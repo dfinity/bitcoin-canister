@@ -376,6 +376,8 @@ dependencies = [
  "byteorder",
  "candid",
  "ic-btc-test-utils",
+ "ic-btc-types",
+ "stable-structures",
 ]
 
 [[package]]
@@ -384,6 +386,16 @@ version = "0.1.0"
 source = "git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77#0acc04638bb2be562c146c2480e6217eb572aa77"
 dependencies = [
  "bitcoin",
+]
+
+[[package]]
+name = "ic-btc-types"
+version = "0.1.0"
+source = "git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77#0acc04638bb2be562c146c2480e6217eb572aa77"
+dependencies = [
+ "candid",
+ "serde",
+ "serde_bytes",
 ]
 
 [[package]]
@@ -914,6 +926,11 @@ name = "smallvec"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fd0db749597d91ff862fd1d55ea87f7855a744a8425a64695b6fca237d1dad1"
+
+[[package]]
+name = "stable-structures"
+version = "0.1.0"
+source = "git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77#0acc04638bb2be562c146c2480e6217eb572aa77"
 
 [[package]]
 name = "string_cache"

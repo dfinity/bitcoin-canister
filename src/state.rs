@@ -1,4 +1,4 @@
-use crate::{proto, PageMapMemory};
+/*use crate::{proto, PageMapMemory};
 use bitcoin::{hashes::Hash, Block, Network, OutPoint, Script, TxOut, Txid};
 use ic_btc_types::Height;
 use ic_protobuf::bitcoin::v1;
@@ -8,8 +8,6 @@ use ic_replicated_state::bitcoin_state::{
 };
 use ic_replicated_state::page_map::PersistenceError;
 use ic_state_layout::{AccessPolicy, ProtoFileWith, RwPolicy};
-use stable_structures::StableBTreeMap;
-use std::collections::BTreeMap;
 use std::{convert::TryFrom, path::Path};
 
 /// A structure used to maintain the entire state.
@@ -168,53 +166,7 @@ impl From<&State> for proto::State {
         }
     }
 }
-
-/// A key-value store for UTXOs (unspent transaction outputs).
-///
-/// A UTXO is the tuple (OutPoint, TxOut, Height). For ease of access, UTXOs are
-/// stored such that the OutPoint is the key, and (TxOut, Height) is the value.
-///
-/// Ordinarily, a standard `BTreeMap` would suffice for storing UTXOs, but UTXOs
-/// have properties that make storing them more complex.
-///
-///  * Number of entries: As of early 2022, there are tens of millions of UTXOs.
-///    Storing them in a standard `BTreeMap` would make checkpointing very
-///    inefficient as it would require serializing all the UTXOs. To work
-///    around this, `StableBTreeMap` is used instead, where checkpointing grows
-///    linearly only with the number of dirty memory pages.
-///
-///  * A `StableBTreeMap` allocates the maximum size possible for a key/value.
-///    Scripts in Bitcoin are bounded to 10k bytes, but allocating 10k for every
-///    UTXO wastes a lot of memory and increases the number of memory read/writes.
-///
-///    Based on a study of mainnet up to height ~705,000, the following is the
-///    distribution of script sizes in UTXOs:
-///
-///    | Script Size           |  # UTXOs     | % of Total |
-///    |-----------------------|--------------|------------|
-///    | <= 25 bytes           |  74,136,585  |   98.57%   |
-///    | > 25 && <= 201 bytes  |   1,074,004  |    1.43%   |
-///    | > 201 bytes           |          13  | 0.00002%   |
-///
-///    Because of the skewness in the sizes of the script, the KV store for
-///    UTXOs is split into buckets:
-///
-///    1) "Small" to store UTXOs with script size <= 25 bytes.
-///    2) "Medium" to store UTXOs with script size > 25 bytes && <= 201 bytes.
-///    3) "Large" to store UTXOs with script size > 201 bytes.
-pub struct Utxos {
-    // A map storing the UTXOs that are "small" in size.
-    pub small_utxos: StableBTreeMap<PageMapMemory, Vec<u8>, Vec<u8>>,
-
-    // A map storing the UTXOs that are "medium" in size.
-    pub medium_utxos: StableBTreeMap<PageMapMemory, Vec<u8>, Vec<u8>>,
-
-    // A map storing the UTXOs that are "large" in size.
-    // The number of entries stored in this map is tiny (see docs above), so a
-    // standard `BTreeMap` suffices.
-    pub large_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
-}
-
+*/
 // The size of an outpoint in bytes.
 const OUTPOINT_TX_ID_SIZE: u32 = 32; // The size of the transaction ID.
 const OUTPOINT_VOUT_SIZE: u32 = 4; // The size of a transaction's vout.
@@ -250,34 +202,7 @@ pub const UTXO_VALUE_MAX_SIZE_MEDIUM: u32 = TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE
 const MAX_ADDRESS_SIZE: u32 = 90;
 const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
-impl Default for Utxos {
-    fn default() -> Self {
-        Self {
-            small_utxos: StableBTreeMap::new(
-                PageMapMemory::default(),
-                UTXO_KEY_SIZE,
-                UTXO_VALUE_MAX_SIZE_SMALL,
-            ),
-            medium_utxos: StableBTreeMap::new(
-                PageMapMemory::default(),
-                UTXO_KEY_SIZE,
-                UTXO_VALUE_MAX_SIZE_MEDIUM,
-            ),
-            large_utxos: BTreeMap::default(),
-        }
-    }
-}
-
-impl Utxos {
-    pub fn len(&self) -> u64 {
-        self.large_utxos.len() as u64 + self.small_utxos.len() + self.medium_utxos.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.large_utxos.is_empty() && self.small_utxos.is_empty() && self.medium_utxos.is_empty()
-    }
-}
-
+/*
 pub struct UtxoSet {
     pub utxos: Utxos,
     pub network: Network,
@@ -373,4 +298,4 @@ impl UtxoSet {
             },
         }
     }
-}
+}*/

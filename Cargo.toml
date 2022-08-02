@@ -9,9 +9,10 @@ edition = "2018"
 bitcoin = "0.28.1"
 candid = "0.7.4"
 byteorder = "1.4.3"
+ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
+stable-structures = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
 #ic-metrics = { path = "../../monitoring/metrics" }
 #ic-protobuf = { path = "../../protobuf" }
-#ic-btc-types = { path = "../types/public" }
 #ic-btc-types-internal = { path = "../types/internal" }
 #ic-logger = { path = "../../monitoring/logger" }
 #ic-registry-subnet-features = { path = "../../registry/subnet_features" }
@@ -23,7 +24,6 @@ byteorder = "1.4.3"
 #serde = "1.0.132"
 #serde_bytes = "0.11"
 #slog = { version = "2.5.2", features = ["nested-values", "release_max_level_debug"] }
-#stable-structures = { path = "../../stable-structures" }
 
 #[build-dependencies]
 #prost-build = "0.10.4"
