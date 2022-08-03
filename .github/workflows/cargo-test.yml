@@ -36,12 +36,12 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --target wasm32-unknown-unknown --all-targets --all-features
+          args: --all-targets --all-features
 
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --all-targets --all-features
+          cargo test --release --all-targets --all-features
         env:
           RUST_BACKTRACE: 1
 
