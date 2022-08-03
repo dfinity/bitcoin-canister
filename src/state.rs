@@ -1,5 +1,7 @@
-/*use crate::{proto, PageMapMemory};
+use crate::utxos::Utxos;
 use bitcoin::{hashes::Hash, Block, Network, OutPoint, Script, TxOut, Txid};
+use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
+/*use crate::{proto, PageMapMemory};
 use ic_btc_types::Height;
 use ic_protobuf::bitcoin::v1;
 use ic_replicated_state::bitcoin_state::{
@@ -202,12 +204,11 @@ pub const UTXO_VALUE_MAX_SIZE_MEDIUM: u32 = TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE
 const MAX_ADDRESS_SIZE: u32 = 90;
 const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
-/*
 pub struct UtxoSet {
     pub utxos: Utxos,
     pub network: Network,
     // An index for fast retrievals of an address's UTXOs.
-    pub address_to_outpoints: StableBTreeMap<PageMapMemory, Vec<u8>, Vec<u8>>,
+    pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
 }
 
 impl UtxoSet {
@@ -215,7 +216,7 @@ impl UtxoSet {
         Self {
             utxos: Utxos::default(),
             address_to_outpoints: StableBTreeMap::new(
-                PageMapMemory::default(),
+                RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
                 MAX_ADDRESS_OUTPOINT_SIZE,
                 0, // No values are stored in the map.
             ),
@@ -223,7 +224,7 @@ impl UtxoSet {
         }
     }
 
-    pub fn to_proto(&self) -> proto::UtxoSet {
+    /*pub fn to_proto(&self) -> proto::UtxoSet {
         proto::UtxoSet {
             large_utxos: self
                 .utxos
@@ -297,5 +298,5 @@ impl UtxoSet {
                 _ => panic!("Invalid network ID"),
             },
         }
-    }
-}*/
+    }*/
+}

@@ -1,4 +1,4 @@
-use crate::{state::UtxoSet, types::Storable, utxos::UtxosTrait};
+use crate::{state::UtxoSet, types::Storable};
 use bitcoin::{Address, OutPoint, Transaction, TxOut};
 use ic_btc_types::{Address as AddressStr, Height, Utxo};
 use std::collections::{BTreeMap, BTreeSet};

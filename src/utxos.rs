@@ -74,7 +74,7 @@ impl Default for Utxos {
 impl Utxos {
     /// Inserts a utxo into the map.
     /// Returns true if there was a previous value for the key in the map, false otherwise.
-    fn insert(&mut self, key: OutPoint, value: (TxOut, Height)) -> bool {
+    pub fn insert(&mut self, key: OutPoint, value: (TxOut, Height)) -> bool {
         let value_encoded = value.to_bytes();
 
         if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL as usize {
@@ -93,7 +93,7 @@ impl Utxos {
     }
 
     /// Returns the value associated with the given outpoint if it exists.
-    fn get(&self, key: &OutPoint) -> Option<(TxOut, Height)> {
+    pub fn get(&self, key: &OutPoint) -> Option<(TxOut, Height)> {
         let key_vec = key.to_bytes();
 
         if let Some(value) = self.small_utxos.get(&key_vec) {
@@ -108,7 +108,7 @@ impl Utxos {
     }
 
     /// Removes a key from the map, returning the previous value at the key if it exists.
-    fn remove(&mut self, key: &OutPoint) -> Option<(TxOut, Height)> {
+    pub fn remove(&mut self, key: &OutPoint) -> Option<(TxOut, Height)> {
         let key_vec = key.to_bytes();
 
         if let Some(value) = self.small_utxos.remove(&key_vec) {
@@ -123,7 +123,7 @@ impl Utxos {
     }
 
     /// Returns `true` if the key exists in the map, `false` otherwise.
-    fn contains_key(&self, key: &OutPoint) -> bool {
+    pub fn contains_key(&self, key: &OutPoint) -> bool {
         self.small_utxos.contains_key(&key.to_bytes())
             || self.medium_utxos.contains_key(&key.to_bytes())
             || self.large_utxos.contains_key(key)
