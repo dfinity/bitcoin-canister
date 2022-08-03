@@ -1,0 +1,24 @@
+{
+  "dfx": "0.11.1-beta.2",
+  "canisters": {
+    "bitcoin": {
+      "type": "custom",
+      "candid": "./candid.did",
+      "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
+      "build": "./build.sh"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}
+

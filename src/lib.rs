@@ -1,4 +1,4 @@
-mod address_utxoset;
+/*mod address_utxoset;
 mod blocktree;
 mod canister;
 mod heartbeat;
@@ -20,4 +20,4 @@ pub mod proto {
 
 // Expose the canister's interface directly.
 pub use canister::*;
-pub use metrics::BitcoinCanisterMetrics;
+pub use metrics::BitcoinCanisterMetrics;*/
