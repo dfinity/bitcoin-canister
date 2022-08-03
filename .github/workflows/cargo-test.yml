@@ -1,0 +1,63 @@
+name: CI Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+
+  cargo-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        rust: [ '1.62.1' ]
+        os: [ ubuntu-20.04, macos-10.15 ]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+          rustup component add clippy
+
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --target wasm32-unknown-unknown --all-targets --all-features
+
+      - name: Run Tests
+        shell: bash
+        run: |
+          cargo test --all-targets --all-features
+        env:
+          RUST_BACKTRACE: 1
+
+  shell-checks:
+    name: ShellCheck
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run ShellCheck
+      uses: ludeeus/action-shellcheck@master
+      env:
+        SHELLCHECK_OPTS: -e SC1090 -e SC2119 -e SC1091
+
+  checks-pass:
+    needs: ["cargo-tests", "shell-checks"]
+    runs-on: ubuntu-20.04
+    steps:
+       - name: Checks workflow passes
+         run: echo OK

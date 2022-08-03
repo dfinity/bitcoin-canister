@@ -1,6 +1,25 @@
-use crate::blocktree::{self, BlockChain, BlockDoesNotExtendTree};
+use crate::blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree};
 use bitcoin::{Block, BlockHash};
-use ic_replicated_state::bitcoin_state::UnstableBlocks;
+
+/// A data structure for maintaining all unstable blocks.
+///
+/// A block `b` is considered stable if:
+///   depth(block) ≥ stability_threshold
+///   ∀ b', height(b') = height(b): depth(b) - depth(b’) ≥ stability_threshold
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnstableBlocks {
+    pub stability_threshold: u32,
+    pub tree: BlockTree,
+}
+
+impl UnstableBlocks {
+    pub fn new(stability_threshold: u32, anchor: Block) -> Self {
+        Self {
+            stability_threshold,
+            tree: BlockTree::new(anchor),
+        }
+    }
+}
 
 /// Pops the `anchor` block iff ∃ a child `C` of the `anchor` block that
 /// is stable. The child `C` becomes the new `anchor` block, and all its

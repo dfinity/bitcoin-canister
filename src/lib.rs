@@ -1,5 +1,6 @@
-/*mod address_utxoset;
 mod blocktree;
+mod unstable_blocks;
+/*mod address_utxoset;
 mod canister;
 mod heartbeat;
 mod metrics;
@@ -9,7 +10,6 @@ pub mod fees;
 pub mod state;
 pub mod store;
 mod types;
-mod unstable_blocks;
 mod utxos;
 mod utxoset;
 

@@ -1,5 +1,4 @@
 use bitcoin::{Block, BlockHash};
-use ic_replicated_state::bitcoin_state::BlockTree;
 use std::fmt;
 
 /// Represents a non-empty block chain as:
@@ -70,6 +69,23 @@ pub struct EmptyChainError {}
 impl fmt::Display for EmptyChainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "cannot create a `BlockChain` from an empty chain")
+    }
+}
+
+/// Maintains a tree of connected blocks.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BlockTree {
+    pub root: Block,
+    pub children: Vec<BlockTree>,
+}
+
+impl BlockTree {
+    /// Creates a new `BlockTree` with the given block as its root.
+    pub fn new(root: Block) -> Self {
+        Self {
+            root,
+            children: vec![],
+        }
     }
 }
 
