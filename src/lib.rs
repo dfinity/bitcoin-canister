@@ -2,6 +2,7 @@ mod address_utxoset;
 mod blocktree;
 mod unstable_blocks;
 pub mod state;
+pub mod store;
 mod types;
 mod utxos;
 mod utxoset;
@@ -12,7 +13,6 @@ mod metrics;
 mod page_map_memory;
 use page_map_memory::PageMapMemory;
 pub mod fees;
-pub mod store;
 
 // TODO(EXC-1093): Guard this with a rust feature. It's only needed in local scripts.
 pub mod proto {
