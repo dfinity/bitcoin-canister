@@ -31,15 +31,12 @@ jobs:
           rustup update ${{ matrix.rust }} --no-self-update
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
-          # TODO: uncomment the lines below to enable the clippy check once
-          # there are no more clippy errors.
-          #
-          # rustup component add clippy
+          rustup component add clippy
 
-    # - uses: actions-rs/clippy-check@v1
-    #   with:
-    #     token: ${{ secrets.GITHUB_TOKEN }}
-    #     args: --all-targets --all-features -- -D warnings
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --target wasm32-unknown-unknown --all-targets --all-features
 
       - name: Run Tests
         shell: bash
