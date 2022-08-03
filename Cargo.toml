@@ -42,7 +42,6 @@ path = "src/main.rs"
 
 [dev-dependencies]
 ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
-
 #bitcoin = {version = "0.28.1", features = ["rand"]} # needed for generating secp256k1 keys.
 #clap = {version = "3.1.9", features = ["derive"]}
 #maplit = "1.0.2"

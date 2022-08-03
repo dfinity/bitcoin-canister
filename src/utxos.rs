@@ -190,13 +190,13 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
 // Creates a memory region for the "small" UTXOs.
 // The memory region currently is small for testing purposes and
 // will be much larger in the future.
-fn small_utxos_memory() -> Memory {
+fn small_utxos_memory() -> CanisterMemory {
     RestrictedMemory::new(DefaultMemoryImpl::default(), 0..999)
 }
 
 // Creates a memory region for the "medium" UTXOs.
 // The memory region currently is small for testing purposes and
 // will be much larger in the future.
-fn medium_utxos_memory() -> Memory {
+fn medium_utxos_memory() -> CanisterMemory {
     RestrictedMemory::new(DefaultMemoryImpl::default(), 1000..1999)
 }
