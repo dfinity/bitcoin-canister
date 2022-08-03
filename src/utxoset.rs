@@ -1,5 +1,5 @@
 use crate::address_utxoset::AddressUtxoSet;
-use crate::{state::UtxoSet, types::Storable, utxos::UtxosTrait};
+use crate::{state::UtxoSet, types::Storable};
 use bitcoin::{Address, OutPoint, Transaction, TxOut, Txid};
 use std::str::FromStr;
 
