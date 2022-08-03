@@ -131,7 +131,7 @@ impl Utxos {
 
     /// Gets an iterator over the entries of the map.
     /// NOTE: The entries are not guaranteed to be sorted in any particular way.
-    fn iter(&self) -> Iter<CanisterMemory> {
+    pub fn iter(&self) -> Iter<CanisterMemory> {
         Iter::new(self)
     }
 
