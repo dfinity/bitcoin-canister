@@ -41,7 +41,7 @@ fn remove_spent_txs(utxo_set: &mut UtxoSet, tx: &Transaction) {
                     let address = address.to_string();
                     let found = utxo_set
                         .address_to_outpoints
-                        .remove(&(address, height, input.previous_output).to_bytes());
+                        .remove(&(address, height, (&input.previous_output).into()).to_bytes());
 
                     assert!(
                         found.is_some(),
@@ -269,7 +269,7 @@ mod test {
         for height in [17u32, 0, 31, 4, 2].iter() {
             utxo.address_to_outpoints
                 .insert(
-                    (address.clone(), *height, BitcoinOutPoint::null()).to_bytes(),
+                    (address.clone(), *height, OutPoint::new(vec![0; 32], 0)).to_bytes(),
                     vec![],
                 )
                 .unwrap();
@@ -280,7 +280,7 @@ mod test {
             utxo.address_to_outpoints
                 .range(address.to_bytes(), None)
                 .map(|(k, _)| {
-                    let (_, height, _) = <(AddressStr, Height, BitcoinOutPoint)>::from_bytes(k);
+                    let (_, height, _) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
                     height
                 })
                 .collect::<Vec<_>>(),

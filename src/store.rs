@@ -1,10 +1,10 @@
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree},
     state::State,
-    types::Page,
+    types::{OutPoint, Page},
     unstable_blocks, utxoset,
 };
-use bitcoin::{hashes::Hash, Address, Block, OutPoint, Txid};
+use bitcoin::{hashes::Hash, Address, Block, Txid};
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, Height, Satoshi};
 use lazy_static::lazy_static;
 use serde_bytes::ByteBuf;
@@ -139,7 +139,7 @@ fn get_utxos_from_chain(
         tip_block_height = block_height;
     }
 
-    let all_utxos = address_utxos.into_vec(offset.map(|e| (e.0, (&e.1).into())));
+    let all_utxos = address_utxos.into_vec(offset);
     let mut next_page = None;
 
     let utxos = match utxo_limit {
@@ -155,13 +155,10 @@ fn get_utxos_from_chain(
                     Page {
                         tip_block_hash,
                         height: rest[0].height,
-                        outpoint: OutPoint {
-                            txid: Txid::from_hash(
-                                Hash::from_slice(&rest[0].outpoint.txid)
-                                    .expect("Txid must be valid"),
-                            ),
-                            vout: rest[0].outpoint.vout,
-                        },
+                        outpoint: OutPoint::new(
+                            rest[0].outpoint.txid.clone(),
+                            rest[0].outpoint.vout,
+                        ),
                     }
                     .to_bytes(),
                 );

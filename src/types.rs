@@ -34,7 +34,7 @@ impl From<&BitcoinOutPoint> for OutPoint {
 pub struct Page {
     pub tip_block_hash: BlockHash,
     pub height: Height,
-    pub outpoint: BitcoinOutPoint,
+    pub outpoint: OutPoint,
 }
 
 impl Page {
@@ -42,7 +42,7 @@ impl Page {
         vec![
             self.tip_block_hash.to_vec(),
             self.height.to_bytes(),
-            BitcoinOutPoint::to_bytes(&self.outpoint),
+            OutPoint::to_bytes(&self.outpoint),
         ]
         .into_iter()
         .flatten()
@@ -51,7 +51,7 @@ impl Page {
 
     pub fn from_bytes(mut bytes: Vec<u8>) -> Result<Self, String> {
         // The first 32 bytes represent the encoded `BlockHash`, the next 4 the
-        // `Height` and the remaining the encoded `BitcoinOutPoint`.
+        // `Height` and the remaining the encoded `OutPoint`.
         let height_offset = 32;
         let outpoint_offset = 36;
         let outpoint_bytes = bytes.split_off(outpoint_offset);
@@ -75,24 +75,9 @@ impl Page {
         Ok(Page {
             tip_block_hash,
             height,
-            outpoint: outpoint_from_bytes(outpoint_bytes)?,
+            outpoint: OutPoint::from_bytes(outpoint_bytes),
         })
     }
-}
-
-fn outpoint_from_bytes(bytes: Vec<u8>) -> Result<BitcoinOutPoint, String> {
-    if bytes.len() != 36 {
-        return Err(format!("Invalid length {} != 36 for outpoint", bytes.len()));
-    }
-    let txid = Txid::from_hash(
-        Hash::from_slice(&bytes[..32]).map_err(|err| format!("Could not parse txid: {}", err))?,
-    );
-    let vout = u32::from_le_bytes(
-        bytes[32..36]
-            .try_into()
-            .map_err(|err| format!("Could not parse vout: {}", err))?,
-    );
-    Ok(BitcoinOutPoint { txid, vout })
 }
 
 /// A trait with convencience methods for storing an element into a stable structure.
@@ -100,26 +85,6 @@ pub trait Storable {
     fn to_bytes(&self) -> Vec<u8>;
 
     fn from_bytes(bytes: Vec<u8>) -> Self;
-}
-
-impl Storable for BitcoinOutPoint {
-    fn to_bytes(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = self.txid.to_vec(); // Store the txid (32 bytes)
-        v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
-
-        // An outpoint is always exactly to the key size (36 bytes).
-        assert_eq!(v.len(), UTXO_KEY_SIZE as usize);
-
-        v
-    }
-
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        assert_eq!(bytes.len(), 36);
-        BitcoinOutPoint {
-            txid: Txid::from_hash(Hash::from_slice(&bytes[..32]).unwrap()),
-            vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
-        }
-    }
 }
 
 impl Storable for OutPoint {
@@ -180,33 +145,6 @@ impl Storable for Address {
     fn from_bytes(bytes: Vec<u8>) -> Self {
         let address_len = bytes[0] as usize;
         String::from_utf8(bytes[1..address_len + 1].to_vec()).expect("Loading address cannot fail.")
-    }
-}
-
-impl Storable for (Address, Height, BitcoinOutPoint) {
-    fn to_bytes(&self) -> Vec<u8> {
-        vec![
-            Address::to_bytes(&self.0),
-            self.1.to_bytes(),
-            BitcoinOutPoint::to_bytes(&self.2),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
-    }
-
-    fn from_bytes(mut bytes: Vec<u8>) -> Self {
-        let address_len = bytes[0] as usize;
-        let height_offset = address_len + 1;
-        let outpoint_offset = address_len + 5;
-        let outpoint_bytes = bytes.split_off(outpoint_offset);
-        let height_bytes = bytes.split_off(height_offset);
-
-        (
-            Address::from_bytes(bytes),
-            Height::from_bytes(height_bytes),
-            BitcoinOutPoint::from_bytes(outpoint_bytes),
-        )
     }
 }
 
