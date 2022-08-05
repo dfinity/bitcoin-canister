@@ -2,16 +2,7 @@ use crate::{unstable_blocks::UnstableBlocks, utxos::Utxos};
 use bitcoin::{hashes::Hash, Block, Network, OutPoint, Script, TxOut, Txid};
 use ic_btc_types::Height;
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
-/*use crate::{proto, PageMapMemory};
-use ic_protobuf::bitcoin::v1;
-use ic_replicated_state::bitcoin_state::{
-    AdapterQueues, BitcoinState as ReplicatedBitcoinState, FeePercentilesCache, UnstableBlocks,
-    UtxoSet as ReplicatedUtxoSet,
-};
-use ic_replicated_state::page_map::PersistenceError;
-use ic_state_layout::{AccessPolicy, ProtoFileWith, RwPolicy};
-use std::{convert::TryFrom, path::Path};
-*/
+
 /// A structure used to maintain the entire state.
 pub struct State {
     // The height of the latest block marked as stable.
@@ -28,6 +19,7 @@ pub struct State {
     // Cache for the current fee percentiles.
     //pub fee_percentiles_cache: Option<FeePercentilesCache>,
 }
+
 impl State {
     /// Create a new blockchain.
     ///

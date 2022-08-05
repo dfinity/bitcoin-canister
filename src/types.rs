@@ -1,12 +1,20 @@
 //! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
 use bitcoin::{
-    hashes::Hash, BlockHash, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
+    hashes::Hash, BlockHash, OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
 };
 use ic_btc_types::{Address, Height};
 use std::convert::TryInto;
 use std::ops::Deref;
 
+/// A wrapper around `ic_btc_types::OutPoint.
+///
+/// The wrapper serves two purposes:
+///
+///   1) Allows us to add a conversion method from the `bitcoin::OutPoint`, which
+///      is not something that's available in the public type crate.
+///
+///   2) Allows us to implement external traits.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
 pub struct OutPoint(ic_btc_types::OutPoint);
 
@@ -32,6 +40,7 @@ impl From<&BitcoinOutPoint> for OutPoint {
     }
 }
 
+/// A Bitcoin transaction's output.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
 pub struct TxOut {
     pub value: u64,
