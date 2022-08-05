@@ -3,11 +3,13 @@ mod blocktree;
 mod unstable_blocks;
 pub mod state;
 pub mod store;
-mod types;
+pub mod types;
 mod utxos;
 mod utxoset;
+
+#[cfg(test)]
+mod test_utils;
 /*
-mod canister;
 mod heartbeat;
 mod metrics;
 mod page_map_memory;

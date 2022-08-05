@@ -4,7 +4,7 @@ use crate::{
     types::{OutPoint, Page},
     unstable_blocks, utxoset,
 };
-use bitcoin::{hashes::Hash, Address, Block, Txid};
+use bitcoin::{Address, Block, Txid};
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, Height, Satoshi};
 use lazy_static::lazy_static;
 use serde_bytes::ByteBuf;
@@ -209,7 +209,8 @@ mod test {
     use bitcoin::blockdata::constants::genesis_block;
     use bitcoin::secp256k1::rand::rngs::OsRng;
     use bitcoin::secp256k1::Secp256k1;
-    use bitcoin::{consensus::Decodable, Address, BlockHash, Network, PublicKey};
+    use bitcoin::{consensus::Decodable, Address, BlockHash, Network as BitcoinNetwork, PublicKey};
+    use crate::types::Network;
     use byteorder::{LittleEndian, ReadBytesExt};
     use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
     use ic_btc_types::{OutPoint, Utxo};
@@ -217,6 +218,7 @@ mod test {
     use std::fs::File;
     use std::str::FromStr;
     use std::{collections::HashMap, io::BufReader, path::PathBuf};
+    use crate::test_utils::random_p2pkh_address;
 
     fn process_chain(state: &mut State, num_blocks: u32) {
         let mut chain: Vec<Block> = vec![];
@@ -256,7 +258,7 @@ mod test {
         // Build the chain
         chain.push(
             blocks
-                .remove(&genesis_block(Network::Bitcoin).block_hash())
+                .remove(&genesis_block(BitcoinNetwork::Bitcoin).block_hash())
                 .unwrap(),
         );
         for _ in 1..num_blocks {
@@ -337,19 +339,19 @@ mod test {
         // Create some BTC addresses.
         let address_1 = Address::p2pkh(
             &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
+            BitcoinNetwork::Bitcoin,
         );
         let address_2 = Address::p2pkh(
             &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
+            BitcoinNetwork::Bitcoin,
         );
         let address_3 = Address::p2pkh(
             &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
+            BitcoinNetwork::Bitcoin,
         );
         let address_4 = Address::p2pkh(
             &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
+            BitcoinNetwork::Bitcoin,
         );
 
         // Create a genesis block where 1000 satoshis are given to address 1.
@@ -361,7 +363,7 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        let mut state = State::new(2, Network::Bitcoin, block_0.clone());
+        let mut state = State::new(2, Network::Mainnet, block_0.clone());
 
         let block_0_utxos = GetUtxosResponse {
             utxos: vec![Utxo {
@@ -519,7 +521,7 @@ mod test {
 
     #[test]
     fn process_100k_blocks() {
-        let mut state = State::new(10, Network::Bitcoin, genesis_block(Network::Bitcoin));
+        let mut state = State::new(10, Network::Mainnet, genesis_block(BitcoinNetwork::Bitcoin));
 
         process_chain(&mut state, 100_000);
 
@@ -680,19 +682,14 @@ mod test {
     #[test]
     fn get_utxos_min_confirmations_greater_than_chain_height() {
         for network in [
-            Network::Bitcoin,
-            Network::Regtest,
+            Network::Mainnet,
             Network::Testnet,
-            Network::Signet,
+            Network::Regtest,
         ]
         .iter()
         {
             // Generate addresses.
-            let address_1 = {
-                let secp = Secp256k1::new();
-                let mut rng = OsRng::new().unwrap();
-                Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), *network)
-            };
+            let address_1 = random_p2pkh_address(*network);
 
             // Create a block where 1000 satoshis are given to the address_1.
             let tx = TransactionBuilder::coinbase()
@@ -729,25 +726,16 @@ mod test {
     #[test]
     fn get_utxos_does_not_include_other_addresses() {
         for network in [
-            Network::Bitcoin,
-            Network::Regtest,
+            Network::Mainnet,
             Network::Testnet,
-            Network::Signet,
+            Network::Regtest,
         ]
         .iter()
         {
             // Generate addresses.
-            let address_1 = {
-                let secp = Secp256k1::new();
-                let mut rng = OsRng::new().unwrap();
-                Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), *network)
-            };
+            let address_1 = random_p2pkh_address(*network);
 
-            let address_2 = {
-                let secp = Secp256k1::new();
-                let mut rng = OsRng::new().unwrap();
-                Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), *network)
-            };
+            let address_2 = random_p2pkh_address(*network);
 
             // Create a genesis block where 1000 satoshis are given to the address_1, followed
             // by a block where address_1 gives 1000 satoshis to address_2.
@@ -784,19 +772,14 @@ mod test {
     #[test]
     fn get_utxos_for_address_with_many_of_them_respects_utxo_limit() {
         for network in [
-            Network::Bitcoin,
-            Network::Regtest,
+            Network::Mainnet,
             Network::Testnet,
-            Network::Signet,
+            Network::Regtest,
         ]
         .iter()
         {
             // Generate an address.
-            let address = {
-                let secp = Secp256k1::new();
-                let mut rng = OsRng::new().unwrap();
-                Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), *network)
-            };
+            let address = random_p2pkh_address(*network);
 
             let num_transactions = 10;
             let mut transactions = vec![];
@@ -869,10 +852,9 @@ mod test {
         #[test]
         fn get_utxos_with_pagination_is_consistent_with_no_pagination(
             network in prop_oneof![
-                Just(Network::Bitcoin),
+                Just(Network::Mainnet),
                 Just(Network::Testnet),
                 Just(Network::Regtest),
-                Just(Network::Signet)
             ],
             num_transactions in 1..20u64,
             num_blocks in 1..10u64,
@@ -884,11 +866,7 @@ mod test {
             ],
         ) {
             // Generate an address.
-            let address = {
-                let secp = Secp256k1::new();
-                let mut rng = OsRng::new().unwrap();
-                Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), network)
-            };
+            let address = random_p2pkh_address(network);
 
             let mut prev_block: Option<Block> = None;
             let mut value = 1;

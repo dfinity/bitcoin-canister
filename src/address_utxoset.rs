@@ -141,7 +141,7 @@ impl<'a> AddressUtxoSet<'a> {
         for (height_and_outpoint, txout) in added_utxos {
             if let Some(address) = Address::from_script(
                 &Script::from(txout.script_pubkey.clone()),
-                self.full_utxo_set.network,
+                self.full_utxo_set.network.into(),
             ) {
                 if address.to_string() == self.address {
                     assert!(
@@ -155,7 +155,7 @@ impl<'a> AddressUtxoSet<'a> {
         for (outpoint, (txout, height)) in self.removed_utxos {
             if let Some(address) = Address::from_script(
                 &Script::from(txout.script_pubkey.clone()),
-                self.full_utxo_set.network,
+                self.full_utxo_set.network.into(),
             ) {
                 if address.to_string() == self.address {
                     set.remove(&((height, outpoint).to_bytes(), txout));
@@ -182,24 +182,17 @@ impl<'a> AddressUtxoSet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitcoin::secp256k1::rand::rngs::OsRng;
-    use bitcoin::secp256k1::Secp256k1;
-    use bitcoin::{Address, Network, PublicKey};
-    use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
-    use ic_btc_types::OutPoint as PublicOutPoint;
+    use crate::types::Network;
+    use crate::test_utils::random_p2pkh_address;
+    use ic_btc_test_utils::{TransactionBuilder};
+    use ic_btc_types::{OutPoint as PublicOutPoint};
 
     #[test]
     fn add_tx_to_empty_utxo() {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().unwrap();
-
         // Create some BTC addresses.
-        let address_1 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
+        let address_1 = random_p2pkh_address(Network::Mainnet);
 
-        let utxo_set = UtxoSet::new(Network::Bitcoin);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
 
@@ -226,20 +219,11 @@ mod test {
 
     #[test]
     fn add_tx_then_transfer() {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().unwrap();
-
         // Create some BTC addresses.
-        let address_1 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
-        let address_2 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
+        let address_1 = random_p2pkh_address(Network::Mainnet);
+        let address_2 = random_p2pkh_address(Network::Mainnet);
 
-        let utxo_set = UtxoSet::new(Network::Bitcoin);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
 
@@ -281,16 +265,10 @@ mod test {
     #[test]
     #[should_panic]
     fn insert_same_tx_twice() {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().unwrap();
-
         // Create some BTC addresses.
-        let address_1 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
+        let address_1 = random_p2pkh_address(Network::Mainnet);
 
-        let utxo_set = UtxoSet::new(Network::Bitcoin);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
 
@@ -307,7 +285,7 @@ mod test {
 
     #[test]
     fn spending_multiple_inputs() {
-        let network = Network::Bitcoin;
+        let network = Network::Mainnet;
 
         // Create some BTC addresses.
         let address_1 = random_p2pkh_address(network);
@@ -329,7 +307,7 @@ mod test {
             .build();
 
         // Process the blocks.
-        let utxo_set = UtxoSet::new(network);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
         let mut address_1_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
         address_1_utxo_set.insert_tx(&coinbase_tx, 0);
         address_1_utxo_set.insert_tx(&tx, 1);

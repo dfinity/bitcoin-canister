@@ -1,13 +1,14 @@
 //! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
 use bitcoin::{
-    hashes::Hash, BlockHash, OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
+    hashes::Hash, BlockHash, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
+    TxOut as BitcoinTxOut,
 };
 use ic_btc_types::{Address, Height};
 use std::convert::TryInto;
 use std::ops::Deref;
 
-/// A wrapper around `ic_btc_types::OutPoint.
+/// A wrapper around `ic_btc_types::OutPoint`.
 ///
 /// The wrapper serves two purposes:
 ///
@@ -52,6 +53,23 @@ impl From<&BitcoinTxOut> for TxOut {
         Self {
             value: bitcoin_txout.value,
             script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum Network {
+    Mainnet,
+    Testnet,
+    Regtest,
+}
+
+impl Into<BitcoinNetwork> for Network {
+    fn into(self) -> BitcoinNetwork {
+        match self {
+            Network::Mainnet => BitcoinNetwork::Bitcoin,
+            Network::Testnet => BitcoinNetwork::Testnet,
+            Network::Regtest => BitcoinNetwork::Regtest,
         }
     }
 }

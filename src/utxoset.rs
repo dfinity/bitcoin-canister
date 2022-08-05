@@ -3,7 +3,7 @@ use crate::{
     state::UtxoSet,
     types::{OutPoint, Storable},
 };
-use bitcoin::{Address, Transaction, TxOut, Txid, Script};
+use bitcoin::{Address, Script, Transaction, TxOut, Txid};
 use std::str::FromStr;
 
 type Height = u32;
@@ -36,9 +36,10 @@ fn remove_spent_txs(utxo_set: &mut UtxoSet, tx: &Transaction) {
         // Remove the input from the UTXOs. The input *must* exist in the UTXO set.
         match utxo_set.utxos.remove(&(&input.previous_output).into()) {
             Some((txout, height)) => {
-                if let Some(address) =
-                    Address::from_script(&Script::from(txout.script_pubkey), utxo_set.network)
-                {
+                if let Some(address) = Address::from_script(
+                    &Script::from(txout.script_pubkey),
+                    utxo_set.network.into(),
+                ) {
                     let address = address.to_string();
                     let found = utxo_set
                         .address_to_outpoints
@@ -81,7 +82,7 @@ pub(crate) fn insert_utxo(
     height: Height,
 ) {
     // Insert the outpoint.
-    if let Some(address) = Address::from_script(&output.script_pubkey, utxo_set.network) {
+    if let Some(address) = Address::from_script(&output.script_pubkey, utxo_set.network.into()) {
         let address_str = address.to_string();
 
         // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
@@ -100,7 +101,9 @@ pub(crate) fn insert_utxo(
         }
     }
 
-    let outpoint_already_exists = utxo_set.utxos.insert(outpoint.clone(), ((&output).into(), height));
+    let outpoint_already_exists = utxo_set
+        .utxos
+        .insert(outpoint.clone(), ((&output).into(), height));
 
     // Verify that we aren't overwriting a previously seen outpoint.
     // NOTE: There was a bug where there were duplicate transactions. These transactions
@@ -120,15 +123,17 @@ pub(crate) fn insert_utxo(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::test_utils::random_p2pkh_address;
+    use crate::types::Network;
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use bitcoin::{Network, OutPoint as BitcoinOutPoint, TxOut};
-    use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
+    use bitcoin::{Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, TxOut};
+    use ic_btc_test_utils::TransactionBuilder;
     use ic_btc_types::Address as AddressStr;
     use std::collections::BTreeSet;
 
     #[test]
     fn coinbase_tx() {
-        for network in [Network::Bitcoin, Network::Regtest, Network::Testnet].iter() {
+        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
             let address = random_p2pkh_address(*network);
 
             let coinbase_tx = TransactionBuilder::coinbase()
@@ -155,7 +160,7 @@ mod test {
 
     #[test]
     fn tx_without_outputs_leaves_utxo_set_unchanged() {
-        for network in [Network::Bitcoin, Network::Regtest, Network::Testnet].iter() {
+        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
             let mut utxo = UtxoSet::new(*network);
 
             // no output coinbase
@@ -170,7 +175,7 @@ mod test {
 
     #[test]
     fn filter_provably_unspendable_utxos() {
-        for network in [Network::Bitcoin, Network::Regtest, Network::Testnet].iter() {
+        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
             let mut utxo = UtxoSet::new(*network);
 
             // op return coinbase
@@ -192,7 +197,7 @@ mod test {
 
     #[test]
     fn spending() {
-        for network in [Network::Bitcoin, Network::Regtest, Network::Testnet].iter() {
+        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
             let address_1 = random_p2pkh_address(*network);
             let address_2 = random_p2pkh_address(*network);
 
@@ -325,7 +330,7 @@ mod test {
             0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
         ]);
 
-        let address = bitcoin::Address::from_script(&script, Network::Testnet).unwrap();
+        let address = bitcoin::Address::from_script(&script, BitcoinNetwork::Testnet).unwrap();
 
         let mut utxo_set = UtxoSet::new(Network::Testnet);
 

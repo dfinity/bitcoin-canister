@@ -1,5 +1,5 @@
-use crate::{unstable_blocks::UnstableBlocks, utxos::Utxos};
-use bitcoin::{hashes::Hash, Block, Network, OutPoint, Script, TxOut, Txid};
+use crate::{types::Network, unstable_blocks::UnstableBlocks, utxos::Utxos};
+use bitcoin::Block;
 use ic_btc_types::Height;
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
@@ -31,12 +31,12 @@ impl State {
             height: 0,
             utxos: UtxoSet::new(network),
             unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
-    //        adapter_queues: AdapterQueues::default(),
-     //       fee_percentiles_cache: None,
+            //        adapter_queues: AdapterQueues::default(),
+            //       fee_percentiles_cache: None,
         }
     }
 
-/*
+    /*
     /// Serializes the state to disk at the given path.
     // TODO(EXC-1093): Guard this function with a rust feature. It's only needed in local scripts.
     pub fn serialize(&self, root: &Path) -> Result<(), PersistenceError> {
@@ -212,7 +212,7 @@ impl UtxoSet {
                 MAX_ADDRESS_OUTPOINT_SIZE,
                 0, // No values are stored in the map.
             ),
-            network,
+            network: network,
         }
     }
 
@@ -235,10 +235,10 @@ impl UtxoSet {
                 })
                 .collect(),
             network: match self.network {
-                Network::Bitcoin => 0,
-                Network::Testnet => 1,
-                Network::Signet => 2,
-                Network::Regtest => 3,
+                BitcoinNetwork::Bitcoin => 0,
+                BitcoinNetwork::Testnet => 1,
+                BitcoinNetwork::Signet => 2,
+                BitcoinNetwork::Regtest => 3,
             },
         }
     }
@@ -283,10 +283,10 @@ impl UtxoSet {
             utxos,
             address_to_outpoints: StableBTreeMap::load(address_to_outpoints_memory),
             network: match utxos_proto.network {
-                0 => Network::Bitcoin,
-                1 => Network::Testnet,
-                2 => Network::Signet,
-                3 => Network::Regtest,
+                0 => BitcoinNetwork::Bitcoin,
+                1 => BitcoinNetwork::Testnet,
+                2 => BitcoinNetwork::Signet,
+                3 => BitcoinNetwork::Regtest,
                 _ => panic!("Invalid network ID"),
             },
         }
