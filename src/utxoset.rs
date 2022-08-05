@@ -1,14 +1,17 @@
 use crate::address_utxoset::AddressUtxoSet;
-use crate::{state::UtxoSet, types::Storable};
-use bitcoin::{Address, OutPoint, Transaction, TxOut, Txid};
+use crate::{
+    state::UtxoSet,
+    types::{OutPoint, Storable},
+};
+use bitcoin::{Address, Transaction, TxOut, Txid};
 use std::str::FromStr;
 
 type Height = u32;
 
 lazy_static::lazy_static! {
-    static ref DUPLICATE_TX_IDS: [Txid; 2] = [
-        Txid::from_str("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599").unwrap(),
-        Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap()
+    static ref DUPLICATE_TX_IDS: [Vec<u8>; 2] = [
+        Txid::from_str("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599").unwrap().to_vec(),
+        Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap().to_vec()
     ];
 }
 
@@ -60,7 +63,7 @@ fn insert_unspent_txs(utxo_set: &mut UtxoSet, tx: &Transaction, height: Height) 
         if !(output.script_pubkey.is_provably_unspendable()) {
             insert_utxo(
                 utxo_set,
-                OutPoint::new(tx.txid(), vout as u32),
+                OutPoint::new(tx.txid().to_vec(), vout as u32),
                 output.clone(),
                 height,
             );
@@ -91,12 +94,12 @@ pub(crate) fn insert_utxo(
             // Add the address to the index if we can parse it.
             utxo_set
                 .address_to_outpoints
-                .insert((address_str, height, outpoint).to_bytes(), vec![])
+                .insert((address_str, height, outpoint.clone()).to_bytes(), vec![])
                 .expect("insertion must succeed");
         }
     }
 
-    let outpoint_already_exists = utxo_set.utxos.insert((&outpoint).into(), (output, height));
+    let outpoint_already_exists = utxo_set.utxos.insert(outpoint.clone(), (output, height));
 
     // Verify that we aren't overwriting a previously seen outpoint.
     // NOTE: There was a bug where there were duplicate transactions. These transactions
@@ -105,7 +108,7 @@ pub(crate) fn insert_utxo(
     // See: https://en.bitcoin.it/wiki/BIP_0030
     //      https://bitcoinexplorer.org/tx/d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599
     //      https://bitcoinexplorer.org/tx/e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468
-    if outpoint_already_exists && !DUPLICATE_TX_IDS.contains(&outpoint.txid) {
+    if outpoint_already_exists && !DUPLICATE_TX_IDS.contains(&outpoint.txid.to_vec()) {
         panic!(
             "Cannot insert outpoint {:?} because it was already inserted. Block height: {}",
             outpoint, height
@@ -117,7 +120,7 @@ pub(crate) fn insert_utxo(
 mod test {
     use super::*;
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use bitcoin::{Network, TxOut};
+    use bitcoin::{Network, TxOut, OutPoint as BitcoinOutPoint};
     use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
     use ic_btc_types::Address as AddressStr;
     use std::collections::BTreeSet;
@@ -218,16 +221,13 @@ mod test {
                     .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
                     .collect::<BTreeSet<_>>(),
                 maplit::btreeset! {
-                    (address_1.to_string(), 0, OutPoint {
-                        txid: coinbase_tx.txid(),
-                        vout: 0
-                    })
+                    (address_1.to_string(), 0, OutPoint::new(coinbase_tx.txid().to_vec(), 0))
                 }
             );
 
             // Spend the output to address 2.
             let tx = TransactionBuilder::new()
-                .with_input(OutPoint::new(coinbase_tx.txid(), 0))
+                .with_input(BitcoinOutPoint::new(coinbase_tx.txid(), 0))
                 .with_output(&address_2, 1000)
                 .build();
             insert_tx(&mut utxo, &tx, 1);
@@ -253,10 +253,7 @@ mod test {
                     .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
                     .collect::<BTreeSet<_>>(),
                 maplit::btreeset! {
-                    (address_2.to_string(), 1, OutPoint {
-                        txid: tx.txid(),
-                        vout: 0
-                    })
+                    (address_2.to_string(), 1, OutPoint::new(tx.txid().to_vec(), 0))
                 }
             );
         }
@@ -272,7 +269,7 @@ mod test {
         for height in [17u32, 0, 31, 4, 2].iter() {
             utxo.address_to_outpoints
                 .insert(
-                    (address.clone(), *height, OutPoint::null()).to_bytes(),
+                    (address.clone(), *height, BitcoinOutPoint::null()).to_bytes(),
                     vec![],
                 )
                 .unwrap();
@@ -283,7 +280,7 @@ mod test {
             utxo.address_to_outpoints
                 .range(address.to_bytes(), None)
                 .map(|(k, _)| {
-                    let (_, height, _) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
+                    let (_, height, _) = <(AddressStr, Height, BitcoinOutPoint)>::from_bytes(k);
                     height
                 })
                 .collect::<Vec<_>>(),
@@ -310,10 +307,12 @@ mod test {
             .output[0]
             .clone();
 
-        insert_utxo(&mut utxo_set, OutPoint::null(), tx_out_1, 1);
+        let outpoint = OutPoint::new(vec![], 0);
+
+        insert_utxo(&mut utxo_set, outpoint.clone(), tx_out_1, 1);
 
         // Should panic, as we are trying to insert a UTXO with the same outpoint.
-        insert_utxo(&mut utxo_set, OutPoint::null(), tx_out_2, 2);
+        insert_utxo(&mut utxo_set, outpoint, tx_out_2, 2);
     }
 
     #[test]
@@ -335,7 +334,7 @@ mod test {
             .output[0]
             .clone();
 
-        insert_utxo(&mut utxo_set, OutPoint::null(), tx_out_1, 1);
+        insert_utxo(&mut utxo_set, OutPoint::new(vec![0; 32], 0), tx_out_1, 1);
 
         // Verify that this invalid address was not inserted into the address outpoints.
         assert!(utxo_set.address_to_outpoints.is_empty());

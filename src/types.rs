@@ -5,7 +5,7 @@ use ic_btc_types::{Address, Height};
 use std::convert::TryInto;
 use std::ops::Deref;
 
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
 pub struct OutPoint(ic_btc_types::OutPoint);
 
 impl OutPoint {
