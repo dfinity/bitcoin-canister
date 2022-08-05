@@ -71,7 +71,7 @@ impl<'a> AddressUtxoSet<'a> {
                     let (txout, height) = self
                         .full_utxo_set
                         .utxos
-                        .get(&input.previous_output)
+                        .get(&(&input.previous_output).into())
                         .unwrap_or_else(|| {
                             panic!("Cannot find outpoint: {}", &input.previous_output)
                         });
@@ -120,7 +120,7 @@ impl<'a> AddressUtxoSet<'a> {
                 let (txout, height) = self
                     .full_utxo_set
                     .utxos
-                    .get(&outpoint)
+                    .get(&(&outpoint).into())
                     .expect("outpoint must exist");
 
                 ((height, outpoint).to_bytes(), txout)

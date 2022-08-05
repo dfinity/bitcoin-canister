@@ -1,6 +1,6 @@
 use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL};
-use crate::types::Storable;
-use bitcoin::{OutPoint, TxOut};
+use crate::types::{Storable, OutPoint};
+use bitcoin::{TxOut};
 use ic_btc_types::Height;
 use stable_structures::{btreemap, DefaultMemoryImpl, Memory, RestrictedMemory, StableBTreeMap};
 use std::collections::BTreeMap;
@@ -183,7 +183,7 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
         }
 
         // Finally, iterate over the large utxos.
-        self.large_utxos_iter.next().map(|(k, v)| (*k, v.clone()))
+        self.large_utxos_iter.next().map(|(k, v)| (k.clone(), v.clone()))
     }
 }
 

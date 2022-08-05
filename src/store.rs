@@ -521,6 +521,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn process_100k_blocks() {
         let mut state = State::new(10, Network::Bitcoin, genesis_block(Network::Bitcoin));
 
@@ -870,6 +871,7 @@ mod test {
 
     proptest! {
         #[test]
+        #[ignore]
         fn get_utxos_with_pagination_is_consistent_with_no_pagination(
             network in prop_oneof![
                 Just(Network::Bitcoin),

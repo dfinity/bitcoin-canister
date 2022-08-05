@@ -405,7 +405,6 @@ dependencies = [
 [[package]]
 name = "ic-btc-types"
 version = "0.1.0"
-source = "git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77#0acc04638bb2be562c146c2480e6217eb572aa77"
 dependencies = [
  "candid",
  "serde",

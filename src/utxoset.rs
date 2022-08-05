@@ -31,7 +31,7 @@ fn remove_spent_txs(utxo_set: &mut UtxoSet, tx: &Transaction) {
 
     for input in &tx.input {
         // Remove the input from the UTXOs. The input *must* exist in the UTXO set.
-        match utxo_set.utxos.remove(&input.previous_output) {
+        match utxo_set.utxos.remove(&(&input.previous_output).into()) {
             Some((txout, height)) => {
                 if let Some(address) = Address::from_script(&txout.script_pubkey, utxo_set.network)
                 {
@@ -96,7 +96,7 @@ pub(crate) fn insert_utxo(
         }
     }
 
-    let outpoint_already_exists = utxo_set.utxos.insert(outpoint, (output, height));
+    let outpoint_already_exists = utxo_set.utxos.insert((&outpoint).into(), (output, height));
 
     // Verify that we aren't overwriting a previously seen outpoint.
     // NOTE: There was a bug where there were duplicate transactions. These transactions
