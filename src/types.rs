@@ -4,40 +4,31 @@ use bitcoin::{
     hashes::Hash, BlockHash, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
     TxOut as BitcoinTxOut,
 };
+use candid::CandidType;
 use ic_btc_types::{Address, Height};
+use serde::Deserialize;
 use std::convert::TryInto;
-use std::ops::Deref;
 
-/// A wrapper around `ic_btc_types::OutPoint`.
-///
-/// The wrapper serves two purposes:
-///
-///   1) Allows us to add a conversion method from the `bitcoin::OutPoint`, which
-///      is not something that's available in the public type crate.
-///
-///   2) Allows us to implement external traits.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
-pub struct OutPoint(ic_btc_types::OutPoint);
+/// A reference to a transaction output.
+#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct OutPoint {
+    #[serde(with = "serde_bytes")]
+    pub txid: Vec<u8>,
+    pub vout: u32,
+}
 
 impl OutPoint {
     pub fn new(txid: Vec<u8>, vout: u32) -> Self {
-        Self(ic_btc_types::OutPoint { txid, vout })
-    }
-}
-
-impl Deref for OutPoint {
-    type Target = ic_btc_types::OutPoint;
-    fn deref(&self) -> &Self::Target {
-        &self.0
+        Self { txid, vout }
     }
 }
 
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
-        Self(ic_btc_types::OutPoint {
+        Self {
             txid: bitcoin_outpoint.txid.to_vec(),
             vout: bitcoin_outpoint.vout,
-        })
+        }
     }
 }
 
@@ -144,10 +135,10 @@ impl Storable for OutPoint {
 
     fn from_bytes(bytes: Vec<u8>) -> Self {
         assert_eq!(bytes.len(), 36);
-        OutPoint(ic_btc_types::OutPoint {
+        OutPoint {
             txid: bytes[..32].to_vec(),
             vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
-        })
+        }
     }
 }
 

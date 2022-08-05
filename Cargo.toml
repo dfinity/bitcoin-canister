@@ -12,6 +12,7 @@ byteorder = "1.4.3"
 #ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
 ic-btc-types = { path = "../../ic/rs/bitcoin/types/public" }
 lazy_static = "1.4.0"
+serde = "1.0.132"
 serde_bytes = "0.11"
 stable-structures = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
 #ic-metrics = { path = "../../monitoring/metrics" }

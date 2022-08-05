@@ -389,6 +389,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "proptest",
+ "serde",
  "serde_bytes",
  "stable-structures",
  "tempfile",
