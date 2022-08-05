@@ -139,7 +139,7 @@ fn get_utxos_from_chain(
         tip_block_height = block_height;
     }
 
-    let all_utxos = address_utxos.into_vec(offset);
+    let all_utxos = address_utxos.into_vec(offset.map(|e| (e.0, (&e.1).into())));
     let mut next_page = None;
 
     let utxos = match utxo_limit {

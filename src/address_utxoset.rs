@@ -1,5 +1,5 @@
-use crate::{state::UtxoSet, types::Storable};
-use bitcoin::{Address, OutPoint, Transaction, TxOut};
+use crate::{state::UtxoSet, types::{Storable, OutPoint}};
+use bitcoin::{Address, Transaction, TxOut};
 use ic_btc_types::{Address as AddressStr, Height, Utxo};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -61,11 +61,11 @@ impl<'a> AddressUtxoSet<'a> {
             .collect();
 
         for input in &tx.input {
-            match outpoint_to_height.get(&input.previous_output) {
+            match outpoint_to_height.get(&(&input.previous_output).into()) {
                 Some(height) => {
                     // Remove a UTXO that was previously added.
                     self.added_utxos
-                        .remove(&(*height, input.previous_output).to_bytes());
+                        .remove(&(*height, (&input.previous_output).into()).to_bytes());
                 }
                 None => {
                     let (txout, height) = self
@@ -79,7 +79,7 @@ impl<'a> AddressUtxoSet<'a> {
                     // Remove it.
                     let old_value = self
                         .removed_utxos
-                        .insert(input.previous_output, (txout.clone(), height));
+                        .insert((&input.previous_output).into(), (txout.clone(), height));
                     assert_eq!(old_value, None, "Cannot remove an output twice");
                 }
             }
@@ -99,7 +99,7 @@ impl<'a> AddressUtxoSet<'a> {
                 assert!(
                     self.added_utxos
                         .insert(
-                            (height, OutPoint::new(tx.txid(), vout as u32)).to_bytes(),
+                            (height, OutPoint::new(tx.txid().to_vec(), vout as u32)).to_bytes(),
                             output.clone(),
                         )
                         .is_none(),
@@ -114,13 +114,13 @@ impl<'a> AddressUtxoSet<'a> {
         let mut set: BTreeSet<_> = self
             .full_utxo_set
             .address_to_outpoints
-            .range(self.address.to_bytes(), offset.map(|x| x.to_bytes()))
+            .range(self.address.to_bytes(), offset.as_ref().map(|x| x.to_bytes()))
             .map(|(k, _)| {
                 let (_, _, outpoint) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
                 let (txout, height) = self
                     .full_utxo_set
                     .utxos
-                    .get(&(&outpoint).into())
+                    .get(&outpoint)
                     .expect("outpoint must exist");
 
                 ((height, outpoint).to_bytes(), txout)

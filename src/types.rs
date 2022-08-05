@@ -8,6 +8,12 @@ use std::ops::Deref;
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone)]
 pub struct OutPoint(ic_btc_types::OutPoint);
 
+impl OutPoint {
+    pub fn new(txid: Vec<u8>, vout: u32) -> Self {
+        Self(ic_btc_types::OutPoint { txid, vout })
+    }
+}
+
 impl Deref for OutPoint {
     type Target = ic_btc_types::OutPoint;
     fn deref(&self) -> &Self::Target {
@@ -19,7 +25,7 @@ impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self(ic_btc_types::OutPoint {
             txid: bitcoin_outpoint.txid.to_vec(),
-            vout: bitcoin_outpoint.vout
+            vout: bitcoin_outpoint.vout,
         })
     }
 }
@@ -204,6 +210,33 @@ impl Storable for (Address, Height, BitcoinOutPoint) {
     }
 }
 
+impl Storable for (Address, Height, OutPoint) {
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![
+            Address::to_bytes(&self.0),
+            self.1.to_bytes(),
+            OutPoint::to_bytes(&self.2),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
+    }
+
+    fn from_bytes(mut bytes: Vec<u8>) -> Self {
+        let address_len = bytes[0] as usize;
+        let height_offset = address_len + 1;
+        let outpoint_offset = address_len + 5;
+        let outpoint_bytes = bytes.split_off(outpoint_offset);
+        let height_bytes = bytes.split_off(height_offset);
+
+        (
+            Address::from_bytes(bytes),
+            Height::from_bytes(height_bytes),
+            OutPoint::from_bytes(outpoint_bytes),
+        )
+    }
+}
+
 impl Storable for Height {
     fn to_bytes(&self) -> Vec<u8> {
         // The height is represented as an XOR'ed big endian byte array
@@ -223,9 +256,9 @@ impl Storable for Height {
     }
 }
 
-impl Storable for (Height, BitcoinOutPoint) {
+impl Storable for (Height, OutPoint) {
     fn to_bytes(&self) -> Vec<u8> {
-        vec![self.0.to_bytes(), BitcoinOutPoint::to_bytes(&self.1)]
+        vec![self.0.to_bytes(), OutPoint::to_bytes(&self.1)]
             .into_iter()
             .flatten()
             .collect()
@@ -237,7 +270,7 @@ impl Storable for (Height, BitcoinOutPoint) {
 
         (
             Height::from_bytes(bytes),
-            BitcoinOutPoint::from_bytes(outpoint_bytes),
+            OutPoint::from_bytes(outpoint_bytes),
         )
     }
 }
