@@ -1,6 +1,8 @@
 //! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
-use bitcoin::{hashes::Hash, BlockHash, OutPoint as BitcoinOutPoint, Script, TxOut, Txid};
+use bitcoin::{
+    hashes::Hash, BlockHash, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
+};
 use ic_btc_types::{Address, Height};
 use std::convert::TryInto;
 use std::ops::Deref;
@@ -27,6 +29,21 @@ impl From<&BitcoinOutPoint> for OutPoint {
             txid: bitcoin_outpoint.txid.to_vec(),
             vout: bitcoin_outpoint.vout,
         })
+    }
+}
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+pub struct TxOut {
+    pub value: u64,
+    pub script_pubkey: Vec<u8>,
+}
+
+impl From<&BitcoinTxOut> for TxOut {
+    fn from(bitcoin_txout: &BitcoinTxOut) -> Self {
+        Self {
+            value: bitcoin_txout.value,
+            script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
+        }
     }
 }
 
@@ -112,7 +129,7 @@ impl Storable for (TxOut, Height) {
         vec![
             self.1.to_le_bytes().to_vec(),       // Store the height (4 bytes)
             self.0.value.to_le_bytes().to_vec(), // Then the value (8 bytes)
-            self.0.script_pubkey.to_bytes(),     // Then the script (size varies)
+            self.0.script_pubkey.clone(),        // Then the script (size varies)
         ]
         .into_iter()
         .flatten()
@@ -125,7 +142,7 @@ impl Storable for (TxOut, Height) {
         (
             TxOut {
                 value,
-                script_pubkey: Script::from(bytes.split_off(12)),
+                script_pubkey: bytes.split_off(12),
             },
             height,
         )

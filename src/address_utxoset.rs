@@ -1,5 +1,8 @@
-use crate::{state::UtxoSet, types::{Storable, OutPoint}};
-use bitcoin::{Address, Transaction, TxOut};
+use crate::{
+    state::UtxoSet,
+    types::{OutPoint, Storable, TxOut},
+};
+use bitcoin::{Address, Script, Transaction};
 use ic_btc_types::{Address as AddressStr, Height, Utxo};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -100,7 +103,7 @@ impl<'a> AddressUtxoSet<'a> {
                     self.added_utxos
                         .insert(
                             (height, OutPoint::new(tx.txid().to_vec(), vout as u32)).to_bytes(),
-                            output.clone(),
+                            output.into(),
                         )
                         .is_none(),
                     "Cannot insert same outpoint twice"
@@ -114,7 +117,10 @@ impl<'a> AddressUtxoSet<'a> {
         let mut set: BTreeSet<_> = self
             .full_utxo_set
             .address_to_outpoints
-            .range(self.address.to_bytes(), offset.as_ref().map(|x| x.to_bytes()))
+            .range(
+                self.address.to_bytes(),
+                offset.as_ref().map(|x| x.to_bytes()),
+            )
             .map(|(k, _)| {
                 let (_, _, outpoint) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
                 let (txout, height) = self
@@ -133,9 +139,10 @@ impl<'a> AddressUtxoSet<'a> {
             None => self.added_utxos,
         };
         for (height_and_outpoint, txout) in added_utxos {
-            if let Some(address) =
-                Address::from_script(&txout.script_pubkey, self.full_utxo_set.network)
-            {
+            if let Some(address) = Address::from_script(
+                &Script::from(txout.script_pubkey.clone()),
+                self.full_utxo_set.network,
+            ) {
                 if address.to_string() == self.address {
                     assert!(
                         set.insert((height_and_outpoint, txout)),
@@ -146,9 +153,10 @@ impl<'a> AddressUtxoSet<'a> {
         }
 
         for (outpoint, (txout, height)) in self.removed_utxos {
-            if let Some(address) =
-                Address::from_script(&txout.script_pubkey, self.full_utxo_set.network)
-            {
+            if let Some(address) = Address::from_script(
+                &Script::from(txout.script_pubkey.clone()),
+                self.full_utxo_set.network,
+            ) {
                 if address.to_string() == self.address {
                     set.remove(&((height, outpoint).to_bytes(), txout));
                 }

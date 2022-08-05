@@ -3,7 +3,7 @@ use crate::{
     state::UtxoSet,
     types::{OutPoint, Storable},
 };
-use bitcoin::{Address, Transaction, TxOut, Txid};
+use bitcoin::{Address, Transaction, TxOut, Txid, Script};
 use std::str::FromStr;
 
 type Height = u32;
@@ -36,7 +36,8 @@ fn remove_spent_txs(utxo_set: &mut UtxoSet, tx: &Transaction) {
         // Remove the input from the UTXOs. The input *must* exist in the UTXO set.
         match utxo_set.utxos.remove(&(&input.previous_output).into()) {
             Some((txout, height)) => {
-                if let Some(address) = Address::from_script(&txout.script_pubkey, utxo_set.network)
+                if let Some(address) =
+                    Address::from_script(&Script::from(txout.script_pubkey), utxo_set.network)
                 {
                     let address = address.to_string();
                     let found = utxo_set
@@ -99,7 +100,7 @@ pub(crate) fn insert_utxo(
         }
     }
 
-    let outpoint_already_exists = utxo_set.utxos.insert(outpoint.clone(), (output, height));
+    let outpoint_already_exists = utxo_set.utxos.insert(outpoint.clone(), ((&output).into(), height));
 
     // Verify that we aren't overwriting a previously seen outpoint.
     // NOTE: There was a bug where there were duplicate transactions. These transactions
@@ -120,7 +121,7 @@ pub(crate) fn insert_utxo(
 mod test {
     use super::*;
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use bitcoin::{Network, TxOut, OutPoint as BitcoinOutPoint};
+    use bitcoin::{Network, OutPoint as BitcoinOutPoint, TxOut};
     use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
     use ic_btc_types::Address as AddressStr;
     use std::collections::BTreeSet;

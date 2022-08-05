@@ -1,6 +1,6 @@
 use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL};
-use crate::types::{Storable, OutPoint};
-use bitcoin::{TxOut};
+use crate::types::{Storable, OutPoint, TxOut};
+use bitcoin::{TxOut as BitcoinTxOut};
 use ic_btc_types::Height;
 use stable_structures::{btreemap, DefaultMemoryImpl, Memory, RestrictedMemory, StableBTreeMap};
 use std::collections::BTreeMap;
