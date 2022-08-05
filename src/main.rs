@@ -1,23 +1,46 @@
-/*pub use crate::fees::get_current_fee_percentiles;
-use crate::{metrics::BitcoinCanisterMetrics, state::State, store};
-use bitcoin::{util::psbt::serialize::Deserialize, Transaction};
-use ic_btc_types::{
-    GetBalanceError, GetUtxosError, GetUtxosResponse, SendTransactionError, SendTransactionRequest,
-    UtxosFilter,
-};
-use ic_btc_types_internal::{
-    BitcoinAdapterRequestWrapper, SendTransactionRequest as InternalSendTransactionRequest,
-};
-use ic_logger::ReplicaLogger;
-use ic_metrics::MetricsRegistry;
-use ic_replicated_state::bitcoin_state::BitcoinStateError;*/
 use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
 use ic_btc_canister::{state::State, store};
-use ic_btc_types::{GetBalanceError, UtxosFilter, GetUtxosResponse, GetUtxosError};
+use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
+use ic_cdk::api::stable::{StableReader, StableWriter};
+use ic_cdk_macros::{init, post_upgrade, pre_upgrade};
 use std::cell::RefCell;
 
 thread_local! {
-    pub static STATE: RefCell<State> = RefCell::new(State::new(1, BitcoinNetwork::Testnet, genesis_block(BitcoinNetwork::Testnet)));
+    pub static STATE: RefCell<Option<State>> = RefCell::new(None);
+}
+
+fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
+    STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
+}
+
+fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
+    STATE.with(|cell| f(cell.borrow_mut().as_mut().expect("state not initialized")))
+}
+
+#[init]
+fn init() {
+    STATE.with(|cell| {
+        *cell.borrow_mut() = Some(State::new(
+            1,
+            BitcoinNetwork::Testnet,
+            genesis_block(BitcoinNetwork::Testnet),
+        ))
+    });
+}
+
+#[pre_upgrade]
+fn pre_upgrade() {
+    with_state(|state| ciborium::ser::into_writer(state, StableWriter::default()))
+        .expect("failed to encode state");
+}
+
+#[post_upgrade]
+fn post_upgrade() {
+    STATE.with(|cell| {
+        *cell.borrow_mut() = Some(
+            ciborium::de::from_reader(StableReader::default()).expect("failed to decode state"),
+        );
+    })
 }
 
 fn main() {}

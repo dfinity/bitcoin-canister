@@ -2,6 +2,8 @@ use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZ
 use crate::types::Storable;
 use bitcoin::{OutPoint, TxOut};
 use ic_btc_types::Height;
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use stable_structures::{btreemap, DefaultMemoryImpl, Memory, RestrictedMemory, StableBTreeMap};
 use std::collections::BTreeMap;
 
@@ -40,32 +42,102 @@ type CanisterMemory = RestrictedMemory<DefaultMemoryImpl>;
 ///    1) "Small" to store UTXOs with script size <= 25 bytes.
 ///    2) "Medium" to store UTXOs with script size > 25 bytes && <= 201 bytes.
 ///    3) "Large" to store UTXOs with script size > 201 bytes.
+#[derive(Serialize, Deserialize)]
 pub struct Utxos {
     // A map storing the UTXOs that are "small" in size.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_small_utxos")]
     pub small_utxos: StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "medium" in size.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_medium_utxos")]
     pub medium_utxos: StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "large" in size.
     // The number of entries stored in this map is tiny (see docs above), so a
     // standard `BTreeMap` suffices.
-    pub large_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
+    pub large_utxos: BTreeMap<MyOutPoint, (MyTxOut, Height)>,
+}
+
+#[derive(Ord, PartialOrd, PartialEq, Eq)]
+pub struct MyOutPoint(OutPoint);
+
+impl Serialize for MyOutPoint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("OutPoint", 2)?;
+        state.serialize_field("vout", &self.0.vout)?;
+        // TODO: use serde_bytes somehow here.
+        state.serialize_field("txid", &self.0.txid.to_vec())?;
+        state.end()
+    }
+}
+
+use std::fmt;
+
+//use serde::de::{self, Deserialize, Deserializer, Visitor, SeqAccess, MapAccess};
+
+impl<'de> Deserialize<'de> for MyOutPoint {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        todo!();
+    }
+}
+
+use std::ops::Deref;
+impl Deref for MyOutPoint {
+    type Target = bitcoin::OutPoint;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Clone)]
+pub struct MyTxOut(TxOut);
+
+impl Serialize for MyTxOut {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let bytes: Vec<u8> = vec![
+            self.0.value.to_le_bytes().to_vec(), // Store the value (8 bytes)
+            self.0.script_pubkey.to_bytes(),     // Then the script (size varies)
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        serde_bytes::serialize(&bytes, serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for MyTxOut {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        todo!();
+    }
+}
+
+impl Deref for MyTxOut {
+    type Target = bitcoin::TxOut;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl Default for Utxos {
     fn default() -> Self {
         Self {
-            small_utxos: StableBTreeMap::init(
-                small_utxos_memory(),
-                UTXO_KEY_SIZE,
-                UTXO_VALUE_MAX_SIZE_SMALL,
-            ),
-            medium_utxos: StableBTreeMap::init(
-                medium_utxos_memory(),
-                UTXO_KEY_SIZE,
-                UTXO_VALUE_MAX_SIZE_MEDIUM,
-            ),
+            small_utxos: init_small_utxos(),
+            medium_utxos: init_medium_utxos(),
             large_utxos: BTreeMap::default(),
         }
     }
@@ -88,7 +160,9 @@ impl Utxos {
                 .expect("Inserting medium UTXO must succeed.")
                 .is_some()
         } else {
-            self.large_utxos.insert(key, value).is_some()
+            self.large_utxos
+                .insert(MyOutPoint(key), (MyTxOut(value.0), value.1))
+                .is_some()
         }
     }
 
@@ -104,7 +178,10 @@ impl Utxos {
             return Some(<(TxOut, Height)>::from_bytes(value));
         }
 
-        self.large_utxos.get(key).cloned()
+        self.large_utxos
+            .get(&MyOutPoint(*key))
+            .cloned()
+            .map(|(txout, height)| (txout.0, height))
     }
 
     /// Removes a key from the map, returning the previous value at the key if it exists.
@@ -119,14 +196,16 @@ impl Utxos {
             return Some(<(TxOut, Height)>::from_bytes(value));
         }
 
-        self.large_utxos.remove(key)
+        self.large_utxos
+            .remove(&MyOutPoint(*key))
+            .map(|(txout, height)| (txout.0, height))
     }
 
     /// Returns `true` if the key exists in the map, `false` otherwise.
     pub fn contains_key(&self, key: &OutPoint) -> bool {
         self.small_utxos.contains_key(&key.to_bytes())
             || self.medium_utxos.contains_key(&key.to_bytes())
-            || self.large_utxos.contains_key(key)
+            || self.large_utxos.contains_key(&MyOutPoint(key.clone())) // FIXME
     }
 
     /// Gets an iterator over the entries of the map.
@@ -149,7 +228,7 @@ impl Utxos {
 pub struct Iter<'a, M: Memory> {
     small_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
     medium_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
-    large_utxos_iter: std::collections::btree_map::Iter<'a, OutPoint, (TxOut, Height)>,
+    large_utxos_iter: std::collections::btree_map::Iter<'a, MyOutPoint, (MyTxOut, Height)>,
 }
 
 impl<'a> Iter<'a, CanisterMemory> {
@@ -183,8 +262,26 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
         }
 
         // Finally, iterate over the large utxos.
-        self.large_utxos_iter.next().map(|(k, v)| (*k, v.clone()))
+        self.large_utxos_iter
+            .next()
+            .map(|(k, v)| ((*k).0, (v.0 .0.clone(), v.1)))
     }
+}
+
+fn init_small_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
+    StableBTreeMap::init(
+        small_utxos_memory(),
+        UTXO_KEY_SIZE,
+        UTXO_VALUE_MAX_SIZE_SMALL,
+    )
+}
+
+fn init_medium_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
+    StableBTreeMap::init(
+        medium_utxos_memory(),
+        UTXO_KEY_SIZE,
+        UTXO_VALUE_MAX_SIZE_MEDIUM,
+    )
 }
 
 // Creates a memory region for the "small" UTXOs.

@@ -1,18 +1,11 @@
 use crate::{unstable_blocks::UnstableBlocks, utxos::Utxos};
 use bitcoin::{hashes::Hash, Block, Network, OutPoint, Script, TxOut, Txid};
 use ic_btc_types::Height;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
-/*use crate::{proto, PageMapMemory};
-use ic_protobuf::bitcoin::v1;
-use ic_replicated_state::bitcoin_state::{
-    AdapterQueues, BitcoinState as ReplicatedBitcoinState, FeePercentilesCache, UnstableBlocks,
-    UtxoSet as ReplicatedUtxoSet,
-};
-use ic_replicated_state::page_map::PersistenceError;
-use ic_state_layout::{AccessPolicy, ProtoFileWith, RwPolicy};
-use std::{convert::TryFrom, path::Path};
-*/
+
 /// A structure used to maintain the entire state.
+#[derive(Serialize, Deserialize)]
 pub struct State {
     // The height of the latest block marked as stable.
     pub height: Height,
@@ -28,6 +21,7 @@ pub struct State {
     // Cache for the current fee percentiles.
     //pub fee_percentiles_cache: Option<FeePercentilesCache>,
 }
+
 impl State {
     /// Create a new blockchain.
     ///
@@ -39,12 +33,12 @@ impl State {
             height: 0,
             utxos: UtxoSet::new(network),
             unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
-    //        adapter_queues: AdapterQueues::default(),
-     //       fee_percentiles_cache: None,
+            //        adapter_queues: AdapterQueues::default(),
+            //       fee_percentiles_cache: None,
         }
     }
 
-/*
+    /*
     /// Serializes the state to disk at the given path.
     // TODO(EXC-1093): Guard this function with a rust feature. It's only needed in local scripts.
     pub fn serialize(&self, root: &Path) -> Result<(), PersistenceError> {
@@ -204,22 +198,61 @@ pub const UTXO_VALUE_MAX_SIZE_MEDIUM: u32 = TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE
 const MAX_ADDRESS_SIZE: u32 = 90;
 const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
+#[derive(Serialize, Deserialize)]
 pub struct UtxoSet {
     pub utxos: Utxos,
+
+    #[serde(serialize_with = "serialize_network")]
+    #[serde(deserialize_with = "deserialize_network")]
     pub network: Network,
+
     // An index for fast retrievals of an address's UTXOs.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_address_outpoints")]
     pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
+}
+
+pub fn serialize_network<S>(network: &Network, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let n = match network {
+        Network::Bitcoin => 1,
+        Network::Testnet => 2,
+        Network::Regtest => 3,
+        Network::Signet => 4,
+    };
+    s.serialize_u8(n)
+}
+
+pub fn deserialize_network<'de, D>(d: D) -> Result<Network, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    todo!();
+    /*let n = match network {
+        Network::Bitcoin => 1,
+        Network::Testnet => 2,
+        Network::Regtest => 3,
+        Network::Signet => 4,
+    };
+    s.serialize_u8(n)*/
+}
+
+fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
+{
+    StableBTreeMap::init(
+        RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
+        MAX_ADDRESS_OUTPOINT_SIZE,
+        0, // No values are stored in the map.
+    )
 }
 
 impl UtxoSet {
     pub fn new(network: Network) -> Self {
         Self {
             utxos: Utxos::default(),
-            address_to_outpoints: StableBTreeMap::new(
-                RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
-                MAX_ADDRESS_OUTPOINT_SIZE,
-                0, // No values are stored in the map.
-            ),
+            address_to_outpoints: init_address_outpoints(),
             network,
         }
     }
