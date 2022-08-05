@@ -1,5 +1,8 @@
-use crate::{state::UtxoSet, types::Storable};
-use bitcoin::{Address, OutPoint, Transaction, TxOut};
+use crate::{
+    state::UtxoSet,
+    types::{OutPoint, Storable, TxOut},
+};
+use bitcoin::{Address, Script, Transaction};
 use ic_btc_types::{Address as AddressStr, Height, Utxo};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -61,17 +64,17 @@ impl<'a> AddressUtxoSet<'a> {
             .collect();
 
         for input in &tx.input {
-            match outpoint_to_height.get(&input.previous_output) {
+            match outpoint_to_height.get(&(&input.previous_output).into()) {
                 Some(height) => {
                     // Remove a UTXO that was previously added.
                     self.added_utxos
-                        .remove(&(*height, input.previous_output).to_bytes());
+                        .remove(&(*height, (&input.previous_output).into()).to_bytes());
                 }
                 None => {
                     let (txout, height) = self
                         .full_utxo_set
                         .utxos
-                        .get(&input.previous_output)
+                        .get(&(&input.previous_output).into())
                         .unwrap_or_else(|| {
                             panic!("Cannot find outpoint: {}", &input.previous_output)
                         });
@@ -79,7 +82,7 @@ impl<'a> AddressUtxoSet<'a> {
                     // Remove it.
                     let old_value = self
                         .removed_utxos
-                        .insert(input.previous_output, (txout.clone(), height));
+                        .insert((&input.previous_output).into(), (txout.clone(), height));
                     assert_eq!(old_value, None, "Cannot remove an output twice");
                 }
             }
@@ -99,8 +102,8 @@ impl<'a> AddressUtxoSet<'a> {
                 assert!(
                     self.added_utxos
                         .insert(
-                            (height, OutPoint::new(tx.txid(), vout as u32)).to_bytes(),
-                            output.clone(),
+                            (height, OutPoint::new(tx.txid().to_vec(), vout as u32)).to_bytes(),
+                            output.into(),
                         )
                         .is_none(),
                     "Cannot insert same outpoint twice"
@@ -114,7 +117,10 @@ impl<'a> AddressUtxoSet<'a> {
         let mut set: BTreeSet<_> = self
             .full_utxo_set
             .address_to_outpoints
-            .range(self.address.to_bytes(), offset.map(|x| x.to_bytes()))
+            .range(
+                self.address.to_bytes(),
+                offset.as_ref().map(|x| x.to_bytes()),
+            )
             .map(|(k, _)| {
                 let (_, _, outpoint) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
                 let (txout, height) = self
@@ -133,9 +139,10 @@ impl<'a> AddressUtxoSet<'a> {
             None => self.added_utxos,
         };
         for (height_and_outpoint, txout) in added_utxos {
-            if let Some(address) =
-                Address::from_script(&txout.script_pubkey, self.full_utxo_set.network)
-            {
+            if let Some(address) = Address::from_script(
+                &Script::from(txout.script_pubkey.clone()),
+                self.full_utxo_set.network.into(),
+            ) {
                 if address.to_string() == self.address {
                     assert!(
                         set.insert((height_and_outpoint, txout)),
@@ -146,9 +153,10 @@ impl<'a> AddressUtxoSet<'a> {
         }
 
         for (outpoint, (txout, height)) in self.removed_utxos {
-            if let Some(address) =
-                Address::from_script(&txout.script_pubkey, self.full_utxo_set.network)
-            {
+            if let Some(address) = Address::from_script(
+                &Script::from(txout.script_pubkey.clone()),
+                self.full_utxo_set.network.into(),
+            ) {
                 if address.to_string() == self.address {
                     set.remove(&((height, outpoint).to_bytes(), txout));
                 }
@@ -174,24 +182,17 @@ impl<'a> AddressUtxoSet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitcoin::secp256k1::rand::rngs::OsRng;
-    use bitcoin::secp256k1::Secp256k1;
-    use bitcoin::{Address, Network, PublicKey};
-    use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
+    use crate::test_utils::random_p2pkh_address;
+    use crate::types::Network;
+    use ic_btc_test_utils::TransactionBuilder;
     use ic_btc_types::OutPoint as PublicOutPoint;
 
     #[test]
     fn add_tx_to_empty_utxo() {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().unwrap();
-
         // Create some BTC addresses.
-        let address_1 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
+        let address_1 = random_p2pkh_address(Network::Mainnet);
 
-        let utxo_set = UtxoSet::new(Network::Bitcoin);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
 
@@ -218,20 +219,11 @@ mod test {
 
     #[test]
     fn add_tx_then_transfer() {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().unwrap();
-
         // Create some BTC addresses.
-        let address_1 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
-        let address_2 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
+        let address_1 = random_p2pkh_address(Network::Mainnet);
+        let address_2 = random_p2pkh_address(Network::Mainnet);
 
-        let utxo_set = UtxoSet::new(Network::Bitcoin);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
 
@@ -273,16 +265,10 @@ mod test {
     #[test]
     #[should_panic]
     fn insert_same_tx_twice() {
-        let secp = Secp256k1::new();
-        let mut rng = OsRng::new().unwrap();
-
         // Create some BTC addresses.
-        let address_1 = Address::p2pkh(
-            &PublicKey::new(secp.generate_keypair(&mut rng).1),
-            Network::Bitcoin,
-        );
+        let address_1 = random_p2pkh_address(Network::Mainnet);
 
-        let utxo_set = UtxoSet::new(Network::Bitcoin);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
 
@@ -299,7 +285,7 @@ mod test {
 
     #[test]
     fn spending_multiple_inputs() {
-        let network = Network::Bitcoin;
+        let network = Network::Mainnet;
 
         // Create some BTC addresses.
         let address_1 = random_p2pkh_address(network);
@@ -321,7 +307,7 @@ mod test {
             .build();
 
         // Process the blocks.
-        let utxo_set = UtxoSet::new(network);
+        let utxo_set = UtxoSet::new(Network::Mainnet);
         let mut address_1_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
         address_1_utxo_set.insert_tx(&coinbase_tx, 0);
         address_1_utxo_set.insert_tx(&tx, 1);
