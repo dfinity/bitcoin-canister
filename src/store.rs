@@ -206,11 +206,12 @@ pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::test_utils::random_p2pkh_address;
+    use crate::types::Network;
     use bitcoin::blockdata::constants::genesis_block;
     use bitcoin::secp256k1::rand::rngs::OsRng;
     use bitcoin::secp256k1::Secp256k1;
     use bitcoin::{consensus::Decodable, Address, BlockHash, Network as BitcoinNetwork, PublicKey};
-    use crate::types::Network;
     use byteorder::{LittleEndian, ReadBytesExt};
     use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
     use ic_btc_types::{OutPoint, Utxo};
@@ -218,7 +219,6 @@ mod test {
     use std::fs::File;
     use std::str::FromStr;
     use std::{collections::HashMap, io::BufReader, path::PathBuf};
-    use crate::test_utils::random_p2pkh_address;
 
     fn process_chain(state: &mut State, num_blocks: u32) {
         let mut chain: Vec<Block> = vec![];
@@ -681,13 +681,7 @@ mod test {
 
     #[test]
     fn get_utxos_min_confirmations_greater_than_chain_height() {
-        for network in [
-            Network::Mainnet,
-            Network::Testnet,
-            Network::Regtest,
-        ]
-        .iter()
-        {
+        for network in [Network::Mainnet, Network::Testnet, Network::Regtest].iter() {
             // Generate addresses.
             let address_1 = random_p2pkh_address(*network);
 
@@ -725,13 +719,7 @@ mod test {
 
     #[test]
     fn get_utxos_does_not_include_other_addresses() {
-        for network in [
-            Network::Mainnet,
-            Network::Testnet,
-            Network::Regtest,
-        ]
-        .iter()
-        {
+        for network in [Network::Mainnet, Network::Testnet, Network::Regtest].iter() {
             // Generate addresses.
             let address_1 = random_p2pkh_address(*network);
 
@@ -771,13 +759,7 @@ mod test {
 
     #[test]
     fn get_utxos_for_address_with_many_of_them_respects_utxo_limit() {
-        for network in [
-            Network::Mainnet,
-            Network::Testnet,
-            Network::Regtest,
-        ]
-        .iter()
-        {
+        for network in [Network::Mainnet, Network::Testnet, Network::Regtest].iter() {
             // Generate an address.
             let address = random_p2pkh_address(*network);
 

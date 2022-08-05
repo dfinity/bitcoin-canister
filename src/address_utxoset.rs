@@ -182,10 +182,10 @@ impl<'a> AddressUtxoSet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::Network;
     use crate::test_utils::random_p2pkh_address;
-    use ic_btc_test_utils::{TransactionBuilder};
-    use ic_btc_types::{OutPoint as PublicOutPoint};
+    use crate::types::Network;
+    use ic_btc_test_utils::TransactionBuilder;
+    use ic_btc_types::OutPoint as PublicOutPoint;
 
     #[test]
     fn add_tx_to_empty_utxo() {

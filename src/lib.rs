@@ -1,9 +1,9 @@
 mod address_utxoset;
 mod blocktree;
-mod unstable_blocks;
 pub mod state;
 pub mod store;
 pub mod types;
+mod unstable_blocks;
 mod utxos;
 mod utxoset;
 
