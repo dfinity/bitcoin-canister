@@ -55,6 +55,7 @@ pub enum Network {
     Regtest,
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<BitcoinNetwork> for Network {
     fn into(self) -> BitcoinNetwork {
         match self {

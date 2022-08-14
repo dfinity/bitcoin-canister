@@ -88,7 +88,7 @@ impl UtxoSet {
                 MAX_ADDRESS_OUTPOINT_SIZE,
                 0, // No values are stored in the map.
             ),
-            network: network,
+            network,
         }
     }
 }
