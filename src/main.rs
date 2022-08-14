@@ -1,20 +1,15 @@
-/*pub use crate::fees::get_current_fee_percentiles;
-use crate::{metrics::BitcoinCanisterMetrics, state::State, store};
-use bitcoin::{util::psbt::serialize::Deserialize, Transaction};
-use ic_btc_types::{
-    GetBalanceError, GetUtxosError, GetUtxosResponse, SendTransactionError, SendTransactionRequest,
-    UtxosFilter,
-};
-use ic_btc_types_internal::{
-    BitcoinAdapterRequestWrapper, SendTransactionRequest as InternalSendTransactionRequest,
-};
-use ic_logger::ReplicaLogger;
-use ic_metrics::MetricsRegistry;
-use ic_replicated_state::bitcoin_state::BitcoinStateError;*/
 use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
-use ic_btc_canister::{state::State, store, types::Network};
+use ic_btc_canister::{
+    state::State,
+    store,
+    types::{HttpRequest, HttpResponse, Network},
+};
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
+use ic_cdk_macros::query;
+use serde_bytes::ByteBuf;
 use std::cell::RefCell;
+
+mod metrics;
 
 thread_local! {
     pub static STATE: RefCell<State> = RefCell::new(State::new(1, Network::Testnet, genesis_block(BitcoinNetwork::Testnet)));
@@ -102,6 +97,19 @@ pub fn send_transaction(
 
     Ok(())
 }*/
+
+#[query]
+pub fn http_request(req: HttpRequest) -> HttpResponse {
+    let parts: Vec<&str> = req.url.split('?').collect();
+    match parts[0] {
+        "/metrics" => metrics::handle_metrics_request(),
+        _ => HttpResponse {
+            status_code: 404,
+            headers: vec![],
+            body: ByteBuf::from(String::from("Not found.")),
+        },
+    }
+}
 
 #[cfg(test)]
 mod test {
