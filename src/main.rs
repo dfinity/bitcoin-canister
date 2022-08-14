@@ -57,26 +57,6 @@ fn main() {}
 // than 100_000 `Utxo`s are returned in a single response.
 const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
 
-/*
-
-/// The Bitcoin Canister component.
-///
-/// Maintains information that is needed to be accessed at the bitcoin canister's
-/// runtime, such as metrics.
-pub struct BitcoinCanister {
-    pub(crate) metrics: BitcoinCanisterMetrics,
-    pub(crate) log: ReplicaLogger,
-}
-
-impl BitcoinCanister {
-    pub fn new(metrics_registry: &MetricsRegistry, log: ReplicaLogger) -> Self {
-        Self {
-            metrics: BitcoinCanisterMetrics::new(metrics_registry),
-            log,
-        }
-    }
-}*/
-
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(
     state: &State,
