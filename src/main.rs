@@ -12,7 +12,7 @@ use std::cell::RefCell;
 mod metrics;
 
 thread_local! {
-    pub static STATE: RefCell<State> = RefCell::new(State::new(1, Network::Testnet, genesis_block(BitcoinNetwork::Testnet)));
+    static STATE: RefCell<State> = RefCell::new(State::new(1, Network::Testnet, genesis_block(BitcoinNetwork::Testnet)));
 }
 
 pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
