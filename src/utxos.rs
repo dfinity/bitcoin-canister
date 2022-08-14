@@ -1,8 +1,7 @@
 use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL};
 use crate::types::{OutPoint, Storable, TxOut};
 use ic_btc_types::Height;
-use serde::ser::SerializeStruct;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use stable_structures::{btreemap, DefaultMemoryImpl, Memory, RestrictedMemory, StableBTreeMap};
 use std::collections::BTreeMap;
 
@@ -59,80 +58,6 @@ pub struct Utxos {
     pub large_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
 }
 
-/*
-#[derive(Ord, PartialOrd, PartialEq, Eq)]
-pub struct MyOutPoint(OutPoint);
-
-impl Serialize for MyOutPoint {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("OutPoint", 2)?;
-        state.serialize_field("vout", &self.0.vout)?;
-        // TODO: use serde_bytes somehow here.
-        state.serialize_field("txid", &self.0.txid.to_vec())?;
-        state.end()
-    }
-}
-
-use std::fmt;
-
-//use serde::de::{self, Deserialize, Deserializer, Visitor, SeqAccess, MapAccess};
-
-impl<'de> Deserialize<'de> for MyOutPoint {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        todo!();
-    }
-}
-
-use std::ops::Deref;
-impl Deref for MyOutPoint {
-    type Target = bitcoin::OutPoint;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[derive(Clone)]
-pub struct MyTxOut(TxOut);
-
-impl Serialize for MyTxOut {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let bytes: Vec<u8> = vec![
-            self.0.value.to_le_bytes().to_vec(), // Store the value (8 bytes)
-            self.0.script_pubkey.to_bytes(),     // Then the script (size varies)
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-
-        serde_bytes::serialize(&bytes, serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for MyTxOut {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        todo!();
-    }
-}
-
-impl Deref for MyTxOut {
-    type Target = bitcoin::TxOut;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-*/
 impl Default for Utxos {
     fn default() -> Self {
         Self {
@@ -262,9 +187,7 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
         // Finally, iterate over the large utxos.
         self.large_utxos_iter
             .next()
-            //          .map(|(k, v)| ((*k).0, (v.0 .0.clone(), v.1)))
             .map(|(k, v)| (k.clone(), v.clone()))
-        //>>>>>>> master
     }
 }
 

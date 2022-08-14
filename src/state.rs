@@ -1,11 +1,11 @@
 use crate::{types::Network, unstable_blocks::UnstableBlocks, utxos::Utxos};
 use bitcoin::Block;
 use ic_btc_types::Height;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
 /// A structure used to maintain the entire state.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq)]
 pub struct State {
     // The height of the latest block marked as stable.
     pub height: Height,
@@ -78,8 +78,6 @@ const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 pub struct UtxoSet {
     pub utxos: Utxos,
 
-    #[serde(serialize_with = "serialize_network")]
-    #[serde(deserialize_with = "deserialize_network")]
     pub network: Network,
 
     // An index for fast retrievals of an address's UTXOs.
@@ -88,31 +86,11 @@ pub struct UtxoSet {
     pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
 }
 
-pub fn serialize_network<S>(network: &Network, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let n = match network {
-        Network::Bitcoin => 1,
-        Network::Testnet => 2,
-        Network::Regtest => 3,
-        Network::Signet => 4,
-    };
-    s.serialize_u8(n)
-}
-
-pub fn deserialize_network<'de, D>(d: D) -> Result<Network, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    todo!();
-    /*let n = match network {
-        Network::Bitcoin => 1,
-        Network::Testnet => 2,
-        Network::Regtest => 3,
-        Network::Signet => 4,
-    };
-    s.serialize_u8(n)*/
+impl PartialEq for UtxoSet {
+    fn eq(&self, other: &Self) -> bool {
+        // TODO: add the rest
+        self.network == other.network
+    }
 }
 
 impl UtxoSet {
@@ -132,4 +110,23 @@ fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl
         MAX_ADDRESS_OUTPOINT_SIZE,
         0, // No values are stored in the map.
     )
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
+
+    #[test]
+    fn serialize_deserialize_state() {
+        let state = State::new(1, Network::Regtest, genesis_block(BitcoinNetwork::Regtest));
+        let mut bytes = vec![];
+        ciborium::ser::into_writer(&state, &mut bytes);
+        let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
+
+        assert_eq!(new_state.height, state.height);
+        assert_eq!(new_state.unstable_blocks, state.unstable_blocks);
+        assert_eq!(new_state.utxos.utxos.large_utxos, state.utxos.utxos.large_utxos);
+        //     assert_eq!(state, new_state);
+    }
 }

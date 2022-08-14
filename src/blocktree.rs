@@ -1,5 +1,5 @@
 use bitcoin::{Block, BlockHash};
-use serde::{Serialize, Serializer, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
 /// Represents a non-empty block chain as:
@@ -87,11 +87,13 @@ pub fn deserialize_block<'de, D>(d: D) -> Result<Block, D::Error>
 where
     D: Deserializer<'de>,
 {
-    todo!();
+    let bytes: Vec<u8> = serde_bytes::deserialize(d).unwrap();
+    use bitcoin::consensus::Decodable;
+    Ok(Block::consensus_decode(bytes.as_slice()).unwrap())
 }
 
 /// Maintains a tree of connected blocks.
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
 pub struct BlockTree {
     #[serde(serialize_with = "serialize_block")]
     #[serde(deserialize_with = "deserialize_block")]
