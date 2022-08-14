@@ -1,6 +1,5 @@
 use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL};
-use crate::types::Storable;
-use bitcoin::{OutPoint, TxOut};
+use crate::types::{OutPoint, Storable, TxOut};
 use ic_btc_types::Height;
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -57,9 +56,10 @@ pub struct Utxos {
     // A map storing the UTXOs that are "large" in size.
     // The number of entries stored in this map is tiny (see docs above), so a
     // standard `BTreeMap` suffices.
-    pub large_utxos: BTreeMap<MyOutPoint, (MyTxOut, Height)>,
+    pub large_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
 }
 
+/*
 #[derive(Ord, PartialOrd, PartialEq, Eq)]
 pub struct MyOutPoint(OutPoint);
 
@@ -132,7 +132,7 @@ impl Deref for MyTxOut {
         &self.0
     }
 }
-
+*/
 impl Default for Utxos {
     fn default() -> Self {
         Self {
@@ -160,9 +160,7 @@ impl Utxos {
                 .expect("Inserting medium UTXO must succeed.")
                 .is_some()
         } else {
-            self.large_utxos
-                .insert(MyOutPoint(key), (MyTxOut(value.0), value.1))
-                .is_some()
+            self.large_utxos.insert(key, value).is_some()
         }
     }
 
@@ -179,9 +177,9 @@ impl Utxos {
         }
 
         self.large_utxos
-            .get(&MyOutPoint(*key))
+            .get(key)
             .cloned()
-            .map(|(txout, height)| (txout.0, height))
+            .map(|(txout, height)| (txout, height))
     }
 
     /// Removes a key from the map, returning the previous value at the key if it exists.
@@ -197,15 +195,15 @@ impl Utxos {
         }
 
         self.large_utxos
-            .remove(&MyOutPoint(*key))
-            .map(|(txout, height)| (txout.0, height))
+            .remove(key)
+            .map(|(txout, height)| (txout, height))
     }
 
     /// Returns `true` if the key exists in the map, `false` otherwise.
     pub fn contains_key(&self, key: &OutPoint) -> bool {
         self.small_utxos.contains_key(&key.to_bytes())
             || self.medium_utxos.contains_key(&key.to_bytes())
-            || self.large_utxos.contains_key(&MyOutPoint(key.clone())) // FIXME
+            || self.large_utxos.contains_key(&key) // FIXME
     }
 
     /// Gets an iterator over the entries of the map.
@@ -228,7 +226,7 @@ impl Utxos {
 pub struct Iter<'a, M: Memory> {
     small_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
     medium_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
-    large_utxos_iter: std::collections::btree_map::Iter<'a, MyOutPoint, (MyTxOut, Height)>,
+    large_utxos_iter: std::collections::btree_map::Iter<'a, OutPoint, (TxOut, Height)>,
 }
 
 impl<'a> Iter<'a, CanisterMemory> {
@@ -264,7 +262,9 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
         // Finally, iterate over the large utxos.
         self.large_utxos_iter
             .next()
-            .map(|(k, v)| ((*k).0, (v.0 .0.clone(), v.1)))
+            //          .map(|(k, v)| ((*k).0, (v.0 .0.clone(), v.1)))
+            .map(|(k, v)| (k.clone(), v.clone()))
+        //>>>>>>> master
     }
 }
 

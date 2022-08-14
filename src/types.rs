@@ -1,8 +1,69 @@
 //! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
-use bitcoin::{hashes::Hash, BlockHash, OutPoint, Script, TxOut, Txid};
+use bitcoin::{
+    hashes::Hash, BlockHash, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
+    TxOut as BitcoinTxOut,
+};
+use candid::CandidType;
 use ic_btc_types::{Address, Height};
+use serde::Deserialize;
 use std::convert::TryInto;
+
+/// A reference to a transaction output.
+#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct OutPoint {
+    #[serde(with = "serde_bytes")]
+    pub txid: Vec<u8>,
+    pub vout: u32,
+}
+
+impl OutPoint {
+    pub fn new(txid: Vec<u8>, vout: u32) -> Self {
+        Self { txid, vout }
+    }
+}
+
+impl From<&BitcoinOutPoint> for OutPoint {
+    fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
+        Self {
+            txid: bitcoin_outpoint.txid.to_vec(),
+            vout: bitcoin_outpoint.vout,
+        }
+    }
+}
+
+/// A Bitcoin transaction's output.
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+pub struct TxOut {
+    pub value: u64,
+    pub script_pubkey: Vec<u8>,
+}
+
+impl From<&BitcoinTxOut> for TxOut {
+    fn from(bitcoin_txout: &BitcoinTxOut) -> Self {
+        Self {
+            value: bitcoin_txout.value,
+            script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub enum Network {
+    Mainnet,
+    Testnet,
+    Regtest,
+}
+
+impl Into<BitcoinNetwork> for Network {
+    fn into(self) -> BitcoinNetwork {
+        match self {
+            Network::Mainnet => BitcoinNetwork::Bitcoin,
+            Network::Testnet => BitcoinNetwork::Testnet,
+            Network::Regtest => BitcoinNetwork::Regtest,
+        }
+    }
+}
 
 /// Used to signal the cut-off point for returning chunked UTXOs results.
 pub struct Page {
@@ -49,24 +110,9 @@ impl Page {
         Ok(Page {
             tip_block_hash,
             height,
-            outpoint: outpoint_from_bytes(outpoint_bytes)?,
+            outpoint: OutPoint::from_bytes(outpoint_bytes),
         })
     }
-}
-
-fn outpoint_from_bytes(bytes: Vec<u8>) -> Result<OutPoint, String> {
-    if bytes.len() != 36 {
-        return Err(format!("Invalid length {} != 36 for outpoint", bytes.len()));
-    }
-    let txid = Txid::from_hash(
-        Hash::from_slice(&bytes[..32]).map_err(|err| format!("Could not parse txid: {}", err))?,
-    );
-    let vout = u32::from_le_bytes(
-        bytes[32..36]
-            .try_into()
-            .map_err(|err| format!("Could not parse vout: {}", err))?,
-    );
-    Ok(OutPoint { txid, vout })
 }
 
 /// A trait with convencience methods for storing an element into a stable structure.
@@ -78,7 +124,7 @@ pub trait Storable {
 
 impl Storable for OutPoint {
     fn to_bytes(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = self.txid.to_vec(); // Store the txid (32 bytes)
+        let mut v: Vec<u8> = self.txid.clone(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
         // An outpoint is always exactly to the key size (36 bytes).
@@ -90,7 +136,7 @@ impl Storable for OutPoint {
     fn from_bytes(bytes: Vec<u8>) -> Self {
         assert_eq!(bytes.len(), 36);
         OutPoint {
-            txid: Txid::from_hash(Hash::from_slice(&bytes[..32]).unwrap()),
+            txid: bytes[..32].to_vec(),
             vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
         }
     }
@@ -101,7 +147,7 @@ impl Storable for (TxOut, Height) {
         vec![
             self.1.to_le_bytes().to_vec(),       // Store the height (4 bytes)
             self.0.value.to_le_bytes().to_vec(), // Then the value (8 bytes)
-            self.0.script_pubkey.to_bytes(),     // Then the script (size varies)
+            self.0.script_pubkey.clone(),        // Then the script (size varies)
         ]
         .into_iter()
         .flatten()
@@ -114,7 +160,7 @@ impl Storable for (TxOut, Height) {
         (
             TxOut {
                 value,
-                script_pubkey: Script::from(bytes.split_off(12)),
+                script_pubkey: bytes.split_off(12),
             },
             height,
         )

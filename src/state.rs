@@ -1,5 +1,5 @@
-use crate::{unstable_blocks::UnstableBlocks, utxos::Utxos};
-use bitcoin::{hashes::Hash, Block, Network, OutPoint, Script, TxOut, Txid};
+use crate::{types::Network, unstable_blocks::UnstableBlocks, utxos::Utxos};
+use bitcoin::Block;
 use ic_btc_types::Height;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
@@ -239,15 +239,6 @@ where
     s.serialize_u8(n)*/
 }
 
-fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
-{
-    StableBTreeMap::init(
-        RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
-        MAX_ADDRESS_OUTPOINT_SIZE,
-        0, // No values are stored in the map.
-    )
-}
-
 impl UtxoSet {
     pub fn new(network: Network) -> Self {
         Self {
@@ -276,10 +267,10 @@ impl UtxoSet {
                 })
                 .collect(),
             network: match self.network {
-                Network::Bitcoin => 0,
-                Network::Testnet => 1,
-                Network::Signet => 2,
-                Network::Regtest => 3,
+                BitcoinNetwork::Bitcoin => 0,
+                BitcoinNetwork::Testnet => 1,
+                BitcoinNetwork::Signet => 2,
+                BitcoinNetwork::Regtest => 3,
             },
         }
     }
@@ -324,12 +315,21 @@ impl UtxoSet {
             utxos,
             address_to_outpoints: StableBTreeMap::load(address_to_outpoints_memory),
             network: match utxos_proto.network {
-                0 => Network::Bitcoin,
-                1 => Network::Testnet,
-                2 => Network::Signet,
-                3 => Network::Regtest,
+                0 => BitcoinNetwork::Bitcoin,
+                1 => BitcoinNetwork::Testnet,
+                2 => BitcoinNetwork::Signet,
+                3 => BitcoinNetwork::Regtest,
                 _ => panic!("Invalid network ID"),
             },
         }
     }*/
+}
+
+fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
+{
+    StableBTreeMap::init(
+        RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
+        MAX_ADDRESS_OUTPOINT_SIZE,
+        0, // No values are stored in the map.
+    )
 }
