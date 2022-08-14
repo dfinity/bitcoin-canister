@@ -1,6 +1,6 @@
 use ic_btc_canister::types::HttpResponse;
-use serde_bytes::ByteBuf;
 use ic_cdk::api::time;
+use serde_bytes::ByteBuf;
 use std::io;
 
 pub fn handle_metrics_request() -> HttpResponse {
@@ -30,20 +30,20 @@ pub fn handle_metrics_request() -> HttpResponse {
 }
 
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
-    crate::STATE.with(|state| {
+    crate::with_state(|state| {
         w.encode_gauge(
             "main_chain_height",
-            crate::store::main_chain_height(&state.borrow()) as f64,
+            crate::store::main_chain_height(&state) as f64,
             "Height of the main chain.",
         )?;
         w.encode_gauge(
             "utxos_length",
-            state.borrow().utxos.utxos.len() as f64,
+            state.utxos.utxos.len() as f64,
             "The size of the UTXO set.",
         )?;
         w.encode_gauge(
             "address_outpoints_length",
-            state.borrow().utxos.address_to_outpoints.len() as f64,
+            state.utxos.address_to_outpoints.len() as f64,
             "The size of the address to outpoints map.",
         )?;
         Ok(())
@@ -82,7 +82,13 @@ impl<W: io::Write> MetricsEncoder<W> {
         writeln!(self.writer, "# TYPE {} {}", name, typ)
     }
 
-    fn encode_single_value(&mut self, typ: &str, name: &str, value: f64, help: &str) -> io::Result<()> {
+    fn encode_single_value(
+        &mut self,
+        typ: &str,
+        name: &str,
+        value: f64,
+        help: &str,
+    ) -> io::Result<()> {
         self.encode_header(name, help, typ)?;
         writeln!(self.writer, "{} {} {}", name, value, self.now_millis)
     }

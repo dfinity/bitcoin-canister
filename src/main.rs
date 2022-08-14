@@ -15,6 +15,10 @@ thread_local! {
     pub static STATE: RefCell<State> = RefCell::new(State::new(1, Network::Testnet, genesis_block(BitcoinNetwork::Testnet)));
 }
 
+pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
+    STATE.with(|cell| f(&cell.borrow()))
+}
+
 fn main() {}
 
 // The maximum number of UTXOs that are allowed to be included in a single
