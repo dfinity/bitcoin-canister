@@ -1,16 +1,11 @@
 use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
 use ic_btc_canister::{state::State, store, types::Network};
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
-use ic_cdk::api::stable::{StableReader, StableWriter};
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade};
+use ic_cdk_macros::init;
 use std::cell::RefCell;
 
 thread_local! {
     pub static STATE: RefCell<Option<State>> = RefCell::new(None);
-}
-
-fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
-    STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
 }
 
 fn set_state(state: State) {
@@ -24,18 +19,6 @@ fn init() {
         Network::Testnet,
         genesis_block(BitcoinNetwork::Testnet),
     ))
-}
-
-#[pre_upgrade]
-fn pre_upgrade() {
-    // FIXME: how does this work with stable btreemaps?
-    with_state(|state| ciborium::ser::into_writer(state, StableWriter::default()))
-        .expect("failed to encode state");
-}
-
-#[post_upgrade]
-fn post_upgrade() {
-    set_state(ciborium::de::from_reader(StableReader::default()).expect("failed to decode state"))
 }
 
 fn main() {}
@@ -129,78 +112,10 @@ mod test {
         random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder,
     };
     use ic_btc_types::{OutPoint, Utxo};
-    use proptest::prelude::*;
 
     // A default state to use for tests.
     fn default_state() -> State {
         State::new(1, Network::Regtest, genesis_block(BitcoinNetwork::Regtest))
-    }
-
-    proptest! {
-        #[test]
-        fn hello(
-            stability_threshold in 1..2u32,
-            network in prop_oneof![
-                Just(Network::Mainnet),
-                Just(Network::Testnet),
-                Just(Network::Regtest),
-            ],
-            num_blocks in prop_oneof![
-                Just(10),
-                Just(20),
-            ],
-        ) {
-            let num_transactions = 20;
-            let address = random_p2pkh_address(network.into());
-
-            let mut prev_block: Option<Block> = None;
-            let mut blocks = vec![];
-            let mut value = 1;
-
-            for block_idx in 0..num_blocks {
-                let mut block_builder = match prev_block {
-                    Some(b) => BlockBuilder::with_prev_header(b.header),
-                    None => BlockBuilder::genesis(),
-                };
-
-                let mut transactions = vec![];
-                for _ in 0..(num_transactions + block_idx) {
-                    transactions.push(
-                        TransactionBuilder::coinbase()
-                            .with_output(&address, value)
-                            .build()
-                    );
-                    // Vary the value of the transaction to ensure that
-                    // we get unique outpoints in the blockchain.
-                    value += 1;
-                }
-
-                for transaction in transactions.iter() {
-                    block_builder = block_builder.with_transaction(transaction.clone());
-                }
-
-                let block = block_builder.build();
-                blocks.push(block.clone());
-                prev_block = Some(block);
-            }
-
-            let mut state = State::new(stability_threshold, network, blocks[0].clone());
-
-            for block in blocks[1..].iter() {
-                store::insert_block(&mut state, block.clone()).unwrap();
-            }
-
-            let mut bytes = vec![];
-            ciborium::ser::into_writer(&state, &mut bytes).unwrap();
-            let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
-
-            assert_eq!(state.height, new_state.height);
-            assert_eq!(state.unstable_blocks, new_state.unstable_blocks);
-            assert_eq!(state.utxos.network, new_state.utxos.network);
-            assert_eq!(state.utxos.utxos.large_utxos, new_state.utxos.utxos.large_utxos);
-
-            // TODO: add way to validate that stablebtreemaps are equal.
-        }
     }
 
     #[test]

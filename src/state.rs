@@ -115,18 +115,41 @@ fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
+    use crate::test_utils::build_chain;
+    use proptest::prelude::*;
 
-    #[test]
-    fn serialize_deserialize_state() {
-        let state = State::new(1, Network::Regtest, genesis_block(BitcoinNetwork::Regtest));
-        let mut bytes = vec![];
-        ciborium::ser::into_writer(&state, &mut bytes);
-        let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn serialize_deserialize_state(
+            stability_threshold in 1..100u32,
+            network in prop_oneof![
+                Just(Network::Mainnet),
+                Just(Network::Testnet),
+                Just(Network::Regtest),
+            ],
+            num_blocks in 1..250u32,
+            num_transactions_in_block in 1..100u32,
+        ) {
+            let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
-        assert_eq!(new_state.height, state.height);
-        assert_eq!(new_state.unstable_blocks, state.unstable_blocks);
-        assert_eq!(new_state.utxos.utxos.large_utxos, state.utxos.utxos.large_utxos);
-        //     assert_eq!(state, new_state);
+            let mut state = State::new(stability_threshold, network, blocks[0].clone());
+
+            for block in blocks[1..].iter() {
+                crate::store::insert_block(&mut state, block.clone()).unwrap();
+            }
+
+            let mut bytes = vec![];
+            ciborium::ser::into_writer(&state, &mut bytes).unwrap();
+            let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
+
+            // Verify parts of the state are the same after serialization/deserialization.
+            assert_eq!(state.height, new_state.height);
+            assert_eq!(state.unstable_blocks, new_state.unstable_blocks);
+            assert_eq!(state.utxos.network, new_state.utxos.network);
+            assert_eq!(state.utxos.utxos.large_utxos, new_state.utxos.utxos.large_utxos);
+
+            // TODO(EXC-1188): Verify that stable btreemaps are also equal.
+        }
     }
 }
