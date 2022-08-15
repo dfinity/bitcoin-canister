@@ -101,10 +101,7 @@ impl Utxos {
             return Some(<(TxOut, Height)>::from_bytes(value));
         }
 
-        self.large_utxos
-            .get(key)
-            .cloned()
-            .map(|(txout, height)| (txout, height))
+        self.large_utxos.get(key).cloned()
     }
 
     /// Removes a key from the map, returning the previous value at the key if it exists.
@@ -128,7 +125,7 @@ impl Utxos {
     pub fn contains_key(&self, key: &OutPoint) -> bool {
         self.small_utxos.contains_key(&key.to_bytes())
             || self.medium_utxos.contains_key(&key.to_bytes())
-            || self.large_utxos.contains_key(&key) // FIXME
+            || self.large_utxos.contains_key(key)
     }
 
     /// Gets an iterator over the entries of the map.

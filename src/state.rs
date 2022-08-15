@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
 /// A structure used to maintain the entire state.
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub struct State {
     // The height of the latest block marked as stable.
     pub height: Height,
@@ -84,13 +84,6 @@ pub struct UtxoSet {
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_outpoints")]
     pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
-}
-
-impl PartialEq for UtxoSet {
-    fn eq(&self, other: &Self) -> bool {
-        // TODO: add the rest
-        self.network == other.network
-    }
 }
 
 impl UtxoSet {

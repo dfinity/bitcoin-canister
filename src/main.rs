@@ -1,24 +1,9 @@
-use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
-use ic_btc_canister::{state::State, store, types::Network};
+use ic_btc_canister::{state::State, store};
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
-use ic_cdk_macros::init;
 use std::cell::RefCell;
 
 thread_local! {
     pub static STATE: RefCell<Option<State>> = RefCell::new(None);
-}
-
-fn set_state(state: State) {
-    STATE.with(|cell| *cell.borrow_mut() = Some(state));
-}
-
-#[init]
-fn init() {
-    set_state(State::new(
-        1,
-        Network::Testnet,
-        genesis_block(BitcoinNetwork::Testnet),
-    ))
 }
 
 fn main() {}
@@ -107,7 +92,8 @@ pub fn send_transaction(
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitcoin::{blockdata::constants::genesis_block, Block};
+    use ic_btc_canister::types::Network;
+    use bitcoin::{blockdata::constants::genesis_block, Block, Network as BitcoinNetwork};
     use ic_btc_test_utils::{
         random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder,
     };
