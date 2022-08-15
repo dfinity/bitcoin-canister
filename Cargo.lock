@@ -417,8 +417,6 @@ dependencies = [
  "ciborium",
  "ic-btc-test-utils",
  "ic-btc-types",
- "ic-cdk",
- "ic-cdk-macros",
  "lazy_static",
  "maplit",
  "proptest",
@@ -444,32 +442,6 @@ dependencies = [
  "candid",
  "serde",
  "serde_bytes",
-]
-
-[[package]]
-name = "ic-cdk"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ebabbd2e082472e93928ec9725a5aeec4572284e07bf399f3e1eb6a358a4ba6"
-dependencies = [
- "candid",
- "cfg-if",
- "serde",
-]
-
-[[package]]
-name = "ic-cdk-macros"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d453dcbe269b19ebd9b3a377819c9f32b3c5c99c3dd42bfd6789600aa77b510c"
-dependencies = [
- "candid",
- "ic-cdk",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream",
- "syn",
 ]
 
 [[package]]
@@ -1038,17 +1010,6 @@ checksum = "d3d8e8de557aee63c26b85b947f5e59b690d0454c753f3adeb5cd7835ab88391"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn",
-]
-
-[[package]]
-name = "serde_tokenstream"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6deb15c3a535e81438110111d90168d91721652f502abb147f31cde129f683d"
-dependencies = [
- "proc-macro2",
- "serde",
  "syn",
 ]
 
