@@ -1,4 +1,4 @@
-use ic_btc_canister::types::HttpResponse;
+use crate::types::HttpResponse;
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
 use std::io;

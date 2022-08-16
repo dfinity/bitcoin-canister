@@ -31,9 +31,8 @@ stable-structures = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2
 #[build-dependencies]
 #prost-build = "0.10.4"
 
-[[bin]]
-name = "canister"
-path = "src/main.rs"
+[lib]
+crate-type = ["cdylib"]
 
 #[[example]]
 #name = "build-utxo-set"
