@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
 /// A structure used to maintain the entire state.
+// NOTE: `PartialEq` is only available in tests as it would be impractically
+// expensive in production.
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct State {
     // The height of the latest block marked as stable.
     pub height: Height,
@@ -96,10 +99,22 @@ impl UtxoSet {
     }
 }
 
+// NOTE: `PartialEq` is only available in tests as it would be impractically
+// expensive in production.
+#[cfg(test)]
+impl PartialEq for UtxoSet {
+    fn eq(&self, other: &Self) -> bool {
+        use crate::test_utils::is_stable_btreemap_equal;
+        self.utxos == other.utxos
+            && self.network == other.network
+            && is_stable_btreemap_equal(&self.address_to_outpoints, &other.address_to_outpoints)
+    }
+}
+
 fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
 {
     StableBTreeMap::init(
-        RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
+        RestrictedMemory::new(crate::memory::get(), 2000..2999),
         MAX_ADDRESS_OUTPOINT_SIZE,
         0, // No values are stored in the map.
     )
@@ -136,13 +151,8 @@ mod test {
             ciborium::ser::into_writer(&state, &mut bytes).unwrap();
             let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
 
-            // Verify parts of the state are the same after serialization/deserialization.
-            assert_eq!(state.height, new_state.height);
-            assert_eq!(state.unstable_blocks, new_state.unstable_blocks);
-            assert_eq!(state.utxos.network, new_state.utxos.network);
-            assert_eq!(state.utxos.utxos.large_utxos, new_state.utxos.utxos.large_utxos);
-
-            // TODO(EXC-1188): Verify that stable btreemaps are also equal.
+            // Verify the new state is the same as the old state.
+            assert!(state == new_state);
         }
     }
 }
