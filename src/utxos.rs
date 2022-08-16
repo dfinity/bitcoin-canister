@@ -1,6 +1,7 @@
 use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL};
 use crate::types::{OutPoint, Storable, TxOut};
 use ic_btc_types::Height;
+use serde::{Deserialize, Serialize};
 use stable_structures::{btreemap, DefaultMemoryImpl, Memory, RestrictedMemory, StableBTreeMap};
 use std::collections::BTreeMap;
 
@@ -39,11 +40,16 @@ type CanisterMemory = RestrictedMemory<DefaultMemoryImpl>;
 ///    1) "Small" to store UTXOs with script size <= 25 bytes.
 ///    2) "Medium" to store UTXOs with script size > 25 bytes && <= 201 bytes.
 ///    3) "Large" to store UTXOs with script size > 201 bytes.
+#[derive(Serialize, Deserialize)]
 pub struct Utxos {
     // A map storing the UTXOs that are "small" in size.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_small_utxos")]
     pub small_utxos: StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "medium" in size.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_medium_utxos")]
     pub medium_utxos: StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "large" in size.
@@ -55,16 +61,8 @@ pub struct Utxos {
 impl Default for Utxos {
     fn default() -> Self {
         Self {
-            small_utxos: StableBTreeMap::init(
-                small_utxos_memory(),
-                UTXO_KEY_SIZE,
-                UTXO_VALUE_MAX_SIZE_SMALL,
-            ),
-            medium_utxos: StableBTreeMap::init(
-                medium_utxos_memory(),
-                UTXO_KEY_SIZE,
-                UTXO_VALUE_MAX_SIZE_MEDIUM,
-            ),
+            small_utxos: init_small_utxos(),
+            medium_utxos: init_medium_utxos(),
             large_utxos: BTreeMap::default(),
         }
     }
@@ -118,7 +116,9 @@ impl Utxos {
             return Some(<(TxOut, Height)>::from_bytes(value));
         }
 
-        self.large_utxos.remove(key)
+        self.large_utxos
+            .remove(key)
+            .map(|(txout, height)| (txout, height))
     }
 
     /// Returns `true` if the key exists in the map, `false` otherwise.
@@ -186,6 +186,22 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
             .next()
             .map(|(k, v)| (k.clone(), v.clone()))
     }
+}
+
+fn init_small_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
+    StableBTreeMap::init(
+        small_utxos_memory(),
+        UTXO_KEY_SIZE,
+        UTXO_VALUE_MAX_SIZE_SMALL,
+    )
+}
+
+fn init_medium_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
+    StableBTreeMap::init(
+        medium_utxos_memory(),
+        UTXO_KEY_SIZE,
+        UTXO_VALUE_MAX_SIZE_MEDIUM,
+    )
 }
 
 // Creates a memory region for the "small" UTXOs.

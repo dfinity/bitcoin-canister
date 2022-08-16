@@ -1,8 +1,7 @@
-use bitcoin::{blockdata::constants::genesis_block, Network as BitcoinNetwork};
 use ic_btc_canister::{
     state::State,
     store,
-    types::{HttpRequest, HttpResponse, Network},
+    types::{HttpRequest, HttpResponse},
 };
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
 use ic_cdk_macros::query;
@@ -12,11 +11,11 @@ use std::cell::RefCell;
 mod metrics;
 
 thread_local! {
-    static STATE: RefCell<State> = RefCell::new(State::new(1, Network::Testnet, genesis_block(BitcoinNetwork::Testnet)));
+    pub static STATE: RefCell<Option<State>> = RefCell::new(None);
 }
 
 pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
-    STATE.with(|cell| f(&cell.borrow()))
+    STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
 }
 
 fn main() {}
@@ -118,7 +117,8 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitcoin::{blockdata::constants::genesis_block, Block};
+    use bitcoin::{blockdata::constants::genesis_block, Block, Network as BitcoinNetwork};
+    use ic_btc_canister::types::Network;
     use ic_btc_test_utils::{
         random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder,
     };

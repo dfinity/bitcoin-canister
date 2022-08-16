@@ -1,12 +1,13 @@
 use crate::blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree};
 use bitcoin::{Block, BlockHash};
+use serde::{Serialize, Deserialize};
 
 /// A data structure for maintaining all unstable blocks.
 ///
 /// A block `b` is considered stable if:
 ///   depth(block) ≥ stability_threshold
 ///   ∀ b', height(b') = height(b): depth(b) - depth(b’) ≥ stability_threshold
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UnstableBlocks {
     pub stability_threshold: u32,
     pub tree: BlockTree,

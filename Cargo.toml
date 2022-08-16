@@ -7,8 +7,8 @@ edition = "2018"
 
 [dependencies]
 bitcoin = "0.28.1"
-candid = "0.7.4"
 byteorder = "1.4.3"
+candid = "0.7.4"
 ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
 ic-cdk = "0.5.6"
 ic-cdk-macros = "0.5.6"
@@ -45,6 +45,9 @@ path = "src/main.rs"
 
 [dev-dependencies]
 bitcoin = {version = "0.28.1", features = ["rand"]} # needed for generating secp256k1 keys.
+# NOTE: A specific commit of ciborium is used that includes efficient serializion/deserialization of
+#       blobs. At the time of this writing, a new version including this commit hasn't yet been released.
+ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
 ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
 maplit = "1.0.2"
 proptest = "0.9.4"

@@ -1,9 +1,11 @@
 use crate::{types::Network, unstable_blocks::UnstableBlocks, utxos::Utxos};
 use bitcoin::Block;
 use ic_btc_types::Height;
+use serde::{Deserialize, Serialize};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
 /// A structure used to maintain the entire state.
+#[derive(Serialize, Deserialize)]
 pub struct State {
     // The height of the latest block marked as stable.
     pub height: Height,
@@ -72,10 +74,15 @@ pub const UTXO_VALUE_MAX_SIZE_MEDIUM: u32 = TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE
 const MAX_ADDRESS_SIZE: u32 = 90;
 const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
+#[derive(Serialize, Deserialize)]
 pub struct UtxoSet {
     pub utxos: Utxos,
+
     pub network: Network,
+
     // An index for fast retrievals of an address's UTXOs.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_address_outpoints")]
     pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
 }
 
@@ -83,12 +90,59 @@ impl UtxoSet {
     pub fn new(network: Network) -> Self {
         Self {
             utxos: Utxos::default(),
-            address_to_outpoints: StableBTreeMap::new(
-                RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
-                MAX_ADDRESS_OUTPOINT_SIZE,
-                0, // No values are stored in the map.
-            ),
+            address_to_outpoints: init_address_outpoints(),
             network,
+        }
+    }
+}
+
+fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
+{
+    StableBTreeMap::init(
+        RestrictedMemory::new(DefaultMemoryImpl::default(), 2000..2999),
+        MAX_ADDRESS_OUTPOINT_SIZE,
+        0, // No values are stored in the map.
+    )
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::test_utils::build_chain;
+    use proptest::prelude::*;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn serialize_deserialize_state(
+            stability_threshold in 1..100u32,
+            network in prop_oneof![
+                Just(Network::Mainnet),
+                Just(Network::Testnet),
+                Just(Network::Regtest),
+            ],
+            num_blocks in 1..250u32,
+            num_transactions_in_block in 1..100u32,
+        ) {
+            let blocks = build_chain(network, num_blocks, num_transactions_in_block);
+
+            let mut state = State::new(stability_threshold, network, blocks[0].clone());
+
+            for block in blocks[1..].iter() {
+                crate::store::insert_block(&mut state, block.clone()).unwrap();
+            }
+
+            let mut bytes = vec![];
+            ciborium::ser::into_writer(&state, &mut bytes).unwrap();
+            let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
+
+            // Verify parts of the state are the same after serialization/deserialization.
+            assert_eq!(state.height, new_state.height);
+            assert_eq!(state.unstable_blocks, new_state.unstable_blocks);
+            assert_eq!(state.utxos.network, new_state.utxos.network);
+            assert_eq!(state.utxos.utxos.large_utxos, new_state.utxos.utxos.large_utxos);
+
+            // TODO(EXC-1188): Verify that stable btreemaps are also equal.
         }
     }
 }
