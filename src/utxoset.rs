@@ -132,30 +132,42 @@ mod test {
     use std::collections::BTreeSet;
 
     #[test]
-    fn coinbase_tx() {
-        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
-            let address = random_p2pkh_address(*network);
+    fn coinbase_tx_mainnet() {
+        coinbase_test(Network::Mainnet);
+    }
 
-            let coinbase_tx = TransactionBuilder::coinbase()
-                .with_output(&address, 1000)
-                .build();
+    #[test]
+    fn coinbase_tx_testnet() {
+        coinbase_test(Network::Testnet);
+    }
 
-            let mut utxo = UtxoSet::new(*network);
-            insert_tx(&mut utxo, &coinbase_tx, 0);
+    #[test]
+    fn coinbase_tx_regtest() {
+        coinbase_test(Network::Regtest);
+    }
 
-            assert_eq!(utxo.utxos.len(), 1);
-            assert_eq!(
-                get_utxos(&utxo, &address.to_string()).into_vec(None),
-                vec![ic_btc_types::Utxo {
-                    outpoint: ic_btc_types::OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
-                        vout: 0,
-                    },
-                    value: 1000,
-                    height: 0,
-                }]
-            );
-        }
+    fn coinbase_test(network: Network) {
+        let address = random_p2pkh_address(network);
+
+        let coinbase_tx = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+
+        let mut utxo = UtxoSet::new(network);
+        insert_tx(&mut utxo, &coinbase_tx, 0);
+
+        assert_eq!(utxo.utxos.len(), 1);
+        assert_eq!(
+            get_utxos(&utxo, &address.to_string()).into_vec(None),
+            vec![ic_btc_types::Utxo {
+                outpoint: ic_btc_types::OutPoint {
+                    txid: coinbase_tx.txid().to_vec(),
+                    vout: 0,
+                },
+                value: 1000,
+                height: 0,
+            }]
+        );
     }
 
     #[test]
@@ -196,73 +208,85 @@ mod test {
     }
 
     #[test]
-    fn spending() {
-        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
-            let address_1 = random_p2pkh_address(*network);
-            let address_2 = random_p2pkh_address(*network);
+    fn spending_mainnet() {
+        spending(Network::Mainnet);
+    }
 
-            let mut utxo = UtxoSet::new(*network);
+    #[test]
+    fn spending_testnet() {
+        spending(Network::Testnet);
+    }
 
-            let coinbase_tx = TransactionBuilder::coinbase()
-                .with_output(&address_1, 1000)
-                .build();
-            insert_tx(&mut utxo, &coinbase_tx, 0);
+    #[test]
+    fn spending_regtest() {
+        spending(Network::Regtest);
+    }
 
-            let expected = vec![ic_btc_types::Utxo {
+    fn spending(network: Network) {
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+
+        let mut utxo = UtxoSet::new(network);
+
+        let coinbase_tx = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .build();
+        insert_tx(&mut utxo, &coinbase_tx, 0);
+
+        let expected = vec![ic_btc_types::Utxo {
+            outpoint: ic_btc_types::OutPoint {
+                txid: coinbase_tx.txid().to_vec(),
+                vout: 0,
+            },
+            value: 1000,
+            height: 0,
+        }];
+
+        assert_eq!(
+            get_utxos(&utxo, &address_1.to_string()).into_vec(None),
+            expected
+        );
+        assert_eq!(
+            utxo.address_to_outpoints
+                .iter()
+                .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
+                .collect::<BTreeSet<_>>(),
+            maplit::btreeset! {
+                (address_1.to_string(), 0, OutPoint::new(coinbase_tx.txid().to_vec(), 0))
+            }
+        );
+
+        // Spend the output to address 2.
+        let tx = TransactionBuilder::new()
+            .with_input(BitcoinOutPoint::new(coinbase_tx.txid(), 0))
+            .with_output(&address_2, 1000)
+            .build();
+        insert_tx(&mut utxo, &tx, 1);
+
+        assert_eq!(
+            get_utxos(&utxo, &address_1.to_string()).into_vec(None),
+            vec![]
+        );
+        assert_eq!(
+            get_utxos(&utxo, &address_2.to_string()).into_vec(None),
+            vec![ic_btc_types::Utxo {
                 outpoint: ic_btc_types::OutPoint {
-                    txid: coinbase_tx.txid().to_vec(),
-                    vout: 0,
+                    txid: tx.txid().to_vec(),
+                    vout: 0
                 },
                 value: 1000,
-                height: 0,
-            }];
-
-            assert_eq!(
-                get_utxos(&utxo, &address_1.to_string()).into_vec(None),
-                expected
-            );
-            assert_eq!(
-                utxo.address_to_outpoints
-                    .iter()
-                    .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
-                    .collect::<BTreeSet<_>>(),
-                maplit::btreeset! {
-                    (address_1.to_string(), 0, OutPoint::new(coinbase_tx.txid().to_vec(), 0))
-                }
-            );
-
-            // Spend the output to address 2.
-            let tx = TransactionBuilder::new()
-                .with_input(BitcoinOutPoint::new(coinbase_tx.txid(), 0))
-                .with_output(&address_2, 1000)
-                .build();
-            insert_tx(&mut utxo, &tx, 1);
-
-            assert_eq!(
-                get_utxos(&utxo, &address_1.to_string()).into_vec(None),
-                vec![]
-            );
-            assert_eq!(
-                get_utxos(&utxo, &address_2.to_string()).into_vec(None),
-                vec![ic_btc_types::Utxo {
-                    outpoint: ic_btc_types::OutPoint {
-                        txid: tx.txid().to_vec(),
-                        vout: 0
-                    },
-                    value: 1000,
-                    height: 1
-                }]
-            );
-            assert_eq!(
-                utxo.address_to_outpoints
-                    .iter()
-                    .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
-                    .collect::<BTreeSet<_>>(),
-                maplit::btreeset! {
-                    (address_2.to_string(), 1, OutPoint::new(tx.txid().to_vec(), 0))
-                }
-            );
-        }
+                height: 1
+            }]
+        );
+        assert_eq!(
+            utxo.address_to_outpoints
+                .iter()
+                .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
+                .collect::<BTreeSet<_>>(),
+            maplit::btreeset! {
+                (address_2.to_string(), 1, OutPoint::new(tx.txid().to_vec(), 0))
+            }
+        );
     }
 
     #[test]

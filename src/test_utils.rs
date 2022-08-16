@@ -1,6 +1,7 @@
 use crate::types::Network;
 use bitcoin::{secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, Block, PublicKey};
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+use stable_structures::{Memory, StableBTreeMap, Storable};
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
@@ -51,4 +52,22 @@ pub fn build_chain(
         prev_block = Some(block);
     }
     blocks
+}
+
+/// Returns true if the instances of `StableBTreeMap` provided are equal.
+pub fn is_stable_btreemap_equal<M: Memory + Clone, K: Storable + Eq, V: Storable + Eq>(
+    a: &StableBTreeMap<M, K, V>,
+    b: &StableBTreeMap<M, K, V>,
+) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+
+    for (x, y) in a.iter().zip(b.iter()) {
+        if x != y {
+            return false;
+        }
+    }
+
+    true
 }
