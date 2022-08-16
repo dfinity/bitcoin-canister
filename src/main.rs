@@ -1,9 +1,21 @@
-use ic_btc_canister::{state::State, store};
+use ic_btc_canister::{
+    state::State,
+    store,
+    types::{HttpRequest, HttpResponse},
+};
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
+use ic_cdk_macros::query;
+use serde_bytes::ByteBuf;
 use std::cell::RefCell;
+
+mod metrics;
 
 thread_local! {
     pub static STATE: RefCell<Option<State>> = RefCell::new(None);
+}
+
+pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
+    STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
 }
 
 fn main() {}
@@ -89,11 +101,24 @@ pub fn send_transaction(
     Ok(())
 }*/
 
+#[query]
+pub fn http_request(req: HttpRequest) -> HttpResponse {
+    let parts: Vec<&str> = req.url.split('?').collect();
+    match parts[0] {
+        "/metrics" => metrics::handle_metrics_request(),
+        _ => HttpResponse {
+            status_code: 404,
+            headers: vec![],
+            body: ByteBuf::from(String::from("Not found.")),
+        },
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_btc_canister::types::Network;
     use bitcoin::{blockdata::constants::genesis_block, Block, Network as BitcoinNetwork};
+    use ic_btc_canister::types::Network;
     use ic_btc_test_utils::{
         random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder,
     };

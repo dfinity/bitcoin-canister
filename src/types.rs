@@ -7,6 +7,7 @@ use bitcoin::{
 use candid::CandidType;
 use ic_btc_types::{Address, Height};
 use serde::{Deserialize, Serialize};
+use serde_bytes::ByteBuf;
 use std::convert::TryInto;
 
 /// A reference to a transaction output.
@@ -247,4 +248,21 @@ impl Storable for (Height, OutPoint) {
             OutPoint::from_bytes(outpoint_bytes),
         )
     }
+}
+
+type HeaderField = (String, String);
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct HttpRequest {
+    pub method: String,
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: ByteBuf,
+}
+
+#[derive(Clone, Debug, CandidType, Deserialize)]
+pub struct HttpResponse {
+    pub status_code: u16,
+    pub headers: Vec<HeaderField>,
+    pub body: ByteBuf,
 }
