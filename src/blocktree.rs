@@ -1,4 +1,5 @@
 use bitcoin::{Block, BlockHash};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
 /// Represents a non-empty block chain as:
@@ -73,8 +74,10 @@ impl fmt::Display for EmptyChainError {
 }
 
 /// Maintains a tree of connected blocks.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
 pub struct BlockTree {
+    #[serde(serialize_with = "serialize_block")]
+    #[serde(deserialize_with = "deserialize_block")]
     pub root: Block,
     pub children: Vec<BlockTree>,
 }
@@ -231,6 +234,31 @@ fn contains(block_tree: &BlockTree, block: &Block) -> bool {
 /// of any block in the tree.
 #[derive(Debug)]
 pub struct BlockDoesNotExtendTree(pub Block);
+
+
+// A method for serde to serialize a block.
+// Serialization relies on converting the block into a blob using the
+// Bitcoin standard format.
+fn serialize_block<S>(block: &Block, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use bitcoin::consensus::Encodable;
+    let mut bytes = vec![];
+    Block::consensus_encode(block, &mut bytes).unwrap();
+    serde_bytes::serialize(&bytes, s)
+}
+
+// A method for serde to deserialize a block.
+// The blob is assumed to be in Bitcoin standard format.
+fn deserialize_block<'de, D>(d: D) -> Result<Block, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let bytes: Vec<u8> = serde_bytes::deserialize(d).unwrap();
+    use bitcoin::consensus::Decodable;
+    Ok(Block::consensus_decode(bytes.as_slice()).unwrap())
+}
 
 #[cfg(test)]
 mod test {

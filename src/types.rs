@@ -6,12 +6,12 @@ use bitcoin::{
 };
 use candid::CandidType;
 use ic_btc_types::{Address, Height};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::convert::TryInto;
 
 /// A reference to a transaction output.
-#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
 pub struct OutPoint {
     #[serde(with = "serde_bytes")]
     pub txid: Vec<u8>,
@@ -34,7 +34,7 @@ impl From<&BitcoinOutPoint> for OutPoint {
 }
 
 /// A Bitcoin transaction's output.
-#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug)]
+#[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct TxOut {
     pub value: u64,
     pub script_pubkey: Vec<u8>,
@@ -49,7 +49,7 @@ impl From<&BitcoinTxOut> for TxOut {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Network {
     Mainnet,
     Testnet,
