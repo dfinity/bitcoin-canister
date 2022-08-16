@@ -1,4 +1,4 @@
-//! The purpose of this code is to make the memory being used in unit tests and
+//! The purpose of this module is to make the memory being used in unit tests and
 //! in production functionally equivalent.
 //!
 //! In production, a `DefaultMemoryImpl` resolves to the `Ic0StableMemory`,
