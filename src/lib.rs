@@ -1,5 +1,6 @@
 mod address_utxoset;
 mod blocktree;
+mod memory;
 pub mod state;
 pub mod store;
 pub mod types;

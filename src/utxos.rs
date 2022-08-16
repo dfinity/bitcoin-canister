@@ -68,6 +68,18 @@ impl Default for Utxos {
     }
 }
 
+// NOTE: `PartialEq` is only available in tests as it would be impractically
+// expensive in production.
+#[cfg(test)]
+impl PartialEq for Utxos {
+    fn eq(&self, other: &Self) -> bool {
+        use crate::test_utils::is_stable_btreemap_equal;
+        is_stable_btreemap_equal(&self.small_utxos, &other.small_utxos)
+            && is_stable_btreemap_equal(&self.medium_utxos, &other.medium_utxos)
+            && self.large_utxos == other.large_utxos
+    }
+}
+
 impl Utxos {
     /// Inserts a utxo into the map.
     /// Returns true if there was a previous value for the key in the map, false otherwise.
@@ -208,12 +220,12 @@ fn init_medium_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
 // The memory region currently is small for testing purposes and
 // will be much larger in the future.
 fn small_utxos_memory() -> CanisterMemory {
-    RestrictedMemory::new(DefaultMemoryImpl::default(), 0..999)
+    RestrictedMemory::new(crate::memory::get(), 0..999)
 }
 
 // Creates a memory region for the "medium" UTXOs.
 // The memory region currently is small for testing purposes and
 // will be much larger in the future.
 fn medium_utxos_memory() -> CanisterMemory {
-    RestrictedMemory::new(DefaultMemoryImpl::default(), 1000..1999)
+    RestrictedMemory::new(crate::memory::get(), 1000..1999)
 }
