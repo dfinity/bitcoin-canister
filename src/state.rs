@@ -114,7 +114,7 @@ impl PartialEq for UtxoSet {
 fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
 {
     StableBTreeMap::init(
-        RestrictedMemory::new(crate::memory::get(), 2000..2999),
+        crate::memory::get_address_outpoints_memory(),
         MAX_ADDRESS_OUTPOINT_SIZE,
         0, // No values are stored in the map.
     )

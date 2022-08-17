@@ -1,5 +1,8 @@
 use crate::types::Network;
-use bitcoin::{secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, Block, PublicKey};
+use bitcoin::{
+    blockdata::constants::genesis_block, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1,
+    Address, Block, PublicKey,
+};
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use stable_structures::{Memory, StableBTreeMap, Storable};
 
@@ -15,22 +18,46 @@ pub fn random_p2pkh_address(network: Network) -> Address {
 }
 
 /// Builds a random chain with the given number of block and transactions.
+/// The genesis block used in the chain is also random.
 pub fn build_chain(
     network: Network,
     num_blocks: u32,
     num_transactions_per_block: u32,
 ) -> Vec<Block> {
+    build_chain_with_genesis_block(
+        network,
+        BlockBuilder::genesis().build(),
+        num_blocks,
+        num_transactions_per_block,
+    )
+}
+
+/// Builds a random chain with the given number of block and transactions
+/// and starting with the Regtest genesis block.
+pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
+    let network = Network::Regtest;
+    build_chain_with_genesis_block(
+        network,
+        genesis_block(network.into()),
+        num_blocks,
+        num_transactions_per_block,
+    )
+}
+
+fn build_chain_with_genesis_block(
+    network: Network,
+    genesis_block: Block,
+    num_blocks: u32,
+    num_transactions_per_block: u32,
+) -> Vec<Block> {
     let address = random_p2pkh_address(network);
-    let mut prev_block: Option<Block> = None;
-    let mut blocks = vec![];
+    let mut blocks = vec![genesis_block.clone()];
+    let mut prev_block: Block = genesis_block;
     let mut value = 1;
 
-    for _ in 0..num_blocks {
-        let mut block_builder = match prev_block {
-            Some(b) => BlockBuilder::with_prev_header(b.header),
-            None => BlockBuilder::genesis(),
-        };
-
+    // Since we start with a genesis block, we need `num_blocks - 1` additional blocks.
+    for _ in 0..num_blocks - 1 {
+        let mut block_builder = BlockBuilder::with_prev_header(prev_block.header);
         let mut transactions = vec![];
         for _ in 0..num_transactions_per_block {
             transactions.push(
@@ -49,8 +76,9 @@ pub fn build_chain(
 
         let block = block_builder.build();
         blocks.push(block.clone());
-        prev_block = Some(block);
+        prev_block = block;
     }
+
     blocks
 }
 
