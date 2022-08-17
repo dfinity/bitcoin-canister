@@ -202,7 +202,7 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
 
 fn init_small_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
     StableBTreeMap::init(
-        small_utxos_memory(),
+        crate::memory::get_utxos_small_memory(),
         UTXO_KEY_SIZE,
         UTXO_VALUE_MAX_SIZE_SMALL,
     )
@@ -210,22 +210,8 @@ fn init_small_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
 
 fn init_medium_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
     StableBTreeMap::init(
-        medium_utxos_memory(),
+        crate::memory::get_utxos_medium_memory(),
         UTXO_KEY_SIZE,
         UTXO_VALUE_MAX_SIZE_MEDIUM,
     )
-}
-
-// Creates a memory region for the "small" UTXOs.
-// The memory region currently is small for testing purposes and
-// will be much larger in the future.
-fn small_utxos_memory() -> CanisterMemory {
-    RestrictedMemory::new(crate::memory::get(), 0..999)
-}
-
-// Creates a memory region for the "medium" UTXOs.
-// The memory region currently is small for testing purposes and
-// will be much larger in the future.
-fn medium_utxos_memory() -> CanisterMemory {
-    RestrictedMemory::new(crate::memory::get(), 1000..1999)
 }
