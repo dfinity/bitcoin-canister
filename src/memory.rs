@@ -22,7 +22,7 @@ thread_local! {
     static MEMORY: DefaultMemoryImpl = DefaultMemoryImpl::default();
 }
 
-// A memory used for storing bits of the state during updates..
+// A memory used for storing bits of the state during updates.
 const UPGRADES_MEMORY: Range<u64> = 0..1_000;
 
 // Memories for stable structures.
