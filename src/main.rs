@@ -1,21 +1,17 @@
 use ic_btc_canister::{
     state::State,
     store,
-    types::{HttpRequest, HttpResponse},
+    types::{HttpRequest, HttpResponse, InitPayload},
 };
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
-use ic_cdk_macros::query;
+use ic_cdk_macros::{init, query};
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
 
 mod metrics;
 
-thread_local! {
-    pub static STATE: RefCell<Option<State>> = RefCell::new(None);
-}
-
-pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
-    STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
+#[init]
+fn init(payload: InitPayload) {
+    ic_btc_canister::init(payload);
 }
 
 fn main() {}

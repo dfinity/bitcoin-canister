@@ -30,7 +30,7 @@ pub fn handle_metrics_request() -> HttpResponse {
 }
 
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
-    crate::with_state(|state| {
+    ic_btc_canister::with_state(|state| {
         w.encode_gauge(
             "main_chain_height",
             crate::store::main_chain_height(state) as f64,
