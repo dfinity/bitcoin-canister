@@ -10,6 +10,13 @@ use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::convert::TryInto;
 
+/// The payload used to initialize the canister.
+#[derive(CandidType, Deserialize)]
+pub struct InitPayload {
+    pub stability_threshold: u32,
+    pub network: Network,
+}
+
 /// A reference to a transaction output.
 #[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
 pub struct OutPoint {
@@ -49,7 +56,7 @@ impl From<&BitcoinTxOut> for TxOut {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Network {
     Mainnet,
     Testnet,
