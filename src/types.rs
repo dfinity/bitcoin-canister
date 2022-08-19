@@ -262,6 +262,26 @@ impl Storable for (Height, OutPoint) {
     }
 }
 
+// A blob representing a block in the standard bitcoin format.
+type BlockBlob = Vec<u8>;
+
+// A blob representing a block header in the standard bitcoin format.
+type BlockHeaderBlob = Vec<u8>;
+
+/// A request to retrieve more blocks from the Bitcoin network.
+#[derive(CandidType, Clone, Debug, PartialEq, Eq)]
+pub struct GetSuccessorsRequest {
+    pub anchor: Vec<u8>,
+    pub processed_block_hashes: Vec<Vec<u8>>,
+}
+
+/// A response containing new successor blocks from the Bitcoin network.
+#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq)]
+pub struct GetSuccessorsResponse {
+    pub blocks: Vec<BlockBlob>,
+    pub next: Vec<BlockHeaderBlob>,
+}
+
 type HeaderField = (String, String);
 
 #[derive(Clone, Debug, CandidType, Deserialize)]

@@ -4,7 +4,7 @@ use ic_btc_canister::{
     types::{HttpRequest, HttpResponse, InitPayload},
 };
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query};
+use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, heartbeat};
 use serde_bytes::ByteBuf;
 
 mod metrics;
@@ -22,6 +22,11 @@ fn pre_upgrade() {
 #[post_upgrade]
 fn post_upgrade() {
     ic_btc_canister::post_upgrade();
+}
+
+#[heartbeat]
+async fn heartbeat() {
+    ic_btc_canister::heartbeat().await
 }
 
 fn main() {}
