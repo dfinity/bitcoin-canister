@@ -13,12 +13,14 @@ use std::convert::TryInto;
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
 pub struct InitPayload {
-    pub stability_threshold: u32,
+    pub stability_threshold: u128,
     pub network: Network,
 }
 
 /// A reference to a transaction output.
-#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
+#[derive(
+    CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize,
+)]
 pub struct OutPoint {
     #[serde(with = "serde_bytes")]
     pub txid: Vec<u8>,
@@ -58,8 +60,11 @@ impl From<&BitcoinTxOut> for TxOut {
 
 #[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Network {
+    #[serde(rename = "mainnet")]
     Mainnet,
+    #[serde(rename = "testnet")]
     Testnet,
+    #[serde(rename = "regtest")]
     Regtest,
 }
 
