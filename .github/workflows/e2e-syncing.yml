@@ -9,6 +9,10 @@ on:
 jobs:
   e2e-syncing:
     runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        rust: [ '1.62.1' ]
+
     steps:
       - name: Install DFX
         run: |
@@ -16,3 +20,16 @@ jobs:
           DFX_VERSION=${DFX_VERSION:=0.11.1} bash install-dfx.sh < <(yes Y)
           rm install-dfx.sh
           dfx cache install
+          echo "$HOME/bin" >> $GITHUB_PATH  # TODO: check if this is needed.
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+          rustup component add clippy
+
+      - name: Deploy management mock
+        run: |
+          dfx start --background
+          dfx deploy --no-wallet management_mock
