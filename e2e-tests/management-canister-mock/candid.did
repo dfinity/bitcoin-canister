@@ -1,0 +1,14 @@
+type get_successors_request = record {
+  anchor: blob;
+  processed_block_hashes: vec blob;
+};
+
+type get_successors_response = record {
+  blocks: vec blob;
+  next: vec blob;
+};
+
+service : {
+  bitcoin_get_successors: (get_successors_request) -> (get_successors_response);
+}
+

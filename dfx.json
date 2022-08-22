@@ -5,7 +5,13 @@
       "type": "custom",
       "candid": "./candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
-      "build": "./build.sh"
+      "build": "./canister/build.sh"
+    },
+    "management-canister-mock": {
+      "type": "rust",
+      "candid": "./e2e-tests/management-canister-mock/candid.did",
+      "package": "management-canister-mock",
+      "wasm": "./target/wasm32-unknown-unknown/release/management-canister-mock.wasm"
     }
   },
   "defaults": {
