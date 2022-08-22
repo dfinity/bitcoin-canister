@@ -268,11 +268,14 @@ type BlockBlob = Vec<u8>;
 // A blob representing a block header in the standard bitcoin format.
 type BlockHeaderBlob = Vec<u8>;
 
+// A blob representing a block hash.
+type BlockHashBlob = Vec<u8>;
+
 /// A request to retrieve more blocks from the Bitcoin network.
 #[derive(CandidType, Clone, Debug, PartialEq, Eq)]
 pub struct GetSuccessorsRequest {
-    pub anchor: Vec<u8>,
-    pub processed_block_hashes: Vec<Vec<u8>>,
+    pub anchor: BlockHashBlob,
+    pub processed_block_hashes: Vec<BlockHashBlob>,
 }
 
 /// A response containing new successor blocks from the Bitcoin network.
