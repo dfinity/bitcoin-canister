@@ -126,7 +126,7 @@ jobs:
         SHELLCHECK_OPTS: -e SC1090 -e SC2119 -e SC1091
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
