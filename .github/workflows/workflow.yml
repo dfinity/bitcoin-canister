@@ -62,11 +62,6 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features -- -D warnings
-
       - name: Run Tests
         shell: bash
         run: |

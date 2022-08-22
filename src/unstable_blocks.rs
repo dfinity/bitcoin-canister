@@ -1,6 +1,6 @@
 use crate::blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree};
 use bitcoin::{Block, BlockHash};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// A data structure for maintaining all unstable blocks.
 ///

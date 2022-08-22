@@ -18,7 +18,9 @@ pub struct InitPayload {
 }
 
 /// A reference to a transaction output.
-#[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
+#[derive(
+    CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize,
+)]
 pub struct OutPoint {
     #[serde(with = "serde_bytes")]
     pub txid: Vec<u8>,
