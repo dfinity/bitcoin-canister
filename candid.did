@@ -4,11 +4,20 @@ type network = variant {
   regtest;
 };
 
+type satoshi = nat64;
+
+type address = text;
+
 type init_payload = record {
   stability_threshold: nat;
   network: network;
 };
 
-service bitcoin: (init_payload) -> {
+type get_balance_request = record {
+  address : address;
+  min_confirmations: opt nat32;
+};
 
+service bitcoin: (init_payload) -> {
+  get_balance: (get_balance_request) -> (satoshi);
 }
