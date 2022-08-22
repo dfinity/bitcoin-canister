@@ -13,8 +13,8 @@ dfx stop
 
 if [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   echo "SUCCESS"
-  return 0
+  exit 0
 else
   echo "FAIL"
-  return 1
+  exit 1
 fi
