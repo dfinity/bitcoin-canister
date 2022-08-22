@@ -48,7 +48,7 @@ mod test {
             .with_output(&address, 1000)
             .build();
         let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
-            .with_transaction(coinbase_tx.clone())
+            .with_transaction(coinbase_tx)
             .build();
 
         // Set the state.
@@ -133,7 +133,7 @@ mod test {
             .with_output(&address_2, 1000)
             .build();
         let block_2 = BlockBuilder::with_prev_header(block_1.header)
-            .with_transaction(tx.clone())
+            .with_transaction(tx)
             .build();
 
         // Set the state.
