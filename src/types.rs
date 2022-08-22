@@ -1,8 +1,8 @@
 //! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
 use bitcoin::{
-    hashes::Hash, BlockHash, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
-    TxOut as BitcoinTxOut,
+    hashes::Hash, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
+    OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
 };
 use candid::CandidType;
 use ic_btc_types::{Address, Height};
@@ -81,7 +81,7 @@ impl Into<BitcoinNetwork> for Network {
 
 /// Used to signal the cut-off point for returning chunked UTXOs results.
 pub struct Page {
-    pub tip_block_hash: BlockHash,
+    pub tip_block_hash: BitcoinBlockHash,
     pub height: Height,
     pub outpoint: OutPoint,
 }
@@ -106,7 +106,7 @@ impl Page {
         let outpoint_bytes = bytes.split_off(outpoint_offset);
         let height_bytes = bytes.split_off(height_offset);
 
-        let tip_block_hash = BlockHash::from_hash(
+        let tip_block_hash = BitcoinBlockHash::from_hash(
             Hash::from_slice(&bytes)
                 .map_err(|err| format!("Could not parse tip block hash: {}", err))?,
         );
@@ -260,6 +260,29 @@ impl Storable for (Height, OutPoint) {
             OutPoint::from_bytes(outpoint_bytes),
         )
     }
+}
+
+// A blob representing a block in the standard bitcoin format.
+type BlockBlob = Vec<u8>;
+
+// A blob representing a block header in the standard bitcoin format.
+type BlockHeaderBlob = Vec<u8>;
+
+// A blob representing a block hash.
+type BlockHash = Vec<u8>;
+
+/// A request to retrieve more blocks from the Bitcoin network.
+#[derive(CandidType, Clone, Debug, PartialEq, Eq)]
+pub struct GetSuccessorsRequest {
+    pub anchor: BlockHash,
+    pub processed_block_hashes: Vec<BlockHash>,
+}
+
+/// A response containing new successor blocks from the Bitcoin network.
+#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq)]
+pub struct GetSuccessorsResponse {
+    pub blocks: Vec<BlockBlob>,
+    pub next: Vec<BlockHeaderBlob>,
 }
 
 type HeaderField = (String, String);
