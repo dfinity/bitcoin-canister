@@ -11,6 +11,7 @@ type address = text;
 type init_payload = record {
   stability_threshold: nat;
   network: network;
+  management_canister: principal;
 };
 
 type get_balance_request = record {

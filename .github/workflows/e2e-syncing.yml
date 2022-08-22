@@ -1,0 +1,18 @@
+name: E2E Syncing
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  e2e-syncing:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install DFX
+        run: |
+          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
+          DFX_VERSION=${DFX_VERSION:=0.11.1} bash install-dfx.sh < <(yes Y)
+          rm install-dfx.sh
+          dfx cache install

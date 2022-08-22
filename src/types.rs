@@ -6,15 +6,17 @@ use bitcoin::{
 };
 use candid::CandidType;
 use ic_btc_types::{Address, Height};
+use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::convert::TryInto;
 
 /// The payload used to initialize the canister.
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct InitPayload {
     pub stability_threshold: u128,
     pub network: Network,
+    pub management_canister: Option<Principal>,
 }
 
 /// A reference to a transaction output.

@@ -56,6 +56,7 @@ fn set_state(state: State) {
 
 /// Initializes the state of the Bitcoin canister.
 pub fn init(payload: InitPayload) {
+    ic_cdk::print(&format!("initialzing with payload: {:?}", payload));
     set_state(State::new(
         payload
             .stability_threshold
@@ -63,7 +64,11 @@ pub fn init(payload: InitPayload) {
             .expect("stability threshold too large"),
         payload.network,
         genesis_block(payload.network.into()),
-    ))
+    ));
+
+    if let Some(management_canister) = payload.management_canister {
+        with_state_mut(|s| s.management_canister = management_canister)
+    }
 }
 
 pub fn pre_upgrade() {

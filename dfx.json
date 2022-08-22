@@ -6,6 +6,12 @@
       "candid": "./candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
       "build": "./build.sh"
+    },
+    "management_mock": {
+      "type": "custom",
+      "candid": "./management-mock/candid.did",
+      "wasm": "./management-mock/target/wasm32-unknown-unknown/release/management-mock.wasm",
+      "build": "./management-mock/build.sh"
     }
   },
   "defaults": {
