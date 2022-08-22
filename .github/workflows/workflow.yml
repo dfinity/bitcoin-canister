@@ -34,7 +34,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cargo test --no-run --release --all-targets --all-features
+          cargo build --release --all-targets --all-features
         env:
           RUST_BACKTRACE: 1
 
