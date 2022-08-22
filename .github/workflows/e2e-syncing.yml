@@ -40,5 +40,4 @@ jobs:
 
       - name: Deploy management mock
         run: |
-          dfx start --background
-          dfx deploy --no-wallet management_mock
+          bash syncing_test.sh
