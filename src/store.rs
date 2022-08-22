@@ -18,6 +18,7 @@ lazy_static! {
 }
 
 /// Returns the balance of a bitcoin address.
+// TODO(EXC-1203): Move this method into api/get_balance.rs
 pub fn get_balance(
     state: &State,
     address: &str,
