@@ -1,1 +1,14 @@
-// An empty candid interface (for now).
+type network = variant {
+  mainnet;
+  testnet;
+  regtest;
+};
+
+type init_payload = record {
+  stability_threshold: nat;
+  network: network;
+};
+
+service bitcoin: (init_payload) -> {
+
+}

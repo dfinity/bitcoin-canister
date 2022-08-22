@@ -14,6 +14,7 @@ use crate::{state::State, types::InitPayload};
 use bitcoin::blockdata::constants::genesis_block;
 use stable_structures::Memory;
 use std::cell::RefCell;
+use std::convert::TryInto;
 
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
@@ -52,7 +53,10 @@ fn set_state(state: State) {
 /// Initializes the state of the Bitcoin canister.
 pub fn init(payload: InitPayload) {
     set_state(State::new(
-        payload.stability_threshold,
+        payload
+            .stability_threshold
+            .try_into()
+            .expect("stability threshold too large"),
         payload.network,
         genesis_block(payload.network.into()),
     ))
@@ -98,7 +102,7 @@ mod test {
     proptest! {
         #[test]
         fn init_sets_state(
-            stability_threshold in 1..200u32,
+            stability_threshold in 1..200u128,
             network in prop_oneof![
                 Just(Network::Mainnet),
                 Just(Network::Testnet),
@@ -112,7 +116,7 @@ mod test {
 
             with_state(|state| {
                 assert!(
-                    *state == State::new(stability_threshold, network, genesis_block(network.into()))
+                    *state == State::new(stability_threshold as u32, network, genesis_block(network.into()))
                 );
             });
         }
@@ -122,7 +126,7 @@ mod test {
         #![proptest_config(ProptestConfig::with_cases(1))]
         #[test]
         fn upgrade(
-            stability_threshold in 1..100u32,
+            stability_threshold in 1..100u128,
             num_blocks in 1..250u32,
             num_transactions_in_block in 1..100u32,
         ) {
