@@ -4,7 +4,7 @@ use ic_btc_canister::{
     types::{HttpRequest, HttpResponse, InitPayload},
 };
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, heartbeat};
+use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query};
 use serde_bytes::ByteBuf;
 
 mod metrics;
