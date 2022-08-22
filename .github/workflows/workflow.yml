@@ -8,8 +8,39 @@ on:
 
 jobs:
 
+  cargo-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        rust: [ '1.62.1' ]
+        os: [ ubuntu-20.04, macos-10.15 ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Build
+        shell: bash
+        run: |
+          cargo test --no-run --release --all-targets --all-features
+        env:
+          RUST_BACKTRACE: 1
+
   cargo-tests:
     runs-on: ${{ matrix.os }}
+    needs: cargo-build
     strategy:
       matrix:
         rust: [ '1.62.1' ]
