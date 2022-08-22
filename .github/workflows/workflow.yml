@@ -1,5 +1,8 @@
 name: CI Checks
 
+env:
+  RUST_VERSION = 1.62.1
+
 on:
   push:
     branches:
@@ -27,8 +30,8 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
+          rustup update $RUST_VERSION --no-self-update
+          rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
 
       - name: Build
@@ -43,7 +46,6 @@ jobs:
     needs: cargo-build
     strategy:
       matrix:
-        rust: [ '1.62.1' ]
         os: [ ubuntu-20.04, macos-10.15 ]
 
     steps:
@@ -58,8 +60,8 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
+          rustup update $RUST_VERSION --no-self-update
+          rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
 
       - name: Run Tests
@@ -83,8 +85,8 @@ jobs:
 
       - name: Install Rust + Clippy
         run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
+          rustup update $RUST_VERSION --no-self-update
+          rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
           rustup component add clippy
 
@@ -99,14 +101,14 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install Rust + Clippy
         run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
+          rustup update $RUST_VERSION --no-self-update
+          rustup default $RUST_VERSION
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.62.1
-          override: true
-          components: rustfmt
+      - name: Install Rust + Rustfmt
+        run: |
+          rustup update $RUST_VERSION --no-self-update
+          rustup default $RUST_VERSION
+          rustup component add rustfmt
 
       - uses: actions-rs/cargo@v1
         with:
