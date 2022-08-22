@@ -282,6 +282,12 @@ pub struct GetSuccessorsResponse {
     pub next: Vec<BlockHeaderBlob>,
 }
 
+#[derive(CandidType, Debug, Deserialize, PartialEq)]
+pub struct GetBalanceRequest {
+    pub address: Address,
+    pub min_confirmations: Option<u32>,
+}
+
 type HeaderField = (String, String);
 
 #[derive(Clone, Debug, CandidType, Deserialize)]

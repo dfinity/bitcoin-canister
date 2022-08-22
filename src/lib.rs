@@ -1,4 +1,5 @@
 mod address_utxoset;
+mod api;
 mod blocktree;
 mod heartbeat;
 mod memory;
@@ -12,6 +13,7 @@ mod utxos;
 mod utxoset;
 
 use crate::{state::State, types::InitPayload};
+pub use api::get_balance;
 use bitcoin::blockdata::constants::genesis_block;
 pub use heartbeat::heartbeat;
 use stable_structures::Memory;

@@ -1,10 +1,10 @@
 use ic_btc_canister::{
     state::State,
     store,
-    types::{HttpRequest, HttpResponse, InitPayload},
+    types::{GetBalanceRequest, HttpRequest, HttpResponse, InitPayload},
 };
-use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, UtxosFilter};
-use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, heartbeat};
+use ic_btc_types::{GetUtxosError, GetUtxosResponse, Satoshi, UtxosFilter};
+use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
 use serde_bytes::ByteBuf;
 
 mod metrics;
@@ -29,6 +29,11 @@ async fn heartbeat() {
     ic_btc_canister::heartbeat().await
 }
 
+#[update]
+pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+    ic_btc_canister::get_balance(request)
+}
+
 fn main() {}
 
 // The maximum number of UTXOs that are allowed to be included in a single
@@ -42,17 +47,6 @@ fn main() {}
 // The value also conforms to the interface spec which requires that no more
 // than 100_000 `Utxo`s are returned in a single response.
 const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
-
-/// Retrieves the balance of the given Bitcoin address.
-pub fn get_balance(
-    state: &State,
-    address: &str,
-    min_confirmations: Option<u32>,
-) -> Result<u64, GetBalanceError> {
-    let min_confirmations = min_confirmations.unwrap_or(0);
-
-    store::get_balance(state, address, min_confirmations)
-}
 
 pub fn get_utxos(
     state: &State,
@@ -183,90 +177,11 @@ mod test {
     }
 
     #[test]
-    fn get_balance_malformed_address() {
-        assert_eq!(
-            get_balance(&default_state(), "not an address", None),
-            Err(GetBalanceError::MalformedAddress)
-        );
-    }
-
-    #[test]
     fn get_utxos_malformed_address() {
         assert_eq!(
             get_utxos(&default_state(), "not an address", None),
             Err(GetUtxosError::MalformedAddress)
         );
-    }
-
-    #[test]
-    fn get_balance_test() {
-        for network in [
-            (Network::Mainnet, BitcoinNetwork::Bitcoin),
-            (Network::Regtest, BitcoinNetwork::Regtest),
-            (Network::Testnet, BitcoinNetwork::Testnet),
-        ]
-        .iter()
-        {
-            // Generate addresses.
-            let address_1 = random_p2pkh_address(network.1);
-
-            let address_2 = random_p2pkh_address(network.1);
-
-            // Create a genesis block where 1000 satoshis are given to the address_1, followed
-            // by a block where address_1 gives 1000 satoshis to address_2.
-            let coinbase_tx = TransactionBuilder::coinbase()
-                .with_output(&address_1, 1000)
-                .build();
-            let block_0 = BlockBuilder::genesis()
-                .with_transaction(coinbase_tx.clone())
-                .build();
-            let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
-                .with_output(&address_2, 1000)
-                .build();
-            let block_1 = BlockBuilder::with_prev_header(block_0.header)
-                .with_transaction(tx.clone())
-                .build();
-
-            // Set the state.
-            let mut state = State::new(2, network.0, block_0);
-            store::insert_block(&mut state, block_1).unwrap();
-
-            // With up to one confirmation, expect address 2 to have a balance 1000, and
-            // address 1 to have a balance of 0.
-            for min_confirmations in [None, Some(0), Some(1)].iter() {
-                assert_eq!(
-                    get_balance(&state, &address_2.to_string(), *min_confirmations),
-                    Ok(1000)
-                );
-
-                assert_eq!(
-                    get_balance(&state, &address_1.to_string(), *min_confirmations),
-                    Ok(0)
-                );
-            }
-
-            // With two confirmations, expect address 2 to have a balance of 0, and address 1 to
-            // have a balance of 1000.
-            assert_eq!(get_balance(&state, &address_2.to_string(), Some(2)), Ok(0));
-            assert_eq!(
-                get_balance(&state, &address_1.to_string(), Some(2)),
-                Ok(1000)
-            );
-
-            // With >= 2 confirmations, we should get an error as that's higher than
-            // the chain's height.
-            for i in 3..10 {
-                assert_eq!(
-                    get_balance(&state, &address_2.to_string(), Some(i)),
-                    Err(GetBalanceError::MinConfirmationsTooLarge { given: i, max: 2 })
-                );
-                assert_eq!(
-                    get_balance(&state, &address_1.to_string(), Some(i)),
-                    Err(GetBalanceError::MinConfirmationsTooLarge { given: i, max: 2 })
-                );
-            }
-        }
     }
 
     #[test]
