@@ -235,7 +235,6 @@ fn contains(block_tree: &BlockTree, block: &Block) -> bool {
 #[derive(Debug)]
 pub struct BlockDoesNotExtendTree(pub Block);
 
-
 // A method for serde to serialize a block.
 // Serialization relies on converting the block into a blob using the
 // Bitcoin standard format.
