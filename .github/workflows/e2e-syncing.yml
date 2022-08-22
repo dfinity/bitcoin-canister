@@ -14,6 +14,15 @@ jobs:
         rust: [ '1.62.1' ]
 
     steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
       - name: Install DFX
         run: |
           wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
