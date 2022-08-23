@@ -63,7 +63,11 @@ pub fn init(payload: InitPayload) {
             .expect("stability threshold too large"),
         payload.network,
         genesis_block(payload.network.into()),
-    ))
+    ));
+
+    if let Some(blocks_source) = payload.blocks_source {
+        with_state_mut(|s| s.blocks_source = blocks_source)
+    }
 }
 
 pub fn pre_upgrade() {
@@ -116,6 +120,7 @@ mod test {
             init(InitPayload {
                 stability_threshold,
                 network,
+                blocks_source: None
             });
 
             with_state(|state| {
@@ -139,6 +144,7 @@ mod test {
             init(InitPayload {
                 stability_threshold,
                 network,
+                blocks_source: None
             });
 
             let blocks = build_regtest_chain(num_blocks, num_transactions_in_block);
