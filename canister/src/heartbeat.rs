@@ -41,8 +41,8 @@ pub async fn heartbeat() {
         s.heartbeat_in_progress = false;
     });
 
-    // TODO: Process the response in a separate heartbeat.
-    // TODO: Gracefully handle errors instead of unwrapping.
+    // TODO(EXC-1208): Process the response in a separate heartbeat
+    // and gracefully handle errors instead of unwrapping.
     with_state_mut(|state| {
         let blocks = response.unwrap().0.blocks;
         for block in blocks.into_iter() {
