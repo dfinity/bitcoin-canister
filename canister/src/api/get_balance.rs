@@ -26,7 +26,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 1,
             network: Network::Mainnet,
-            blocks_source: None
+            blocks_source: None,
         });
 
         get_balance(GetBalanceRequest {
@@ -41,7 +41,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 2,
             network,
-            blocks_source: None
+            blocks_source: None,
         });
 
         // Create a block where 1000 satoshis are given to an address.
@@ -86,7 +86,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 2,
             network,
-            blocks_source: None
+            blocks_source: None,
         });
 
         let address = random_p2pkh_address(network);
@@ -116,7 +116,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 2,
             network,
-            blocks_source: None
+            blocks_source: None,
         });
 
         // Generate addresses.
