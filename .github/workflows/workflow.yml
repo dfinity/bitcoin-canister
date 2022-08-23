@@ -154,7 +154,7 @@ jobs:
 
       - name: Run syncing test
         run: |
-          bash syncing_test.sh
+          bash e2e-tests/syncing_single_block.sh
 
   checks-pass:
     needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt"]
