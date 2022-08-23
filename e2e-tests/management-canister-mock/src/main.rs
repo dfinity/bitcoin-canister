@@ -17,6 +17,8 @@ struct GetSuccessorsResponse {
     next: Vec<BlockHeaderBlob>,
 }
 
+// A block with a coinbase transaction giving "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
+// 50 BTC.
 const BLOCK: &[u8] = &[
     0, 0, 0, 32, 6, 34, 110, 70, 17, 26, 11, 89, 202, 175, 18, 96, 67, 235, 91, 191, 40, 195, 79,
     58, 94, 51, 42, 31, 199, 178, 183, 60, 241, 136, 145, 15, 85, 62, 67, 249, 230, 181, 156, 95,
