@@ -26,7 +26,6 @@ pub struct State {
     /// The canister from which blocks are retrieved.
     /// Defaults to the management canister in production.
     pub blocks_source: Principal,
-
     // Queues used to communicate with the adapter.
     //   pub adapter_queues: AdapterQueues,
 
