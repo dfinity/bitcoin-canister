@@ -1,6 +1,7 @@
 use crate::{types::Network, unstable_blocks::UnstableBlocks, utxos::Utxos};
 use bitcoin::Block;
 use ic_btc_types::Height;
+use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
@@ -21,6 +22,11 @@ pub struct State {
 
     /// A lock to ensure that only one heartbeat is running at a tine.
     pub heartbeat_in_progress: bool,
+
+    /// The canister from which blocks are retrieved.
+    /// Defaults to the management canister in production.
+    pub blocks_source: Principal,
+
     // Queues used to communicate with the adapter.
     //   pub adapter_queues: AdapterQueues,
 
@@ -40,6 +46,7 @@ impl State {
             utxos: UtxoSet::new(network),
             unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
             heartbeat_in_progress: false,
+            blocks_source: Principal::management_canister(),
             //        adapter_queues: AdapterQueues::default(),
             //       fee_percentiles_cache: None,
         }

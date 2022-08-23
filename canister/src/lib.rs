@@ -63,7 +63,11 @@ pub fn init(payload: InitPayload) {
             .expect("stability threshold too large"),
         payload.network,
         genesis_block(payload.network.into()),
-    ))
+    ));
+
+    if let Some(blocks_source) = payload.blocks_source {
+        with_state_mut(|s| s.blocks_source = blocks_source)
+    }
 }
 
 pub fn pre_upgrade() {

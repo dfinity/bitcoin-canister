@@ -3,10 +3,9 @@ use crate::{
     types::{GetSuccessorsRequest, GetSuccessorsResponse},
 };
 use crate::{with_state, with_state_mut};
-use ic_cdk::{
-    api::{call::call, print},
-    export::Principal,
-};
+use bitcoin::consensus::Decodable;
+use bitcoin::Block;
+use ic_cdk::api::{call::call, print};
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -29,7 +28,7 @@ pub async fn heartbeat() {
     let request = get_successors_request();
     print(&format!("Sending request: {:?}", request));
     let response: Result<(GetSuccessorsResponse,), _> = call(
-        Principal::management_canister(),
+        with_state(|s| s.blocks_source),
         "bitcoin_get_successors",
         (request,),
     )
@@ -42,7 +41,15 @@ pub async fn heartbeat() {
         s.heartbeat_in_progress = false;
     });
 
-    // TODO: handle the response.
+    // TODO: Process the response in a separate heartbeat.
+    // TODO: Gracefully handle errors instead of unwrapping.
+    with_state_mut(|state| {
+        let blocks = response.unwrap().0.blocks;
+        for block in blocks.into_iter() {
+            let block = Block::consensus_decode(block.as_slice()).unwrap();
+            store::insert_block(state, block).unwrap();
+        }
+    });
 }
 
 // Retrieves a `GetSuccessorsRequest` to send to the adapter.

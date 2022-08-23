@@ -3,7 +3,7 @@
   "canisters": {
     "bitcoin": {
       "type": "custom",
-      "candid": "./candid.did",
+      "candid": "./canister/candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
       "build": "./canister/build.sh"
     },
