@@ -120,6 +120,7 @@ mod test {
             init(InitPayload {
                 stability_threshold,
                 network,
+                blocks_source: None
             });
 
             with_state(|state| {
@@ -143,6 +144,7 @@ mod test {
             init(InitPayload {
                 stability_threshold,
                 network,
+                blocks_source: None
             });
 
             let blocks = build_regtest_chain(num_blocks, num_transactions_in_block);
