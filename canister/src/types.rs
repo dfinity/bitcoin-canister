@@ -4,8 +4,8 @@ use bitcoin::{
     hashes::Hash, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
     OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
 };
-use candid::CandidType;
 use ic_btc_types::{Address, Height};
+use ic_cdk::export::{candid::CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::convert::TryInto;
@@ -15,6 +15,11 @@ use std::convert::TryInto;
 pub struct InitPayload {
     pub stability_threshold: u128,
     pub network: Network,
+
+    /// The canister from which blocks are retrieved.
+    /// Defaults to the management canister in production and can be overridden
+    /// for testing.
+    pub blocks_source: Option<Principal>,
 }
 
 /// A reference to a transaction output.
