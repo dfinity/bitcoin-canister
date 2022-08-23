@@ -25,10 +25,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
       - name: Install Rust
         run: |
@@ -58,10 +55,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
       - name: Install Rust
         run: |
@@ -86,10 +80,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
       - name: Install Rust + Clippy
         run: |
@@ -145,10 +136,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ git rev-parse HEAD }}
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
       - name: Install Rust
         run: |
