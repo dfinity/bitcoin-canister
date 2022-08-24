@@ -284,7 +284,7 @@ pub struct GetSuccessorsRequest {
 }
 
 /// A response containing new successor blocks from the Bitcoin network.
-#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq)]
+#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
 pub struct GetSuccessorsResponse {
     pub blocks: Vec<BlockBlob>,
     pub next: Vec<BlockHeaderBlob>,
