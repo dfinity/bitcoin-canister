@@ -84,20 +84,13 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use bitcoin::{blockdata::constants::genesis_block, Block, Network as BitcoinNetwork};
-    use ic_btc_canister::{state::State, types::Network};
-    use ic_btc_test_utils::{
-        random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder,
-    };
-    use ic_btc_types::{OutPoint, Utxo};
-
+    /*
     // A default state to use for tests.
     fn default_state() -> ic_btc_canister::state::State {
         State::new(1, Network::Regtest, genesis_block(BitcoinNetwork::Regtest))
     }
 
-    /*#[test]
+    #[test]
     fn send_transaction_malformed_transaction() {
         assert_eq!(
             send_transaction(

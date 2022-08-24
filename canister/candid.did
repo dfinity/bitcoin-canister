@@ -24,7 +24,7 @@ type utxo = record {
 type init_payload = record {
   stability_threshold: nat;
   network: network;
-  blocks_source: principal;
+  blocks_source: opt principal;
 };
 
 type get_balance_request = record {

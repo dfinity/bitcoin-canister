@@ -66,6 +66,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 1,
             network: Network::Mainnet,
+            blocks_source: None,
         });
 
         get_utxos(GetUtxosRequest {
@@ -80,6 +81,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 1,
             network,
+            blocks_source: None,
         });
 
         // Generate an address.
@@ -126,6 +128,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 1,
             network,
+            blocks_source: None,
         });
 
         // Generate addresses.
@@ -219,6 +222,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 1,
             network,
+            blocks_source: None,
         });
 
         let address = random_p2tr_address(network.into());
@@ -266,12 +270,13 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 2,
             network,
+            blocks_source: None,
         });
 
         // Generate addresses.
-        let address_1 = random_p2pkh_address(network.into());
+        let address_1 = random_p2pkh_address(network);
 
-        let address_2 = random_p2pkh_address(network.into());
+        let address_2 = random_p2pkh_address(network);
 
         // Create a block where 1000 satoshis are given to the address_1, followed
         // by a block where address_1 gives 1000 satoshis to address_2.
@@ -374,6 +379,7 @@ mod test {
         crate::init(InitPayload {
             stability_threshold: 2,
             network,
+            blocks_source: None,
         });
 
         let address = random_p2pkh_address(network);
