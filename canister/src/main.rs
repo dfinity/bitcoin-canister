@@ -86,7 +86,7 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
 mod test {
     use super::*;
     use bitcoin::{blockdata::constants::genesis_block, Block, Network as BitcoinNetwork};
-    use ic_btc_canister::{types::Network, state::State};
+    use ic_btc_canister::{state::State, types::Network};
     use ic_btc_test_utils::{
         random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder,
     };
@@ -97,7 +97,6 @@ mod test {
         State::new(1, Network::Regtest, genesis_block(BitcoinNetwork::Regtest))
     }
 
-    
     /*#[test]
     fn send_transaction_malformed_transaction() {
         assert_eq!(
@@ -133,5 +132,4 @@ mod test {
 
         assert_eq!(state.adapter_queues.num_requests(), 1);
     }*/
-
 }
