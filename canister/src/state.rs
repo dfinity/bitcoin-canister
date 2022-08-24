@@ -9,7 +9,6 @@ use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 
-
 /// A structure used to maintain the entire state.
 // NOTE: `PartialEq` is only available in tests as it would be impractically
 // expensive in production.
