@@ -9,7 +9,7 @@ use ic_cdk::api::{call::call, print};
 
 /// The heartbeat of the Bitcoin canister.
 ///
-/// The heartbeat fetches new new blocks from the network and inserts them into the state.
+/// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
     // Only fetch new blocks if there isn't a request in progress and there is no
     // response to process.
