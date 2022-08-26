@@ -4,7 +4,7 @@ use bitcoin::{
     hashes::Hash, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
     OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
 };
-use ic_btc_types::{Address, Height};
+use ic_btc_types::{Address, Height, UtxosFilter};
 use ic_cdk::export::{candid::CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -294,6 +294,13 @@ pub struct GetSuccessorsResponse {
 pub struct GetBalanceRequest {
     pub address: Address,
     pub min_confirmations: Option<u32>,
+}
+
+/// A request for getting the UTXOs for a given address.
+#[derive(CandidType, Debug, Deserialize, PartialEq)]
+pub struct GetUtxosRequest {
+    pub address: Address,
+    pub filter: Option<UtxosFilter>,
 }
 
 type HeaderField = (String, String);

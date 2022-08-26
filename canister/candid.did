@@ -8,6 +8,19 @@ type satoshi = nat64;
 
 type address = text;
 
+type block_hash = blob;
+
+type outpoint = record {
+  txid : blob;
+  vout : nat32
+};
+
+type utxo = record {
+  outpoint: outpoint;
+  value: satoshi;
+  height: nat32;
+};
+
 type init_payload = record {
   stability_threshold: nat;
   network: network;
@@ -19,6 +32,23 @@ type get_balance_request = record {
   min_confirmations: opt nat32;
 };
 
+type get_utxos_request = record {
+  address : address;
+  filter: opt variant {
+    min_confirmations: nat32;
+    page: blob;
+  };
+};
+
+type get_utxos_response = record {
+  utxos: vec utxo;
+  tip_block_hash: block_hash;
+  tip_height: nat32;
+  next_page: opt blob;
+};
+
 service bitcoin: (init_payload) -> {
   get_balance: (get_balance_request) -> (satoshi);
+  
+  get_utxos: (get_utxos_request) -> (get_utxos_response);
 }
