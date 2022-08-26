@@ -9,19 +9,25 @@ use ic_cdk::api::{call::call, print};
 
 /// The heartbeat of the Bitcoin canister.
 ///
-/// The heartbeat sends and processes `GetSuccessor` requests/responses, which
-/// is needed to fetch new blocks from the network.
+/// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
-    let is_locked = with_state(|s| s.heartbeat_in_progress);
-    if is_locked {
-        // Another heartbeat is already in progress.
-        return;
+    // Only fetch new blocks if there isn't a request in progress and there is no
+    // response to process.
+    let should_fetch_blocks = with_state(|s| {
+        !s.syncing_state.is_fetching_blocks && s.syncing_state.response_to_process.is_none()
+    });
+
+    if should_fetch_blocks {
+        return fetch_blocks().await;
     }
 
-    // Lock the heartbeat method to prevent future heartbeats from running
-    // until the lock is released.
+    maybe_process_response();
+}
+
+async fn fetch_blocks() {
+    // A lock to ensure the heartbeat only sends one request at a time.
     with_state_mut(|s| {
-        s.heartbeat_in_progress = true;
+        s.syncing_state.is_fetching_blocks = true;
     });
 
     // Request additional blocks.
@@ -36,18 +42,33 @@ pub async fn heartbeat() {
 
     print(&format!("Received response: {:?}", response));
 
-    // Release the heartbeat lock.
+    // Release the heartbeat lock and save the response.
     with_state_mut(|s| {
-        s.heartbeat_in_progress = false;
-    });
+        s.syncing_state.is_fetching_blocks = false;
 
-    // TODO(EXC-1208): Process the response in a separate heartbeat
-    // and gracefully handle errors instead of unwrapping.
+        match response {
+            Ok((response,)) => {
+                s.syncing_state.response_to_process = Some(response);
+            }
+            Err((code, msg)) => {
+                print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
+                s.syncing_state.response_to_process = None;
+            }
+        }
+    });
+}
+
+// Process a `GetSuccessorsResponse` if one is available.
+fn maybe_process_response() {
     with_state_mut(|state| {
-        let blocks = response.unwrap().0.blocks;
-        for block in blocks.into_iter() {
-            let block = Block::consensus_decode(block.as_slice()).unwrap();
-            store::insert_block(state, block).unwrap();
+        let response_to_process = state.syncing_state.response_to_process.take();
+        if let Some(response) = response_to_process {
+            let blocks = response.blocks;
+            for block in blocks.into_iter() {
+                // TODO(EXC-1215): Gracefully handle the errors here.
+                let block = Block::consensus_decode(block.as_slice()).unwrap();
+                store::insert_block(state, block).unwrap();
+            }
         }
     });
 }

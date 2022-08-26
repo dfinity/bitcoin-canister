@@ -1,4 +1,8 @@
-use crate::{types::Network, unstable_blocks::UnstableBlocks, utxos::Utxos};
+use crate::{
+    types::{GetSuccessorsResponse, Network},
+    unstable_blocks::UnstableBlocks,
+    utxos::Utxos,
+};
 use bitcoin::Block;
 use ic_btc_types::Height;
 use ic_cdk::export::Principal;
@@ -20,8 +24,8 @@ pub struct State {
     /// Blocks inserted, but are not considered stable yet.
     pub unstable_blocks: UnstableBlocks,
 
-    /// A lock to ensure that only one heartbeat is running at a tine.
-    pub heartbeat_in_progress: bool,
+    /// State used for syncing new blocks.
+    pub syncing_state: SyncingState,
 
     /// The canister from which blocks are retrieved.
     /// Defaults to the management canister in production.
@@ -44,7 +48,7 @@ impl State {
             height: 0,
             utxos: UtxoSet::new(network),
             unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
-            heartbeat_in_progress: false,
+            syncing_state: SyncingState::default(),
             blocks_source: Principal::management_canister(),
             //        adapter_queues: AdapterQueues::default(),
             //       fee_percentiles_cache: None,
@@ -119,6 +123,16 @@ impl PartialEq for UtxoSet {
             && self.network == other.network
             && is_stable_btreemap_equal(&self.address_to_outpoints, &other.address_to_outpoints)
     }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct SyncingState {
+    /// A flag used to ensure that only one request for fetching blocks is
+    /// being sent at a time.
+    pub is_fetching_blocks: bool,
+
+    /// A response that needs to be processed.
+    pub response_to_process: Option<GetSuccessorsResponse>,
 }
 
 fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
