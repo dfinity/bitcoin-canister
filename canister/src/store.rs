@@ -181,19 +181,19 @@ fn get_utxos_from_chain(
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotExtendTree> {
     // The block is first inserted into the unstable blocks.
-    unstable_blocks::push(&mut state.unstable_blocks, block)?;
+    unstable_blocks::push(&mut state.unstable_blocks, block)
+}
 
-    // Process a stable block, if any.
-    // TODO(EXC-932): Process all stable blocks, not just one.
-    if let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
+/// Pops any blocks in `UnstableBlocks` that are considered stable and writes
+/// them to the UTXO set.
+pub fn write_stable_blocks_into_utxoset(state: &mut State) {
+    while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
         for tx in &new_stable_block.txdata {
             utxoset::insert_tx(&mut state.utxos, tx, state.height);
         }
 
         state.height += 1;
     }
-
-    Ok(())
 }
 
 pub fn main_chain_height(state: &State) -> Height {
@@ -272,6 +272,7 @@ mod test {
         let mut i = 0;
         for block in chain.into_iter() {
             insert_block(state, block).unwrap();
+            write_stable_blocks_into_utxoset(state);
             i += 1;
             if i % 1000 == 0 {
                 println!("processed block: {}", i);

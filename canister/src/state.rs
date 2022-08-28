@@ -169,6 +169,7 @@ mod test {
 
             for block in blocks[1..].iter() {
                 crate::store::insert_block(&mut state, block.clone()).unwrap();
+                crate::store::write_stable_blocks_into_utxoset(&mut state);
             }
 
             let mut bytes = vec![];

@@ -21,6 +21,9 @@ pub async fn heartbeat() {
         return fetch_blocks().await;
     }
 
+    // TODO: add test case
+    write_stable_blocks_into_utxoset();
+
     maybe_process_response();
 }
 
@@ -56,6 +59,10 @@ async fn fetch_blocks() {
             }
         }
     });
+}
+
+fn write_stable_blocks_into_utxoset() {
+    with_state_mut(|s| store::write_stable_blocks_into_utxoset(s));
 }
 
 // Process a `GetSuccessorsResponse` if one is available.
