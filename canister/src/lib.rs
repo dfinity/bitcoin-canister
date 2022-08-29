@@ -3,6 +3,7 @@ mod api;
 mod blocktree;
 mod heartbeat;
 mod memory;
+mod runtime;
 pub mod state;
 pub mod store;
 #[cfg(test)]
