@@ -1,11 +1,11 @@
 use crate::{
+    runtime::{call_get_successors, print},
     store,
     types::{GetSuccessorsRequest, GetSuccessorsResponse},
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::consensus::Decodable;
 use bitcoin::Block;
-use ic_cdk::api::{call::call, print};
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -22,6 +22,8 @@ pub async fn heartbeat() {
     }
 
     maybe_process_response();
+
+    write_stable_blocks_into_utxoset();
 }
 
 async fn fetch_blocks() {
@@ -33,12 +35,9 @@ async fn fetch_blocks() {
     // Request additional blocks.
     let request = get_successors_request();
     print(&format!("Sending request: {:?}", request));
-    let response: Result<(GetSuccessorsResponse,), _> = call(
-        with_state(|s| s.blocks_source),
-        "bitcoin_get_successors",
-        (request,),
-    )
-    .await;
+
+    let response: Result<(GetSuccessorsResponse,), _> =
+        call_get_successors(with_state(|s| s.blocks_source), request).await;
 
     print(&format!("Received response: {:?}", response));
 
@@ -56,6 +55,10 @@ async fn fetch_blocks() {
             }
         }
     });
+}
+
+fn write_stable_blocks_into_utxoset() {
+    with_state_mut(store::write_stable_blocks_into_utxoset);
 }
 
 // Process a `GetSuccessorsResponse` if one is available.
@@ -89,4 +92,45 @@ fn get_successors_request() -> GetSuccessorsRequest {
             processed_block_hashes,
         }
     })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::types::Network;
+    use bitcoin::{blockdata::constants::genesis_block, consensus::Encodable};
+    use ic_btc_test_utils::BlockBuilder;
+
+    #[async_std::test]
+    async fn fetches_blocks_and_processes_response() {
+        let network = Network::Regtest;
+
+        crate::init(crate::InitPayload {
+            stability_threshold: 0,
+            network,
+            blocks_source: None,
+        });
+
+        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header).build();
+
+        let mut block_bytes = vec![];
+        block.consensus_encode(&mut block_bytes).unwrap();
+
+        crate::runtime::set_successors_response(GetSuccessorsResponse {
+            blocks: vec![block_bytes],
+            next: vec![],
+        });
+
+        // Fetch blocks.
+        heartbeat().await;
+
+        // Process response and write stable blocks.
+        heartbeat().await;
+
+        // Assert that the block has been ingested.
+        assert_eq!(with_state(store::main_chain_height), 1);
+
+        // The stable height = 1 iff the block has been written into the UTXO set.
+        assert_eq!(with_state(|s| s.height), 1);
+    }
 }

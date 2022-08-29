@@ -3,6 +3,7 @@ mod api;
 mod blocktree;
 mod heartbeat;
 mod memory;
+mod runtime;
 pub mod state;
 pub mod store;
 #[cfg(test)]
@@ -155,6 +156,7 @@ mod test {
             for block in blocks[1..].iter() {
                 with_state_mut(|s| {
                     crate::store::insert_block(s, block.clone()).unwrap();
+                    crate::store::write_stable_blocks_into_utxoset(s);
                 });
             }
 
