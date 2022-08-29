@@ -1,5 +1,7 @@
-//! A module with wrapper methods around the IC0 API, with alternative implementations
-//! available in non-wasm environments to facilitate testing.
+//! Wrapper methods around the IC0 API and the canister's asynchronous calls.
+//!
+//! Alternative implementations are available in non-wasm environments to
+//! facilitate testing.
 use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse};
 use ic_cdk::{api::call::CallResult, export::Principal};
 use std::cell::RefCell;

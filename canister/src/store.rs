@@ -180,7 +180,6 @@ fn get_utxos_from_chain(
 /// Inserts a block into the state.
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotExtendTree> {
-    // The block is first inserted into the unstable blocks.
     unstable_blocks::push(&mut state.unstable_blocks, block)
 }
 
