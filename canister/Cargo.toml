@@ -47,6 +47,7 @@ path = "src/main.rs"
 #path = "src/examples/explore_utxos.rs"
 
 [dev-dependencies]
+async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = {version = "0.28.1", features = ["rand"]} # needed for generating secp256k1 keys.
 ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
 maplit = "1.0.2"
