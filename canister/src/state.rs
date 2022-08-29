@@ -133,6 +133,20 @@ pub struct SyncingState {
 
     /// A response that needs to be processed.
     pub response_to_process: Option<GetSuccessorsResponse>,
+
+    /// A stable block that has partially been written to the UTXO set. Used for time slicing.
+    pub partial_stable_block: Option<PartialStableBlock>,
+}
+
+
+/// A state for maintaining a stable block that is partially written into the UTXO set.
+/// Used for time slicing.
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
+pub struct PartialStableBlock {
+    #[serde(serialize_with = "crate::serde::serialize_block")]
+    #[serde(deserialize_with = "crate::serde::deserialize_block")]
+    pub block: Block,
+    pub txs_processed: usize,
 }
 
 fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>

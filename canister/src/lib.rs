@@ -4,6 +4,7 @@ mod blocktree;
 mod heartbeat;
 mod memory;
 mod runtime;
+mod serde;
 pub mod state;
 pub mod store;
 #[cfg(test)]

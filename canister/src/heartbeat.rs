@@ -11,6 +11,12 @@ use bitcoin::Block;
 ///
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
+    if write_stable_blocks_into_utxoset() {
+        // Exit the heartbeat if stable blocks had been processed as a precaution to not
+        // exceed the instructions limit.
+        return;
+    }
+
     // Only fetch new blocks if there isn't a request in progress and there is no
     // response to process.
     let should_fetch_blocks = with_state(|s| {
@@ -22,8 +28,6 @@ pub async fn heartbeat() {
     }
 
     maybe_process_response();
-
-    write_stable_blocks_into_utxoset();
 }
 
 async fn fetch_blocks() {
@@ -57,8 +61,8 @@ async fn fetch_blocks() {
     });
 }
 
-fn write_stable_blocks_into_utxoset() {
-    with_state_mut(store::write_stable_blocks_into_utxoset);
+fn write_stable_blocks_into_utxoset() -> bool {
+    with_state_mut(store::write_stable_blocks_into_utxoset)
 }
 
 // Process a `GetSuccessorsResponse` if one is available.
@@ -97,9 +101,34 @@ fn get_successors_request() -> GetSuccessorsRequest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::Network;
-    use bitcoin::{blockdata::constants::genesis_block, consensus::Encodable};
-    use ic_btc_test_utils::BlockBuilder;
+    use crate::{
+        runtime,
+        state::PartialStableBlock,
+        test_utils::random_p2pkh_address,
+        types::{BlockBlob, Network},
+    };
+    use bitcoin::{
+        blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
+    };
+    use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+
+    fn build_block(prev_header: BlockHeader, address: Address, num_transactions: u128) -> Block {
+        let mut block = BlockBuilder::with_prev_header(prev_header);
+
+        let mut value = 1;
+        for _ in 0..num_transactions {
+            block = block.with_transaction(
+                TransactionBuilder::coinbase()
+                    .with_output(&address, value)
+                    .build(),
+            );
+
+            // Increment the value so that all transaction IDs are unique.
+            value += 1;
+        }
+
+        block.build()
+    }
 
     #[async_std::test]
     async fn fetches_blocks_and_processes_response() {
@@ -124,13 +153,112 @@ mod test {
         // Fetch blocks.
         heartbeat().await;
 
-        // Process response and write stable blocks.
+        // Process response.
         heartbeat().await;
 
         // Assert that the block has been ingested.
         assert_eq!(with_state(store::main_chain_height), 1);
 
-        // The stable height = 1 iff the block has been written into the UTXO set.
+        // The UTXO set hasn't been updated with the genesis block yet.
+        assert_eq!(with_state(|s| s.height), 0);
+
+        // Write the stable block (the genesis block) to the UTXO set.
+        heartbeat().await;
+
+        // Assert that the block has been ingested.
+        assert_eq!(with_state(store::main_chain_height), 1);
+
+        // The UTXO set has been updated with the genesis block.
         assert_eq!(with_state(|s| s.height), 1);
+    }
+
+    #[async_std::test]
+    async fn time_slices_large_blocks() {
+        let network = Network::Regtest;
+
+        crate::init(crate::InitPayload {
+            stability_threshold: 0,
+            network,
+            blocks_source: None,
+        });
+
+        // Setup a chain of two blocks.
+        let address = random_p2pkh_address(network);
+        let block_1 = build_block(genesis_block(network.into()).header, address.clone(), 10);
+        let block_2 = build_block(block_1.header, address, 1);
+
+        // Serialize the blocks.
+        let blocks: Vec<BlockBlob> = [block_1.clone(), block_2]
+            .iter()
+            .map(|block| {
+                let mut block_bytes = vec![];
+                block.consensus_encode(&mut block_bytes).unwrap();
+                block_bytes
+            })
+            .collect();
+
+        crate::runtime::set_successors_response(GetSuccessorsResponse {
+            blocks,
+            next: vec![],
+        });
+
+        // Set a large step for the performance_counter to exceed the instructions limit quickly.
+        runtime::set_performance_counter_step(1_000_000_000);
+
+        // Fetch blocks.
+        heartbeat().await;
+
+        // Process response.
+        heartbeat().await;
+
+        // Assert that the blocks have been ingested.
+        assert_eq!(with_state(store::main_chain_height), 2);
+
+        // Write stable blocks.
+        runtime::performance_counter_reset();
+        heartbeat().await;
+
+        // Assert that execution has been paused.
+        // Wrote the genesis block + 3 transactions of block_1 into the UTXO set.
+        assert_eq!(
+            with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
+            PartialStableBlock {
+                block: block_1.clone(),
+                txs_processed: 3
+            }
+        );
+
+        // Write more stable blocks.
+        runtime::performance_counter_reset();
+        heartbeat().await;
+
+        // Assert that execution has been paused. Added more transactions in block_1
+        // into the UTXO set.
+        assert_eq!(
+            with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
+            PartialStableBlock {
+                block: block_1,
+                txs_processed: 7
+            }
+        );
+
+        // Only the genesis block has been fully processed, so the stable height is one.
+        assert_eq!(with_state(|s| s.height), 1);
+
+        // Write more stable blocks.
+        runtime::performance_counter_reset();
+        heartbeat().await;
+
+        // Time slicing is complete.
+        assert!(with_state(|s| s
+            .syncing_state
+            .partial_stable_block
+            .is_none()));
+
+        // Assert that the blocks have been ingested.
+        assert_eq!(with_state(store::main_chain_height), 2);
+
+        // The stable height is now updated to include `block_1`.
+        assert_eq!(with_state(|s| s.height), 2);
     }
 }

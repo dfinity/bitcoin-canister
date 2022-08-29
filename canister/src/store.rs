@@ -1,6 +1,7 @@
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree},
-    state::State,
+    runtime::performance_counter,
+    state::{PartialStableBlock, State},
     types::{OutPoint, Page},
     unstable_blocks, utxoset,
 };
@@ -16,6 +17,9 @@ lazy_static! {
         Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap()
     ];
 }
+
+// The threshold at which time slicing kicks in.
+const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
 
 /// Returns the balance of a bitcoin address.
 // TODO(EXC-1203): Move this method into api/get_balance.rs
@@ -183,16 +187,66 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
     unstable_blocks::push(&mut state.unstable_blocks, block)
 }
 
-/// Pops any blocks in `UnstableBlocks` that are considered stable and writes
-/// them to the UTXO set.
-pub fn write_stable_blocks_into_utxoset(state: &mut State) {
-    while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
-        for tx in &new_stable_block.txdata {
-            utxoset::insert_tx(&mut state.utxos, tx, state.height);
-        }
-
-        state.height += 1;
+/// Pops any blocks in `UnstableBlocks` that are considered stable and writes them to the UTXO set.
+///
+/// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
+/// multiple calls may be required for all the stable blocks to be written.
+///
+/// Returns a boolean indicating whether or not transactions new transactions have been inserted
+/// into the UTXO set.
+pub fn write_stable_blocks_into_utxoset(state: &mut State) -> bool {
+    enum Slicing {
+        Paused,
+        Done,
     }
+
+    let mut has_inserted_txs = false;
+
+    // A closure for writing a block into the UTXO set, inserting as many transactions as possible
+    // within the instructions limit.
+    let mut write_block_into_utxoset =
+        |state: &mut State, block: Block, txs_to_skip: usize| -> Slicing {
+            for (tx_idx, tx) in block.txdata.iter().enumerate().skip(txs_to_skip) {
+                if performance_counter() > MAX_INSTRUCTIONS_THRESHOLD {
+                    // Getting close the the instructions limit. Pause execution.
+                    state.syncing_state.partial_stable_block = Some(PartialStableBlock {
+                        block,
+                        txs_processed: tx_idx,
+                    });
+
+                    return Slicing::Paused;
+                }
+
+                utxoset::insert_tx(&mut state.utxos, tx, state.height);
+                has_inserted_txs = true;
+            }
+
+            state.height += 1;
+
+            Slicing::Done
+        };
+
+    // Finish writing the stable block that's partially written, if that exists.
+    if let Some(partial_stable_block) = state.syncing_state.partial_stable_block.take() {
+        match write_block_into_utxoset(
+            state,
+            partial_stable_block.block,
+            partial_stable_block.txs_processed,
+        ) {
+            Slicing::Paused => return has_inserted_txs,
+            Slicing::Done => {}
+        }
+    }
+
+    // Check if there are any stable blocks and write those into the UTXO set.
+    while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
+        match write_block_into_utxoset(state, new_stable_block, 0) {
+            Slicing::Paused => return has_inserted_txs,
+            Slicing::Done => {}
+        }
+    }
+
+    has_inserted_txs
 }
 
 pub fn main_chain_height(state: &State) -> Height {
