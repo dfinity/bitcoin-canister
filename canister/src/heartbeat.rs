@@ -11,7 +11,7 @@ use bitcoin::Block;
 ///
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
-    if write_stable_blocks_into_utxoset() {
+    if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been processed as a precaution to not
         // exceed the instructions limit.
         return;
@@ -61,8 +61,8 @@ async fn fetch_blocks() {
     });
 }
 
-fn write_stable_blocks_into_utxoset() -> bool {
-    with_state_mut(store::write_stable_blocks_into_utxoset)
+fn ingest_stable_blocks_into_utxoset() -> bool {
+    with_state_mut(store::ingest_stable_blocks_into_utxoset)
 }
 
 // Process a `GetSuccessorsResponse` if one is available.

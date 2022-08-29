@@ -187,14 +187,14 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
     unstable_blocks::push(&mut state.unstable_blocks, block)
 }
 
-/// Pops any blocks in `UnstableBlocks` that are considered stable and writes them to the UTXO set.
+/// Pops any blocks in `UnstableBlocks` that are considered stable and ingests them to the UTXO set.
 ///
 /// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
 /// multiple calls may be required for all the stable blocks to be written.
 ///
 /// Returns a boolean indicating whether or not transactions new transactions have been inserted
 /// into the UTXO set.
-pub fn write_stable_blocks_into_utxoset(state: &mut State) -> bool {
+pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     enum Slicing {
         Paused,
         Done,
@@ -204,7 +204,7 @@ pub fn write_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
     // A closure for writing a block into the UTXO set, inserting as many transactions as possible
     // within the instructions limit.
-    let mut write_block_into_utxoset =
+    let mut ingest_block_into_utxoset =
         |state: &mut State, block: Block, txs_to_skip: usize| -> Slicing {
             for (tx_idx, tx) in block.txdata.iter().enumerate().skip(txs_to_skip) {
                 if performance_counter() > MAX_INSTRUCTIONS_THRESHOLD {
@@ -228,7 +228,7 @@ pub fn write_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
     // Finish writing the stable block that's partially written, if that exists.
     if let Some(partial_stable_block) = state.syncing_state.partial_stable_block.take() {
-        match write_block_into_utxoset(
+        match ingest_block_into_utxoset(
             state,
             partial_stable_block.block,
             partial_stable_block.txs_processed,
@@ -238,9 +238,9 @@ pub fn write_stable_blocks_into_utxoset(state: &mut State) -> bool {
         }
     }
 
-    // Check if there are any stable blocks and write those into the UTXO set.
+    // Check if there are any stable blocks and ingest those into the UTXO set.
     while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
-        match write_block_into_utxoset(state, new_stable_block, 0) {
+        match ingest_block_into_utxoset(state, new_stable_block, 0) {
             Slicing::Paused => return has_inserted_txs,
             Slicing::Done => {}
         }
@@ -325,7 +325,7 @@ mod test {
         let mut i = 0;
         for block in chain.into_iter() {
             insert_block(state, block).unwrap();
-            write_stable_blocks_into_utxoset(state);
+            ingest_stable_blocks_into_utxoset(state);
             i += 1;
             if i % 1000 == 0 {
                 println!("processed block: {}", i);
