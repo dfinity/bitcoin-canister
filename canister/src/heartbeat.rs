@@ -162,7 +162,7 @@ mod test {
         // The UTXO set hasn't been updated with the genesis block yet.
         assert_eq!(with_state(|s| s.height), 0);
 
-        // Write the stable block (the genesis block) to the UTXO set.
+        // Ingest the stable block (the genesis block) to the UTXO set.
         heartbeat().await;
 
         // Assert that the block has been ingested.
@@ -214,7 +214,7 @@ mod test {
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(store::main_chain_height), 2);
 
-        // Write stable blocks.
+        // Ingest stable blocks.
         runtime::performance_counter_reset();
         heartbeat().await;
 
@@ -228,7 +228,7 @@ mod test {
             }
         );
 
-        // Write more stable blocks.
+        // Ingest more stable blocks.
         runtime::performance_counter_reset();
         heartbeat().await;
 
@@ -245,7 +245,7 @@ mod test {
         // Only the genesis block has been fully processed, so the stable height is one.
         assert_eq!(with_state(|s| s.height), 1);
 
-        // Write more stable blocks.
+        // Ingest more stable blocks.
         runtime::performance_counter_reset();
         heartbeat().await;
 
