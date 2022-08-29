@@ -138,7 +138,6 @@ pub struct SyncingState {
     pub partial_stable_block: Option<PartialStableBlock>,
 }
 
-
 /// A state for maintaining a stable block that is partially written into the UTXO set.
 /// Used for time slicing.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
