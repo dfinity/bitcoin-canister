@@ -12,8 +12,8 @@ use bitcoin::Block;
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
     if ingest_stable_blocks_into_utxoset() {
-        // Exit the heartbeat if stable blocks had been processed as a precaution to not
-        // exceed the instructions limit.
+        // Exit the heartbeat if stable blocks had been ingested.
+        // This is a precaution to not exceed the instructions limit.
         return;
     }
 
@@ -114,7 +114,6 @@ mod test {
 
     fn build_block(prev_header: BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
-
         let mut value = 1;
         for _ in 0..num_transactions {
             block = block.with_transaction(
