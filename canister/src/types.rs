@@ -268,13 +268,13 @@ impl Storable for (Height, OutPoint) {
 }
 
 // A blob representing a block in the standard bitcoin format.
-type BlockBlob = Vec<u8>;
+pub type BlockBlob = Vec<u8>;
 
 // A blob representing a block header in the standard bitcoin format.
-type BlockHeaderBlob = Vec<u8>;
+pub type BlockHeaderBlob = Vec<u8>;
 
 // A blob representing a block hash.
-type BlockHash = Vec<u8>;
+pub type BlockHash = Vec<u8>;
 
 /// A request to retrieve more blocks from the Bitcoin network.
 #[derive(CandidType, Clone, Debug, PartialEq, Eq)]
