@@ -19,6 +19,7 @@ lazy_static! {
 }
 
 // The threshold at which time slicing kicks in.
+// At the time of this writing it is equivalent to 80% of the maximum instructions limit.
 const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
 
 /// Returns the balance of a bitcoin address.
@@ -192,8 +193,7 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
 /// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
 /// multiple calls may be required for all the stable blocks to be written.
 ///
-/// Returns a boolean indicating whether or not transactions new transactions have been inserted
-/// into the UTXO set.
+/// Returns a bool indicating whether or not new transactions have been inserted into the UTXO set.
 pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     enum Slicing {
         Paused,

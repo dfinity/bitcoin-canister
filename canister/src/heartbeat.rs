@@ -202,6 +202,7 @@ mod test {
         });
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
+        // This value allows ingesting 4 transactions per round.
         runtime::set_performance_counter_step(1_000_000_000);
 
         // Fetch blocks.
@@ -218,7 +219,7 @@ mod test {
         heartbeat().await;
 
         // Assert that execution has been paused.
-        // Wrote the genesis block + 3 transactions of block_1 into the UTXO set.
+        // Ingested the genesis block (1 tx) + 3 txs of block_1 into the UTXO set.
         assert_eq!(
             with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
             PartialStableBlock {
@@ -231,8 +232,7 @@ mod test {
         runtime::performance_counter_reset();
         heartbeat().await;
 
-        // Assert that execution has been paused. Added more transactions in block_1
-        // into the UTXO set.
+        // Assert that execution has been paused. Ingested 4 more txs in block_1.
         assert_eq!(
             with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
             PartialStableBlock {
