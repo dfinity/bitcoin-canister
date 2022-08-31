@@ -207,7 +207,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
                     p.next_output_idx,
                 )
             {
-                // Getting close the the instructions limit. Pause execution.
+                // Getting close to the the instructions limit. Pause execution.
                 state.syncing_state.partial_stable_block = Some(PartialStableBlock {
                     block: p.block,
                     next_tx_idx: tx_idx,
