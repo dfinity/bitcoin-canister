@@ -319,3 +319,11 @@ pub struct HttpResponse {
     pub headers: Vec<HeaderField>,
     pub body: ByteBuf,
 }
+
+/// A type used to facilitate time-slicing.
+#[must_use]
+#[derive(Debug, PartialEq, Eq)]
+pub enum Slicing<T> {
+    Paused(T),
+    Done,
+}

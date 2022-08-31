@@ -1,7 +1,8 @@
 use crate::address_utxoset::AddressUtxoSet;
 use crate::{
+    runtime::performance_counter,
     state::UtxoSet,
-    types::{OutPoint, Storable},
+    types::{OutPoint, Slicing, Storable},
 };
 use bitcoin::{Address, Script, Transaction, TxOut, Txid};
 use std::str::FromStr;
@@ -15,24 +16,48 @@ lazy_static::lazy_static! {
     ];
 }
 
+// The threshold at which time slicing kicks in.
+// At the time of this writing it is equivalent to 80% of the maximum instructions limit.
+const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
+
 /// Returns the `UtxoSet` of a given bitcoin address.
 pub fn get_utxos<'a>(utxo_set: &'a UtxoSet, address: &'a str) -> AddressUtxoSet<'a> {
     AddressUtxoSet::new(address.to_string(), utxo_set)
 }
 
-/// Inserts a transaction into the given UTXO set at the given height.
-pub fn insert_tx(utxo_set: &mut UtxoSet, tx: &Transaction, height: Height) {
-    remove_spent_txs(utxo_set, tx);
-    insert_unspent_txs(utxo_set, tx, height);
-}
-
-// Iterates over transaction inputs and removes spent outputs.
-fn remove_spent_txs(utxo_set: &mut UtxoSet, tx: &Transaction) {
-    if tx.is_coin_base() {
-        return;
+/// Ingests a transaction into the given UTXO set at the given height.
+///
+/// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
+/// multiple calls may be required for the transaction to be ingested.
+pub fn ingest_tx_with_slicing(
+    utxo_set: &mut UtxoSet,
+    tx: &Transaction,
+    height: Height,
+    start_input_idx: usize,
+    start_output_idx: usize,
+) -> Slicing<(usize, usize)> {
+    if let Slicing::Paused(input_idx) = remove_inputs(utxo_set, tx, start_input_idx) {
+        return Slicing::Paused((input_idx, 0));
     }
 
-    for input in &tx.input {
+    if let Slicing::Paused(output_idx) = insert_outputs(utxo_set, tx, height, start_output_idx) {
+        return Slicing::Paused((tx.input.len(), output_idx));
+    }
+
+    Slicing::Done
+}
+
+// Iterates over transaction inputs, starting from `start_idx`, and removes them from the UTXO set.
+fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> Slicing<usize> {
+    if tx.is_coin_base() {
+        return Slicing::Done;
+    }
+
+    for (input_idx, input) in tx.input.iter().enumerate().skip(start_idx) {
+        if performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
+            return Slicing::Paused(input_idx);
+        }
+
         // Remove the input from the UTXOs. The input *must* exist in the UTXO set.
         match utxo_set.utxos.remove(&(&input.previous_output).into()) {
             Some((txout, height)) => {
@@ -57,11 +82,24 @@ fn remove_spent_txs(utxo_set: &mut UtxoSet, tx: &Transaction) {
             }
         }
     }
+
+    Slicing::Done
 }
 
-// Iterates over transaction outputs and adds unspents.
-fn insert_unspent_txs(utxo_set: &mut UtxoSet, tx: &Transaction, height: Height) {
-    for (vout, output) in tx.output.iter().enumerate() {
+// Iterates over transaction outputs, starting from `start_idx`, and inserts them into the UTXO set.
+fn insert_outputs(
+    utxo_set: &mut UtxoSet,
+    tx: &Transaction,
+    height: Height,
+    start_idx: usize,
+) -> Slicing<usize> {
+    for (vout, output) in tx.output.iter().enumerate().skip(start_idx) {
+        println!("insert_outputs: checking perf counter");
+        if performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
+            return Slicing::Paused(vout);
+        }
+
+        println!("insert_outputs at idx {}", vout);
         if !(output.script_pubkey.is_provably_unspendable()) {
             insert_utxo(
                 utxo_set,
@@ -71,6 +109,8 @@ fn insert_unspent_txs(utxo_set: &mut UtxoSet, tx: &Transaction, height: Height) 
             );
         }
     }
+
+    Slicing::Done
 }
 
 // Inserts a UTXO at a given height into the given UTXO set.
@@ -131,6 +171,14 @@ mod test {
     use ic_btc_types::Address as AddressStr;
     use std::collections::BTreeSet;
 
+    // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
+    fn ingest_tx(utxo_set: &mut UtxoSet, tx: &Transaction, height: Height) {
+        assert_eq!(
+            ingest_tx_with_slicing(utxo_set, tx, height, 0, 0),
+            Slicing::Done
+        );
+    }
+
     #[test]
     fn coinbase_tx_mainnet() {
         coinbase_test(Network::Mainnet);
@@ -154,7 +202,7 @@ mod test {
             .build();
 
         let mut utxo = UtxoSet::new(network);
-        insert_tx(&mut utxo, &coinbase_tx, 0);
+        ingest_tx(&mut utxo, &coinbase_tx, 0);
 
         assert_eq!(utxo.utxos.len(), 1);
         assert_eq!(
@@ -178,7 +226,7 @@ mod test {
             // no output coinbase
             let mut coinbase_empty_tx = TransactionBuilder::coinbase().build();
             coinbase_empty_tx.output.clear();
-            insert_tx(&mut utxo, &coinbase_empty_tx, 0);
+            ingest_tx(&mut utxo, &coinbase_empty_tx, 0);
 
             assert!(utxo.utxos.is_empty());
             assert!(utxo.address_to_outpoints.is_empty());
@@ -200,7 +248,7 @@ mod test {
                 version: 1,
                 lock_time: 0,
             };
-            insert_tx(&mut utxo, &coinbase_op_return_tx, 0);
+            ingest_tx(&mut utxo, &coinbase_op_return_tx, 0);
 
             assert!(utxo.utxos.is_empty());
             assert!(utxo.address_to_outpoints.is_empty());
@@ -231,7 +279,7 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .build();
-        insert_tx(&mut utxo, &coinbase_tx, 0);
+        ingest_tx(&mut utxo, &coinbase_tx, 0);
 
         let expected = vec![ic_btc_types::Utxo {
             outpoint: ic_btc_types::OutPoint {
@@ -261,7 +309,7 @@ mod test {
             .with_input(BitcoinOutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
-        insert_tx(&mut utxo, &tx, 1);
+        ingest_tx(&mut utxo, &tx, 1);
 
         assert_eq!(
             get_utxos(&utxo, &address_1.to_string()).into_vec(None),

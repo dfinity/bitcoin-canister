@@ -102,10 +102,10 @@ fn get_successors_request() -> GetSuccessorsRequest {
 mod test {
     use super::*;
     use crate::{
-        runtime,
+        init, runtime,
         state::PartialStableBlock,
         test_utils::random_p2pkh_address,
-        types::{BlockBlob, Network},
+        types::{BlockBlob, InitPayload, Network},
     };
     use bitcoin::{
         blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
@@ -133,7 +133,7 @@ mod test {
     async fn fetches_blocks_and_processes_response() {
         let network = Network::Regtest;
 
-        crate::init(crate::InitPayload {
+        init(InitPayload {
             stability_threshold: 0,
             network,
             blocks_source: None,
@@ -144,7 +144,7 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        crate::runtime::set_successors_response(GetSuccessorsResponse {
+        runtime::set_successors_response(GetSuccessorsResponse {
             blocks: vec![block_bytes],
             next: vec![],
         });
@@ -175,7 +175,7 @@ mod test {
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
 
-        crate::init(crate::InitPayload {
+        init(InitPayload {
             stability_threshold: 0,
             network,
             blocks_source: None,
@@ -183,7 +183,7 @@ mod test {
 
         // Setup a chain of two blocks.
         let address = random_p2pkh_address(network);
-        let block_1 = build_block(genesis_block(network.into()).header, address.clone(), 10);
+        let block_1 = build_block(genesis_block(network.into()).header, address.clone(), 6);
         let block_2 = build_block(block_1.header, address, 1);
 
         // Serialize the blocks.
@@ -196,13 +196,13 @@ mod test {
             })
             .collect();
 
-        crate::runtime::set_successors_response(GetSuccessorsResponse {
+        runtime::set_successors_response(GetSuccessorsResponse {
             blocks,
             next: vec![],
         });
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
-        // This value allows ingesting 4 transactions per round.
+        // This value allows ingesting 3 inputs/outputs per round.
         runtime::set_performance_counter_step(1_000_000_000);
 
         // Fetch blocks.
@@ -219,12 +219,14 @@ mod test {
         heartbeat().await;
 
         // Assert that execution has been paused.
-        // Ingested the genesis block (1 tx) + 3 txs of block_1 into the UTXO set.
+        // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
         assert_eq!(
             with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
             PartialStableBlock {
                 block: block_1.clone(),
-                txs_processed: 3
+                next_tx_idx: 2,
+                next_input_idx: 1,
+                next_output_idx: 0,
             }
         );
 
@@ -232,12 +234,14 @@ mod test {
         runtime::performance_counter_reset();
         heartbeat().await;
 
-        // Assert that execution has been paused. Ingested 4 more txs in block_1.
+        // Assert that execution has been paused. Ingested 3 more txs in block_1.
         assert_eq!(
             with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
             PartialStableBlock {
                 block: block_1,
-                txs_processed: 7
+                next_tx_idx: 5,
+                next_input_idx: 1,
+                next_output_idx: 0,
             }
         );
 
@@ -259,5 +263,126 @@ mod test {
 
         // The stable height is now updated to include `block_1`.
         assert_eq!(with_state(|s| s.height), 2);
+    }
+
+    #[async_std::test]
+    async fn time_slices_large_transactions() {
+        let network = Network::Regtest;
+        // The number of inputs/outputs in a transaction.
+        let tx_cardinality = 6;
+
+        init(InitPayload {
+            stability_threshold: 0,
+            network,
+            blocks_source: None,
+        });
+
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+
+        // Create a transaction where a few inputs are given to address 1.
+        let mut tx_1 = TransactionBuilder::coinbase();
+        for _ in 0..tx_cardinality {
+            tx_1 = tx_1.with_output(&address_1, 1000);
+        }
+        let tx_1 = tx_1.build();
+
+        // Create another transaction where the UTXOs of address 1 are transferred to address 2.
+        let mut tx_2 = TransactionBuilder::new();
+        for i in 0..tx_cardinality {
+            tx_2 = tx_2.with_input(bitcoin::OutPoint {
+                txid: tx_1.txid(),
+                vout: i,
+            });
+        }
+        for _ in 0..tx_cardinality {
+            tx_2 = tx_2.with_output(&address_2, 1000);
+        }
+        let tx_2 = tx_2.build();
+
+        // Create blocks with the two transactions above.
+        let block_1 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+            .with_transaction(tx_1)
+            .build();
+
+        let block_2 = BlockBuilder::with_prev_header(block_1.header)
+            .with_transaction(tx_2)
+            .build();
+
+        // An additional block so that the previous blocks are ingested into the stable UTXO set.
+        let block_3 = BlockBuilder::with_prev_header(block_2.header).build();
+
+        // Serialize the blocks.
+        let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone(), block_3]
+            .iter()
+            .map(|block| {
+                let mut block_bytes = vec![];
+                block.consensus_encode(&mut block_bytes).unwrap();
+                block_bytes
+            })
+            .collect();
+
+        runtime::set_successors_response(GetSuccessorsResponse {
+            blocks,
+            next: vec![],
+        });
+
+        // Set a large step for the performance_counter to exceed the instructions limit quickly.
+        // This value allows ingesting 3 transactions inputs/outputs per round.
+        runtime::set_performance_counter_step(1_000_000_000);
+
+        // Fetch blocks.
+        heartbeat().await;
+
+        // Process response.
+        heartbeat().await;
+
+        // Assert that the blocks have been ingested.
+        assert_eq!(with_state(store::main_chain_height), 3);
+
+        // Run the heartbeat a few rounds to ingest the two stable blocks.
+        // Three inputs/outputs are expected to be ingested per round.
+        let expected_states = vec![
+            Some(PartialStableBlock::new(block_1.clone(), 0, 1, 2)),
+            Some(PartialStableBlock::new(block_1.clone(), 0, 1, 5)),
+            Some(PartialStableBlock::new(block_2.clone(), 0, 2, 0)),
+            Some(PartialStableBlock::new(block_2.clone(), 0, 5, 0)),
+            Some(PartialStableBlock::new(block_2.clone(), 0, 6, 2)),
+            Some(PartialStableBlock::new(block_2.clone(), 0, 6, 5)),
+            None, // Ingestion has finished.
+        ];
+
+        for expected_state in expected_states.into_iter() {
+            // Ingest stable blocks.
+            runtime::performance_counter_reset();
+            heartbeat().await;
+
+            // Assert that execution has been paused.
+            // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
+            with_state(|s| assert_eq!(s.syncing_state.partial_stable_block, expected_state));
+        }
+
+        // Assert that the blocks have been ingested.
+        assert_eq!(with_state(store::main_chain_height), 3);
+
+        // The stable height is now updated to include `block_1` and `block_2`.
+        assert_eq!(with_state(|s| s.height), 3);
+
+        // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
+        assert_eq!(
+            crate::get_balance(crate::types::GetBalanceRequest {
+                address: address_1.to_string(),
+                min_confirmations: None
+            }),
+            0
+        );
+
+        assert_eq!(
+            crate::get_balance(crate::types::GetBalanceRequest {
+                address: address_2.to_string(),
+                min_confirmations: None
+            }),
+            tx_cardinality as u64 * 1000
+        );
     }
 }
