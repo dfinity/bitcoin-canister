@@ -15,9 +15,6 @@ use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct State {
-    /// The height of the latest block marked as stable.
-    pub height: Height,
-
     /// The UTXOs of all stable blocks since genesis.
     pub utxos: UtxoSet,
 
@@ -45,7 +42,6 @@ impl State {
     /// to be final and are never removed.
     pub fn new(stability_threshold: u32, network: Network, genesis_block: Block) -> Self {
         Self {
-            height: 0,
             utxos: UtxoSet::new(network),
             unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
             syncing_state: SyncingState::default(),
@@ -101,6 +97,18 @@ pub struct UtxoSet {
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_outpoints")]
     pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
+
+    /// The height of the block that will be ingested next.
+    // NOTE: The `next_height` is stored, rather than the current height, because:
+    //   * The `UtxoSet` is initialized as empty with no blocks.
+    //   * The height of the genesis block is defined as zero.
+    //
+    // Rather than making this an optional to handle the case where the UTXO set is empty, we
+    // instead store the `next_height` to avoid having this special case.
+    pub next_height: Height,
+
+    /// A stable block that has partially been written to the UTXO set. Used for time slicing.
+    pub partial_stable_block: Option<PartialStableBlock>,
 }
 
 impl UtxoSet {
@@ -109,6 +117,8 @@ impl UtxoSet {
             utxos: Utxos::default(),
             address_to_outpoints: init_address_outpoints(),
             network,
+            next_height: 0,
+            partial_stable_block: None,
         }
     }
 }
@@ -133,12 +143,9 @@ pub struct SyncingState {
 
     /// A response that needs to be processed.
     pub response_to_process: Option<GetSuccessorsResponse>,
-
-    /// A stable block that has partially been written to the UTXO set. Used for time slicing.
-    pub partial_stable_block: Option<PartialStableBlock>,
 }
 
-/// A state for maintaining a stable block that is partially written into the UTXO set.
+/// A state for maintaining a stable block that is partially ingested into the UTXO set.
 /// Used for time slicing.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
 pub struct PartialStableBlock {

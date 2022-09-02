@@ -159,7 +159,7 @@ mod test {
         assert_eq!(with_state(store::main_chain_height), 1);
 
         // The UTXO set hasn't been updated with the genesis block yet.
-        assert_eq!(with_state(|s| s.height), 0);
+        assert_eq!(with_state(|s| s.utxos.next_height), 0);
 
         // Ingest the stable block (the genesis block) to the UTXO set.
         heartbeat().await;
@@ -168,7 +168,7 @@ mod test {
         assert_eq!(with_state(store::main_chain_height), 1);
 
         // The UTXO set has been updated with the genesis block.
-        assert_eq!(with_state(|s| s.height), 1);
+        assert_eq!(with_state(|s| s.utxos.next_height), 1);
     }
 
     #[async_std::test]
@@ -221,7 +221,7 @@ mod test {
         // Assert that execution has been paused.
         // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
         assert_eq!(
-            with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
+            with_state(|s| s.utxos.partial_stable_block.clone().unwrap()),
             PartialStableBlock {
                 block: block_1.clone(),
                 next_tx_idx: 2,
@@ -236,7 +236,7 @@ mod test {
 
         // Assert that execution has been paused. Ingested 3 more txs in block_1.
         assert_eq!(
-            with_state(|s| s.syncing_state.partial_stable_block.clone().unwrap()),
+            with_state(|s| s.utxos.partial_stable_block.clone().unwrap()),
             PartialStableBlock {
                 block: block_1,
                 next_tx_idx: 5,
@@ -246,23 +246,20 @@ mod test {
         );
 
         // Only the genesis block has been fully processed, so the stable height is one.
-        assert_eq!(with_state(|s| s.height), 1);
+        assert_eq!(with_state(|s| s.utxos.next_height), 1);
 
         // Ingest more stable blocks.
         runtime::performance_counter_reset();
         heartbeat().await;
 
         // Time slicing is complete.
-        assert!(with_state(|s| s
-            .syncing_state
-            .partial_stable_block
-            .is_none()));
+        assert!(with_state(|s| s.utxos.partial_stable_block.is_none()));
 
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(store::main_chain_height), 2);
 
         // The stable height is now updated to include `block_1`.
-        assert_eq!(with_state(|s| s.height), 2);
+        assert_eq!(with_state(|s| s.utxos.next_height), 2);
     }
 
     #[async_std::test]
@@ -359,14 +356,14 @@ mod test {
 
             // Assert that execution has been paused.
             // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
-            with_state(|s| assert_eq!(s.syncing_state.partial_stable_block, expected_state));
+            with_state(|s| assert_eq!(s.utxos.partial_stable_block, expected_state));
         }
 
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(store::main_chain_height), 3);
 
         // The stable height is now updated to include `block_1` and `block_2`.
-        assert_eq!(with_state(|s| s.height), 3);
+        assert_eq!(with_state(|s| s.utxos.next_height), 3);
 
         // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
         assert_eq!(
