@@ -29,6 +29,8 @@ pub fn get_utxos<'a>(utxo_set: &'a UtxoSet, address: &'a str) -> AddressUtxoSet<
 ///
 /// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
 /// multiple calls may be required for the transaction to be ingested.
+///
+/// Returns a `Slicing` struct with a tuple containing (# inputs removed, # outputs inserted).
 pub fn ingest_tx_with_slicing(
     utxo_set: &mut UtxoSet,
     tx: &Transaction,
@@ -94,12 +96,10 @@ fn insert_outputs(
     start_idx: usize,
 ) -> Slicing<usize> {
     for (vout, output) in tx.output.iter().enumerate().skip(start_idx) {
-        println!("insert_outputs: checking perf counter");
         if performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
             return Slicing::Paused(vout);
         }
 
-        println!("insert_outputs at idx {}", vout);
         if !(output.script_pubkey.is_provably_unspendable()) {
             insert_utxo(
                 utxo_set,
