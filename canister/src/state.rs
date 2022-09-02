@@ -145,7 +145,25 @@ pub struct PartialStableBlock {
     #[serde(serialize_with = "crate::serde::serialize_block")]
     #[serde(deserialize_with = "crate::serde::deserialize_block")]
     pub block: Block,
-    pub txs_processed: usize,
+    pub next_tx_idx: usize,
+    pub next_input_idx: usize,
+    pub next_output_idx: usize,
+}
+
+impl PartialStableBlock {
+    pub fn new(
+        block: Block,
+        next_tx_idx: usize,
+        next_input_idx: usize,
+        next_output_idx: usize,
+    ) -> Self {
+        Self {
+            block,
+            next_tx_idx,
+            next_input_idx,
+            next_output_idx,
+        }
+    }
 }
 
 fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
