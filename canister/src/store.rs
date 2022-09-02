@@ -1,6 +1,6 @@
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree},
-    state::{PartialStableBlock, State},
+    state::State,
     types::{OutPoint, Page, Slicing},
     unstable_blocks, utxoset,
 };
@@ -116,14 +116,14 @@ fn get_utxos_from_chain(
     }
 
     let mut address_utxos = utxoset::get_utxos(&state.utxos, address);
-    let chain_height = state.height + (chain.len() as u32) - 1;
+    let chain_height = (state.utxos.next_height - 1) + (chain.len() as u32);
 
     let mut tip_block_hash = chain.first().block_hash();
-    let mut tip_block_height = state.height;
+    let mut tip_block_height = state.utxos.next_height;
 
     // Apply unstable blocks to the UTXO set.
     for (i, block) in chain.into_chain().iter().enumerate() {
-        let block_height = state.height + (i as u32);
+        let block_height = state.utxos.next_height + (i as u32);
         let confirmations = chain_height - block_height + 1;
 
         if confirmations < min_confirmations {
@@ -188,63 +188,36 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
 /// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
 /// multiple calls may be required for all the stable blocks to be ingested.
 ///
-/// Returns a bool indicating whether or not new transactions have been ingested into the UTXO set.
+/// Returns a bool indicating whether or not the state has changed.
 pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
-    let mut has_ingested_txs = false;
-
-    // A closure for ingesting a block into the UTXO set, ingesting as many transactions as possible
-    // within the instructions limit.
-    let mut ingest_block_into_utxoset = |state: &mut State, p: PartialStableBlock| -> Slicing<()> {
-        for (tx_idx, tx) in p.block.txdata.iter().enumerate().skip(p.next_tx_idx) {
-            has_ingested_txs = true;
-
-            if let Slicing::Paused((next_input_idx, next_output_idx)) =
-                utxoset::ingest_tx_with_slicing(
-                    &mut state.utxos,
-                    tx,
-                    state.height,
-                    p.next_input_idx,
-                    p.next_output_idx,
-                )
-            {
-                // Getting close to the the instructions limit. Pause execution.
-                state.syncing_state.partial_stable_block = Some(PartialStableBlock {
-                    block: p.block,
-                    next_tx_idx: tx_idx,
-                    next_input_idx,
-                    next_output_idx,
-                });
-
-                return Slicing::Paused(());
-            }
-        }
-
-        state.height += 1;
-
-        Slicing::Done
+    let prev_state = (
+        state.utxos.next_height,
+        &state.utxos.partial_stable_block.clone(),
+    );
+    let has_state_changed = |state: &State| -> bool {
+        prev_state != (state.utxos.next_height, &state.utxos.partial_stable_block)
     };
 
-    // Finish writing the stable block that's partially written, if that exists.
-    if let Some(partial_stable_block) = state.syncing_state.partial_stable_block.take() {
-        match ingest_block_into_utxoset(state, partial_stable_block) {
-            Slicing::Paused(()) => return has_ingested_txs,
-            Slicing::Done => {}
-        }
+    // Finish ingesting the stable block that's partially ingested, if that exists.
+    match utxoset::ingest_block_continue(&mut state.utxos) {
+        Slicing::Paused(()) => return has_state_changed(state),
+        Slicing::Done => {}
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
     while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
-        match ingest_block_into_utxoset(state, PartialStableBlock::new(new_stable_block, 0, 0, 0)) {
-            Slicing::Paused(()) => return has_ingested_txs,
+        match utxoset::ingest_block(&mut state.utxos, new_stable_block) {
+            Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done => {}
         }
     }
 
-    has_ingested_txs
+    has_state_changed(state)
 }
 
 pub fn main_chain_height(state: &State) -> Height {
-    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.height - 1
+    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height
+        - 1
 }
 
 pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
@@ -582,7 +555,7 @@ mod test {
         // NOTE: The duplicate transactions cause us to lose some of the supply,
         // which we deduct in this assertion.
         assert_eq!(
-            ((state.height as u64) - DUPLICATE_TX_IDS.len() as u64) * 5000000000,
+            ((state.utxos.next_height as u64) - DUPLICATE_TX_IDS.len() as u64) * 5000000000,
             total_supply
         );
 
