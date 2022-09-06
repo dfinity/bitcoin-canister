@@ -46,10 +46,12 @@ pub fn call_get_successors(
     std::future::ready(Ok((GET_SUCCESSORS_RESPONSE.with(|e| {
         e.borrow_mut()
             .take()
-            .unwrap_or(GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-                blocks: vec![],
-                next: vec![],
-            }))
+            .unwrap_or(GetSuccessorsResponse::Complete(
+                GetSuccessorsCompleteResponse {
+                    blocks: vec![],
+                    next: vec![],
+                },
+            ))
     }),)))
 }
 
