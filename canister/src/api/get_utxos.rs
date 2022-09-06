@@ -76,6 +76,29 @@ mod test {
     }
 
     #[test]
+    fn genesis_block_only() {
+        let network = Network::Regtest;
+        crate::init(InitPayload {
+            stability_threshold: 1,
+            network,
+            blocks_source: None,
+        });
+
+        assert_eq!(
+            get_utxos(GetUtxosRequest {
+                address: random_p2pkh_address(network).to_string(),
+                filter: None
+            }),
+            GetUtxosResponse {
+                utxos: vec![],
+                tip_block_hash: genesis_block(network.into()).block_hash().to_vec(),
+                tip_height: 0,
+                next_page: None,
+            }
+        );
+    }
+
+    #[test]
     fn single_block() {
         let network = Network::Regtest;
         crate::init(InitPayload {
