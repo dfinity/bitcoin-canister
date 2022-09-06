@@ -859,7 +859,9 @@ dependencies = [
 name = "management-canister-mock"
 version = "0.1.0"
 dependencies = [
+ "bitcoin",
  "candid",
+ "ic-btc-test-utils",
  "ic-cdk",
  "ic-cdk-macros",
  "serde",

@@ -2,7 +2,7 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse};
+use crate::types::{GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsResponse};
 use ic_cdk::{api::call::CallResult, export::Principal};
 use std::cell::RefCell;
 use std::future::Future;
@@ -44,10 +44,12 @@ pub fn call_get_successors(
     _request: GetSuccessorsRequest,
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
     std::future::ready(Ok((GET_SUCCESSORS_RESPONSE.with(|e| {
-        e.borrow_mut().take().unwrap_or(GetSuccessorsResponse {
-            blocks: vec![],
-            next: vec![],
-        })
+        e.borrow_mut()
+            .take()
+            .unwrap_or(GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+                blocks: vec![],
+                next: vec![],
+            }))
     }),)))
 }
 
