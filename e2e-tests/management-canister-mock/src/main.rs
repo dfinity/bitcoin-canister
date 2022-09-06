@@ -55,7 +55,7 @@ thread_local! {
 fn init() {
     let network = Network::Regtest;
 
-    let block_1 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header)
         .with_transaction(
             TransactionBuilder::new()
                 .with_output(&Address::from_str(ADDRESS_1).unwrap(), 50_0000_0000)

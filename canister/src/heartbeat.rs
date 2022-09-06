@@ -110,8 +110,8 @@ async fn maybe_fetch_blocks() -> bool {
                 s.syncing_state.response_to_process =
                     Some(if pages_processed == partial_response.num_pages {
                         ResponseToProcess::Complete(GetSuccessorsCompleteResponse {
-                            blocks: vec![partial_response.partial_block.clone()],
-                            next: partial_response.next.clone(),
+                            blocks: vec![partial_response.partial_block],
+                            next: partial_response.next,
                         })
                     } else {
                         ResponseToProcess::Partial(partial_response, pages_processed)
@@ -489,9 +489,7 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        // Split the block bytes into three chunks.
-        println!("block bytes length {:?}", block_bytes.len());
-
+        // Split the block bytes into three pages.
         runtime::set_successors_response(GetSuccessorsResponse::Partial(
             GetSuccessorsPartialResponse {
                 partial_block: block_bytes[0..40].to_vec(),
