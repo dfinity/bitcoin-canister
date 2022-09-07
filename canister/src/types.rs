@@ -307,16 +307,14 @@ pub enum GetSuccessorsResponse {
 }
 
 #[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
 pub struct GetSuccessorsCompleteResponse {
     pub blocks: Vec<BlockBlob>,
     pub next: Vec<BlockHeaderBlob>,
 }
 
 #[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
 pub struct GetSuccessorsPartialResponse {
-    /// A block that is partial (i.e. not the full blob has been sent).
+    /// A block that is partial (i.e. the full blob has not been sent).
     pub partial_block: BlockBlob,
 
     /// Hashes of next block headers.
