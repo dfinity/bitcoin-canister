@@ -83,8 +83,8 @@ pub fn pre_upgrade() {
     // by the bytes themselves.
     let len = state_bytes.len() as u32;
     let memory = memory::get_upgrades_memory();
-    memory.write(0, &len.to_le_bytes());
-    memory.write(4, &state_bytes);
+    crate::memory::write(&memory, 0, &len.to_le_bytes());
+    crate::memory::write(&memory, 4, &state_bytes);
 }
 
 pub fn post_upgrade() {

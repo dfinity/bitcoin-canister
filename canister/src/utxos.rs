@@ -1,11 +1,12 @@
-use crate::state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL};
-use crate::types::{OutPoint, Storable, TxOut};
+use crate::{
+    memory::Memory,
+    state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL},
+    types::{OutPoint, Storable, TxOut},
+};
 use ic_btc_types::Height;
 use serde::{Deserialize, Serialize};
-use stable_structures::{btreemap, DefaultMemoryImpl, Memory, RestrictedMemory, StableBTreeMap};
+use stable_structures::{btreemap, StableBTreeMap, Memory as MemoryTrait};
 use std::collections::BTreeMap;
-
-type CanisterMemory = RestrictedMemory<DefaultMemoryImpl>;
 
 /// A key-value store for UTXOs (unspent transaction outputs).
 ///
@@ -45,12 +46,12 @@ pub struct Utxos {
     // A map storing the UTXOs that are "small" in size.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_small_utxos")]
-    pub small_utxos: StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>>,
+    pub small_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "medium" in size.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_medium_utxos")]
-    pub medium_utxos: StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>>,
+    pub medium_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "large" in size.
     // The number of entries stored in this map is tiny (see docs above), so a
@@ -142,7 +143,7 @@ impl Utxos {
 
     /// Gets an iterator over the entries of the map.
     /// NOTE: The entries are not guaranteed to be sorted in any particular way.
-    pub fn iter(&self) -> Iter<CanisterMemory> {
+    pub fn iter(&self) -> Iter<Memory> {
         Iter::new(self)
     }
 
@@ -157,13 +158,13 @@ impl Utxos {
 
 /// An iterator over the entries in [`Utxos`].
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-pub struct Iter<'a, M: Memory> {
+pub struct Iter<'a, M: MemoryTrait> {
     small_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
     medium_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
     large_utxos_iter: std::collections::btree_map::Iter<'a, OutPoint, (TxOut, Height)>,
 }
 
-impl<'a> Iter<'a, CanisterMemory> {
+impl<'a> Iter<'a, Memory> {
     fn new(utxos: &'a Utxos) -> Self {
         Self {
             small_utxos_iter: utxos.small_utxos.iter(),
@@ -173,7 +174,7 @@ impl<'a> Iter<'a, CanisterMemory> {
     }
 }
 
-impl<M: Memory + Clone> Iterator for Iter<'_, M> {
+impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
     type Item = (OutPoint, (TxOut, Height));
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -200,7 +201,7 @@ impl<M: Memory + Clone> Iterator for Iter<'_, M> {
     }
 }
 
-fn init_small_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
+fn init_small_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
     StableBTreeMap::init(
         crate::memory::get_utxos_small_memory(),
         UTXO_KEY_SIZE,
@@ -208,7 +209,7 @@ fn init_small_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
     )
 }
 
-fn init_medium_utxos() -> StableBTreeMap<CanisterMemory, Vec<u8>, Vec<u8>> {
+fn init_medium_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
     StableBTreeMap::init(
         crate::memory::get_utxos_medium_memory(),
         UTXO_KEY_SIZE,
