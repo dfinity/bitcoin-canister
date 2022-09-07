@@ -19,20 +19,6 @@ lazy_static = "1.4.0"
 serde = "1.0.132"
 serde_bytes = "0.11"
 stable-structures = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
-#ic-metrics = { path = "../../monitoring/metrics" }
-#ic-protobuf = { path = "../../protobuf" }
-#ic-btc-types-internal = { path = "../types/internal" }
-#ic-logger = { path = "../../monitoring/logger" }
-#ic-registry-subnet-features = { path = "../../registry/subnet_features" }
-#ic-replicated-state = { path = "../../replicated_state" }
-#ic-state-layout = { path = "../../state_layout" }
-#prometheus = { version = "0.12.0", features = [ "process" ] }
-#prost = "0.10.4"
-#serde = "1.0.132"
-#slog = { version = "2.5.2", features = ["nested-values", "release_max_level_debug"] }
-
-#[build-dependencies]
-#prost-build = "0.10.4"
 
 [[bin]]
 name = "canister"
@@ -53,4 +39,3 @@ ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2
 maplit = "1.0.2"
 proptest = "0.9.4"
 tempfile = "3.2.0"
-#clap = {version = "3.1.9", features = ["derive"]}
