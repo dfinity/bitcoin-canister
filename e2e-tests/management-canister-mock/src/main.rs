@@ -1,44 +1,118 @@
+use bitcoin::{blockdata::constants::genesis_block, consensus::Encodable, Address, Network};
 use candid::CandidType;
-use ic_cdk_macros::update;
-use serde::Deserialize;
+use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+use ic_cdk_macros::{init, update};
+use serde::{Deserialize, Serialize};
+use std::cell::{Cell, RefCell};
+use std::str::FromStr;
 
 type BlockBlob = Vec<u8>;
 type BlockHeaderBlob = Vec<u8>;
 
+const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
+const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Deserialize)]
-struct GetSuccessorsRequest {
-    anchor: Vec<u8>,
-    processed_block_hashes: Vec<Vec<u8>>,
+enum GetSuccessorsRequest {
+    #[serde(rename = "initial")]
+    Initial(Vec<BlockBlob>),
+    #[serde(rename = "follow_up")]
+    FollowUp(u8),
 }
 
-#[derive(CandidType, Clone, Debug, Default, Hash, PartialEq, Eq, Deserialize)]
-struct GetSuccessorsResponse {
+#[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
+enum GetSuccessorsResponse {
+    #[serde(rename = "complete")]
+    Complete(GetSuccessorsCompleteResponse),
+    #[serde(rename = "partial")]
+    Partial(GetSuccessorsPartialResponse),
+    #[serde(rename = "follow_up")]
+    FollowUp(BlockBlob),
+}
+
+#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+pub struct GetSuccessorsCompleteResponse {
     blocks: Vec<BlockBlob>,
     next: Vec<BlockHeaderBlob>,
 }
 
-// A block with a coinbase transaction giving "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
-// 50 BTC.
-const BLOCK: &[u8] = &[
-    0, 0, 0, 32, 6, 34, 110, 70, 17, 26, 11, 89, 202, 175, 18, 96, 67, 235, 91, 191, 40, 195, 79,
-    58, 94, 51, 42, 31, 199, 178, 183, 60, 241, 136, 145, 15, 85, 62, 67, 249, 230, 181, 156, 95,
-    185, 45, 16, 164, 161, 63, 188, 213, 202, 179, 233, 36, 217, 153, 78, 126, 15, 160, 146, 211,
-    241, 7, 68, 110, 188, 170, 255, 98, 255, 255, 127, 32, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 1, 1, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    255, 255, 255, 255, 3, 81, 1, 1, 255, 255, 255, 255, 2, 0, 242, 5, 42, 1, 0, 0, 0, 22, 0, 20,
-    69, 112, 201, 197, 244, 204, 35, 99, 203, 69, 51, 244, 178, 221, 53, 101, 8, 106, 236, 205, 0,
-    0, 0, 0, 0, 0, 0, 0, 38, 106, 36, 170, 33, 169, 237, 226, 246, 28, 63, 113, 209, 222, 253, 63,
-    169, 153, 223, 163, 105, 83, 117, 92, 105, 6, 137, 121, 153, 98, 180, 139, 235, 216, 54, 151,
-    78, 140, 249, 1, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-];
+#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+pub struct GetSuccessorsPartialResponse {
+    partial_block: BlockBlob,
+    next: Vec<BlockHeaderBlob>,
+    num_pages: u8,
+}
+
+thread_local! {
+    static BLOCK_1: RefCell<BlockBlob> = RefCell::new(Vec::new());
+    static BLOCK_2: RefCell<BlockBlob> = RefCell::new(Vec::new());
+
+    static COUNT: Cell<u64> = Cell::new(0);
+}
+
+// Initialize the blocks.
+#[init]
+fn init() {
+    let network = Network::Regtest;
+
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_1).unwrap(), 50_0000_0000)
+                .build(),
+        )
+        .build();
+
+    let mut block_bytes = vec![];
+    block_1.consensus_encode(&mut block_bytes).unwrap();
+    BLOCK_1.with(|b| b.replace(block_bytes));
+
+    let block_2 = BlockBuilder::with_prev_header(block_1.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_2).unwrap(), 50_0000_0000)
+                .build(),
+        )
+        .build();
+
+    let mut block_bytes = vec![];
+    block_2.consensus_encode(&mut block_bytes).unwrap();
+    BLOCK_2.with(|b| b.replace(block_bytes));
+}
 
 #[update]
 fn bitcoin_get_successors(_request: GetSuccessorsRequest) -> GetSuccessorsResponse {
-    GetSuccessorsResponse {
-        blocks: vec![BLOCK.to_vec()],
-        next: vec![],
-    }
+    let count = COUNT.with(|c| c.get());
+
+    let res = if count == 0 {
+        // Send block 1 in full.
+        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+            blocks: vec![BLOCK_1.with(|b| b.borrow().clone())],
+            next: vec![],
+        })
+    } else if count == 1 {
+        // Send part of block 2.
+        GetSuccessorsResponse::Partial(GetSuccessorsPartialResponse {
+            partial_block: BLOCK_2.with(|b| b.borrow().clone())[0..20].to_vec(),
+            next: vec![],
+            num_pages: 3,
+        })
+    } else if count == 2 {
+        // Send another part of block 2.
+        GetSuccessorsResponse::FollowUp(BLOCK_2.with(|b| b.borrow().clone())[20..40].to_vec())
+    } else if count == 3 {
+        // Send rest of block 2.
+        GetSuccessorsResponse::FollowUp(BLOCK_2.with(|b| b.borrow().clone())[40..].to_vec())
+    } else {
+        // Empty response
+        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+            blocks: vec![],
+            next: vec![],
+        })
+    };
+
+    COUNT.with(|c| c.set(c.get() + 1));
+    res
 }
 
 fn main() {}

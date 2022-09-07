@@ -1,5 +1,5 @@
 use crate::{
-    types::{GetSuccessorsResponse, Network},
+    types::{GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network},
     unstable_blocks::UnstableBlocks,
     utxos::Utxos,
 };
@@ -135,6 +135,18 @@ impl PartialEq for UtxoSet {
     }
 }
 
+/// A response awaiting to be processed.
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub enum ResponseToProcess {
+    /// A complete response that is ready to be processed.
+    Complete(GetSuccessorsCompleteResponse),
+
+    /// A partial response that needs more follow-up requests for it to be complete.
+    /// The partial response is stored along with the number of pages of the complete
+    /// response that has been processed.
+    Partial(GetSuccessorsPartialResponse, u8),
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct SyncingState {
     /// A flag used to ensure that only one request for fetching blocks is
@@ -142,7 +154,7 @@ pub struct SyncingState {
     pub is_fetching_blocks: bool,
 
     /// A response that needs to be processed.
-    pub response_to_process: Option<GetSuccessorsResponse>,
+    pub response_to_process: Option<ResponseToProcess>,
 }
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
