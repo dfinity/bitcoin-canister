@@ -276,18 +276,53 @@ pub type BlockHeaderBlob = Vec<u8>;
 // A blob representing a block hash.
 pub type BlockHash = Vec<u8>;
 
+type PageNumber = u8;
+
 /// A request to retrieve more blocks from the Bitcoin network.
-#[derive(CandidType, Clone, Debug, PartialEq, Eq)]
-pub struct GetSuccessorsRequest {
-    pub anchor: BlockHash,
-    pub processed_block_hashes: Vec<BlockHash>,
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GetSuccessorsRequest {
+    /// A request containing the hashes of blocks we'd like to retrieve succeessors for.
+    #[serde(rename = "initial")]
+    Initial(Vec<BlockHash>),
+
+    /// A follow-up request to retrieve the `FollowUp` response associated with the given page.
+    #[serde(rename = "follow_up")]
+    FollowUp(PageNumber),
 }
 
 /// A response containing new successor blocks from the Bitcoin network.
+#[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
+pub enum GetSuccessorsResponse {
+    /// A complete response that doesn't require pagination.
+    #[serde(rename = "complete")]
+    Complete(GetSuccessorsCompleteResponse),
+
+    /// A partial response that requires `FollowUp` responses to get the rest of it.
+    #[serde(rename = "partial")]
+    Partial(GetSuccessorsPartialResponse),
+
+    /// A follow-up response containing a blob of bytes to be appended to the partial response.
+    #[serde(rename = "follow_up")]
+    FollowUp(BlockBlob),
+}
+
 #[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
-pub struct GetSuccessorsResponse {
+pub struct GetSuccessorsCompleteResponse {
     pub blocks: Vec<BlockBlob>,
     pub next: Vec<BlockHeaderBlob>,
+}
+
+#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+pub struct GetSuccessorsPartialResponse {
+    /// A block that is partial (i.e. the full blob has not been sent).
+    pub partial_block: BlockBlob,
+
+    /// Hashes of next block headers.
+    pub next: Vec<BlockHeaderBlob>,
+
+    /// The number of pages in this response. The remaining pages need to be retrieved
+    /// via `FollowUp` requests/responses.
+    pub num_pages: u8,
 }
 
 #[derive(CandidType, Debug, Deserialize, PartialEq)]

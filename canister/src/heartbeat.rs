@@ -1,7 +1,10 @@
 use crate::{
     runtime::{call_get_successors, print},
+    state::ResponseToProcess,
     store,
-    types::{GetSuccessorsRequest, GetSuccessorsResponse},
+    types::{
+        BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsResponse,
+    },
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::consensus::Decodable;
@@ -17,27 +20,38 @@ pub async fn heartbeat() {
         return;
     }
 
-    // Only fetch new blocks if there isn't a request in progress and there is no
-    // response to process.
-    let should_fetch_blocks = with_state(|s| {
-        !s.syncing_state.is_fetching_blocks && s.syncing_state.response_to_process.is_none()
-    });
-
-    if should_fetch_blocks {
-        return fetch_blocks().await;
+    if maybe_fetch_blocks().await {
+        // Exit the heartbeat if new blocks have been fetched.
+        // This is a precaution to not exceed the instructions limit.
+        return;
     }
 
     maybe_process_response();
 }
 
-async fn fetch_blocks() {
+// Fetches new blocks if there isn't a request in progress and no complete response to process.
+// Returns true if a call to the `blocks_source` has been made, false otherwise.
+async fn maybe_fetch_blocks() -> bool {
+    if with_state(|s| s.syncing_state.is_fetching_blocks) {
+        // Already fetching blocks.
+        return false;
+    }
+
+    // Request additional blocks.
+    let maybe_request = maybe_get_successors_request();
+    let request = match maybe_request {
+        Some(request) => request,
+        None => {
+            // No request to send at this time.
+            return false;
+        }
+    };
+
     // A lock to ensure the heartbeat only sends one request at a time.
     with_state_mut(|s| {
         s.syncing_state.is_fetching_blocks = true;
     });
 
-    // Request additional blocks.
-    let request = get_successors_request();
     print(&format!("Sending request: {:?}", request));
 
     let response: Result<(GetSuccessorsResponse,), _> =
@@ -49,16 +63,65 @@ async fn fetch_blocks() {
     with_state_mut(|s| {
         s.syncing_state.is_fetching_blocks = false;
 
-        match response {
-            Ok((response,)) => {
-                s.syncing_state.response_to_process = Some(response);
-            }
+        let response = match response {
+            Ok((response,)) => response,
             Err((code, msg)) => {
+                // TODO(EXC-1232): track these occurrences in a metric.
                 print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
                 s.syncing_state.response_to_process = None;
+                return;
             }
-        }
+        };
+
+        match response {
+            GetSuccessorsResponse::Complete(response) => {
+                // Received complete response.
+                assert!(
+                    s.syncing_state.response_to_process.is_none(),
+                    "Received complete response before processing previous response."
+                );
+                s.syncing_state.response_to_process = Some(ResponseToProcess::Complete(response));
+            }
+            GetSuccessorsResponse::Partial(partial_response) => {
+                // Received partial response.
+                assert!(
+                    s.syncing_state.response_to_process.is_none(),
+                    "Received partial response before processing previous response."
+                );
+                s.syncing_state.response_to_process =
+                    Some(ResponseToProcess::Partial(partial_response, 1));
+            }
+            GetSuccessorsResponse::FollowUp(mut block_bytes) => {
+                // Received a follow-up response.
+                // A follow-up response is only expected, and only makes sense, when there's
+                // a partial response to process.
+
+                let (mut partial_response, mut pages_processed) = match s.syncing_state.response_to_process.take() {
+                    Some(ResponseToProcess::Partial(res, pages)) => (res, pages),
+                    other => unreachable!("Cannot receive follow-up response without a previous partial response. Previous response found: {:?}", other)
+                };
+
+                // Append block to partial response and increment # pages processed.
+                partial_response.partial_block.append(&mut block_bytes);
+                pages_processed += 1;
+
+                // If the response is now complete, store a complete response to process.
+                // Otherwise, store the updated partial response.
+                s.syncing_state.response_to_process =
+                    Some(if pages_processed == partial_response.num_pages {
+                        ResponseToProcess::Complete(GetSuccessorsCompleteResponse {
+                            blocks: vec![partial_response.partial_block],
+                            next: partial_response.next,
+                        })
+                    } else {
+                        ResponseToProcess::Partial(partial_response, pages_processed)
+                    });
+            }
+        };
     });
+
+    // A request to fetch new blocks has been made.
+    true
 }
 
 fn ingest_stable_blocks_into_utxoset() -> bool {
@@ -69,31 +132,43 @@ fn ingest_stable_blocks_into_utxoset() -> bool {
 fn maybe_process_response() {
     with_state_mut(|state| {
         let response_to_process = state.syncing_state.response_to_process.take();
-        if let Some(response) = response_to_process {
-            let blocks = response.blocks;
-            for block in blocks.into_iter() {
-                // TODO(EXC-1215): Gracefully handle the errors here.
-                let block = Block::consensus_decode(block.as_slice()).unwrap();
-                store::insert_block(state, block).unwrap();
+
+        match response_to_process {
+            Some(ResponseToProcess::Complete(response)) => {
+                for block in response.blocks.iter() {
+                    // TODO(EXC-1215): Gracefully handle the errors here.
+                    let block = Block::consensus_decode(block.as_slice()).unwrap();
+                    store::insert_block(state, block).unwrap();
+                }
+            }
+            other => {
+                // Not a complete response. Put it back into the state.
+                state.syncing_state.response_to_process = other;
             }
         }
     });
 }
 
 // Retrieves a `GetSuccessorsRequest` to send to the adapter.
-fn get_successors_request() -> GetSuccessorsRequest {
-    with_state(|state| {
-        let mut processed_block_hashes: Vec<Vec<u8>> = store::get_unstable_blocks(state)
-            .iter()
-            .map(|b| b.block_hash().to_vec())
-            .collect();
+fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
+    with_state(|state| match &state.syncing_state.response_to_process {
+        Some(ResponseToProcess::Complete(_)) => {
+            // There's already a complete response waiting to be processed.
+            None
+        }
+        Some(ResponseToProcess::Partial(partial_response, pages_processed)) => {
+            // There's a partial response. Create a follow-up request.
+            assert!(partial_response.num_pages > *pages_processed);
+            Some(GetSuccessorsRequest::FollowUp(pages_processed + 1))
+        }
+        None => {
+            // No response is present. Send an initial request for new blocks.
+            let processed_block_hashes: Vec<BlockHash> = store::get_unstable_blocks(state)
+                .iter()
+                .map(|b| b.block_hash().to_vec())
+                .collect();
 
-        // This is safe as there will always be at least 1 unstable block.
-        let anchor = processed_block_hashes.remove(0);
-
-        GetSuccessorsRequest {
-            anchor,
-            processed_block_hashes,
+            Some(GetSuccessorsRequest::Initial(processed_block_hashes))
         }
     })
 }
@@ -105,7 +180,10 @@ mod test {
         init, runtime,
         state::PartialStableBlock,
         test_utils::random_p2pkh_address,
-        types::{BlockBlob, InitPayload, Network},
+        types::{
+            BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, InitPayload,
+            Network,
+        },
     };
     use bitcoin::{
         blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
@@ -144,10 +222,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse {
-            blocks: vec![block_bytes],
-            next: vec![],
-        });
+        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![block_bytes],
+                next: vec![],
+            },
+        ));
 
         // Fetch blocks.
         heartbeat().await;
@@ -196,10 +276,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse {
-            blocks,
-            next: vec![],
-        });
+        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks,
+                next: vec![],
+            },
+        ));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 inputs/outputs per round.
@@ -319,10 +401,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse {
-            blocks,
-            next: vec![],
-        });
+        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks,
+                next: vec![],
+            },
+        ));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 transactions inputs/outputs per round.
@@ -380,6 +464,74 @@ mod test {
                 min_confirmations: None
             }),
             tx_cardinality as u64 * 1000
+        );
+    }
+
+    #[async_std::test]
+    async fn fetches_and_processes_responses_paginated() {
+        let network = Network::Regtest;
+
+        init(InitPayload {
+            stability_threshold: 0,
+            network,
+            blocks_source: None,
+        });
+
+        let address = random_p2pkh_address(network);
+        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+            .with_transaction(
+                TransactionBuilder::coinbase()
+                    .with_output(&address, 1000)
+                    .build(),
+            )
+            .build();
+
+        let mut block_bytes = vec![];
+        block.consensus_encode(&mut block_bytes).unwrap();
+
+        // Split the block bytes into three pages.
+        runtime::set_successors_response(GetSuccessorsResponse::Partial(
+            GetSuccessorsPartialResponse {
+                partial_block: block_bytes[0..40].to_vec(),
+                next: vec![],
+                num_pages: 3,
+            },
+        ));
+
+        // Fetch blocks (initial response).
+        heartbeat().await;
+
+        // Fetch blocks (second page).
+        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+            block_bytes[40..80].to_vec(),
+        ));
+        heartbeat().await;
+
+        // Fetch blocks (third page).
+        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+            block_bytes[80..].to_vec(),
+        ));
+        heartbeat().await;
+
+        // The response hasn't been fully processed yet, so the balance should still be zero.
+        assert_eq!(
+            crate::get_balance(crate::types::GetBalanceRequest {
+                address: address.to_string(),
+                min_confirmations: None
+            }),
+            0
+        );
+
+        // Process response.
+        heartbeat().await;
+
+        // Query the balance, validating the block was processed.
+        assert_eq!(
+            crate::get_balance(crate::types::GetBalanceRequest {
+                address: address.to_string(),
+                min_confirmations: None
+            }),
+            1000
         );
     }
 }

@@ -1,11 +1,12 @@
-type get_successors_request = record {
-  anchor: blob;
-  processed_block_hashes: vec blob;
+type get_successors_request = variant {
+  initial : vec blob;
+  follow_up : nat8;
 };
 
-type get_successors_response = record {
-  blocks: vec blob;
-  next: vec blob;
+type get_successors_response = variant {
+  complete : record { blocks: vec blob; next: vec blob; };
+  partial : record { partial_block: blob; next: vec blob; num_pages: nat8; };
+  follow_up : blob;
 };
 
 service : {
