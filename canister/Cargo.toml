@@ -12,13 +12,13 @@ candid = "0.7.4"
 # NOTE: A specific commit of ciborium is used that includes efficient serializion/deserialization of
 #       blobs. At the time of this writing, a new version including this commit hasn't yet been released.
 ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
-ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
+ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "8d413d09e36acd961608ed5665e318e34da7d85c" }
 ic-cdk = "0.5.6"
 ic-cdk-macros = "0.5.6"
 lazy_static = "1.4.0"
 serde = "1.0.132"
 serde_bytes = "0.11"
-stable-structures = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
+stable-structures = { git = "https://github.com/dfinity/ic", rev = "8d413d09e36acd961608ed5665e318e34da7d85c" }
 
 [[bin]]
 name = "canister"

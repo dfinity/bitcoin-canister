@@ -1,4 +1,5 @@
 use crate::{
+    memory::Memory,
     types::{GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network},
     unstable_blocks::UnstableBlocks,
     utxos::Utxos,
@@ -7,7 +8,7 @@ use bitcoin::Block;
 use ic_btc_types::Height;
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
-use stable_structures::{DefaultMemoryImpl, RestrictedMemory, StableBTreeMap};
+use stable_structures::StableBTreeMap;
 
 /// A structure used to maintain the entire state.
 // NOTE: `PartialEq` is only available in tests as it would be impractically
@@ -96,7 +97,7 @@ pub struct UtxoSet {
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_outpoints")]
-    pub address_to_outpoints: StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>,
+    pub address_to_outpoints: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
 
     /// The height of the block that will be ingested next.
     // NOTE: The `next_height` is stored, rather than the current height, because:
@@ -185,8 +186,7 @@ impl PartialStableBlock {
     }
 }
 
-fn init_address_outpoints() -> StableBTreeMap<RestrictedMemory<DefaultMemoryImpl>, Vec<u8>, Vec<u8>>
-{
+fn init_address_outpoints() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
     StableBTreeMap::init(
         crate::memory::get_address_outpoints_memory(),
         MAX_ADDRESS_OUTPOINT_SIZE,
