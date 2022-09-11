@@ -168,7 +168,10 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
                 .map(|b| b.block_hash().to_vec())
                 .collect();
 
-            Some(GetSuccessorsRequest::Initial(state.network(), processed_block_hashes))
+            Some(GetSuccessorsRequest::Initial(
+                state.network(),
+                processed_block_hashes,
+            ))
         }
     })
 }

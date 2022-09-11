@@ -95,7 +95,11 @@ fn init() {
 #[update]
 fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsResponse {
     if let GetSuccessorsRequest::Initial(network, _) = &request {
-        assert_eq!(*network, Network::Regtest, "request must be to the regtest network");
+        assert_eq!(
+            *network,
+            Network::Regtest,
+            "request must be to the regtest network"
+        );
     }
 
     let count = COUNT.with(|c| c.get());
