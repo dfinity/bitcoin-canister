@@ -283,7 +283,7 @@ type PageNumber = u8;
 pub enum GetSuccessorsRequest {
     /// A request containing the hashes of blocks we'd like to retrieve succeessors for.
     #[serde(rename = "initial")]
-    Initial(Vec<BlockHash>),
+    Initial(Network, Vec<BlockHash>),
 
     /// A follow-up request to retrieve the `FollowUp` response associated with the given page.
     #[serde(rename = "follow_up")]

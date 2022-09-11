@@ -1,5 +1,11 @@
+type network = variant {
+  mainnet;
+  testnet;
+  regtest;
+};
+
 type get_successors_request = variant {
-  initial : vec blob;
+  initial : record { network; vec blob };
   follow_up : nat8;
 };
 
