@@ -283,11 +283,17 @@ type PageNumber = u8;
 pub enum GetSuccessorsRequest {
     /// A request containing the hashes of blocks we'd like to retrieve succeessors for.
     #[serde(rename = "initial")]
-    Initial(Network, Vec<BlockHash>),
+    Initial(GetSuccessorsRequestInitial),
 
     /// A follow-up request to retrieve the `FollowUp` response associated with the given page.
     #[serde(rename = "follow_up")]
     FollowUp(PageNumber),
+}
+
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetSuccessorsRequestInitial {
+    pub network: Network,
+    pub processed_block_hashes: Vec<BlockHash>,
 }
 
 /// A response containing new successor blocks from the Bitcoin network.

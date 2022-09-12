@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 type BlockBlob = Vec<u8>;
 type BlockHeaderBlob = Vec<u8>;
+type BlockHash = Vec<u8>;
 
 const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
@@ -27,9 +28,15 @@ enum Network {
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Deserialize)]
 enum GetSuccessorsRequest {
     #[serde(rename = "initial")]
-    Initial(Network, Vec<BlockBlob>),
+    Initial(GetSuccessorsRequestInitial),
     #[serde(rename = "follow_up")]
     FollowUp(u8),
+}
+
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct GetSuccessorsRequestInitial {
+    pub network: Network,
+    pub processed_block_hashes: Vec<BlockHash>,
 }
 
 #[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
@@ -94,11 +101,11 @@ fn init() {
 
 #[update]
 fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsResponse {
-    if let GetSuccessorsRequest::Initial(network, _) = &request {
+    if let GetSuccessorsRequest::Initial(GetSuccessorsRequestInitial { network, .. }) = &request {
         assert_eq!(
             *network,
             Network::Regtest,
-            "request must be to the regtest network"
+            "request must be set to the regtest network"
         );
     }
 

@@ -3,7 +3,8 @@ use crate::{
     state::ResponseToProcess,
     store,
     types::{
-        BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsResponse,
+        BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
+        GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
 use crate::{with_state, with_state_mut};
@@ -168,10 +169,10 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
                 .map(|b| b.block_hash().to_vec())
                 .collect();
 
-            Some(GetSuccessorsRequest::Initial(
-                state.network(),
+            Some(GetSuccessorsRequest::Initial(GetSuccessorsRequestInitial {
+                network: state.network(),
                 processed_block_hashes,
-            ))
+            }))
         }
     })
 }

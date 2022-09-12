@@ -5,7 +5,10 @@ type network = variant {
 };
 
 type get_successors_request = variant {
-  initial : record { network; vec blob };
+  initial : record {
+    network: network;
+    processed_block_hashes: vec blob
+  };
   follow_up : nat8;
 };
 
