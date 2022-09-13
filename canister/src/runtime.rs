@@ -74,7 +74,7 @@ pub fn call_get_successors(
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_successors_response(response: GetSuccessorsResponse) {
-    set_successors_responses(vec![response);
+    set_successors_responses(vec![response]);
 }
 
 /// Sets (mock) responses to return whenever `call_get_successors` is invoked.

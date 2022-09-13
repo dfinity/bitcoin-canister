@@ -320,7 +320,7 @@ mod test {
             if i % 1000 == 0 {
                 // The `main_chain_height` call is a bit expensive, so we only check every once
                 // in a while.
-                if with_state(|s| main_chain_height(s)) == num_blocks {
+                if with_state(main_chain_height) == num_blocks {
                     break;
                 }
             }
@@ -547,12 +547,12 @@ mod test {
 
             // https://blockexplorer.one/bitcoin/mainnet/address/1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh
             assert_eq!(
-                get_balance(&state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0),
+                get_balance(state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0),
                 Ok(4000000)
             );
 
             assert_eq!(
-                get_utxos(&state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0, None, None),
+                get_utxos(state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0, None, None),
                 Ok(GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
@@ -580,11 +580,11 @@ mod test {
 
             // https://blockexplorer.one/bitcoin/mainnet/address/12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK
             assert_eq!(
-                get_balance(&state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0),
+                get_balance(state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0),
                 Ok(500000000)
             );
             assert_eq!(
-                get_utxos(&state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0, None, None),
+                get_utxos(state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0, None, None),
                 Ok(GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
@@ -613,24 +613,24 @@ mod test {
             // This address spent its BTC at height 99,996. At 0 confirmations
             // (height 100,000) it should have no BTC.
             assert_eq!(
-                get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 0),
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 0),
                 Ok(0)
             );
 
             // At 10 confirmations it should have its BTC.
             assert_eq!(
-                get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 10),
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 10),
                 Ok(48_0000_0000)
             );
 
             // At 6 confirmations it should have its BTC.
             assert_eq!(
-                get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6),
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6),
                 Ok(48_0000_0000)
             );
 
             assert_eq!(
-                get_utxos(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6, None, None),
+                get_utxos(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6, None, None),
                 Ok(GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
@@ -658,29 +658,29 @@ mod test {
 
             // At 5 confirmations the BTC is spent.
             assert_eq!(
-                get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 5),
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 5),
                 Ok(0)
             );
 
             // The BTC is spent to the following two addresses.
             assert_eq!(
-                get_balance(&state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 5),
+                get_balance(state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 5),
                 Ok(3_4500_0000)
             );
 
             assert_eq!(
-                get_balance(&state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 5),
+                get_balance(state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 5),
                 Ok(44_5500_0000)
             );
 
             // And these addresses should have a balance of zero before that height.
             assert_eq!(
-                get_balance(&state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 6),
+                get_balance(state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 6),
                 Ok(0)
             );
 
             assert_eq!(
-                get_balance(&state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 6),
+                get_balance(state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 6),
                 Ok(0)
             );
         });
