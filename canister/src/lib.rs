@@ -9,6 +9,8 @@ pub mod state;
 pub mod store;
 #[cfg(test)]
 mod test_utils;
+#[cfg(test)]
+mod tests;
 pub mod types;
 mod unstable_blocks;
 mod utxos;
