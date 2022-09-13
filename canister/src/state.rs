@@ -51,6 +51,10 @@ impl State {
             //       fee_percentiles_cache: None,
         }
     }
+
+    pub fn network(&self) -> Network {
+        self.utxos.network
+    }
 }
 
 // The size of an outpoint in bytes.
