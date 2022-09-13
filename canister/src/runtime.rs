@@ -22,8 +22,11 @@ pub fn print(msg: &str) {
 
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
-    // A mock response to return when `call_get_successors` is invoked.
-    static GET_SUCCESSORS_RESPONSE: RefCell<Option<GetSuccessorsResponse>> = RefCell::new(None);
+    // Mock responses to return when `call_get_successors` is invoked.
+    // Responses are returned in the order provided.
+    static GET_SUCCESSORS_RESPONSES: RefCell<Vec<GetSuccessorsResponse>> = RefCell::new(Vec::default());
+
+    static GET_SUCCESSORS_RESPONSES_INDEX: RefCell<usize> = RefCell::new(0);
 
     static PERFORMANCE_COUNTER: RefCell<u64> = RefCell::new(0);
 
@@ -43,23 +46,44 @@ pub fn call_get_successors(
     _id: Principal,
     _request: GetSuccessorsRequest,
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
-    std::future::ready(Ok((GET_SUCCESSORS_RESPONSE.with(|e| {
-        e.borrow_mut()
-            .take()
-            .unwrap_or(GetSuccessorsResponse::Complete(
-                GetSuccessorsCompleteResponse {
-                    blocks: vec![],
-                    next: vec![],
-                },
-            ))
-    }),)))
+    let response = GET_SUCCESSORS_RESPONSES.with(|responses| {
+        // Get the response at the current index.
+        GET_SUCCESSORS_RESPONSES_INDEX.with(|i| {
+            let response = responses
+                .borrow()
+                .get(*i.borrow())
+                .unwrap_or(&GetSuccessorsResponse::Complete(
+                    GetSuccessorsCompleteResponse {
+                        blocks: vec![],
+                        next: vec![],
+                    },
+                ))
+                .clone();
+
+            // Increment index.
+            *i.borrow_mut() += 1;
+
+            response
+        })
+    });
+
+    std::future::ready(Ok((response,)))
 }
 
 /// Sets a (mock) response to return whenever `call_get_successors` is invoked.
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_successors_response(response: GetSuccessorsResponse) {
-    GET_SUCCESSORS_RESPONSE.with(|e| e.replace(Some(response)));
+    set_successors_responses(vec![response]);
+}
+
+/// Sets (mock) responses to return whenever `call_get_successors` is invoked.
+/// Responses are returned in order.
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+pub fn set_successors_responses(responses: Vec<GetSuccessorsResponse>) {
+    GET_SUCCESSORS_RESPONSES.with(|e| e.replace(responses));
+    GET_SUCCESSORS_RESPONSES_INDEX.with(|e| e.replace(0));
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -228,11 +228,18 @@ pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
 mod test {
     use super::*;
     use crate::test_utils::random_p2pkh_address;
-    use crate::types::Network;
+    use crate::{
+        heartbeat, runtime,
+        types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
+        with_state,
+    };
     use bitcoin::blockdata::constants::genesis_block;
     use bitcoin::secp256k1::rand::rngs::OsRng;
     use bitcoin::secp256k1::Secp256k1;
-    use bitcoin::{consensus::Decodable, Address, BlockHash, Network as BitcoinNetwork, PublicKey};
+    use bitcoin::{
+        consensus::{Decodable, Encodable},
+        Address, BlockHash, Network as BitcoinNetwork, PublicKey,
+    };
     use byteorder::{LittleEndian, ReadBytesExt};
     use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
     use ic_btc_types::{OutPoint, Utxo};
@@ -241,7 +248,7 @@ mod test {
     use std::str::FromStr;
     use std::{collections::HashMap, io::BufReader, path::PathBuf};
 
-    fn process_chain(state: &mut State, num_blocks: u32) {
+    async fn process_chain(num_blocks: u32) {
         let mut chain: Vec<Block> = vec![];
 
         let mut blocks: HashMap<BlockHash, Block> = HashMap::new();
@@ -289,14 +296,36 @@ mod test {
 
         println!("Built chain with length: {}", chain.len());
 
+        // Map the blocks into responses that are given to the hearbeat.
+        let responses: Vec<_> = chain
+            .into_iter()
+            .map(|block| {
+                let mut block_bytes = vec![];
+                Block::consensus_encode(&block, &mut block_bytes).unwrap();
+                GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+                    blocks: vec![block_bytes],
+                    next: vec![],
+                })
+            })
+            .collect();
+
+        runtime::set_successors_responses(responses);
+
+        // Run the heartbeat until we process all the blocks.
         let mut i = 0;
-        for block in chain.into_iter() {
-            insert_block(state, block).unwrap();
-            ingest_stable_blocks_into_utxoset(state);
-            i += 1;
+        loop {
+            runtime::performance_counter_reset();
+            heartbeat().await;
+
             if i % 1000 == 0 {
-                println!("processed block: {}", i);
+                // The `main_chain_height` call is a bit expensive, so we only check every once
+                // in a while.
+                if with_state(main_chain_height) == num_blocks {
+                    break;
+                }
             }
+
+            i += 1;
         }
     }
 
@@ -488,164 +517,173 @@ mod test {
         );
     }
 
-    #[test]
-    fn process_100k_blocks() {
-        let mut state = State::new(10, Network::Mainnet, genesis_block(BitcoinNetwork::Bitcoin));
+    #[async_std::test]
+    async fn process_100k_blocks() {
+        crate::init(crate::InitPayload {
+            stability_threshold: 10,
+            network: Network::Mainnet,
+            blocks_source: None,
+        });
 
-        process_chain(&mut state, 100_000);
+        // Set a reasonable performance counter step to trigger time-slicing.
+        runtime::set_performance_counter_step(100_000);
+
+        process_chain(100_000).await;
 
         let mut total_supply = 0;
-        for (_, (v, _)) in state.utxos.utxos.iter() {
-            total_supply += v.value;
-        }
+        crate::with_state(|state| {
+            for (_, (v, _)) in state.utxos.utxos.iter() {
+                total_supply += v.value;
+            }
 
-        // NOTE: The duplicate transactions cause us to lose some of the supply,
-        // which we deduct in this assertion.
-        assert_eq!(
-            ((state.utxos.next_height as u64) - DUPLICATE_TX_IDS.len() as u64) * 5000000000,
-            total_supply
-        );
+            // NOTE: The duplicate transactions cause us to lose some of the supply,
+            // which we deduct in this assertion.
+            assert_eq!(
+                ((state.utxos.next_height as u64) - DUPLICATE_TX_IDS.len() as u64) * 5000000000,
+                total_supply
+            );
 
-        // Check some random addresses that the balance is correct:
+            // Check some random addresses that the balance is correct:
 
-        // https://blockexplorer.one/bitcoin/mainnet/address/1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh
-        assert_eq!(
-            get_balance(&state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0),
-            Ok(4000000)
-        );
+            // https://blockexplorer.one/bitcoin/mainnet/address/1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh
+            assert_eq!(
+                get_balance(state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0),
+                Ok(4000000)
+            );
 
-        assert_eq!(
-            get_utxos(&state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0, None, None),
-            Ok(GetUtxosResponse {
-                utxos: vec![Utxo {
-                    outpoint: OutPoint {
-                        txid: Txid::from_str(
-                            "1a592a31c79f817ed787b6acbeef29b0f0324179820949d7da6215f0f4870c42",
-                        )
-                        .unwrap()
-                        .to_vec(),
-                        vout: 1,
-                    },
-                    value: 4000000,
-                    height: 75361,
-                }],
-                // The tip should be the block hash at height 100,000
-                // https://bitcoinchain.com/block_explorer/block/100000/
-                tip_block_hash: BlockHash::from_str(
-                    "000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
-                )
-                .unwrap()
-                .to_vec(),
-                tip_height: 100_000,
-                next_page: None,
-            })
-        );
+            assert_eq!(
+                get_utxos(state, "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh", 0, None, None),
+                Ok(GetUtxosResponse {
+                    utxos: vec![Utxo {
+                        outpoint: OutPoint {
+                            txid: Txid::from_str(
+                                "1a592a31c79f817ed787b6acbeef29b0f0324179820949d7da6215f0f4870c42",
+                            )
+                            .unwrap()
+                            .to_vec(),
+                            vout: 1,
+                        },
+                        value: 4000000,
+                        height: 75361,
+                    }],
+                    // The tip should be the block hash at height 100,000
+                    // https://bitcoinchain.com/block_explorer/block/100000/
+                    tip_block_hash: BlockHash::from_str(
+                        "000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
+                    )
+                    .unwrap()
+                    .to_vec(),
+                    tip_height: 100_000,
+                    next_page: None,
+                })
+            );
 
-        // https://blockexplorer.one/bitcoin/mainnet/address/12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK
-        assert_eq!(
-            get_balance(&state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0),
-            Ok(500000000)
-        );
-        assert_eq!(
-            get_utxos(&state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0, None, None),
-            Ok(GetUtxosResponse {
-                utxos: vec![Utxo {
-                    outpoint: OutPoint {
-                        txid: Txid::from_str(
-                            "3371b3978e7285d962fd54656aca6b3191135a1db838b5c689b8a44a7ede6a31",
-                        )
-                        .unwrap()
-                        .to_vec(),
-                        vout: 0,
-                    },
-                    value: 500000000,
-                    height: 66184,
-                }],
-                // The tip should be the block hash at height 100,000
-                // https://bitcoinchain.com/block_explorer/block/100000/
-                tip_block_hash: BlockHash::from_str(
-                    "000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
-                )
-                .unwrap()
-                .to_vec(),
-                tip_height: 100_000,
-                next_page: None,
-            })
-        );
+            // https://blockexplorer.one/bitcoin/mainnet/address/12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK
+            assert_eq!(
+                get_balance(state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0),
+                Ok(500000000)
+            );
+            assert_eq!(
+                get_utxos(state, "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK", 0, None, None),
+                Ok(GetUtxosResponse {
+                    utxos: vec![Utxo {
+                        outpoint: OutPoint {
+                            txid: Txid::from_str(
+                                "3371b3978e7285d962fd54656aca6b3191135a1db838b5c689b8a44a7ede6a31",
+                            )
+                            .unwrap()
+                            .to_vec(),
+                            vout: 0,
+                        },
+                        value: 500000000,
+                        height: 66184,
+                    }],
+                    // The tip should be the block hash at height 100,000
+                    // https://bitcoinchain.com/block_explorer/block/100000/
+                    tip_block_hash: BlockHash::from_str(
+                        "000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
+                    )
+                    .unwrap()
+                    .to_vec(),
+                    tip_height: 100_000,
+                    next_page: None,
+                })
+            );
 
-        // This address spent its BTC at height 99,996. At 0 confirmations
-        // (height 100,000) it should have no BTC.
-        assert_eq!(
-            get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 0),
-            Ok(0)
-        );
+            // This address spent its BTC at height 99,996. At 0 confirmations
+            // (height 100,000) it should have no BTC.
+            assert_eq!(
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 0),
+                Ok(0)
+            );
 
-        // At 10 confirmations it should have its BTC.
-        assert_eq!(
-            get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 10),
-            Ok(48_0000_0000)
-        );
+            // At 10 confirmations it should have its BTC.
+            assert_eq!(
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 10),
+                Ok(48_0000_0000)
+            );
 
-        // At 6 confirmations it should have its BTC.
-        assert_eq!(
-            get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6),
-            Ok(48_0000_0000)
-        );
+            // At 6 confirmations it should have its BTC.
+            assert_eq!(
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6),
+                Ok(48_0000_0000)
+            );
 
-        assert_eq!(
-            get_utxos(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6, None, None),
-            Ok(GetUtxosResponse {
-                utxos: vec![Utxo {
-                    outpoint: OutPoint {
-                        txid: Txid::from_str(
-                            "2bdd8506980479fb57d848ddbbb29831b4d468f9dc5d572ccdea69edec677ed6",
-                        )
-                        .unwrap()
-                        .to_vec(),
-                        vout: 1,
-                    },
-                    value: 48_0000_0000,
-                    height: 96778,
-                }],
-                // The tip should be the block hash at height 99,995
-                // https://blockchair.com/bitcoin/block/99995
-                tip_block_hash: BlockHash::from_str(
-                    "00000000000471d4db69f006cefc583aee6dec243d63c6a09cd5c02e0ef52523",
-                )
-                .unwrap()
-                .to_vec(),
-                tip_height: 99_995,
-                next_page: None,
-            })
-        );
+            assert_eq!(
+                get_utxos(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 6, None, None),
+                Ok(GetUtxosResponse {
+                    utxos: vec![Utxo {
+                        outpoint: OutPoint {
+                            txid: Txid::from_str(
+                                "2bdd8506980479fb57d848ddbbb29831b4d468f9dc5d572ccdea69edec677ed6",
+                            )
+                            .unwrap()
+                            .to_vec(),
+                            vout: 1,
+                        },
+                        value: 48_0000_0000,
+                        height: 96778,
+                    }],
+                    // The tip should be the block hash at height 99,995
+                    // https://blockchair.com/bitcoin/block/99995
+                    tip_block_hash: BlockHash::from_str(
+                        "00000000000471d4db69f006cefc583aee6dec243d63c6a09cd5c02e0ef52523",
+                    )
+                    .unwrap()
+                    .to_vec(),
+                    tip_height: 99_995,
+                    next_page: None,
+                })
+            );
 
-        // At 5 confirmations the BTC is spent.
-        assert_eq!(
-            get_balance(&state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 5),
-            Ok(0)
-        );
+            // At 5 confirmations the BTC is spent.
+            assert_eq!(
+                get_balance(state, "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro", 5),
+                Ok(0)
+            );
 
-        // The BTC is spent to the following two addresses.
-        assert_eq!(
-            get_balance(&state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 5),
-            Ok(3_4500_0000)
-        );
+            // The BTC is spent to the following two addresses.
+            assert_eq!(
+                get_balance(state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 5),
+                Ok(3_4500_0000)
+            );
 
-        assert_eq!(
-            get_balance(&state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 5),
-            Ok(44_5500_0000)
-        );
+            assert_eq!(
+                get_balance(state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 5),
+                Ok(44_5500_0000)
+            );
 
-        // And these addresses should have a balance of zero before that height.
-        assert_eq!(
-            get_balance(&state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 6),
-            Ok(0)
-        );
+            // And these addresses should have a balance of zero before that height.
+            assert_eq!(
+                get_balance(state, "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr", 6),
+                Ok(0)
+            );
 
-        assert_eq!(
-            get_balance(&state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 6),
-            Ok(0)
-        );
+            assert_eq!(
+                get_balance(state, "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr", 6),
+                Ok(0)
+            );
+        });
     }
 
     #[test]
