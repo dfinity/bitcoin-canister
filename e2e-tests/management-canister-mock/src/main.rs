@@ -1,4 +1,6 @@
-use bitcoin::{blockdata::constants::genesis_block, consensus::Encodable, Address, Network};
+use bitcoin::{
+    blockdata::constants::genesis_block, consensus::Encodable, Address, Network as BitcoinNetwork,
+};
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use ic_cdk_macros::{init, update};
@@ -8,16 +10,33 @@ use std::str::FromStr;
 
 type BlockBlob = Vec<u8>;
 type BlockHeaderBlob = Vec<u8>;
+type BlockHash = Vec<u8>;
 
 const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
 
+#[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+enum Network {
+    #[serde(rename = "mainnet")]
+    Mainnet,
+    #[serde(rename = "testnet")]
+    Testnet,
+    #[serde(rename = "regtest")]
+    Regtest,
+}
+
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Deserialize)]
 enum GetSuccessorsRequest {
     #[serde(rename = "initial")]
-    Initial(Vec<BlockBlob>),
+    Initial(GetSuccessorsRequestInitial),
     #[serde(rename = "follow_up")]
     FollowUp(u8),
+}
+
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct GetSuccessorsRequestInitial {
+    pub network: Network,
+    pub processed_block_hashes: Vec<BlockHash>,
 }
 
 #[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
@@ -31,13 +50,13 @@ enum GetSuccessorsResponse {
 }
 
 #[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
-pub struct GetSuccessorsCompleteResponse {
+struct GetSuccessorsCompleteResponse {
     blocks: Vec<BlockBlob>,
     next: Vec<BlockHeaderBlob>,
 }
 
 #[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
-pub struct GetSuccessorsPartialResponse {
+struct GetSuccessorsPartialResponse {
     partial_block: BlockBlob,
     next: Vec<BlockHeaderBlob>,
     num_pages: u8,
@@ -53,7 +72,7 @@ thread_local! {
 // Initialize the blocks.
 #[init]
 fn init() {
-    let network = Network::Regtest;
+    let network = BitcoinNetwork::Regtest;
 
     let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header)
         .with_transaction(
@@ -81,7 +100,15 @@ fn init() {
 }
 
 #[update]
-fn bitcoin_get_successors(_request: GetSuccessorsRequest) -> GetSuccessorsResponse {
+fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsResponse {
+    if let GetSuccessorsRequest::Initial(GetSuccessorsRequestInitial { network, .. }) = &request {
+        assert_eq!(
+            *network,
+            Network::Regtest,
+            "request must be set to the regtest network"
+        );
+    }
+
     let count = COUNT.with(|c| c.get());
 
     let res = if count == 0 {
