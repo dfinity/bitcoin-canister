@@ -443,7 +443,6 @@ mod test {
             heartbeat().await;
 
             // Assert that execution has been paused.
-            // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
             with_state(|s| assert_eq!(s.utxos.partial_stable_block, expected_state));
         }
 
