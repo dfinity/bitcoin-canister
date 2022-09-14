@@ -82,7 +82,7 @@ fn ingest_block_helper(
             return Slicing::Paused(());
         }
 
-        // Reset the indices.
+        // Current transaction was processed in full. Reset the indices for next transaction.
         next_input_idx = 0;
         next_output_idx = 0;
     }

@@ -390,7 +390,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
         with_state(|s| assert_eq!(s.utxos.partial_stable_block, expected_state));
     }
 
-    // The stable height is now updated to include `block_1`
+    // The stable height is now updated to include `block_1`.
     assert_eq!(with_state(|s| s.utxos.next_height), 2);
 
     // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
