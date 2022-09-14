@@ -64,8 +64,8 @@ fn ingest_block_helper(
     utxo_set: &mut UtxoSet,
     block: Block,
     next_tx_idx: usize,
-    next_input_idx: usize,
-    next_output_idx: usize,
+    mut next_input_idx: usize,
+    mut next_output_idx: usize,
 ) -> Slicing<()> {
     for (tx_idx, tx) in block.txdata.iter().enumerate().skip(next_tx_idx) {
         if let Slicing::Paused((next_input_idx, next_output_idx)) =
@@ -81,6 +81,10 @@ fn ingest_block_helper(
 
             return Slicing::Paused(());
         }
+
+        // Current transaction was processed in full. Reset the indices for next transaction.
+        next_input_idx = 0;
+        next_output_idx = 0;
     }
 
     // Block ingestion complete.

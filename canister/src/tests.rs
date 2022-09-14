@@ -1,13 +1,15 @@
 use crate::{
     get_balance, get_utxos, heartbeat, runtime,
+    state::PartialStableBlock,
     store::main_chain_height,
     types::{
-        GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
-        Network,
+        BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
+        GetUtxosRequest, Network,
     },
     utxoset::DUPLICATE_TX_IDS,
     with_state,
 };
+use crate::{init, test_utils::random_p2pkh_address, InitPayload};
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::Block;
 use bitcoin::{
@@ -15,6 +17,7 @@ use bitcoin::{
     BlockHash, Network as BitcoinNetwork, Txid,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
+use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
 use std::fs::File;
@@ -308,5 +311,102 @@ async fn process_100k_blocks() {
             min_confirmations: Some(6),
         }),
         0
+    );
+}
+
+#[async_std::test]
+async fn time_slices_large_block_with_multiple_transactions() {
+    let network = Network::Regtest;
+    init(InitPayload {
+        stability_threshold: 0,
+        network,
+        blocks_source: None,
+    });
+
+    let address_1 = random_p2pkh_address(network);
+    let address_2 = random_p2pkh_address(network);
+
+    let tx_1 = TransactionBuilder::coinbase()
+        .with_output(&address_1, 1000)
+        .with_output(&address_1, 1000)
+        .build();
+
+    let tx_2 = TransactionBuilder::new()
+        .with_output(&address_2, 1000)
+        .with_output(&address_2, 1000)
+        .build();
+
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        .with_transaction(tx_1)
+        .with_transaction(tx_2)
+        .build();
+
+    // An additional block so that the previous block is ingested into the stable UTXO set.
+    let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
+
+    // Serialize the blocks.
+    let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
+        .iter()
+        .map(|block| {
+            let mut block_bytes = vec![];
+            block.consensus_encode(&mut block_bytes).unwrap();
+            block_bytes
+        })
+        .collect();
+
+    runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks,
+            next: vec![],
+        },
+    ));
+
+    // Set a large step for the performance_counter to exceed the instructions limit quickly.
+    // This value allows ingesting 2 transactions inputs/outputs per round.
+    runtime::set_performance_counter_step(1_500_000_000);
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 2);
+
+    // Run the heartbeat a few rounds to ingest the blocks.
+    let expected_states = vec![
+        Some(PartialStableBlock::new(block_1.clone(), 0, 1, 1)),
+        Some(PartialStableBlock::new(block_1.clone(), 1, 1, 1)),
+        None, // Ingestion has finished.
+    ];
+
+    for expected_state in expected_states.into_iter() {
+        // Ingest stable blocks.
+        runtime::performance_counter_reset();
+        heartbeat().await;
+
+        // Assert that execution has been paused.
+        with_state(|s| assert_eq!(s.utxos.partial_stable_block, expected_state));
+    }
+
+    // The stable height is now updated to include `block_1`.
+    assert_eq!(with_state(|s| s.utxos.next_height), 2);
+
+    // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
+    assert_eq!(
+        crate::get_balance(crate::types::GetBalanceRequest {
+            address: address_1.to_string(),
+            min_confirmations: None
+        }),
+        2000
+    );
+
+    assert_eq!(
+        crate::get_balance(crate::types::GetBalanceRequest {
+            address: address_2.to_string(),
+            min_confirmations: None
+        }),
+        2000
     );
 }
