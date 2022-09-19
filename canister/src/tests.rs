@@ -341,6 +341,16 @@ async fn testnet_10k_blocks() {
 
     // Validate we've ingested all the blocks.
     assert_eq!(with_state(main_chain_height), 10_000);
+
+    // Verify the total supply
+    let mut total_supply = 0;
+    crate::with_state(|state| {
+        for (_, (v, _)) in state.utxos.utxos.iter() {
+            total_supply += v.value;
+        }
+
+        assert_eq!(state.utxos.next_height as u64 * 5000000000, total_supply);
+    });
 }
 
 #[async_std::test]
