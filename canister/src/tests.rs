@@ -14,7 +14,7 @@ use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
-    BlockHash, Network as BitcoinNetwork, Txid,
+    BlockHash, Txid,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
@@ -24,17 +24,14 @@ use std::fs::File;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
 
-async fn process_chain(num_blocks: u32) {
+async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     let mut chain: Vec<Block> = vec![];
 
     let mut blocks: HashMap<BlockHash, Block> = HashMap::new();
 
     let mut blk_file = BufReader::new(
-        File::open(
-            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-                .join("test-data/100k_blocks.dat"),
-        )
-        .unwrap(),
+        File::open(PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(blocks_file))
+            .unwrap(),
     );
 
     loop {
@@ -48,7 +45,14 @@ async fn process_chain(num_blocks: u32) {
                 magic
             }
         };
-        assert_eq!(magic, 0xD9B4BEF9);
+
+        assert_eq!(
+            magic,
+            match network {
+                Network::Mainnet => 0xD9B4BEF9,
+                Network::Testnet | Network::Regtest => 0x0709110B,
+            }
+        );
 
         let _block_size = blk_file.read_u32::<LittleEndian>().unwrap();
 
@@ -62,7 +66,7 @@ async fn process_chain(num_blocks: u32) {
     // Build the chain
     chain.push(
         blocks
-            .remove(&genesis_block(BitcoinNetwork::Bitcoin).block_hash())
+            .remove(&genesis_block(network.into()).block_hash())
             .unwrap(),
     );
     for _ in 1..num_blocks {
@@ -106,7 +110,7 @@ async fn process_chain(num_blocks: u32) {
 }
 
 #[async_std::test]
-async fn process_100k_blocks() {
+async fn mainnet_100k_blocks() {
     crate::init(crate::InitPayload {
         stability_threshold: 10,
         network: Network::Mainnet,
@@ -116,7 +120,15 @@ async fn process_100k_blocks() {
     // Set a reasonable performance counter step to trigger time-slicing.
     runtime::set_performance_counter_step(100_000);
 
-    process_chain(100_000).await;
+    process_chain(
+        Network::Mainnet,
+        "test-data/mainnet_100k_blocks.dat",
+        100_000,
+    )
+    .await;
+
+    // Validate we've ingested all the blocks.
+    assert_eq!(with_state(main_chain_height), 100_000);
 
     let mut total_supply = 0;
     crate::with_state(|state| {
@@ -312,6 +324,33 @@ async fn process_100k_blocks() {
         }),
         0
     );
+}
+
+#[async_std::test]
+async fn testnet_10k_blocks() {
+    crate::init(crate::InitPayload {
+        stability_threshold: 2,
+        network: Network::Testnet,
+        blocks_source: None,
+    });
+
+    // Set a reasonable performance counter step to trigger time-slicing.
+    runtime::set_performance_counter_step(100_000);
+
+    process_chain(Network::Testnet, "test-data/testnet_10k_blocks.dat", 10_000).await;
+
+    // Validate we've ingested all the blocks.
+    assert_eq!(with_state(main_chain_height), 10_000);
+
+    // Verify the total supply
+    let mut total_supply = 0;
+    crate::with_state(|state| {
+        for (_, (v, _)) in state.utxos.utxos.iter() {
+            total_supply += v.value;
+        }
+
+        assert_eq!(state.utxos.next_height as u64 * 5000000000, total_supply);
+    });
 }
 
 #[async_std::test]
