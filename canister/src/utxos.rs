@@ -134,13 +134,6 @@ impl Utxos {
             .map(|(txout, height)| (txout, height))
     }
 
-    /// Returns `true` if the key exists in the map, `false` otherwise.
-    pub fn contains_key(&self, key: &OutPoint) -> bool {
-        self.small_utxos.contains_key(&key.to_bytes())
-            || self.medium_utxos.contains_key(&key.to_bytes())
-            || self.large_utxos.contains_key(key)
-    }
-
     /// Gets an iterator over the entries of the map.
     /// NOTE: The entries are not guaranteed to be sorted in any particular way.
     pub fn iter(&self) -> Iter<Memory> {
