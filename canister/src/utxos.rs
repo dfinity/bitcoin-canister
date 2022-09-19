@@ -4,8 +4,8 @@ use crate::{
     types::{OutPoint, Storable, TxOut},
 };
 use ic_btc_types::Height;
+use ic_stable_structures::{btreemap, Memory as MemoryTrait, StableBTreeMap};
 use serde::{Deserialize, Serialize};
-use stable_structures::{btreemap, Memory as MemoryTrait, StableBTreeMap};
 use std::collections::BTreeMap;
 
 /// A key-value store for UTXOs (unspent transaction outputs).
