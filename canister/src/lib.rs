@@ -21,7 +21,7 @@ pub use api::get_balance;
 pub use api::get_utxos;
 use bitcoin::blockdata::constants::genesis_block;
 pub use heartbeat::heartbeat;
-use stable_structures::Memory;
+use ic_stable_structures::Memory;
 use std::cell::RefCell;
 use std::convert::TryInto;
 

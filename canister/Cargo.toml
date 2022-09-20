@@ -15,10 +15,10 @@ ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c36
 ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "8d413d09e36acd961608ed5665e318e34da7d85c" }
 ic-cdk = "0.5.6"
 ic-cdk-macros = "0.5.6"
+ic-stable-structures = "0.1.0"
 lazy_static = "1.4.0"
 serde = "1.0.132"
 serde_bytes = "0.11"
-stable-structures = { git = "https://github.com/dfinity/ic", rev = "8d413d09e36acd961608ed5665e318e34da7d85c" }
 
 [[bin]]
 name = "canister"

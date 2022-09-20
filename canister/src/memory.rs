@@ -1,5 +1,5 @@
-use stable_structures::{
-    memory_manager::{ManagedMemory, MemoryId, MemoryManager},
+use ic_stable_structures::{
+    memory_manager::{MemoryId, MemoryManager, VirtualMemory},
     DefaultMemoryImpl, Memory as MemoryTrait,
 };
 
@@ -10,7 +10,7 @@ const ADDRESS_OUTPOINTS: MemoryId = MemoryId::new(1);
 const SMALL_UTXOS: MemoryId = MemoryId::new(2);
 const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
 
-pub type Memory = ManagedMemory<DefaultMemoryImpl>;
+pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 thread_local! {
     static MEMORY_MANAGER: MemoryManager<DefaultMemoryImpl>
