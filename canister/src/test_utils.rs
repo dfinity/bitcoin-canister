@@ -4,7 +4,7 @@ use bitcoin::{
     Address, Block, PublicKey,
 };
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
-use stable_structures::{Memory, StableBTreeMap, Storable};
+use ic_stable_structures::{Memory, StableBTreeMap, Storable};
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {

@@ -7,8 +7,8 @@ use crate::{
 use bitcoin::Block;
 use ic_btc_types::Height;
 use ic_cdk::export::Principal;
+use ic_stable_structures::StableBTreeMap;
 use serde::{Deserialize, Serialize};
-use stable_structures::StableBTreeMap;
 
 /// A structure used to maintain the entire state.
 // NOTE: `PartialEq` is only available in tests as it would be impractically
