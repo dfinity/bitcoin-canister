@@ -2,7 +2,7 @@ use ic_btc_canister::{
     store,
     types::{GetBalanceRequest, GetUtxosRequest, HttpRequest, HttpResponse, InitPayload},
 };
-use ic_btc_types::{GetUtxosResponse, Satoshi};
+use ic_btc_types::{GetUtxosResponse, MillisatoshiPerByte, Satoshi};
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
 use serde_bytes::ByteBuf;
 
@@ -36,6 +36,11 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
 #[update]
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     ic_btc_canister::get_utxos(request)
+}
+
+#[update]
+pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
+    ic_btc_canister::get_current_fee_percentiles()
 }
 
 fn main() {}

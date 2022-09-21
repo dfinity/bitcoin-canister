@@ -1,30 +1,28 @@
-use crate::state::{State, UtxoSet};
-use crate::unstable_blocks;
-use crate::utxos::UtxosTrait;
+use crate::{
+    state::{State, UtxoSet},
+    types::OutPoint,
+    unstable_blocks, with_state,
+};
 use bitcoin::Block;
 use bitcoin::{Transaction, TxIn};
 use ic_btc_types::{MillisatoshiPerByte, Satoshi};
-use ic_replicated_state::bitcoin_state::FeePercentilesCache;
 
-/// Returns the 100 fee percentiles, measured in millisatoshi/byte, of the chain's most recent transactions.
-///
-/// The `number_of_transactions` parameter configures the number of recent transactions to use for computing the percentiles.
-/// Note that only unstable transactions (i.e. transactions in unstable blocks) are inspected.
-/// If `number_of_transactions` exceeds the number of unstable transactions,
-/// then all the unstable transactions are used.
-pub fn get_current_fee_percentiles(
-    state: &mut State,
+// The number of transactions to include in the percentiles calculation.
+const NUM_TRANSACTIONS: u32 = 10_000;
+
+// The number of percentiles to compute.
+const NUM_PERCENTILES: u16 = 100;
+
+/// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
+pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
+    with_state(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS))
+}
+
+fn get_current_fee_percentiles_internal(
+    state: &State,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
-    let current_tip_block_hash = main_chain.tip().block_hash();
-
-    if let Some(ref cache) = state.fee_percentiles_cache {
-        if cache.tip_block_hash == current_tip_block_hash {
-            // If tip block did not change return cached results.
-            return cache.fee_percentiles.clone();
-        }
-    };
 
     // If tip block changed recalculate and cache results.
     let fee_percentiles = percentiles(
@@ -33,12 +31,9 @@ pub fn get_current_fee_percentiles(
             &state.utxos,
             number_of_transactions,
         ),
-        100,
+        NUM_PERCENTILES,
     );
-    state.fee_percentiles_cache = Some(FeePercentilesCache {
-        tip_block_hash: current_tip_block_hash,
-        fee_percentiles: fee_percentiles.clone(),
-    });
+
     fee_percentiles
 }
 
@@ -109,7 +104,7 @@ fn get_tx_fee_per_byte(
 // it's part of a stable block, or in one of the unstable blocks.
 fn get_tx_input_value(tx_in: &TxIn, utxo_set: &UtxoSet, main_chain: &[&Block]) -> Option<Satoshi> {
     // Look up transaction's input value in the UTXO set first.
-    let result = utxo_set.utxos.get(&tx_in.previous_output);
+    let result = utxo_set.utxos.get(&OutPoint::from(&tx_in.previous_output));
     match result {
         Some((txout, _height)) => Some(txout.value as Satoshi),
         None => {
@@ -147,10 +142,12 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::state::State;
-    use crate::store::insert_block;
-    use crate::unstable_blocks;
-    use bitcoin::Network;
+    use crate::{
+        store,
+        types::{InitPayload, Network},
+        with_state_mut,
+    };
+    use bitcoin::blockdata::constants::genesis_block;
     use ic_btc_test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
 
     #[test]
@@ -207,21 +204,18 @@ mod test {
     // - genesis block receives a coinbase transaction on address_1 with initial_balance
     // - follow-up blocks transfer payments from address_1 to address_2 with a specified fee
     // Fee is choosen to be a multiple of transaction size to have round values of fee.
-    fn generate_blocks(
-        initial_balance: Satoshi,
-        number_of_blocks: u32,
-        network: Network,
-    ) -> Vec<Block> {
+    fn generate_blocks(initial_balance: Satoshi, number_of_blocks: u32) -> Vec<Block> {
+        let network = Network::Regtest;
         let mut blocks = Vec::new();
 
         let pay: Satoshi = 1;
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(network.into());
+        let address_2 = random_p2pkh_address(network.into());
 
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, initial_balance)
             .build();
-        let block_0 = BlockBuilder::genesis()
+        let block_0 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
             .with_transaction(coinbase_tx.clone())
             .build();
         blocks.push(block_0.clone());
@@ -263,40 +257,49 @@ mod test {
         blocks
     }
 
-    fn convert_blocks_to_state(
-        blocks: Vec<Block>,
-        network: Network,
-        stability_threshold: u32,
-    ) -> State {
-        let mut state = State::new(stability_threshold, network, blocks[0].clone());
-        for (i, block) in blocks.iter().skip(1).enumerate() {
-            insert_block(&mut state, block.clone()).unwrap();
-            if i % 1000 == 0 {
-                println!("processed block: {}", i);
+    fn init_state(blocks: Vec<Block>, stability_threshold: u128) {
+        crate::init(InitPayload {
+            stability_threshold,
+            network: Network::Regtest,
+            blocks_source: None,
+        });
+
+        with_state_mut(|state| {
+            for (i, block) in blocks.into_iter().enumerate() {
+                store::insert_block(state, block).unwrap();
+                if i % 1000 == 0 {
+                    println!("processed block: {}", i);
+                }
             }
-        }
-        state
+
+            store::ingest_stable_blocks_into_utxoset(state);
+        });
     }
 
     #[test]
     fn get_current_fee_percentiles_requested_number_of_txs_is_greater_than_number_of_actual_txs() {
         let number_of_blocks = 5;
-        let network = Network::Bitcoin;
-        let blocks = generate_blocks(10_000, number_of_blocks, network);
-        let stability_threshold = blocks.len() as u32;
-        let mut state = convert_blocks_to_state(blocks, network, stability_threshold);
-        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
-
+        let blocks = generate_blocks(10_000, number_of_blocks);
         let number_of_transactions = 10_000;
-        let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-        let percentiles = get_current_fee_percentiles(&mut state, number_of_transactions);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
-        // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
-        // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
-        assert_eq!(fees.len(), number_of_blocks as usize);
-        // Fees are in a reversed order, in millisatoshi per byte units.
-        assert_eq!(fees, vec![33, 25, 16, 8, 0]);
+            let fees = get_fees_per_byte(
+                main_chain.clone(),
+                &state.utxos,
+                number_of_transactions as u32,
+            );
 
+            // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
+            // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
+            assert_eq!(fees.len(), number_of_blocks as usize);
+            // Fees are in a reversed order, in millisatoshi per byte units.
+            assert_eq!(fees, vec![33, 25, 16, 8, 0]);
+        });
+
+        let percentiles = get_current_fee_percentiles();
         assert_eq!(percentiles.len(), 100);
         // Percentiles distributed evenly.
         assert_eq!(percentiles[0..20], [0; 20]);
@@ -309,129 +312,137 @@ mod test {
     #[test]
     fn get_current_fee_percentiles_requested_number_of_txs_is_less_than_number_of_actual_txs() {
         let number_of_blocks = 8;
-        let network = Network::Bitcoin;
-        let blocks = generate_blocks(10_000, number_of_blocks, network);
-        let stability_threshold = blocks.len() as u32;
-        let mut state = convert_blocks_to_state(blocks, network, stability_threshold);
-        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
 
-        let number_of_transactions = 4;
-        let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-        let percentiles = get_current_fee_percentiles(&mut state, number_of_transactions);
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
-        // Initial transactions' fees [0, 1, 2, 3, 4, 5, 6, 7, 8] satoshi, with 119 bytes of transaction size
-        // transfer into [0, 8, 16, 25, 33, 42, 50, 58] millisatoshi per byte fees in chronological order.
-        // Extracted fees contain only last 4 transaction fees in a reversed order.
-        assert_eq!(fees.len(), number_of_transactions as usize);
-        // Fees are in a reversed order, in millisatoshi per byte units.
-        assert_eq!(fees, vec![58, 50, 42, 33]);
+            let number_of_transactions = 4;
+            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            // Initial transactions' fees [0, 1, 2, 3, 4, 5, 6, 7, 8] satoshi, with 119 bytes of transaction size
+            // transfer into [0, 8, 16, 25, 33, 42, 50, 58] millisatoshi per byte fees in chronological order.
+            // Extracted fees contain only last 4 transaction fees in a reversed order.
+            assert_eq!(fees.len(), number_of_transactions as usize);
+            // Fees are in a reversed order, in millisatoshi per byte units.
+            assert_eq!(fees, vec![58, 50, 42, 33]);
 
-        assert_eq!(percentiles.len(), 100);
-        // Percentiles distributed evenly.
-        assert_eq!(percentiles[0..25], [33; 25]);
-        assert_eq!(percentiles[25..50], [42; 25]);
-        assert_eq!(percentiles[50..75], [50; 25]);
-        assert_eq!(percentiles[75..100], [58; 25]);
+            let percentiles = get_current_fee_percentiles_internal(state, 4);
+            assert_eq!(percentiles.len(), 100);
+            // Percentiles distributed evenly.
+            assert_eq!(percentiles[0..25], [33; 25]);
+            assert_eq!(percentiles[25..50], [42; 25]);
+            assert_eq!(percentiles[50..75], [50; 25]);
+            assert_eq!(percentiles[75..100], [58; 25]);
+        });
     }
 
     #[test]
     fn get_current_fee_percentiles_requested_number_of_txs_is_equal_to_the_number_of_actual_txs() {
         let number_of_blocks = 5;
-        let network = Network::Bitcoin;
-        let blocks = generate_blocks(10_000, number_of_blocks, network);
-        let stability_threshold = blocks.len() as u32;
-        let mut state = convert_blocks_to_state(blocks, network, stability_threshold);
-        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
 
-        let number_of_transactions = 5;
-        let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-        let percentiles = get_current_fee_percentiles(&mut state, number_of_transactions);
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
-        // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
-        // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
-        assert_eq!(fees.len(), number_of_blocks as usize);
-        // Fees are in a reversed order, in millisatoshi per byte units.
-        assert_eq!(fees, vec![33, 25, 16, 8, 0]);
+            let number_of_transactions = 5;
+            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
 
-        assert_eq!(percentiles.len(), 100);
-        // Percentiles distributed evenly.
-        assert_eq!(percentiles[0..20], [0; 20]);
-        assert_eq!(percentiles[20..40], [8; 20]);
-        assert_eq!(percentiles[40..60], [16; 20]);
-        assert_eq!(percentiles[60..80], [25; 20]);
-        assert_eq!(percentiles[80..100], [33; 20]);
+            // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
+            // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
+            assert_eq!(fees.len(), number_of_blocks as usize);
+            // Fees are in a reversed order, in millisatoshi per byte units.
+            assert_eq!(fees, vec![33, 25, 16, 8, 0]);
+
+            assert_eq!(percentiles.len(), 100);
+            // Percentiles distributed evenly.
+            assert_eq!(percentiles[0..20], [0; 20]);
+            assert_eq!(percentiles[20..40], [8; 20]);
+            assert_eq!(percentiles[40..60], [16; 20]);
+            assert_eq!(percentiles[60..80], [25; 20]);
+            assert_eq!(percentiles[80..100], [33; 20]);
+        });
     }
 
     #[test]
     fn get_current_fee_percentiles_big_input() {
         let number_of_blocks = 1_000;
         let initial_balance = 500_500; // number_of_blocks * (number_of_blocks + 1) / 2
-        let network = Network::Bitcoin;
-        let blocks = generate_blocks(initial_balance, number_of_blocks, network);
-        let stability_threshold = blocks.len() as u32;
-        let mut state = convert_blocks_to_state(blocks, network, stability_threshold);
-        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
+        let blocks = generate_blocks(initial_balance, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
 
-        let number_of_transactions = 5;
-        let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-        let percentiles = get_current_fee_percentiles(&mut state, number_of_transactions);
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
-        // Initial transactions' fees [0, 1, 2, 3, ...] satoshi, with 119 bytes of transaction size
-        // transfer into [0, 8, 16, 25, ...] millisatoshi per byte fees in chronological order.
-        assert_eq!(fees.len(), number_of_transactions as usize);
-        // Fees are in a reversed order, in millisatoshi per byte units.
-        // Eg. the fee of 999 satoshi for transaction of 119 bytes converts to
-        // 1000 * 999 / 119 = 8394 millisatosi/bite.
-        assert_eq!(fees, vec![8394, 8386, 8378, 8369, 8361]);
+            let number_of_transactions = 5;
+            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
 
-        assert_eq!(percentiles.len(), 100);
-        // Percentiles distributed evenly.
-        assert_eq!(percentiles[0..20], [8361; 20]);
-        assert_eq!(percentiles[20..40], [8369; 20]);
-        assert_eq!(percentiles[40..60], [8378; 20]);
-        assert_eq!(percentiles[60..80], [8386; 20]);
-        assert_eq!(percentiles[80..100], [8394; 20]);
+            // Initial transactions' fees [0, 1, 2, 3, ...] satoshi, with 119 bytes of transaction size
+            // transfer into [0, 8, 16, 25, ...] millisatoshi per byte fees in chronological order.
+            assert_eq!(fees.len(), number_of_transactions as usize);
+            // Fees are in a reversed order, in millisatoshi per byte units.
+            // Eg. the fee of 999 satoshi for transaction of 119 bytes converts to
+            // 1000 * 999 / 119 = 8394 millisatosi/bite.
+            assert_eq!(fees, vec![8394, 8386, 8378, 8369, 8361]);
+
+            assert_eq!(percentiles.len(), 100);
+            // Percentiles distributed evenly.
+            assert_eq!(percentiles[0..20], [8361; 20]);
+            assert_eq!(percentiles[20..40], [8369; 20]);
+            assert_eq!(percentiles[40..60], [8378; 20]);
+            assert_eq!(percentiles[60..80], [8386; 20]);
+            assert_eq!(percentiles[80..100], [8394; 20]);
+        });
     }
 
     #[test]
     fn get_current_fee_percentiles_no_transactions() {
         let number_of_blocks = 0;
-        let network = Network::Bitcoin;
-        let blocks = generate_blocks(10_000, number_of_blocks, network);
-        let stability_threshold = blocks.len() as u32;
-        let mut state = convert_blocks_to_state(blocks, network, stability_threshold);
-        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
 
-        let number_of_transactions = 10_000;
-        let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-        let percentiles = get_current_fee_percentiles(&mut state, number_of_transactions);
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
-        assert_eq!(fees.len(), 0);
+            let number_of_transactions = 10_000;
+            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            assert_eq!(fees.len(), 0);
+        });
+
+        let percentiles = get_current_fee_percentiles();
         assert_eq!(percentiles.len(), 0);
     }
 
     #[test]
     fn get_current_fee_percentiles_from_utxos() {
         let number_of_blocks = 5;
-        let network = Network::Bitcoin;
-        let blocks = generate_blocks(10_000, number_of_blocks, network);
-        let stability_threshold = 1;
-        let mut state = convert_blocks_to_state(blocks, network, stability_threshold);
-        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
-
         let number_of_transactions = 10_000;
-        let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-        let percentiles = get_current_fee_percentiles(&mut state, number_of_transactions);
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = 1;
+        init_state(blocks, stability_threshold);
 
-        // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
-        // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
-        // But only 2 last transactions are placed in unstable blocks that form a main chain.
-        // All the rest of the blocks are partially stored in UTXO set, which does not have information
-        // about the sequence and input values, which does not allow to compute the fee.
-        assert_eq!(fees.len(), 2);
-        // Fees are in a reversed order, in millisatoshi per byte units.
-        assert_eq!(fees, vec![33, 25]);
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
+            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
 
+            // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
+            // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
+            // But only 2 last transactions are placed in unstable blocks that form a main chain.
+            // All the rest of the blocks are partially stored in UTXO set, which does not have information
+            // about the sequence and input values, which does not allow to compute the fee.
+            assert_eq!(fees.len(), 2);
+            // Fees are in a reversed order, in millisatoshi per byte units.
+            assert_eq!(fees, vec![33, 25]);
+        });
+
+        let percentiles = get_current_fee_percentiles();
         assert_eq!(percentiles.len(), 100);
         // Percentiles distributed evenly.
         assert_eq!(percentiles[0..50], [25; 50]);
