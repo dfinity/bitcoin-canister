@@ -350,7 +350,7 @@ mod test {
 
             let number_of_transactions = 5;
             let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-            let percentiles = get_current_fee_percentiles_internal(&state, number_of_transactions);
+            let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
 
             // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
             // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
