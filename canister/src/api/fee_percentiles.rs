@@ -23,7 +23,6 @@ fn get_current_fee_percentiles_internal(
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
-    //    let current_tip_block_hash = main_chain.tip().block_hash();
 
     // If tip block changed recalculate and cache results.
     let fee_percentiles = percentiles(
@@ -426,17 +425,12 @@ mod test {
         let number_of_blocks = 5;
         let number_of_transactions = 10_000;
         let blocks = generate_blocks(10_000, number_of_blocks);
-        println!("generated {} blocks", blocks.len());
         let stability_threshold = 1;
         init_state(blocks, stability_threshold);
 
         with_state(|state| {
-            println!("stable height: {:?}", state.utxos.next_height);
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
-            println!("main chain length {}", main_chain.len());
             let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
-            println!("fees len: {}", fees.len());
-            println!("fees: {:?}", fees);
 
             // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
             // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
