@@ -18,6 +18,7 @@ mod utxoset;
 
 use crate::{state::State, types::InitPayload};
 pub use api::get_balance;
+pub use api::get_current_fee_percentiles;
 pub use api::get_utxos;
 use bitcoin::blockdata::constants::genesis_block;
 pub use heartbeat::heartbeat;

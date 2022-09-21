@@ -47,8 +47,12 @@ type get_utxos_response = record {
   next_page: opt blob;
 };
 
+type millisatoshi_per_byte = nat64;
+
 service bitcoin: (init_payload) -> {
   get_balance: (get_balance_request) -> (satoshi);
   
   get_utxos: (get_utxos_request) -> (get_utxos_response);
+
+  get_current_fee_percentiles: () -> (vec millisatoshi_per_byte);
 }
