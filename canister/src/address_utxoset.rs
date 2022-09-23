@@ -91,6 +91,7 @@ impl<'a> AddressUtxoSet<'a> {
 
     // Iterates over transaction outputs and adds unspents.
     fn insert_unspent_txs(&mut self, tx: &Transaction, height: Height) {
+        let mut cached_tx_id: Option<Vec<u8>> = None;
         for (vout, output) in tx.output.iter().enumerate() {
             if !(output.script_pubkey.is_provably_unspendable()) {
                 // Insert the outpoint.
@@ -99,10 +100,22 @@ impl<'a> AddressUtxoSet<'a> {
                 // by the address we're interested in. However, storing everything
                 // allows us to have stronger verification that all inputs/outputs
                 // are being consumed as expected.
+
+                let tx_id = match &mut cached_tx_id {
+                    None => {
+                        // Compute the txid if it wasn't computed already.
+                        // `tx.txid()` is an expensive call, so it's useful to cache.
+                        let tx_id = tx.txid().to_vec();
+                        cached_tx_id = Some(tx_id.clone());
+                        tx_id
+                    }
+                    Some(tx_id) => tx_id.clone(),
+                };
+
                 assert!(
                     self.added_utxos
                         .insert(
-                            (height, OutPoint::new(tx.txid().to_vec(), vout as u32)).to_bytes(),
+                            (height, OutPoint::new(tx_id, vout as u32)).to_bytes(),
                             output.into(),
                         )
                         .is_none(),
