@@ -2,6 +2,7 @@ name: CI Checks
 
 env:
   RUST_VERSION: 1.62.1
+  DFX_VERSION: 0.11.2
 
 on:
   push:
@@ -147,7 +148,7 @@ jobs:
       - name: Install DFX
         run: |
           wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          DFX_VERSION=${DFX_VERSION:=0.11.1} bash install-dfx.sh < <(yes Y)
+          bash install-dfx.sh < <(yes Y)
           rm install-dfx.sh
           dfx cache install
           echo "$HOME/bin" >> $GITHUB_PATH
