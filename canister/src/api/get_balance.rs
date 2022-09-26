@@ -1,12 +1,25 @@
-use crate::{store, types::GetBalanceRequest, with_state};
+use crate::{
+    runtime::{performance_counter, print},
+    store,
+    types::GetBalanceRequest,
+    with_state,
+};
 use ic_btc_types::Satoshi;
 
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
-    with_state(|state| {
+    let res = with_state(|state| {
         let min_confirmations = request.min_confirmations.unwrap_or(0);
         store::get_balance(state, &request.address, min_confirmations).expect("get_balance failed")
-    })
+    });
+
+    // Print the number of instructions it took to process this request.
+    print(&format!(
+        "[INSTRUCTION COUNT] ({:?}): {}",
+        request,
+        performance_counter()
+    ));
+    res
 }
 
 #[cfg(test)]
