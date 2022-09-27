@@ -1,6 +1,6 @@
 use crate::{
     state::UtxoSet,
-    types::{Transaction, OutPoint, Storable, TxOut},
+    types::{OutPoint, Storable, Transaction, TxOut},
 };
 use bitcoin::{Address, Script};
 use ic_btc_types::{Address as AddressStr, Height, Utxo};

@@ -1,6 +1,6 @@
 use crate::{
     genesis_block,
-    types::{Block, Network, Transaction, OutPoint},
+    types::{Block, Network, OutPoint, Transaction},
 };
 use bitcoin::{
     secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, BlockHeader, PublicKey,
