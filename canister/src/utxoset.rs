@@ -2,9 +2,9 @@ use crate::address_utxoset::AddressUtxoSet;
 use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::{BlockIngestionStats, PartialStableBlock, UtxoSet},
-    types::{OutPoint, Slicing, Storable},
+    types::{Block, OutPoint, Slicing, Storable},
 };
-use bitcoin::{Address, Block, Script, Transaction, TxOut, Txid};
+use bitcoin::{Address, Script, Transaction, TxOut, Txid};
 use std::str::FromStr;
 
 lazy_static::lazy_static! {
@@ -70,7 +70,7 @@ fn ingest_block_helper(
 ) -> Slicing<()> {
     let ins_start = performance_counter();
     stats.num_rounds += 1;
-    for (tx_idx, tx) in block.txdata.iter().enumerate().skip(next_tx_idx) {
+    for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {
         if let Slicing::Paused((next_input_idx, next_output_idx)) =
             ingest_tx_with_slicing(utxo_set, tx, next_input_idx, next_output_idx, &mut stats)
         {

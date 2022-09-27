@@ -1,7 +1,7 @@
 //! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
 use bitcoin::{
-    hashes::Hash, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
+    hashes::Hash, Block as BitcoinBlock, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
     OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
 };
 use ic_btc_types::{Address, Height, UtxosFilter};
@@ -20,6 +20,31 @@ pub struct InitPayload {
     /// Defaults to the management canister in production and can be overridden
     /// for testing.
     pub blocks_source: Option<Principal>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
+pub struct Block {
+    #[serde(serialize_with = "crate::serde::serialize_block")]
+    #[serde(deserialize_with = "crate::serde::deserialize_block")]
+    pub block: BitcoinBlock,
+}
+
+impl Block {
+    pub fn new(block: BitcoinBlock) -> Self {
+        Self { block }
+    }
+
+    pub fn header(&self) -> &bitcoin::BlockHeader {
+        &self.block.header
+    }
+
+    pub fn block_hash(&self) -> bitcoin::BlockHash {
+        self.block.block_hash()
+    }
+
+    pub fn txdata(&self) -> &[bitcoin::Transaction] {
+        &self.block.txdata
+    }
 }
 
 /// A reference to a transaction output.

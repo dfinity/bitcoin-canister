@@ -1,4 +1,5 @@
-use bitcoin::{Block, BlockHash};
+use crate::types::Block;
+use bitcoin::BlockHash;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -76,8 +77,6 @@ impl fmt::Display for EmptyChainError {
 /// Maintains a tree of connected blocks.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
 pub struct BlockTree {
-    #[serde(serialize_with = "crate::serde::serialize_block")]
-    #[serde(deserialize_with = "crate::serde::deserialize_block")]
     pub root: Block,
     pub children: Vec<BlockTree>,
 }
@@ -104,9 +103,12 @@ pub fn extend(block_tree: &mut BlockTree, block: Block) -> Result<(), BlockDoesN
     }
 
     // Check if the block is a successor to any of the blocks in the tree.
-    match find_mut(block_tree, &block.header.prev_blockhash) {
+    match find_mut(block_tree, &block.header().prev_blockhash) {
         Some(block_subtree) => {
-            assert_eq!(block_subtree.root.block_hash(), block.header.prev_blockhash);
+            assert_eq!(
+                block_subtree.root.block_hash(),
+                block.header().prev_blockhash
+            );
             // Add the block as a successor.
             block_subtree.children.push(BlockTree::new(block));
             Ok(())
@@ -238,7 +240,7 @@ pub struct BlockDoesNotExtendTree(pub Block);
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_btc_test_utils::BlockBuilder;
+    use crate::test_utils::BlockBuilder;
 
     #[test]
     fn tree_single_block() {
@@ -257,7 +259,7 @@ mod test {
     #[test]
     fn tree_multiple_forks() {
         let genesis_block = BlockBuilder::genesis().build();
-        let genesis_block_header = genesis_block.header;
+        let genesis_block_header = *genesis_block.header();
         let mut block_tree = BlockTree::new(genesis_block);
 
         for i in 1..5 {
@@ -265,7 +267,7 @@ mod test {
             // Each one of these should be a separate fork.
             extend(
                 &mut block_tree,
-                BlockBuilder::with_prev_header(genesis_block_header).build(),
+                BlockBuilder::with_prev_header(&genesis_block_header).build(),
             )
             .unwrap();
             assert_eq!(blockchains(&block_tree).len(), i);
@@ -278,7 +280,7 @@ mod test {
     fn chain_with_tip_no_forks() {
         let mut blocks = vec![BlockBuilder::genesis().build()];
         for i in 1..10 {
-            blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header).build())
+            blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
         }
 
         let mut block_tree = BlockTree::new(blocks[0].clone());
@@ -303,7 +305,7 @@ mod test {
 
             // All blocks should be correctly chained to one another.
             for i in 1..chain.len() {
-                assert_eq!(chain[i - 1].block_hash(), chain[i].header.prev_blockhash)
+                assert_eq!(chain[i - 1].block_hash(), chain[i].header().prev_blockhash)
             }
         }
     }
@@ -316,7 +318,7 @@ mod test {
         let num_forks = 5;
         for _ in 0..num_forks {
             for i in 1..10 {
-                blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header).build())
+                blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
             }
 
             for block in blocks.iter() {
@@ -339,7 +341,7 @@ mod test {
 
                 // All blocks should be correctly chained to one another.
                 for i in 1..chain.len() {
-                    assert_eq!(chain[i - 1].block_hash(), chain[i].header.prev_blockhash)
+                    assert_eq!(chain[i - 1].block_hash(), chain[i].header().prev_blockhash)
                 }
             }
 

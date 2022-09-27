@@ -1,7 +1,8 @@
 use crate::{
-    get_balance, get_utxos, heartbeat, runtime,
+    genesis_block, get_balance, get_utxos, heartbeat, runtime,
     state::PartialStableBlock,
     store::main_chain_height,
+    test_utils::BlockBuilder,
     types::{
         BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
         GetUtxosRequest, Network,
@@ -10,14 +11,13 @@ use crate::{
     with_state,
 };
 use crate::{init, test_utils::random_p2pkh_address, InitPayload};
-use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
     BlockHash, Txid,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+use ic_btc_test_utils::TransactionBuilder;
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
 use std::fs::File;
@@ -64,11 +64,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     println!("# blocks in file: {}", blocks.len());
 
     // Build the chain
-    chain.push(
-        blocks
-            .remove(&genesis_block(network.into()).block_hash())
-            .unwrap(),
-    );
+    chain.push(blocks.remove(&genesis_block(network).block_hash()).unwrap());
     for _ in 1..num_blocks {
         let next_block = blocks.remove(&chain[chain.len() - 1].block_hash()).unwrap();
         chain.push(next_block);
@@ -375,20 +371,20 @@ async fn time_slices_large_block_with_multiple_transactions() {
         .with_output(&address_2, 1000)
         .build();
 
-    let block_1 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header())
         .with_transaction(tx_1)
         .with_transaction(tx_2)
         .build();
 
     // An additional block so that the previous block is ingested into the stable UTXO set.
-    let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
 
     // Serialize the blocks.
     let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
         .iter()
         .map(|block| {
             let mut block_bytes = vec![];
-            block.consensus_encode(&mut block_bytes).unwrap();
+            block.block.consensus_encode(&mut block_bytes).unwrap();
             block_bytes
         })
         .collect();
