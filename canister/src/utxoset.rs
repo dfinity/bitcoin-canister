@@ -1,8 +1,7 @@
 use crate::address_utxoset::AddressUtxoSet;
 use crate::{
-    runtime::performance_counter,
-    state::PartialStableBlock,
-    state::UtxoSet,
+    runtime::{inc_performance_counter, performance_counter, print},
+    state::{BlockIngestionStats, PartialStableBlock, UtxoSet},
     types::{OutPoint, Slicing, Storable},
 };
 use bitcoin::{Address, Block, Script, Transaction, TxOut, Txid};
@@ -39,7 +38,7 @@ pub fn ingest_block(utxo_set: &mut UtxoSet, block: Block) -> Slicing<()> {
         utxo_set.next_height
     );
 
-    ingest_block_helper(utxo_set, block, 0, 0, 0)
+    ingest_block_helper(utxo_set, block, 0, 0, 0, BlockIngestionStats::default())
 }
 
 /// Continue ingesting a block.
@@ -51,6 +50,7 @@ pub fn ingest_block_continue(utxo_set: &mut UtxoSet) -> Slicing<()> {
             p.next_tx_idx,
             p.next_input_idx,
             p.next_output_idx,
+            p.stats,
         ),
         None => {
             // No partially ingested block found. Nothing to do.
@@ -66,17 +66,23 @@ fn ingest_block_helper(
     next_tx_idx: usize,
     mut next_input_idx: usize,
     mut next_output_idx: usize,
+    mut stats: BlockIngestionStats,
 ) -> Slicing<()> {
+    let ins_start = performance_counter();
+    stats.num_rounds += 1;
     for (tx_idx, tx) in block.txdata.iter().enumerate().skip(next_tx_idx) {
         if let Slicing::Paused((next_input_idx, next_output_idx)) =
-            ingest_tx_with_slicing(utxo_set, tx, next_input_idx, next_output_idx)
+            ingest_tx_with_slicing(utxo_set, tx, next_input_idx, next_output_idx, &mut stats)
         {
+            stats.ins_total += performance_counter() - ins_start;
+
             // Getting close to the the instructions limit. Pause execution.
             utxo_set.partial_stable_block = Some(PartialStableBlock {
                 block,
                 next_tx_idx: tx_idx,
                 next_input_idx,
                 next_output_idx,
+                stats,
             });
 
             return Slicing::Paused(());
@@ -86,6 +92,12 @@ fn ingest_block_helper(
         next_input_idx = 0;
         next_output_idx = 0;
     }
+
+    stats.ins_total += performance_counter() - ins_start;
+    print(&format!(
+        "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
+        utxo_set.next_height, stats
+    ));
 
     // Block ingestion complete.
     utxo_set.next_height += 1;
@@ -103,12 +115,19 @@ fn ingest_tx_with_slicing(
     tx: &Transaction,
     start_input_idx: usize,
     start_output_idx: usize,
+    stats: &mut BlockIngestionStats,
 ) -> Slicing<(usize, usize)> {
-    if let Slicing::Paused(input_idx) = remove_inputs(utxo_set, tx, start_input_idx) {
+    let ins_start = performance_counter();
+    let res = remove_inputs(utxo_set, tx, start_input_idx);
+    stats.ins_remove_inputs += performance_counter() - ins_start;
+    if let Slicing::Paused(input_idx) = res {
         return Slicing::Paused((input_idx, 0));
     }
 
-    if let Slicing::Paused(output_idx) = insert_outputs(utxo_set, tx, start_output_idx) {
+    let ins_start = performance_counter();
+    let res = insert_outputs(utxo_set, tx, start_output_idx, stats);
+    stats.ins_insert_outputs += performance_counter() - ins_start;
+    if let Slicing::Paused(output_idx) = res {
         return Slicing::Paused((tx.input.len(), output_idx));
     }
 
@@ -122,7 +141,9 @@ fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> 
     }
 
     for (input_idx, input) in tx.input.iter().enumerate().skip(start_idx) {
-        if performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
+        // NOTE: We're using `inc_performance_counter` here to increment the mock performance
+        // counter in the unit tests.
+        if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
             return Slicing::Paused(input_idx);
         }
 
@@ -155,18 +176,27 @@ fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> 
 }
 
 // Iterates over transaction outputs, starting from `start_idx`, and inserts them into the UTXO set.
-fn insert_outputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> Slicing<usize> {
+fn insert_outputs(
+    utxo_set: &mut UtxoSet,
+    tx: &Transaction,
+    start_idx: usize,
+    stats: &mut BlockIngestionStats,
+) -> Slicing<usize> {
     for (vout, output) in tx.output.iter().enumerate().skip(start_idx) {
-        if performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
+        // NOTE: We're using `inc_performance_counter` here to increment the mock performance
+        // counter in the unit tests.
+        if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
             return Slicing::Paused(vout);
         }
 
         if !(output.script_pubkey.is_provably_unspendable()) {
-            insert_utxo(
-                utxo_set,
-                OutPoint::new(tx.txid().to_vec(), vout as u32),
-                output.clone(),
-            );
+            let ins_start = performance_counter();
+            let txid = tx.txid().to_vec();
+            stats.ins_txids += performance_counter() - ins_start;
+
+            let ins_start = performance_counter();
+            insert_utxo(utxo_set, OutPoint::new(txid, vout as u32), output.clone());
+            stats.ins_insert_utxos += performance_counter() - ins_start;
         }
     }
 
@@ -231,7 +261,10 @@ mod test {
 
     // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
     fn ingest_tx(utxo_set: &mut UtxoSet, tx: &Transaction) {
-        assert_eq!(ingest_tx_with_slicing(utxo_set, tx, 0, 0), Slicing::Done);
+        assert_eq!(
+            ingest_tx_with_slicing(utxo_set, tx, 0, 0, &mut BlockIngestionStats::default()),
+            Slicing::Done
+        );
     }
 
     #[test]
