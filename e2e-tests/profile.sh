@@ -8,4 +8,4 @@ INSTRUCTION_COUNT_FILE="$SCRIPT_DIR"/instructions_count.txt
 bash "$SCRIPT_DIR"/syncing_test.sh 2>&1 | tee "$LOG_FILE"
 
 # Search for the instruction counts in the test and update the instructions count file.
-sed -n 's/.*INSTRUCTION COUNT] \(.*\)}/\1/p' "$LOG_FILE" > "$INSTRUCTION_COUNT_FILE"
+sed -n 's/.*INSTRUCTION COUNT] \(.*\)/\1/p' "$LOG_FILE" > "$INSTRUCTION_COUNT_FILE"
