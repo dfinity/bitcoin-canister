@@ -1,5 +1,8 @@
-use crate::blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree};
-use bitcoin::{Block, BlockHash};
+use crate::{
+    blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
+    types::Block,
+};
+use bitcoin::BlockHash;
 use serde::{Deserialize, Serialize};
 
 /// A data structure for maintaining all unstable blocks.
@@ -140,7 +143,7 @@ pub fn get_chain_with_tip<'a, 'b>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_btc_test_utils::BlockBuilder;
+    use crate::test_utils::BlockBuilder;
 
     #[test]
     fn empty() {
@@ -153,8 +156,8 @@ mod test {
     #[test]
     fn single_chain() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 
@@ -175,8 +178,8 @@ mod test {
     #[test]
     fn forks() {
         let genesis_block = BlockBuilder::genesis().build();
-        let block = BlockBuilder::with_prev_header(genesis_block.header).build();
-        let forked_block = BlockBuilder::with_prev_header(genesis_block.header).build();
+        let block = BlockBuilder::with_prev_header(genesis_block.header()).build();
+        let forked_block = BlockBuilder::with_prev_header(genesis_block.header()).build();
 
         let mut forest = UnstableBlocks::new(1, genesis_block.clone());
 
@@ -189,7 +192,7 @@ mod test {
         // Extend fork2 by another block.
         push(
             &mut forest,
-            BlockBuilder::with_prev_header(forked_block.header).build(),
+            BlockBuilder::with_prev_header(forked_block.header()).build(),
         )
         .unwrap();
 
@@ -205,8 +208,8 @@ mod test {
     #[test]
     fn insert_in_order() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
 
         let mut forest = UnstableBlocks::new(0, block_0.clone());
         push(&mut forest, block_1.clone()).unwrap();
@@ -225,8 +228,8 @@ mod test {
     #[test]
     fn get_main_chain_single_blockchain() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 
@@ -247,8 +250,8 @@ mod test {
     #[test]
     fn get_main_chain_two_contesting_trees() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_0.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_0.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 
@@ -266,9 +269,9 @@ mod test {
     #[test]
     fn get_main_chain_longer_fork() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_3 = BlockBuilder::with_prev_header(block_2.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 
@@ -291,11 +294,11 @@ mod test {
     #[test]
     fn get_main_chain_fork_at_first_block() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
-        let block_3 = BlockBuilder::with_prev_header(block_2.header).build();
-        let block_a = BlockBuilder::with_prev_header(block_1.header).build();
-        let block_b = BlockBuilder::with_prev_header(block_a.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+        let block_a = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_b = BlockBuilder::with_prev_header(block_a.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 
@@ -324,14 +327,14 @@ mod test {
     #[test]
     fn get_main_chain_multiple_forks() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
-        let block_3 = BlockBuilder::with_prev_header(block_2.header).build();
-        let block_a = BlockBuilder::with_prev_header(block_1.header).build();
-        let block_b = BlockBuilder::with_prev_header(block_a.header).build();
-        let block_x = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_y = BlockBuilder::with_prev_header(block_x.header).build();
-        let block_z = BlockBuilder::with_prev_header(block_y.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+        let block_a = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_b = BlockBuilder::with_prev_header(block_a.header()).build();
+        let block_x = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_y = BlockBuilder::with_prev_header(block_x.header()).build();
+        let block_z = BlockBuilder::with_prev_header(block_y.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 
@@ -346,7 +349,7 @@ mod test {
         assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
 
         // Now add block c to b.
-        let block_c = BlockBuilder::with_prev_header(block_b.header).build();
+        let block_c = BlockBuilder::with_prev_header(block_b.header()).build();
         push(&mut forest, block_c.clone()).unwrap();
 
         // Now the main chain should be "1 -> a -> b -> c"
@@ -360,14 +363,14 @@ mod test {
     #[test]
     fn get_main_chain_multiple_forks_2() {
         let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header).build();
-        let block_3 = BlockBuilder::with_prev_header(block_2.header).build();
-        let block_a = BlockBuilder::with_prev_header(block_1.header).build();
-        let block_b = BlockBuilder::with_prev_header(block_a.header).build();
-        let block_x = BlockBuilder::with_prev_header(block_0.header).build();
-        let block_y = BlockBuilder::with_prev_header(block_x.header).build();
-        let block_z = BlockBuilder::with_prev_header(block_y.header).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+        let block_a = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_b = BlockBuilder::with_prev_header(block_a.header()).build();
+        let block_x = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_y = BlockBuilder::with_prev_header(block_x.header()).build();
+        let block_z = BlockBuilder::with_prev_header(block_y.header()).build();
 
         let mut forest = UnstableBlocks::new(1, block_0.clone());
 

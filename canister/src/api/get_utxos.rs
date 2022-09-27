@@ -53,11 +53,11 @@ fn get_utxos_internal(
 mod test {
     use super::*;
     use crate::{
-        test_utils::random_p2pkh_address,
-        types::{InitPayload, Network},
+        genesis_block,
+        test_utils::{random_p2pkh_address, BlockBuilder},
+        types::{Block, InitPayload, Network},
     };
-    use bitcoin::{blockdata::constants::genesis_block, Block};
-    use ic_btc_test_utils::{random_p2tr_address, BlockBuilder, TransactionBuilder};
+    use ic_btc_test_utils::{random_p2tr_address, TransactionBuilder};
     use ic_btc_types::{OutPoint, Utxo};
 
     #[test]
@@ -91,7 +91,7 @@ mod test {
             }),
             GetUtxosResponse {
                 utxos: vec![],
-                tip_block_hash: genesis_block(network.into()).block_hash().to_vec(),
+                tip_block_hash: genesis_block(network).block_hash().to_vec(),
                 tip_height: 0,
                 next_page: None,
             }
@@ -114,7 +114,7 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
-        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(coinbase_tx.clone())
             .build();
 
@@ -162,7 +162,7 @@ mod test {
         // address_1 and address_2 based on whether we're creating an even
         // or an odd height block.
         let num_blocks = 10;
-        let mut prev_block: Block = genesis_block(network.into());
+        let mut prev_block: Block = genesis_block(network);
         let mut transactions = vec![];
         let mut blocks = vec![];
         for i in 0..num_blocks {
@@ -176,7 +176,7 @@ mod test {
                     .build()
             };
             transactions.push(tx.clone());
-            let block = BlockBuilder::with_prev_header(prev_block.header)
+            let block = BlockBuilder::with_prev_header(prev_block.header())
                 .with_transaction(tx.clone())
                 .build();
 
@@ -255,7 +255,7 @@ mod test {
             .with_output(&address, 1000)
             .build();
 
-        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(coinbase_tx.clone())
             .build();
 
@@ -306,14 +306,14 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .build();
-        let block_0 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block_0 = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
             .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header)
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .with_transaction(tx.clone())
             .build();
 
@@ -419,7 +419,7 @@ mod test {
                 }),
                 GetUtxosResponse {
                     utxos: vec![],
-                    tip_block_hash: genesis_block(network.into()).block_hash().to_vec(),
+                    tip_block_hash: genesis_block(network).block_hash().to_vec(),
                     tip_height: 0,
                     next_page: None,
                 }

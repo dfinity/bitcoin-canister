@@ -16,11 +16,13 @@ mod unstable_blocks;
 mod utxos;
 mod utxoset;
 
-use crate::{state::State, types::InitPayload};
+use crate::{
+    state::State,
+    types::{Block, InitPayload, Network},
+};
 pub use api::get_balance;
 pub use api::get_current_fee_percentiles;
 pub use api::get_utxos;
-use bitcoin::blockdata::constants::genesis_block;
 pub use heartbeat::heartbeat;
 use ic_stable_structures::Memory;
 use std::cell::RefCell;
@@ -68,7 +70,7 @@ pub fn init(payload: InitPayload) {
             .try_into()
             .expect("stability threshold too large"),
         payload.network,
-        genesis_block(payload.network.into()),
+        genesis_block(payload.network),
     ));
 
     if let Some(blocks_source) = payload.blocks_source {
@@ -107,6 +109,11 @@ pub fn post_upgrade() {
     set_state(state);
 }
 
+/// Returns the genesis block of the given network.
+pub fn genesis_block(network: Network) -> Block {
+    Block::new(bitcoin::blockdata::constants::genesis_block(network.into()))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -131,7 +138,7 @@ mod test {
 
             with_state(|state| {
                 assert!(
-                    *state == State::new(stability_threshold as u32, network, genesis_block(network.into()))
+                    *state == State::new(stability_threshold as u32, network, genesis_block(network))
                 );
             });
         }

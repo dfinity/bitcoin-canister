@@ -26,12 +26,12 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
 mod test {
     use super::*;
     use crate::{
-        test_utils::random_p2pkh_address,
+        genesis_block,
+        test_utils::{random_p2pkh_address, BlockBuilder},
         types::{InitPayload, Network},
         with_state_mut,
     };
-    use bitcoin::blockdata::constants::genesis_block;
-    use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+    use ic_btc_test_utils::TransactionBuilder;
 
     #[test]
     #[should_panic(expected = "get_balance failed: MalformedAddress")]
@@ -62,7 +62,7 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
-        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(coinbase_tx)
             .build();
 
@@ -141,15 +141,15 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .build();
-        let block_0 = genesis_block(network.into());
-        let block_1 = BlockBuilder::with_prev_header(block_0.header)
+        let block_0 = genesis_block(network);
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
             .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header)
+        let block_2 = BlockBuilder::with_prev_header(block_1.header())
             .with_transaction(tx)
             .build();
 
