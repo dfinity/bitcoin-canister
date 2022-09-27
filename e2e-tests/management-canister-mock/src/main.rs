@@ -1,5 +1,6 @@
 use bitcoin::{
-    blockdata::constants::genesis_block, consensus::Encodable, Address, Network as BitcoinNetwork,
+    blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
+    Network as BitcoinNetwork,
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
@@ -63,8 +64,7 @@ struct GetSuccessorsPartialResponse {
 }
 
 thread_local! {
-    static BLOCK_1: RefCell<BlockBlob> = RefCell::new(Vec::new());
-    static BLOCK_2: RefCell<BlockBlob> = RefCell::new(Vec::new());
+    static BLOCKS: RefCell<Vec<BlockBlob>> = RefCell::new(Vec::new());
 
     static COUNT: Cell<u64> = Cell::new(0);
 }
@@ -85,9 +85,7 @@ fn init() {
         .with_transaction(tx)
         .build();
 
-    let mut block_bytes = vec![];
-    block_1.consensus_encode(&mut block_bytes).unwrap();
-    BLOCK_1.with(|b| b.replace(block_bytes));
+    append_block(&block_1);
 
     let block_2 = BlockBuilder::with_prev_header(block_1.header)
         .with_transaction(
@@ -97,9 +95,26 @@ fn init() {
         )
         .build();
 
-    let mut block_bytes = vec![];
-    block_2.consensus_encode(&mut block_bytes).unwrap();
-    BLOCK_2.with(|b| b.replace(block_bytes));
+    append_block(&block_2);
+
+    // Add some extra blocks.
+    let block_3 = BlockBuilder::with_prev_header(block_2.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block(&block_3);
+
+    let block_4 = BlockBuilder::with_prev_header(block_3.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block(&block_4);
 }
 
 #[update]
@@ -117,22 +132,34 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
     let res = if count == 0 {
         // Send block 1 in full.
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCK_1.with(|b| b.borrow().clone())],
+            blocks: vec![BLOCKS.with(|b| b.borrow()[0].clone())],
             next: vec![],
         })
     } else if count == 1 {
         // Send part of block 2.
         GetSuccessorsResponse::Partial(GetSuccessorsPartialResponse {
-            partial_block: BLOCK_2.with(|b| b.borrow().clone())[0..20].to_vec(),
+            partial_block: BLOCKS.with(|b| b.borrow()[1].clone())[0..20].to_vec(),
             next: vec![],
             num_pages: 3,
         })
     } else if count == 2 {
         // Send another part of block 2.
-        GetSuccessorsResponse::FollowUp(BLOCK_2.with(|b| b.borrow().clone())[20..40].to_vec())
+        GetSuccessorsResponse::FollowUp(BLOCKS.with(|b| b.borrow()[1].clone())[20..40].to_vec())
     } else if count == 3 {
         // Send rest of block 2.
-        GetSuccessorsResponse::FollowUp(BLOCK_2.with(|b| b.borrow().clone())[40..].to_vec())
+        GetSuccessorsResponse::FollowUp(BLOCKS.with(|b| b.borrow()[1].clone())[40..].to_vec())
+    } else if count == 4 {
+        // Send block 1 in full.
+        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+            blocks: vec![BLOCKS.with(|b| b.borrow()[2].clone())],
+            next: vec![],
+        })
+    } else if count == 5 {
+        // Send block 1 in full.
+        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+            blocks: vec![BLOCKS.with(|b| b.borrow()[3].clone())],
+            next: vec![],
+        })
     } else {
         // Empty response
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
@@ -143,6 +170,12 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
 
     COUNT.with(|c| c.set(c.get() + 1));
     res
+}
+
+fn append_block(block: &Block) {
+    let mut block_bytes = vec![];
+    block.consensus_encode(&mut block_bytes).unwrap();
+    BLOCKS.with(|b| b.borrow_mut().push(block_bytes));
 }
 
 fn main() {}

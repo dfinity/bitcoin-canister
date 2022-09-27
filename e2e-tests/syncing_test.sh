@@ -38,8 +38,8 @@ dfx deploy --no-wallet bitcoin --argument "(record {
   blocks_source = principal \"$(dfx canister id management-canister-mock)\"
 })"
 
-# Wait until the chain is at height 2 (and for at most 5 seconds).
-wait_until_height 2 5
+# Wait until the chain is at height 4 (and for at most 10 seconds).
+wait_until_height 4 10
 
 # Fetch the balance of an address we expect to have funds.
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
