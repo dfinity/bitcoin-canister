@@ -141,6 +141,8 @@ fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> 
     }
 
     for (input_idx, input) in tx.input.iter().enumerate().skip(start_idx) {
+        // NOTE: We're using `inc_performance_counter` here to increment the mock performance
+        // counter in the unit tests.
         if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
             return Slicing::Paused(input_idx);
         }
@@ -181,6 +183,8 @@ fn insert_outputs(
     stats: &mut BlockIngestionStats,
 ) -> Slicing<usize> {
     for (vout, output) in tx.output.iter().enumerate().skip(start_idx) {
+        // NOTE: We're using `inc_performance_counter` here to increment the mock performance
+        // counter in the unit tests.
         if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
             return Slicing::Paused(vout);
         }
