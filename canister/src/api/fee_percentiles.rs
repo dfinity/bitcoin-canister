@@ -142,7 +142,7 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
 mod test {
     use super::*;
     use crate::{
-        store,
+        genesis_block, store,
         test_utils::BlockBuilder,
         types::{InitPayload, Network},
         with_state_mut,

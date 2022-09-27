@@ -26,7 +26,7 @@ pub struct InitPayload {
 pub struct Block {
     #[serde(serialize_with = "crate::serde::serialize_block")]
     #[serde(deserialize_with = "crate::serde::deserialize_block")]
-    pub block: BitcoinBlock,
+    block: BitcoinBlock,
 }
 
 impl Block {
@@ -44,6 +44,12 @@ impl Block {
 
     pub fn txdata(&self) -> &[bitcoin::Transaction] {
         &self.block.txdata
+    }
+
+    #[cfg(test)]
+    pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
+        use bitcoin::consensus::Encodable;
+        self.block.consensus_encode(buffer)
     }
 }
 

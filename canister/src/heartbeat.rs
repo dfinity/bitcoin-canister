@@ -189,7 +189,7 @@ mod test {
             Network,
         },
     };
-    use bitcoin::{consensus::Encodable, Address, BlockHeader};
+    use bitcoin::{Address, BlockHeader};
     use ic_btc_test_utils::TransactionBuilder;
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
@@ -222,7 +222,7 @@ mod test {
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
         let mut block_bytes = vec![];
-        block.block.consensus_encode(&mut block_bytes).unwrap();
+        block.consensus_encode(&mut block_bytes).unwrap();
 
         runtime::set_successors_response(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
@@ -273,7 +273,7 @@ mod test {
             .iter()
             .map(|block| {
                 let mut block_bytes = vec![];
-                block.block.consensus_encode(&mut block_bytes).unwrap();
+                block.consensus_encode(&mut block_bytes).unwrap();
                 block_bytes
             })
             .collect();
@@ -390,7 +390,7 @@ mod test {
             .iter()
             .map(|block| {
                 let mut block_bytes = vec![];
-                block.block.consensus_encode(&mut block_bytes).unwrap();
+                block.consensus_encode(&mut block_bytes).unwrap();
                 block_bytes
             })
             .collect();
@@ -491,7 +491,7 @@ mod test {
             .build();
 
         let mut block_bytes = vec![];
-        block.block.consensus_encode(&mut block_bytes).unwrap();
+        block.consensus_encode(&mut block_bytes).unwrap();
 
         // Split the block bytes into three pages.
         runtime::set_successors_response(GetSuccessorsResponse::Partial(

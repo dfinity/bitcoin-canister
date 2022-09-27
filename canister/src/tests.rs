@@ -384,7 +384,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
         .iter()
         .map(|block| {
             let mut block_bytes = vec![];
-            block.block.consensus_encode(&mut block_bytes).unwrap();
+            block.consensus_encode(&mut block_bytes).unwrap();
             block_bytes
         })
         .collect();

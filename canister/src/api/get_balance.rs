@@ -26,6 +26,7 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
 mod test {
     use super::*;
     use crate::{
+        genesis_block,
         test_utils::{random_p2pkh_address, BlockBuilder},
         types::{InitPayload, Network},
         with_state_mut,
@@ -140,8 +141,8 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .build();
-        let block_0 = genesis_block(network.into());
-        let block_1 = BlockBuilder::with_prev_header(&block_0.header)
+        let block_0 = genesis_block(network);
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
