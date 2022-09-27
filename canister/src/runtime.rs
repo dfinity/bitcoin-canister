@@ -86,23 +86,36 @@ pub fn set_successors_responses(responses: Vec<GetSuccessorsResponse>) {
     GET_SUCCESSORS_RESPONSES_INDEX.with(|e| e.replace(0));
 }
 
+/// In production this is equivalent to `performance_counter`.
 #[cfg(target_arch = "wasm32")]
-pub fn performance_counter() -> u64 {
-    ic_cdk::api::performance_counter(0)
+pub fn inc_performance_counter() -> u64 {
+    performance_counter()
 }
 
 /// Increments a mock performance counter and panics whenever the instruction limit is exceeded.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn performance_counter() -> u64 {
+pub fn inc_performance_counter() -> u64 {
     PERFORMANCE_COUNTER.with(|pc| {
         *pc.borrow_mut() += PERFORMANCE_COUNTER_STEP.with(|ps| *ps.borrow());
 
         if *pc.borrow() > INSTRUCTIONS_LIMIT {
             panic!("instructions limit exceeded");
         }
+    });
 
-        *pc.borrow()
-    })
+    performance_counter()
+}
+
+/// Returns the current instruction count.
+#[cfg(target_arch = "wasm32")]
+pub fn performance_counter() -> u64 {
+    ic_cdk::api::performance_counter(0)
+}
+
+/// Returns the current instruction count.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn performance_counter() -> u64 {
+    PERFORMANCE_COUNTER.with(|pc| *pc.borrow())
 }
 
 #[cfg(test)]

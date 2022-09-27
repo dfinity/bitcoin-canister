@@ -415,9 +415,8 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
     // Run the heartbeat a few rounds to ingest the blocks.
     let expected_states = vec![
-        Some(PartialStableBlock::new(block_1.clone(), 0, 1, 1)),
-        Some(PartialStableBlock::new(block_1.clone(), 1, 1, 1)),
-        None, // Ingestion has finished.
+        PartialStableBlock::new(block_1.clone(), 0, 1, 1),
+        PartialStableBlock::new(block_1.clone(), 1, 1, 1),
     ];
 
     for expected_state in expected_states.into_iter() {
@@ -426,8 +425,19 @@ async fn time_slices_large_block_with_multiple_transactions() {
         heartbeat().await;
 
         // Assert that execution has been paused.
-        with_state(|s| assert_eq!(s.utxos.partial_stable_block, expected_state));
+        let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+        assert_eq!(partial_block.block, expected_state.block);
+        assert_eq!(partial_block.next_tx_idx, expected_state.next_tx_idx);
+        assert_eq!(partial_block.next_input_idx, expected_state.next_input_idx);
+        assert_eq!(
+            partial_block.next_output_idx,
+            expected_state.next_output_idx
+        );
     }
+
+    // Assert ingestion has finished.
+    runtime::performance_counter_reset();
+    heartbeat().await;
 
     // The stable height is now updated to include `block_1`.
     assert_eq!(with_state(|s| s.utxos.next_height), 2);
