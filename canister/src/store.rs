@@ -219,12 +219,11 @@ pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{random_p2pkh_address, BlockBuilder};
+    use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::types::Network;
     use bitcoin::secp256k1::rand::rngs::OsRng;
     use bitcoin::secp256k1::Secp256k1;
     use bitcoin::{Address, Network as BitcoinNetwork, PublicKey};
-    use ic_btc_test_utils::TransactionBuilder;
     use ic_btc_types::{OutPoint, Utxo};
     use proptest::prelude::*;
 
@@ -284,7 +283,7 @@ mod test {
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(crate::types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
@@ -324,7 +323,7 @@ mod test {
         // Extend block 0 (again) with block 1 that spends the 1000 satoshis to address 3
         // This causes a fork.
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(crate::types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_3, 1000)
             .build();
         let block_1_prime = BlockBuilder::with_prev_header(block_0.header())
@@ -361,7 +360,7 @@ mod test {
         // In this case, the fork of [block 1', block 2'] will be considered the "main"
         // chain, and will be part of the UTXOs.
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(tx.txid(), 0))
+            .with_input(crate::types::OutPoint::new(tx.txid(), 0))
             .with_output(&address_4, 1000)
             .build();
         let block_2_prime = BlockBuilder::with_prev_header(block_1_prime.header())
@@ -471,7 +470,7 @@ mod test {
                 .with_transaction(coinbase_tx.clone())
                 .build();
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+                .with_input(crate::types::OutPoint::new(coinbase_tx.txid(), 0))
                 .with_output(&address_2, 1000)
                 .build();
             let block_1 = BlockBuilder::with_prev_header(block_0.header())

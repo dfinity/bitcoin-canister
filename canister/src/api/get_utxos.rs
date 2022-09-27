@@ -54,10 +54,10 @@ mod test {
     use super::*;
     use crate::{
         genesis_block,
-        test_utils::{random_p2pkh_address, BlockBuilder},
+        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{Block, InitPayload, Network},
     };
-    use ic_btc_test_utils::{random_p2tr_address, TransactionBuilder};
+    use ic_btc_test_utils::random_p2tr_address;
     use ic_btc_types::{OutPoint, Utxo};
 
     #[test]
@@ -310,7 +310,7 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(crate::types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())

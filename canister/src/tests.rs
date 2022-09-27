@@ -2,7 +2,7 @@ use crate::{
     genesis_block, get_balance, get_utxos, heartbeat, runtime,
     state::PartialStableBlock,
     store::main_chain_height,
-    test_utils::BlockBuilder,
+    test_utils::{BlockBuilder, TransactionBuilder},
     types::{
         BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
         GetUtxosRequest, Network,
@@ -17,7 +17,6 @@ use bitcoin::{
     BlockHash, Txid,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_test_utils::TransactionBuilder;
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
 use std::fs::File;
