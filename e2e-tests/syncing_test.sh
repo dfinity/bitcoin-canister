@@ -62,24 +62,20 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   exit 1
 fi
 
-# Fetch the balance of an address we expect to have funds.
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
 })')
 
-# Verify that the balance is 50 BTC.
 if ! [[ $BALANCE = "(1_500_000 : nat64)" ]]; then
   echo "FAIL"
   exit 1
 fi
 
-# Fetch the balance of an address we expect to have funds.
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
   min_confirmations = opt 3;
 })')
 
-# Verify that the balance is 50 BTC.
 if ! [[ $BALANCE = "(500_000 : nat64)" ]]; then
   echo "FAIL"
   exit 1
