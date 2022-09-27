@@ -15,6 +15,7 @@ type BlockHash = Vec<u8>;
 
 const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+const ADDRESS_3: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 
 #[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 enum Network {
@@ -97,24 +98,14 @@ fn init() {
 
     append_block(&block_2);
 
-    // Add some extra blocks.
     let block_3 = BlockBuilder::with_prev_header(block_2.header)
         .with_transaction(
             TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000)
+                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
                 .build(),
         )
         .build();
     append_block(&block_3);
-
-    let block_4 = BlockBuilder::with_prev_header(block_3.header)
-        .with_transaction(
-            TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000)
-                .build(),
-        )
-        .build();
-    append_block(&block_4);
 }
 
 #[update]
@@ -149,15 +140,9 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
         // Send rest of block 2.
         GetSuccessorsResponse::FollowUp(BLOCKS.with(|b| b.borrow()[1].clone())[40..].to_vec())
     } else if count == 4 {
-        // Send block 1 in full.
+        // Send block 3 in full.
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
             blocks: vec![BLOCKS.with(|b| b.borrow()[2].clone())],
-            next: vec![],
-        })
-    } else if count == 5 {
-        // Send block 1 in full.
-        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCKS.with(|b| b.borrow()[3].clone())],
             next: vec![],
         })
     } else {

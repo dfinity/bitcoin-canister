@@ -1,7 +1,7 @@
 use crate::address_utxoset::AddressUtxoSet;
 use crate::{
     runtime::{performance_counter, print},
-    state::{BlockIngestionRecord, PartialStableBlock, UtxoSet},
+    state::{BlockIngestionStats, PartialStableBlock, UtxoSet},
     types::{OutPoint, Slicing, Storable},
 };
 use bitcoin::{Address, Block, Script, Transaction, TxOut, Txid};
@@ -38,7 +38,7 @@ pub fn ingest_block(utxo_set: &mut UtxoSet, block: Block) -> Slicing<()> {
         utxo_set.next_height
     );
 
-    ingest_block_helper(utxo_set, block, 0, 0, 0, BlockIngestionRecord::default())
+    ingest_block_helper(utxo_set, block, 0, 0, 0, BlockIngestionStats::default())
 }
 
 /// Continue ingesting a block.
@@ -66,7 +66,7 @@ fn ingest_block_helper(
     next_tx_idx: usize,
     mut next_input_idx: usize,
     mut next_output_idx: usize,
-    mut stats: BlockIngestionRecord,
+    mut stats: BlockIngestionStats,
 ) -> Slicing<()> {
     let before = performance_counter();
     stats.num_rounds += 1;
@@ -74,7 +74,7 @@ fn ingest_block_helper(
         if let Slicing::Paused((next_input_idx, next_output_idx)) =
             ingest_tx_with_slicing(utxo_set, tx, next_input_idx, next_output_idx, &mut stats)
         {
-            stats.total_instructions += performance_counter() - before;
+            stats.ins_total += performance_counter() - before;
 
             // Getting close to the the instructions limit. Pause execution.
             utxo_set.partial_stable_block = Some(PartialStableBlock {
@@ -93,9 +93,9 @@ fn ingest_block_helper(
         next_output_idx = 0;
     }
 
-    stats.total_instructions += performance_counter() - before;
+    stats.ins_total += performance_counter() - before;
     print(&format!(
-        "[INSTRUCTION COUNT] Ingest Block {}, {:#?}",
+        "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
         utxo_set.next_height, stats
     ));
 
@@ -115,21 +115,21 @@ fn ingest_tx_with_slicing(
     tx: &Transaction,
     start_input_idx: usize,
     start_output_idx: usize,
-    stats: &mut BlockIngestionRecord,
+    stats: &mut BlockIngestionStats,
 ) -> Slicing<(usize, usize)> {
     let before = performance_counter();
-    if let Slicing::Paused(input_idx) = remove_inputs(utxo_set, tx, start_input_idx) {
-        stats.remove_inputs += performance_counter() - before;
+    let res = remove_inputs(utxo_set, tx, start_input_idx);
+    stats.ins_remove_inputs += performance_counter() - before;
+    if let Slicing::Paused(input_idx) = res {
         return Slicing::Paused((input_idx, 0));
     }
-    stats.remove_inputs += performance_counter() - before;
 
     let before = performance_counter();
-    if let Slicing::Paused(output_idx) = insert_outputs(utxo_set, tx, start_output_idx, stats) {
-        stats.insert_outputs += performance_counter() - before;
+    let res = insert_outputs(utxo_set, tx, start_output_idx, stats);
+    stats.ins_insert_outputs += performance_counter() - before;
+    if let Slicing::Paused(output_idx) = res {
         return Slicing::Paused((tx.input.len(), output_idx));
     }
-    stats.insert_outputs += performance_counter() - before;
 
     Slicing::Done
 }
@@ -178,7 +178,7 @@ fn insert_outputs(
     utxo_set: &mut UtxoSet,
     tx: &Transaction,
     start_idx: usize,
-    stats: &mut BlockIngestionRecord,
+    stats: &mut BlockIngestionStats,
 ) -> Slicing<usize> {
     for (vout, output) in tx.output.iter().enumerate().skip(start_idx) {
         if performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
@@ -188,11 +188,11 @@ fn insert_outputs(
         if !(output.script_pubkey.is_provably_unspendable()) {
             let before = performance_counter();
             let txid = tx.txid().to_vec();
-            stats.txids += performance_counter() - before;
+            stats.ins_txids += performance_counter() - before;
 
             let before = performance_counter();
             insert_utxo(utxo_set, OutPoint::new(txid, vout as u32), output.clone());
-            stats.insert_utxos += performance_counter() - before;
+            stats.ins_insert_utxos += performance_counter() - before;
         }
     }
 

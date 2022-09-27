@@ -162,18 +162,26 @@ pub struct SyncingState {
     pub response_to_process: Option<ResponseToProcess>,
 }
 
+/// Various profiling stats for tracking the performance of block ingestion.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
-pub struct BlockIngestionRecord {
-    //   pub num_inputs: u32,
-    //   pub num_outputs: u32,
-    pub total_instructions: u64,
+pub struct BlockIngestionStats {
+    /// The number of rounds it took to ingest the block.
     pub num_rounds: u32,
-    pub remove_inputs: u64,
-    pub insert_outputs: u64,
-    pub txids: u64,
-    pub insert_utxos: u64,
-    /*pub remove_input_utxos_remove_instructions: u64,
-    pub insert_outputs_insert_address_outpoints_instructions: u64,*/
+
+    /// The total number of instructions used to ingest the block.
+    pub ins_total: u64,
+
+    /// The number of instructions used to remove the transaction inputs.
+    pub ins_remove_inputs: u64,
+
+    /// The number of instructions used to insert the transaction outputs.
+    pub ins_insert_outputs: u64,
+
+    /// The number of instructions used to compute the txids.
+    pub ins_txids: u64,
+
+    /// The number of instructions used to insert new utxos.
+    pub ins_insert_utxos: u64,
 }
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
@@ -186,7 +194,7 @@ pub struct PartialStableBlock {
     pub next_tx_idx: usize,
     pub next_input_idx: usize,
     pub next_output_idx: usize,
-    pub stats: BlockIngestionRecord,
+    pub stats: BlockIngestionStats,
 }
 
 impl PartialStableBlock {
@@ -201,7 +209,7 @@ impl PartialStableBlock {
             next_tx_idx,
             next_input_idx,
             next_output_idx,
-            stats: BlockIngestionRecord::default(),
+            stats: BlockIngestionStats::default(),
         }
     }
 }

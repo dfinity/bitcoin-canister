@@ -15,7 +15,7 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
 
     // Print the number of instructions it took to process this request.
     print(&format!(
-        "[INSTRUCTION COUNT] ({:?}): {}",
+        "[INSTRUCTION COUNT] {:?}: {}",
         request,
         performance_counter()
     ));

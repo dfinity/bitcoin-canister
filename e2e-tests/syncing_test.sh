@@ -33,13 +33,13 @@ dfx deploy --no-wallet management-canister-mock
 
 # Deploy the bitcoin canister, setting the blocks_source to be the mock above.
 dfx deploy --no-wallet bitcoin --argument "(record {
-  stability_threshold = 2;
+  stability_threshold = 1;
   network = variant { regtest };
   blocks_source = principal \"$(dfx canister id management-canister-mock)\"
 })"
 
-# Wait until the chain is at height 4 (and for at most 10 seconds).
-wait_until_height 4 10
+# Wait until the chain is at height 3 (and for at most 10 seconds).
+wait_until_height 3 10
 
 # Fetch the balance of an address we expect to have funds.
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
