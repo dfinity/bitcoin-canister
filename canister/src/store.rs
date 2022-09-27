@@ -1,10 +1,10 @@
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree},
     state::State,
-    types::{OutPoint, Page, Slicing},
+    types::{Block, OutPoint, Page, Slicing},
     unstable_blocks, utxoset,
 };
-use bitcoin::{Address, Block};
+use bitcoin::Address;
 use ic_btc_types::{GetBalanceError, GetUtxosError, GetUtxosResponse, Height, Satoshi};
 use serde_bytes::ByteBuf;
 use std::str::FromStr;
@@ -124,7 +124,7 @@ fn get_utxos_from_chain(
             break;
         }
 
-        for tx in &block.txdata {
+        for tx in block.txdata() {
             address_utxos.insert_tx(tx, block_height);
         }
 
@@ -219,12 +219,12 @@ pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::random_p2pkh_address;
+    use crate::test_utils::{random_p2pkh_address, BlockBuilder};
     use crate::types::Network;
     use bitcoin::secp256k1::rand::rngs::OsRng;
     use bitcoin::secp256k1::Secp256k1;
     use bitcoin::{Address, Network as BitcoinNetwork, PublicKey};
-    use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+    use ic_btc_test_utils::TransactionBuilder;
     use ic_btc_types::{OutPoint, Utxo};
     use proptest::prelude::*;
 
@@ -287,7 +287,7 @@ mod test {
             .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header)
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .with_transaction(tx.clone())
             .build();
 
@@ -327,7 +327,7 @@ mod test {
             .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_3, 1000)
             .build();
-        let block_1_prime = BlockBuilder::with_prev_header(block_0.header)
+        let block_1_prime = BlockBuilder::with_prev_header(block_0.header())
             .with_transaction(tx.clone())
             .build();
         insert_block(&mut state, block_1_prime.clone()).unwrap();
@@ -364,7 +364,7 @@ mod test {
             .with_input(bitcoin::OutPoint::new(tx.txid(), 0))
             .with_output(&address_4, 1000)
             .build();
-        let block_2_prime = BlockBuilder::with_prev_header(block_1_prime.header)
+        let block_2_prime = BlockBuilder::with_prev_header(block_1_prime.header())
             .with_transaction(tx.clone())
             .build();
         insert_block(&mut state, block_2_prime.clone()).unwrap();
@@ -474,7 +474,7 @@ mod test {
                 .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
                 .with_output(&address_2, 1000)
                 .build();
-            let block_1 = BlockBuilder::with_prev_header(block_0.header)
+            let block_1 = BlockBuilder::with_prev_header(block_0.header())
                 .with_transaction(tx.clone())
                 .build();
 
@@ -592,7 +592,7 @@ mod test {
             let mut blocks = vec![];
             for block_idx in 0..num_blocks {
                 let mut block_builder = match prev_block {
-                    Some(b) => BlockBuilder::with_prev_header(b.header),
+                    Some(b) => BlockBuilder::with_prev_header(b.header()),
                     None => BlockBuilder::genesis(),
                 };
 
