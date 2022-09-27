@@ -54,6 +54,11 @@ impl State {
     pub fn network(&self) -> Network {
         self.utxos.network
     }
+
+    /// The height of the latest stable block.
+    pub fn stable_height(&self) -> Height {
+        self.utxos.next_height
+    }
 }
 
 // The size of an outpoint in bytes.
