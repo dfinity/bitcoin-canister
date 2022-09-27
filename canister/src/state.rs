@@ -1,10 +1,9 @@
 use crate::{
     memory::Memory,
-    types::{GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network},
+    types::{Block, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network},
     unstable_blocks::UnstableBlocks,
     utxos::Utxos,
 };
-use bitcoin::Block;
 use ic_btc_types::Height;
 use ic_cdk::export::Principal;
 use ic_stable_structures::StableBTreeMap;
@@ -188,8 +187,6 @@ pub struct BlockIngestionStats {
 /// Used for time slicing.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
 pub struct PartialStableBlock {
-    #[serde(serialize_with = "crate::serde::serialize_block")]
-    #[serde(deserialize_with = "crate::serde::deserialize_block")]
     pub block: Block,
     pub next_tx_idx: usize,
     pub next_input_idx: usize,

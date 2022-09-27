@@ -1,9 +1,12 @@
-use crate::types::Network;
-use bitcoin::{
-    blockdata::constants::genesis_block, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1,
-    Address, Block, PublicKey,
+use crate::{
+    genesis_block,
+    types::{Block, Network},
 };
-use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+use bitcoin::{
+    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, BlockHeader, PublicKey,
+    Transaction,
+};
+use ic_btc_test_utils::{BlockBuilder as ExternalBlockBuilder, TransactionBuilder};
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
 
 /// Generates a random P2PKH address.
@@ -38,7 +41,7 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
     let network = Network::Regtest;
     build_chain_with_genesis_block(
         network,
-        genesis_block(network.into()),
+        genesis_block(network),
         num_blocks,
         num_transactions_per_block,
     )
@@ -57,7 +60,7 @@ fn build_chain_with_genesis_block(
 
     // Since we start with a genesis block, we need `num_blocks - 1` additional blocks.
     for _ in 0..num_blocks - 1 {
-        let mut block_builder = BlockBuilder::with_prev_header(prev_block.header);
+        let mut block_builder = BlockBuilder::with_prev_header(prev_block.header());
         let mut transactions = vec![];
         for _ in 0..num_transactions_per_block {
             transactions.push(
@@ -98,4 +101,34 @@ pub fn is_stable_btreemap_equal<M: Memory + Clone, K: Storable + Eq, V: Storable
     }
 
     true
+}
+
+/// A wrapper around `ic_btc_test_utils::BlockBuilder` that returns `crate::types::Block`
+/// as opposed to `bitcoin::Block`.
+pub struct BlockBuilder {
+    builder: ExternalBlockBuilder,
+}
+
+impl BlockBuilder {
+    pub fn genesis() -> Self {
+        Self {
+            builder: ExternalBlockBuilder::genesis(),
+        }
+    }
+
+    pub fn with_prev_header(prev_header: &BlockHeader) -> Self {
+        Self {
+            builder: ExternalBlockBuilder::with_prev_header(*prev_header),
+        }
+    }
+
+    pub fn with_transaction(self, transaction: Transaction) -> Self {
+        Self {
+            builder: self.builder.with_transaction(transaction),
+        }
+    }
+
+    pub fn build(self) -> Block {
+        Block::new(self.builder.build())
+    }
 }

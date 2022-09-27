@@ -1,9 +1,8 @@
 use crate::{
     state::{State, UtxoSet},
-    types::OutPoint,
+    types::{Block, OutPoint},
     unstable_blocks, with_state,
 };
-use bitcoin::Block;
 use bitcoin::{Transaction, TxIn};
 use ic_btc_types::{MillisatoshiPerByte, Satoshi};
 
@@ -51,7 +50,7 @@ fn get_fees_per_byte(
         if tx_i >= number_of_transactions {
             break;
         }
-        for tx in &block.txdata {
+        for tx in block.txdata() {
             if tx_i >= number_of_transactions {
                 break;
             }
@@ -111,7 +110,7 @@ fn get_tx_input_value(tx_in: &TxIn, utxo_set: &UtxoSet, main_chain: &[&Block]) -
             // The input's value wasn't found in the UTXO set.
             // Look it up in the unstable blocks.
             for block in main_chain.iter() {
-                for tx in &block.txdata {
+                for tx in block.txdata() {
                     if tx.txid() == tx_in.previous_output.txid {
                         let idx = tx_in.previous_output.vout as usize;
                         return Some(tx.output[idx].value as Satoshi);
@@ -143,12 +142,12 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
 mod test {
     use super::*;
     use crate::{
-        store,
+        genesis_block, store,
+        test_utils::BlockBuilder,
         types::{InitPayload, Network},
         with_state_mut,
     };
-    use bitcoin::blockdata::constants::genesis_block;
-    use ic_btc_test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
+    use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
 
     #[test]
     fn percentiles_empty_input() {
@@ -215,7 +214,7 @@ mod test {
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, initial_balance)
             .build();
-        let block_0 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block_0 = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(coinbase_tx.clone())
             .build();
         blocks.push(block_0.clone());
@@ -244,7 +243,7 @@ mod test {
                 .with_output(&address_1, change)
                 .with_output(&address_2, pay)
                 .build();
-            let block = BlockBuilder::with_prev_header(previous_block.header)
+            let block = BlockBuilder::with_prev_header(previous_block.header())
                 .with_transaction(tx.clone())
                 .build();
             blocks.push(block.clone());

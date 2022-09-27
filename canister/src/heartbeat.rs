@@ -3,13 +3,13 @@ use crate::{
     state::ResponseToProcess,
     store,
     types::{
-        BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
+        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::consensus::Decodable;
-use bitcoin::Block;
+use bitcoin::Block as BitcoinBlock;
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -138,8 +138,8 @@ fn maybe_process_response() {
             Some(ResponseToProcess::Complete(response)) => {
                 for block in response.blocks.iter() {
                     // TODO(EXC-1215): Gracefully handle the errors here.
-                    let block = Block::consensus_decode(block.as_slice()).unwrap();
-                    store::insert_block(state, block).unwrap();
+                    let block = BitcoinBlock::consensus_decode(block.as_slice()).unwrap();
+                    store::insert_block(state, Block::new(block)).unwrap();
                 }
             }
             other => {
@@ -181,20 +181,18 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 mod test {
     use super::*;
     use crate::{
-        init, runtime,
+        genesis_block, init, runtime,
         state::PartialStableBlock,
-        test_utils::random_p2pkh_address,
+        test_utils::{random_p2pkh_address, BlockBuilder},
         types::{
             BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, InitPayload,
             Network,
         },
     };
-    use bitcoin::{
-        blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
-    };
-    use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+    use bitcoin::{Address, BlockHeader};
+    use ic_btc_test_utils::TransactionBuilder;
 
-    fn build_block(prev_header: BlockHeader, address: Address, num_transactions: u128) -> Block {
+    fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
         let mut value = 1;
         for _ in 0..num_transactions {
@@ -221,7 +219,7 @@ mod test {
             blocks_source: None,
         });
 
-        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header).build();
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
@@ -267,8 +265,8 @@ mod test {
 
         // Setup a chain of two blocks.
         let address = random_p2pkh_address(network);
-        let block_1 = build_block(genesis_block(network.into()).header, address.clone(), 6);
-        let block_2 = build_block(block_1.header, address, 1);
+        let block_1 = build_block(genesis_block(network).header(), address.clone(), 6);
+        let block_2 = build_block(block_1.header(), address, 1);
 
         // Serialize the blocks.
         let blocks: Vec<BlockBlob> = [block_1.clone(), block_2]
@@ -376,16 +374,16 @@ mod test {
         let tx_2 = tx_2.build();
 
         // Create blocks with the two transactions above.
-        let block_1 = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(tx_1)
             .build();
 
-        let block_2 = BlockBuilder::with_prev_header(block_1.header)
+        let block_2 = BlockBuilder::with_prev_header(block_1.header())
             .with_transaction(tx_2)
             .build();
 
         // An additional block so that the previous blocks are ingested into the stable UTXO set.
-        let block_3 = BlockBuilder::with_prev_header(block_2.header).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
 
         // Serialize the blocks.
         let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone(), block_3]
@@ -484,7 +482,7 @@ mod test {
         });
 
         let address = random_p2pkh_address(network);
-        let block = BlockBuilder::with_prev_header(genesis_block(network.into()).header)
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(
                 TransactionBuilder::coinbase()
                     .with_output(&address, 1000)
