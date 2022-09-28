@@ -18,14 +18,8 @@ pub struct AddressUtxoSet<'a> {
     // A reference to the (full) underlying UTXO set.
     full_utxo_set: &'a UtxoSet,
 
-    // Added UTXOs that are not present in the underlying UTXO set indexed by
-    // the encoded form of (`Height`, `OutPoint`).
-    //
-    // Note that we use the encoded form of (`Height`, `Outpoint`) to match with
-    // the data that's stored in the `StableBtreeMap` and be able to have
-    // consistent ordering between the two when combining the results for a
-    // `get_utxos` response.
-    added_utxos: BTreeMap<Vec<u8>, TxOut>,
+    // Added UTXOs that are not present in the underlying UTXO set.
+    added_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
 
     // Removed UTXOs that are still present in the underlying UTXO set.
     removed_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
@@ -54,28 +48,17 @@ impl<'a> AddressUtxoSet<'a> {
             return;
         }
 
-        let outpoint_to_height: BTreeMap<OutPoint, Height> = self
-            .added_utxos
-            .keys()
-            .map(|x| {
-                let (height, outpoint) = <(Height, OutPoint)>::from_bytes(x.clone());
-                (outpoint, height)
-            })
-            .collect();
-
         for input in tx.input() {
-            match outpoint_to_height.get(&(&input.previous_output).into()) {
-                Some(height) => {
-                    // Remove a UTXO that was previously added.
-                    self.added_utxos
-                        .remove(&(*height, (&input.previous_output).into()).to_bytes());
+            let outpoint = (&input.previous_output).into();
+            match self.added_utxos.remove(&outpoint) {
+                Some(_) => {
+                    // The entry was found and removed.
                 }
                 None => {
-                    let (txout, height) = self
-                        .full_utxo_set
-                        .utxos
-                        .get(&(&input.previous_output).into())
-                        .unwrap_or_else(|| {
+                    // The entry wasn't found in the `added_utxos`. It then must be in the
+                    // stable UTXO set.
+                    let (txout, height) =
+                        self.full_utxo_set.utxos.get(&outpoint).unwrap_or_else(|| {
                             panic!("Cannot find outpoint: {}", &input.previous_output)
                         });
 
@@ -103,8 +86,8 @@ impl<'a> AddressUtxoSet<'a> {
                 assert!(
                     self.added_utxos
                         .insert(
-                            (height, OutPoint::new(tx.txid(), vout as u32)).to_bytes(),
-                            output.into(),
+                            OutPoint::new(tx.txid(), vout as u32),
+                            (output.into(), height)
                         )
                         .is_none(),
                     "Cannot insert same outpoint twice"
@@ -113,7 +96,7 @@ impl<'a> AddressUtxoSet<'a> {
         }
     }
 
-    pub fn into_vec(mut self, offset: Option<(Height, OutPoint)>) -> Vec<Utxo> {
+    pub fn into_vec(self, offset: Option<(Height, OutPoint)>) -> Vec<Utxo> {
         // Retrieve all the UTXOs of the address from the underlying UTXO set.
         let mut set: BTreeSet<_> = self
             .full_utxo_set
@@ -135,11 +118,22 @@ impl<'a> AddressUtxoSet<'a> {
             .collect();
 
         // Include all the newly added UTXOs for that address that are "after" the optional offset.
-        let added_utxos = match offset {
-            Some(offset) => self.added_utxos.split_off(&offset.to_bytes()),
-            None => self.added_utxos,
+        //
+        // First, the UTXOs are encoded that's consistent with the stable UTXO set so that
+        // ordering is preserved in case of pagination.
+        let mut added_utxos_encoded: BTreeMap<_, _> = self
+            .added_utxos
+            .into_iter()
+            .map(|(outpoint, (txout, height))| ((height, outpoint).to_bytes(), txout))
+            .collect();
+
+        // If an offset is specified, then discard the UTXOs before the offset.
+        let added_utxos_encoded = match offset {
+            Some(offset) => added_utxos_encoded.split_off(&offset.to_bytes()),
+            None => added_utxos_encoded,
         };
-        for (height_and_outpoint, txout) in added_utxos {
+
+        for (height_and_outpoint, txout) in added_utxos_encoded {
             if let Some(address) = Address::from_script(
                 &Script::from(txout.script_pubkey.clone()),
                 self.full_utxo_set.network.into(),
