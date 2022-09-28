@@ -4,8 +4,8 @@ set -Eexuo pipefail
 # Run dfx stop if we run into errors.
 trap "dfx stop" ERR EXIT
 
-# Waits until the main chain of the bitcoin canister has reached a certain height.
-wait_until_height () {
+# Waits until the stable chain of the bitcoin canister has reached a certain height.
+wait_until_stable_height () {
   HEIGHT=$1
   ATTEMPTS=$2
 
@@ -13,7 +13,7 @@ wait_until_height () {
 
   while
     METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$BITCOIN_CANISTER_ID")
-    ! [[ "$METRICS" == *"main_chain_height $HEIGHT"* ]]; do
+    ! [[ "$METRICS" == *"stable_height $HEIGHT"* ]]; do
       ((ATTEMPTS-=1))
 
       if [[ $ATTEMPTS -eq 0 ]]; then
@@ -33,21 +33,20 @@ dfx deploy --no-wallet management-canister-mock
 
 # Deploy the bitcoin canister, setting the blocks_source to be the mock above.
 dfx deploy --no-wallet bitcoin --argument "(record {
-  stability_threshold = 1;
+  stability_threshold = 2;
   network = variant { regtest };
   blocks_source = principal \"$(dfx canister id management-canister-mock)\"
 })"
 
-# Wait until the chain is at height 3 (and for at most 10 seconds).
-wait_until_height 3 10
+# Wait until the ingestion of stable blocks is complete.
+wait_until_stable_height 3 60
 
-# Fetch the balance of an address we expect to have funds.
+# Fetch the balance of an address we do not expect to have funds.
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
-# Verify that the balance is 50 BTC.
-if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
+if ! [[ $BALANCE = "(0 : nat64)" ]]; then
   echo "FAIL"
   exit 1
 fi
@@ -58,10 +57,28 @@ BALANCE=$(dfx canister call bitcoin get_balance '(record {
 })')
 
 # Verify that the balance is 50 BTC.
-if [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
-  echo "SUCCESS"
-  exit 0
-else
+if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   echo "FAIL"
   exit 1
 fi
+
+BALANCE=$(dfx canister call bitcoin get_balance '(record {
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
+})')
+
+if ! [[ $BALANCE = "(1_500_000 : nat64)" ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
+BALANCE=$(dfx canister call bitcoin get_balance '(record {
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+  min_confirmations = opt 3;
+})')
+
+if ! [[ $BALANCE = "(500_000 : nat64)" ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
+echo "SUCCESS"
