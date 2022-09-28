@@ -1,6 +1,6 @@
 use bitcoin::{
     blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
-    Network as BitcoinNetwork,
+    Network as BitcoinNetwork, OutPoint,
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
@@ -75,29 +75,42 @@ thread_local! {
 fn init() {
     let network = BitcoinNetwork::Regtest;
 
-    // A transaction that gives ADDRESS_1 50 BTC split over many inputs.
-    let mut tx = TransactionBuilder::new();
+    // Block 1: A single transaction that gives ADDRESS_1 50 BTC split over 10k inputs.
+    let mut tx_1 = TransactionBuilder::new();
     for _ in 0..10_000 {
-        tx = tx.with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000);
+        tx_1 = tx_1.with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000);
     }
-    let tx = tx.build();
+    let tx_1 = tx_1.build();
+    let tx_1_id = tx_1.txid();
 
     let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header)
-        .with_transaction(tx)
+        .with_transaction(tx_1)
         .build();
-
     append_block(&block_1);
 
-    let block_2 = BlockBuilder::with_prev_header(block_1.header)
-        .with_transaction(
+    // Block 2: 10k transactions that transfer all of ADDRESS_1's BTC to ADDRESS_2
+    let mut txs = vec![];
+    for i in 0..10_000 {
+        txs.push(
             TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_2).unwrap(), 50_0000_0000)
+                .with_input(OutPoint {
+                    txid: tx_1_id,
+                    vout: i,
+                })
+                .with_output(&Address::from_str(ADDRESS_2).unwrap(), 500_000)
                 .build(),
         )
-        .build();
+    }
+
+    let mut block_2 = BlockBuilder::with_prev_header(block_1.header);
+    for tx in txs.into_iter() {
+        block_2 = block_2.with_transaction(tx);
+    }
+    let block_2 = block_2.build();
 
     append_block(&block_2);
 
+    // Remaining blocks contain a single coinbase transaction giving ADDRESS_3 some BTC.
     let block_3 = BlockBuilder::with_prev_header(block_2.header)
         .with_transaction(
             TransactionBuilder::new()
@@ -106,6 +119,24 @@ fn init() {
         )
         .build();
     append_block(&block_3);
+
+    let block_4 = BlockBuilder::with_prev_header(block_3.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block(&block_4);
+
+    let block_5 = BlockBuilder::with_prev_header(block_4.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block(&block_5);
 }
 
 #[update]
@@ -143,6 +174,18 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
         // Send block 3 in full.
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
             blocks: vec![BLOCKS.with(|b| b.borrow()[2].clone())],
+            next: vec![],
+        })
+    } else if count == 5 {
+        // Send block 4 in full.
+        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+            blocks: vec![BLOCKS.with(|b| b.borrow()[3].clone())],
+            next: vec![],
+        })
+    } else if count == 6 {
+        // Send block 5 in full.
+        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+            blocks: vec![BLOCKS.with(|b| b.borrow()[4].clone())],
             next: vec![],
         })
     } else {
