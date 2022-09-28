@@ -39,7 +39,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         w.encode_gauge(
             "stable_height",
             state.stable_height() as f64,
-            "The height of the latest stable block."
+            "The height of the latest stable block.",
         )?;
         w.encode_gauge(
             "utxos_length",

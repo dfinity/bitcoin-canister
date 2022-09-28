@@ -94,7 +94,7 @@ fn init() {
         txs.push(
             TransactionBuilder::new()
                 .with_input(OutPoint {
-                    txid: tx_1_id.clone(),
+                    txid: tx_1_id,
                     vout: i,
                 })
                 .with_output(&Address::from_str(ADDRESS_2).unwrap(), 500_000)
