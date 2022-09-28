@@ -63,9 +63,7 @@ impl<'a> AddressUtxoSet<'a> {
                         });
 
                     // Remove it.
-                    let old_value = self
-                        .removed_utxos
-                        .insert((&input.previous_output).into(), (txout.clone(), height));
+                    let old_value = self.removed_utxos.insert(outpoint, (txout.clone(), height));
                     assert_eq!(old_value, None, "Cannot remove an output twice");
                 }
             }
