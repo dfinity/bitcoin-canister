@@ -133,11 +133,11 @@ fn init() {
 
     // Block 5: 10k transactions that transfer all of ADDRESS_2's BTC to ADDRESS_5
     let mut block_5_txs = vec![];
-    for i in 0..10_000 {
+    for block_2_tx in block_2_txs {
         block_5_txs.push(
             TransactionBuilder::new()
                 .with_input(OutPoint {
-                    txid: block_2_txs[i].txid(),
+                    txid: block_2_tx.txid(),
                     vout: 0,
                 })
                 .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)

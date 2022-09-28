@@ -119,8 +119,8 @@ impl<'a> AddressUtxoSet<'a> {
 
         // Include all the newly added UTXOs for that address that are "after" the optional offset.
         //
-        // First, the UTXOs are encoded that's consistent with the stable UTXO set so that
-        // ordering is preserved in case of pagination.
+        // First, the UTXOs are encoded in a way that's consistent with the stable UTXO set
+        // to preserve the ordering.
         let mut added_utxos_encoded: BTreeMap<_, _> = self
             .added_utxos
             .into_iter()
