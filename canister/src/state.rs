@@ -1,10 +1,12 @@
 use crate::{
     memory::Memory,
-    types::{Block, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network},
+    types::{
+        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network,
+    },
     unstable_blocks::UnstableBlocks,
     utxos::Utxos,
 };
-use ic_btc_types::Height;
+use ic_btc_types::{Height, MillisatoshiPerByte};
 use ic_cdk::export::Principal;
 use ic_stable_structures::StableBTreeMap;
 use serde::{Deserialize, Serialize};
@@ -27,11 +29,9 @@ pub struct State {
     /// The canister from which blocks are retrieved.
     /// Defaults to the management canister in production.
     pub blocks_source: Principal,
-    // Queues used to communicate with the adapter.
-    //   pub adapter_queues: AdapterQueues,
 
-    // Cache for the current fee percentiles.
-    //pub fee_percentiles_cache: Option<FeePercentilesCache>,
+    /// Cache for the current fee percentiles.
+    pub fee_percentiles_cache: Option<FeePercentilesCache>,
 }
 
 impl State {
@@ -46,8 +46,7 @@ impl State {
             unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
             syncing_state: SyncingState::default(),
             blocks_source: Principal::management_canister(),
-            //        adapter_queues: AdapterQueues::default(),
-            //       fee_percentiles_cache: None,
+            fee_percentiles_cache: None,
         }
     }
 
@@ -222,6 +221,15 @@ fn init_address_outpoints() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
         MAX_ADDRESS_OUTPOINT_SIZE,
         0, // No values are stored in the map.
     )
+}
+
+/// Cache for storing last calculated fee percentiles
+///
+/// Stores last tip block hash and fee percentiles associated with it.
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FeePercentilesCache {
+    pub tip_block_hash: BlockHash,
+    pub fee_percentiles: Vec<MillisatoshiPerByte>,
 }
 
 #[cfg(test)]
