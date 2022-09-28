@@ -2,9 +2,9 @@ use crate::address_utxoset::AddressUtxoSet;
 use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::{BlockIngestionStats, PartialStableBlock, UtxoSet},
-    types::{Block, OutPoint, Slicing, Storable},
+    types::{Block, OutPoint, Slicing, Storable, Transaction},
 };
-use bitcoin::{Address, Script, Transaction, TxOut, Txid};
+use bitcoin::{Address, Script, TxOut, Txid};
 use std::str::FromStr;
 
 lazy_static::lazy_static! {
@@ -128,7 +128,7 @@ fn ingest_tx_with_slicing(
     let res = insert_outputs(utxo_set, tx, start_output_idx, stats);
     stats.ins_insert_outputs += performance_counter() - ins_start;
     if let Slicing::Paused(output_idx) = res {
-        return Slicing::Paused((tx.input.len(), output_idx));
+        return Slicing::Paused((tx.input().len(), output_idx));
     }
 
     Slicing::Done
@@ -140,7 +140,7 @@ fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> 
         return Slicing::Done;
     }
 
-    for (input_idx, input) in tx.input.iter().enumerate().skip(start_idx) {
+    for (input_idx, input) in tx.input().iter().enumerate().skip(start_idx) {
         // NOTE: We're using `inc_performance_counter` here to increment the mock performance
         // counter in the unit tests.
         if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
@@ -182,7 +182,7 @@ fn insert_outputs(
     start_idx: usize,
     stats: &mut BlockIngestionStats,
 ) -> Slicing<usize> {
-    for (vout, output) in tx.output.iter().enumerate().skip(start_idx) {
+    for (vout, output) in tx.output().iter().enumerate().skip(start_idx) {
         // NOTE: We're using `inc_performance_counter` here to increment the mock performance
         // counter in the unit tests.
         if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
@@ -191,7 +191,7 @@ fn insert_outputs(
 
         if !(output.script_pubkey.is_provably_unspendable()) {
             let ins_start = performance_counter();
-            let txid = tx.txid().to_vec();
+            let txid = tx.txid();
             stats.ins_txids += performance_counter() - ins_start;
 
             let ins_start = performance_counter();
@@ -251,11 +251,10 @@ fn insert_utxo(utxo_set: &mut UtxoSet, outpoint: OutPoint, output: TxOut) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::random_p2pkh_address;
-    use crate::types::Network;
+    use crate::test_utils::{random_p2pkh_address, TransactionBuilder};
+    use crate::types::{Network, OutPoint};
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use bitcoin::{Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, TxOut};
-    use ic_btc_test_utils::TransactionBuilder;
+    use bitcoin::{Network as BitcoinNetwork, TxOut};
     use ic_btc_types::{Address as AddressStr, Height};
     use std::collections::BTreeSet;
 
@@ -312,8 +311,12 @@ mod test {
             let mut utxo = UtxoSet::new(*network);
 
             // no output coinbase
-            let mut coinbase_empty_tx = TransactionBuilder::coinbase().build();
-            coinbase_empty_tx.output.clear();
+            let coinbase_empty_tx = Transaction::new(bitcoin::Transaction {
+                output: vec![],
+                input: vec![],
+                version: 1,
+                lock_time: 0,
+            });
             ingest_tx(&mut utxo, &coinbase_empty_tx);
 
             assert!(utxo.utxos.is_empty());
@@ -327,7 +330,7 @@ mod test {
             let mut utxo = UtxoSet::new(*network);
 
             // op return coinbase
-            let coinbase_op_return_tx = Transaction {
+            let coinbase_op_return_tx = Transaction::new(bitcoin::Transaction {
                 output: vec![TxOut {
                     value: 50_0000_0000,
                     script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
@@ -335,7 +338,7 @@ mod test {
                 input: vec![],
                 version: 1,
                 lock_time: 0,
-            };
+            });
             ingest_tx(&mut utxo, &coinbase_op_return_tx);
 
             assert!(utxo.utxos.is_empty());
@@ -396,7 +399,7 @@ mod test {
 
         // Spend the output to address 2.
         let tx = TransactionBuilder::new()
-            .with_input(BitcoinOutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         ingest_tx(&mut utxo, &tx);
@@ -466,13 +469,13 @@ mod test {
         let tx_out_1 = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build()
-            .output[0]
+            .output()[0]
             .clone();
 
         let tx_out_2 = TransactionBuilder::coinbase()
             .with_output(&address, 2000)
             .build()
-            .output[0]
+            .output()[0]
             .clone();
 
         let outpoint = OutPoint::new(vec![], 0);
@@ -499,7 +502,7 @@ mod test {
         let tx_out = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build()
-            .output[0]
+            .output()[0]
             .clone();
 
         insert_utxo(&mut utxo_set, OutPoint::new(vec![0; 32], 0), tx_out);

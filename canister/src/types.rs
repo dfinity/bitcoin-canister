@@ -8,6 +8,7 @@ use ic_btc_types::{Address, Height, UtxosFilter};
 use ic_cdk::export::{candid::CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+use std::cell::RefCell;
 use std::convert::TryInto;
 
 /// The payload used to initialize the canister.
@@ -24,14 +25,20 @@ pub struct InitPayload {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Block {
-    #[serde(serialize_with = "crate::serde::serialize_block")]
-    #[serde(deserialize_with = "crate::serde::deserialize_block")]
     block: BitcoinBlock,
+    transactions: Vec<Transaction>,
 }
 
 impl Block {
     pub fn new(block: BitcoinBlock) -> Self {
-        Self { block }
+        Self {
+            transactions: block
+                .txdata
+                .iter()
+                .map(|tx| Transaction::new(tx.clone()))
+                .collect(),
+            block,
+        }
     }
 
     pub fn header(&self) -> &bitcoin::BlockHeader {
@@ -42,8 +49,8 @@ impl Block {
         self.block.block_hash()
     }
 
-    pub fn txdata(&self) -> &[bitcoin::Transaction] {
-        &self.block.txdata
+    pub fn txdata(&self) -> &[Transaction] {
+        &self.transactions
     }
 
     #[cfg(test)]
@@ -53,13 +60,69 @@ impl Block {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Eq)]
+pub struct Transaction {
+    tx: bitcoin::Transaction,
+    txid: RefCell<Option<Txid>>,
+}
+
+impl Transaction {
+    pub fn new(tx: bitcoin::Transaction) -> Self {
+        Self {
+            tx,
+            txid: RefCell::new(None),
+        }
+    }
+
+    pub fn is_coin_base(&self) -> bool {
+        self.tx.is_coin_base()
+    }
+
+    pub fn input(&self) -> &[bitcoin::TxIn] {
+        &self.tx.input
+    }
+
+    pub fn output(&self) -> &[bitcoin::TxOut] {
+        &self.tx.output
+    }
+
+    pub fn size(&self) -> usize {
+        self.tx.size()
+    }
+
+    pub fn txid(&self) -> Txid {
+        if self.txid.borrow().is_none() {
+            // Compute the txid as it wasn't computed already.
+            // `tx.txid()` is an expensive call, so it's useful to cache.
+            let txid = self.tx.txid().to_vec();
+            self.txid.borrow_mut().replace(txid);
+        }
+
+        self.txid.borrow().clone().expect("txid must be available")
+    }
+}
+
+impl PartialEq for Transaction {
+    fn eq(&self, other: &Self) -> bool {
+        // Don't include the `txid` field in the comparison, as it's only a cache.
+        self.tx == other.tx
+    }
+}
+
+#[cfg(test)]
+impl From<Transaction> for bitcoin::Transaction {
+    fn from(tx: Transaction) -> Self {
+        tx.tx
+    }
+}
+
 /// A reference to a transaction output.
 #[derive(
     CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize,
 )]
 pub struct OutPoint {
     #[serde(with = "serde_bytes")]
-    pub txid: Vec<u8>,
+    pub txid: Txid,
     pub vout: u32,
 }
 
@@ -74,6 +137,18 @@ impl From<&BitcoinOutPoint> for OutPoint {
         Self {
             txid: bitcoin_outpoint.txid.to_vec(),
             vout: bitcoin_outpoint.vout,
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<OutPoint> for bitcoin::OutPoint {
+    fn from(outpoint: OutPoint) -> Self {
+        Self {
+            txid: bitcoin::Txid::from_hash(
+                Hash::from_slice(&outpoint.txid).expect("txid must be valid"),
+            ),
+            vout: outpoint.vout,
         }
     }
 }
@@ -306,6 +381,8 @@ pub type BlockHeaderBlob = Vec<u8>;
 
 // A blob representing a block hash.
 pub type BlockHash = Vec<u8>;
+
+pub type Txid = Vec<u8>;
 
 type PageNumber = u8;
 

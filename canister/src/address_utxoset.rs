@@ -1,8 +1,8 @@
 use crate::{
     state::UtxoSet,
-    types::{OutPoint, Storable, TxOut},
+    types::{OutPoint, Storable, Transaction, TxOut},
 };
-use bitcoin::{Address, Script, Transaction};
+use bitcoin::{Address, Script};
 use ic_btc_types::{Address as AddressStr, Height, Utxo};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -63,7 +63,7 @@ impl<'a> AddressUtxoSet<'a> {
             })
             .collect();
 
-        for input in &tx.input {
+        for input in tx.input() {
             match outpoint_to_height.get(&(&input.previous_output).into()) {
                 Some(height) => {
                     // Remove a UTXO that was previously added.
@@ -91,8 +91,7 @@ impl<'a> AddressUtxoSet<'a> {
 
     // Iterates over transaction outputs and adds unspents.
     fn insert_unspent_txs(&mut self, tx: &Transaction, height: Height) {
-        let mut cached_tx_id: Option<Vec<u8>> = None;
-        for (vout, output) in tx.output.iter().enumerate() {
+        for (vout, output) in tx.output().iter().enumerate() {
             if !(output.script_pubkey.is_provably_unspendable()) {
                 // Insert the outpoint.
                 //
@@ -101,21 +100,10 @@ impl<'a> AddressUtxoSet<'a> {
                 // allows us to have stronger verification that all inputs/outputs
                 // are being consumed as expected.
 
-                let tx_id = match &mut cached_tx_id {
-                    None => {
-                        // Compute the txid if it wasn't computed already.
-                        // `tx.txid()` is an expensive call, so it's useful to cache.
-                        let tx_id = tx.txid().to_vec();
-                        cached_tx_id = Some(tx_id.clone());
-                        tx_id
-                    }
-                    Some(tx_id) => tx_id.clone(),
-                };
-
                 assert!(
                     self.added_utxos
                         .insert(
-                            (height, OutPoint::new(tx_id, vout as u32)).to_bytes(),
+                            (height, OutPoint::new(tx.txid(), vout as u32)).to_bytes(),
                             output.into(),
                         )
                         .is_none(),
@@ -195,9 +183,8 @@ impl<'a> AddressUtxoSet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::random_p2pkh_address;
-    use crate::types::Network;
-    use ic_btc_test_utils::TransactionBuilder;
+    use crate::test_utils::{random_p2pkh_address, TransactionBuilder};
+    use crate::types::{Network, OutPoint};
     use ic_btc_types::OutPoint as PublicOutPoint;
 
     #[test]
@@ -249,7 +236,7 @@ mod test {
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
 
@@ -313,8 +300,8 @@ mod test {
 
         // Address 1 spends both outputs in a single transaction.
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 1))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 1))
             .with_output(&address_2, 1500)
             .with_output(&address_1, 400)
             .build();

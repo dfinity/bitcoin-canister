@@ -27,11 +27,10 @@ mod test {
     use super::*;
     use crate::{
         genesis_block,
-        test_utils::{random_p2pkh_address, BlockBuilder},
-        types::{InitPayload, Network},
+        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        types::{InitPayload, Network, OutPoint},
         with_state_mut,
     };
-    use ic_btc_test_utils::TransactionBuilder;
 
     #[test]
     #[should_panic(expected = "get_balance failed: MalformedAddress")]
@@ -146,7 +145,7 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
-            .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_2 = BlockBuilder::with_prev_header(block_1.header())

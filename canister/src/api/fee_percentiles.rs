@@ -1,9 +1,9 @@
 use crate::{
     state::{State, UtxoSet},
-    types::{Block, OutPoint},
+    types::{Block, OutPoint, Transaction},
     unstable_blocks, with_state,
 };
-use bitcoin::{Transaction, TxIn};
+use bitcoin::TxIn;
 use ic_btc_types::{MillisatoshiPerByte, Satoshi};
 
 // The number of transactions to include in the percentiles calculation.
@@ -75,7 +75,7 @@ fn get_tx_fee_per_byte(
     }
 
     let mut satoshi = 0;
-    for tx_in in &tx.input {
+    for tx_in in tx.input() {
         satoshi += match get_tx_input_value(tx_in, utxo_set, main_chain) {
             Some(value) => value,
             None => {
@@ -85,7 +85,7 @@ fn get_tx_fee_per_byte(
             }
         }
     }
-    for tx_out in &tx.output {
+    for tx_out in tx.output() {
         satoshi -= tx_out.value;
     }
 
@@ -111,9 +111,9 @@ fn get_tx_input_value(tx_in: &TxIn, utxo_set: &UtxoSet, main_chain: &[&Block]) -
             // Look it up in the unstable blocks.
             for block in main_chain.iter() {
                 for tx in block.txdata() {
-                    if tx.txid() == tx_in.previous_output.txid {
+                    if tx.txid().to_vec() == tx_in.previous_output.txid.to_vec() {
                         let idx = tx_in.previous_output.vout as usize;
-                        return Some(tx.output[idx].value as Satoshi);
+                        return Some(tx.output()[idx].value as Satoshi);
                     }
                 }
             }
@@ -143,11 +143,10 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, store,
-        test_utils::BlockBuilder,
+        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{InitPayload, Network},
         with_state_mut,
     };
-    use ic_btc_test_utils::{random_p2pkh_address, TransactionBuilder};
 
     #[test]
     fn percentiles_empty_input() {
@@ -208,8 +207,8 @@ mod test {
         let mut blocks = Vec::new();
 
         let pay: Satoshi = 1;
-        let address_1 = random_p2pkh_address(network.into());
-        let address_2 = random_p2pkh_address(network.into());
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
 
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, initial_balance)
@@ -239,7 +238,7 @@ mod test {
             };
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(previous_tx.txid(), 0))
+                .with_input(OutPoint::new(previous_tx.txid(), 0))
                 .with_output(&address_1, change)
                 .with_output(&address_2, pay)
                 .build();
