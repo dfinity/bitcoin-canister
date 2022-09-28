@@ -1,12 +1,13 @@
 use crate::{
     genesis_block,
-    types::{Block, Network},
+    types::{Block, Network, OutPoint, Transaction},
 };
 use bitcoin::{
     secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, BlockHeader, PublicKey,
-    Transaction,
 };
-use ic_btc_test_utils::{BlockBuilder as ExternalBlockBuilder, TransactionBuilder};
+use ic_btc_test_utils::{
+    BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
+};
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
 
 /// Generates a random P2PKH address.
@@ -124,11 +125,47 @@ impl BlockBuilder {
 
     pub fn with_transaction(self, transaction: Transaction) -> Self {
         Self {
-            builder: self.builder.with_transaction(transaction),
+            builder: self.builder.with_transaction(transaction.into()),
         }
     }
 
     pub fn build(self) -> Block {
         Block::new(self.builder.build())
+    }
+}
+
+/// A wrapper around `ic_btc_test_utils::TransactionBuilder` that returns
+/// `crate::types::Transaction` as opposed to `bitcoin::Transaction`.
+pub struct TransactionBuilder {
+    builder: ExternalTransactionBuilder,
+}
+
+impl TransactionBuilder {
+    pub fn new() -> Self {
+        Self {
+            builder: ExternalTransactionBuilder::new(),
+        }
+    }
+
+    pub fn coinbase() -> Self {
+        Self {
+            builder: ExternalTransactionBuilder::coinbase(),
+        }
+    }
+
+    pub fn with_input(self, previous_output: OutPoint) -> Self {
+        Self {
+            builder: self.builder.with_input(previous_output.into()),
+        }
+    }
+
+    pub fn with_output(self, address: &Address, value: u64) -> Self {
+        Self {
+            builder: self.builder.with_output(address, value),
+        }
+    }
+
+    pub fn build(self) -> Transaction {
+        Transaction::new(self.builder.build())
     }
 }

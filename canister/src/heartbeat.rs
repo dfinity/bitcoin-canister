@@ -183,14 +183,13 @@ mod test {
     use crate::{
         genesis_block, init, runtime,
         state::PartialStableBlock,
-        test_utils::{random_p2pkh_address, BlockBuilder},
+        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, InitPayload,
             Network,
         },
     };
     use bitcoin::{Address, BlockHeader};
-    use ic_btc_test_utils::TransactionBuilder;
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
@@ -363,7 +362,7 @@ mod test {
         // Create another transaction where the UTXOs of address 1 are transferred to address 2.
         let mut tx_2 = TransactionBuilder::new();
         for i in 0..tx_cardinality {
-            tx_2 = tx_2.with_input(bitcoin::OutPoint {
+            tx_2 = tx_2.with_input(crate::types::OutPoint {
                 txid: tx_1.txid(),
                 vout: i,
             });
