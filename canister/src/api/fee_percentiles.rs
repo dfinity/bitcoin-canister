@@ -1,4 +1,5 @@
 use crate::{
+    runtime::{performance_counter, print},
     state::{State, UtxoSet},
     types::{Block, OutPoint, Transaction},
     unstable_blocks, with_state,
@@ -14,7 +15,14 @@ const NUM_PERCENTILES: u16 = 100;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
-    with_state(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS))
+    let res = with_state(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
+
+    // Print the number of instructions it took to process this request.
+    print(&format!(
+        "[INSTRUCTION COUNT] get_current_fee_percentiles: {}",
+        performance_counter()
+    ));
+    res
 }
 
 fn get_current_fee_percentiles_internal(
