@@ -90,4 +90,8 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   exit 1
 fi
 
+# Request the current fee percentiles. This is only for profiling purposes.
+dfx canister call bitcoin get_current_fee_percentiles
+dfx canister call bitcoin get_current_fee_percentiles
+
 echo "SUCCESS"
