@@ -632,7 +632,7 @@ mod test {
                 address: address_1.to_string(),
                 filter: None,
             }),
-            block_0_utxos.clone()
+            block_0_utxos
         );
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
