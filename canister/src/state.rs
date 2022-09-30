@@ -1,10 +1,13 @@
 use crate::{
+    blocktree::BlockDoesNotExtendTree,
     memory::Memory,
     types::{
         Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network,
+        Slicing,
     },
-    unstable_blocks::UnstableBlocks,
+    unstable_blocks::{self, UnstableBlocks},
     utxos::Utxos,
+    utxoset,
 };
 use ic_btc_types::{Height, MillisatoshiPerByte};
 use ic_cdk::export::Principal;
@@ -58,6 +61,53 @@ impl State {
     pub fn stable_height(&self) -> Height {
         self.utxos.next_height
     }
+}
+
+/// Inserts a block into the state.
+/// Returns an error if the block doesn't extend any known block in the state.
+pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotExtendTree> {
+    unstable_blocks::push(&mut state.unstable_blocks, block)
+}
+
+/// Pops any blocks in `UnstableBlocks` that are considered stable and ingests them to the UTXO set.
+///
+/// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
+/// multiple calls may be required for all the stable blocks to be ingested.
+///
+/// Returns a bool indicating whether or not the state has changed.
+pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
+    let prev_state = (
+        state.utxos.next_height,
+        &state.utxos.partial_stable_block.clone(),
+    );
+    let has_state_changed = |state: &State| -> bool {
+        prev_state != (state.utxos.next_height, &state.utxos.partial_stable_block)
+    };
+
+    // Finish ingesting the stable block that's partially ingested, if that exists.
+    match utxoset::ingest_block_continue(&mut state.utxos) {
+        Slicing::Paused(()) => return has_state_changed(state),
+        Slicing::Done => {}
+    }
+
+    // Check if there are any stable blocks and ingest those into the UTXO set.
+    while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
+        match utxoset::ingest_block(&mut state.utxos, new_stable_block) {
+            Slicing::Paused(()) => return has_state_changed(state),
+            Slicing::Done => {}
+        }
+    }
+
+    has_state_changed(state)
+}
+
+pub fn main_chain_height(state: &State) -> Height {
+    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height
+        - 1
+}
+
+pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
+    unstable_blocks::get_blocks(&state.unstable_blocks)
 }
 
 // The size of an outpoint in bytes.
@@ -256,8 +306,8 @@ mod test {
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
 
             for block in blocks[1..].iter() {
-                crate::store::insert_block(&mut state, block.clone()).unwrap();
-                crate::store::ingest_stable_blocks_into_utxoset(&mut state);
+                insert_block(&mut state, block.clone()).unwrap();
+                ingest_stable_blocks_into_utxoset(&mut state);
             }
 
             let mut bytes = vec![];

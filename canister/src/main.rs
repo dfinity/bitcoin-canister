@@ -1,5 +1,4 @@
 use ic_btc_canister::{
-    store,
     types::{GetBalanceRequest, GetUtxosRequest, HttpRequest, HttpResponse, InitPayload},
 };
 use ic_btc_types::{GetUtxosResponse, MillisatoshiPerByte, Satoshi};
