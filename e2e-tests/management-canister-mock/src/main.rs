@@ -15,7 +15,9 @@ type BlockHash = Vec<u8>;
 
 const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
-const ADDRESS_3: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+const ADDRESS_3: &str = "bcrt1qp045tvzkxx0292645rxem9eryc7jpwsk3dy60h";
+const ADDRESS_4: &str = "bcrt1qjft8fhexv4znxu22hed7gxtpy2wazjn0x079mn";
+const ADDRESS_5: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 
 #[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 enum Network {
@@ -89,9 +91,9 @@ fn init() {
     append_block(&block_1);
 
     // Block 2: 10k transactions that transfer all of ADDRESS_1's BTC to ADDRESS_2
-    let mut txs = vec![];
+    let mut block_2_txs = vec![];
     for i in 0..10_000 {
-        txs.push(
+        block_2_txs.push(
             TransactionBuilder::new()
                 .with_input(OutPoint {
                     txid: tx_1_id,
@@ -103,8 +105,8 @@ fn init() {
     }
 
     let mut block_2 = BlockBuilder::with_prev_header(block_1.header);
-    for tx in txs.into_iter() {
-        block_2 = block_2.with_transaction(tx);
+    for tx in block_2_txs.iter() {
+        block_2 = block_2.with_transaction(tx.clone());
     }
     let block_2 = block_2.build();
 
@@ -123,19 +125,31 @@ fn init() {
     let block_4 = BlockBuilder::with_prev_header(block_3.header)
         .with_transaction(
             TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
+                .with_output(&Address::from_str(ADDRESS_4).unwrap(), 500_000)
                 .build(),
         )
         .build();
     append_block(&block_4);
 
-    let block_5 = BlockBuilder::with_prev_header(block_4.header)
-        .with_transaction(
+    // Block 5: 10k transactions that transfer all of ADDRESS_2's BTC to ADDRESS_5
+    let mut block_5_txs = vec![];
+    for block_2_tx in block_2_txs {
+        block_5_txs.push(
             TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
+                .with_input(OutPoint {
+                    txid: block_2_tx.txid(),
+                    vout: 0,
+                })
+                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
                 .build(),
         )
-        .build();
+    }
+
+    let mut block_5 = BlockBuilder::with_prev_header(block_4.header);
+    for tx in block_5_txs.into_iter() {
+        block_5 = block_5.with_transaction(tx);
+    }
+    let block_5 = block_5.build();
     append_block(&block_5);
 }
 
