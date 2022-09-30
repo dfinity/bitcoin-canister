@@ -25,6 +25,13 @@ wait_until_stable_height () {
   done
 }
 
+# Returns the number of UTXOs found in a response.
+num_utxos () {
+  UTXOS=$1
+  # Count the occurrences of a substring of a UTXO.
+  echo "$UTXOS" | grep -o "record { height = " | wc -l | xargs echo
+}
+
 rm -rf .dfx
 dfx start --background
 
@@ -53,7 +60,8 @@ fi
 
 # Fetch the balance of an address we expect to have funds.
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
-  address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf"
+  address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+  min_confirmations = opt 2;
 })')
 
 # Verify that the balance is 50 BTC.
@@ -62,21 +70,22 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   exit 1
 fi
 
-BALANCE=$(dfx canister call bitcoin get_balance '(record {
+# Verify that we are able to fetch the UTXOs of one address.
+UTXOS=$(dfx canister call bitcoin get_utxos '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
 })')
 
-if ! [[ $BALANCE = "(1_500_000 : nat64)" ]]; then
+# The address has 10000 UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 10000 ]]; then
   echo "FAIL"
   exit 1
 fi
 
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
-  min_confirmations = opt 3;
 })')
 
-if ! [[ $BALANCE = "(500_000 : nat64)" ]]; then
+if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   echo "FAIL"
   exit 1
 fi

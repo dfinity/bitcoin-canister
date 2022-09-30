@@ -1,4 +1,9 @@
-use crate::{store, types::GetUtxosRequest, with_state_mut};
+use crate::{
+    runtime::{performance_counter, print},
+    store,
+    types::GetUtxosRequest,
+    with_state_mut,
+};
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, UtxosFilter};
 
 // The maximum number of UTXOs that are allowed to be included in a single
@@ -15,12 +20,20 @@ const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
 
 /// Retrieves the UTXOs of the given Bitcoin address.
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
-    get_utxos_internal(&request.address, request.filter).expect("get_utxos failed")
+    let res = get_utxos_internal(&request.address, &request.filter).expect("get_utxos failed");
+
+    // Print the number of instructions it took to process this request.
+    print(&format!(
+        "[INSTRUCTION COUNT] {:?}: {}",
+        request,
+        performance_counter()
+    ));
+    res
 }
 
 fn get_utxos_internal(
     address: &str,
-    filter: Option<UtxosFilter>,
+    filter: &Option<UtxosFilter>,
 ) -> Result<GetUtxosResponse, GetUtxosError> {
     with_state_mut(|state| {
         match filter {
@@ -33,7 +46,7 @@ fn get_utxos_internal(
                 store::get_utxos(
                     state,
                     address,
-                    min_confirmations,
+                    *min_confirmations,
                     None,
                     Some(MAX_UTXOS_PER_RESPONSE),
                 )
