@@ -5,7 +5,6 @@ mod heartbeat;
 mod memory;
 mod runtime;
 pub mod state;
-pub mod store;
 #[cfg(test)]
 mod test_utils;
 #[cfg(test)]
@@ -165,8 +164,8 @@ mod test {
             // is already included as part of initializing the state.
             for block in blocks[1..].iter() {
                 with_state_mut(|s| {
-                    crate::store::insert_block(s, block.clone()).unwrap();
-                    crate::store::ingest_stable_blocks_into_utxoset(s);
+                    crate::state::insert_block(s, block.clone()).unwrap();
+                    crate::state::ingest_stable_blocks_into_utxoset(s);
                 });
             }
 

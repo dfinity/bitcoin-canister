@@ -1,7 +1,6 @@
 use crate::{
     runtime::{call_get_successors, print},
-    state::ResponseToProcess,
-    store,
+    state::{self, ResponseToProcess},
     types::{
         Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
@@ -126,7 +125,7 @@ async fn maybe_fetch_blocks() -> bool {
 }
 
 fn ingest_stable_blocks_into_utxoset() -> bool {
-    with_state_mut(store::ingest_stable_blocks_into_utxoset)
+    with_state_mut(state::ingest_stable_blocks_into_utxoset)
 }
 
 // Process a `GetSuccessorsResponse` if one is available.
@@ -139,7 +138,7 @@ fn maybe_process_response() {
                 for block in response.blocks.iter() {
                     // TODO(EXC-1215): Gracefully handle the errors here.
                     let block = BitcoinBlock::consensus_decode(block.as_slice()).unwrap();
-                    store::insert_block(state, Block::new(block)).unwrap();
+                    state::insert_block(state, Block::new(block)).unwrap();
                 }
             }
             other => {
@@ -164,7 +163,7 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
         }
         None => {
             // No response is present. Send an initial request for new blocks.
-            let processed_block_hashes: Vec<BlockHash> = store::get_unstable_blocks(state)
+            let processed_block_hashes: Vec<BlockHash> = state::get_unstable_blocks(state)
                 .iter()
                 .map(|b| b.block_hash().to_vec())
                 .collect();
@@ -237,7 +236,7 @@ mod test {
         heartbeat().await;
 
         // Assert that the block has been ingested.
-        assert_eq!(with_state(store::main_chain_height), 1);
+        assert_eq!(with_state(state::main_chain_height), 1);
 
         // The UTXO set hasn't been updated with the genesis block yet.
         assert_eq!(with_state(|s| s.utxos.next_height), 0);
@@ -246,7 +245,7 @@ mod test {
         heartbeat().await;
 
         // Assert that the block has been ingested.
-        assert_eq!(with_state(store::main_chain_height), 1);
+        assert_eq!(with_state(state::main_chain_height), 1);
 
         // The UTXO set has been updated with the genesis block.
         assert_eq!(with_state(|s| s.utxos.next_height), 1);
@@ -295,7 +294,7 @@ mod test {
         heartbeat().await;
 
         // Assert that the blocks have been ingested.
-        assert_eq!(with_state(store::main_chain_height), 2);
+        assert_eq!(with_state(state::main_chain_height), 2);
 
         // Ingest stable blocks.
         runtime::performance_counter_reset();
@@ -331,7 +330,7 @@ mod test {
         assert!(with_state(|s| s.utxos.partial_stable_block.is_none()));
 
         // Assert that the blocks have been ingested.
-        assert_eq!(with_state(store::main_chain_height), 2);
+        assert_eq!(with_state(state::main_chain_height), 2);
 
         // The stable height is now updated to include `block_1`.
         assert_eq!(with_state(|s| s.utxos.next_height), 2);
@@ -412,7 +411,7 @@ mod test {
         heartbeat().await;
 
         // Assert that the blocks have been ingested.
-        assert_eq!(with_state(store::main_chain_height), 3);
+        assert_eq!(with_state(state::main_chain_height), 3);
 
         // Run the heartbeat a few rounds to ingest the two stable blocks.
         // Three inputs/outputs are expected to be ingested per round.
@@ -447,7 +446,7 @@ mod test {
         with_state(|s| assert_eq!(s.utxos.partial_stable_block, None));
 
         // Assert that the blocks have been ingested.
-        assert_eq!(with_state(store::main_chain_height), 3);
+        assert_eq!(with_state(state::main_chain_height), 3);
 
         // The stable height is now updated to include `block_1` and `block_2`.
         assert_eq!(with_state(|s| s.utxos.next_height), 3);
