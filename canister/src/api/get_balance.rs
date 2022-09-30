@@ -1,6 +1,5 @@
 use crate::{
     runtime::{performance_counter, print},
-    store,
     types::GetBalanceRequest,
     with_state,
 };
@@ -8,10 +7,26 @@ use ic_btc_types::Satoshi;
 
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+    let min_confirmations = request.min_confirmations.unwrap_or(0);
+
     let res = with_state(|state| {
-        let min_confirmations = request.min_confirmations.unwrap_or(0);
-        store::get_balance(state, &request.address, min_confirmations).expect("get_balance failed")
+        crate::api::get_utxos::get_utxos_internal(
+            state,
+            &request.address,
+            min_confirmations,
+            None,
+            None,
+        )
+        .expect("get_balance failed")
     });
+
+    // NOTE: It is safe to sum up the balances here without the risk of overflow.
+    // The maximum number of bitcoins is 2.1 * 10^7, which is 2.1* 10^15 satoshis.
+    // That is well below the max value of a `u64`.
+    let mut balance = 0;
+    for utxo in res.utxos {
+        balance += utxo.value;
+    }
 
     // Print the number of instructions it took to process this request.
     print(&format!(
@@ -19,14 +34,15 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
         request,
         performance_counter()
     ));
-    res
+
+    balance
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{
-        genesis_block,
+        genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{InitPayload, Network, OutPoint},
         with_state_mut,
@@ -67,7 +83,7 @@ mod test {
 
         // Set the state.
         with_state_mut(|state| {
-            store::insert_block(state, block).unwrap();
+            state::insert_block(state, block).unwrap();
         });
 
         // With up to one confirmation, expect the address to have a balance 1000.
@@ -155,8 +171,8 @@ mod test {
         // Set the state.
         //        let mut state = State::new(2, network.0, block_0);
         with_state_mut(|state| {
-            store::insert_block(state, block_1).unwrap();
-            store::insert_block(state, block_2).unwrap();
+            state::insert_block(state, block_1).unwrap();
+            state::insert_block(state, block_2).unwrap();
         });
 
         // With up to one confirmation, expect address 2 to have a balance 1000, and

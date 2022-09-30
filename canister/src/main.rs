@@ -1,6 +1,5 @@
-use ic_btc_canister::{
-    store,
-    types::{GetBalanceRequest, GetUtxosRequest, HttpRequest, HttpResponse, InitPayload},
+use ic_btc_canister::types::{
+    GetBalanceRequest, GetUtxosRequest, HttpRequest, HttpResponse, InitPayload,
 };
 use ic_btc_types::{GetUtxosResponse, MillisatoshiPerByte, Satoshi};
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};

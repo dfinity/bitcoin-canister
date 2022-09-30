@@ -1,7 +1,7 @@
 use crate::{
     genesis_block, get_balance, get_utxos, heartbeat, runtime,
+    state::main_chain_height,
     state::PartialStableBlock,
-    store::main_chain_height,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
         BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,

@@ -33,7 +33,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     ic_btc_canister::with_state(|state| {
         w.encode_gauge(
             "main_chain_height",
-            crate::store::main_chain_height(state) as f64,
+            ic_btc_canister::state::main_chain_height(state) as f64,
             "Height of the main chain.",
         )?;
         w.encode_gauge(

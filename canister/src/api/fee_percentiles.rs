@@ -163,7 +163,7 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, store,
+        genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{InitPayload, Network},
         with_state,
@@ -285,13 +285,13 @@ mod test {
 
         with_state_mut(|state| {
             for (i, block) in blocks.into_iter().enumerate() {
-                store::insert_block(state, block).unwrap();
+                state::insert_block(state, block).unwrap();
                 if i % 1000 == 0 {
                     println!("processed block: {}", i);
                 }
             }
 
-            store::ingest_stable_blocks_into_utxoset(state);
+            state::ingest_stable_blocks_into_utxoset(state);
         });
     }
 
