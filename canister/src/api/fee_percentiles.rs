@@ -1,8 +1,8 @@
 use crate::{
     runtime::{performance_counter, print},
-    state::{State, UtxoSet},
+    state::{FeePercentilesCache, State, UtxoSet},
     types::{Block, OutPoint, Transaction},
-    unstable_blocks, with_state,
+    unstable_blocks, with_state_mut,
 };
 use bitcoin::TxIn;
 use ic_btc_types::{MillisatoshiPerByte, Satoshi};
@@ -15,7 +15,7 @@ const NUM_PERCENTILES: u16 = 100;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
-    let res = with_state(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
+    let res = with_state_mut(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
 
     // Print the number of instructions it took to process this request.
     print(&format!(
@@ -26,10 +26,18 @@ pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
 }
 
 fn get_current_fee_percentiles_internal(
-    state: &State,
+    state: &mut State,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+    let tip_block_hash = main_chain.tip().block_hash().to_vec();
+
+    // If fee percentiles were already cached, then return the cached results.
+    if let Some(cache) = &state.fee_percentiles_cache {
+        if cache.tip_block_hash == tip_block_hash {
+            return cache.fee_percentiles.clone();
+        }
+    }
 
     // If tip block changed recalculate and cache results.
     let fee_percentiles = percentiles(
@@ -40,6 +48,11 @@ fn get_current_fee_percentiles_internal(
         ),
         NUM_PERCENTILES,
     );
+
+    state.fee_percentiles_cache = Some(FeePercentilesCache {
+        tip_block_hash,
+        fee_percentiles: fee_percentiles.clone(),
+    });
 
     fee_percentiles
 }
@@ -153,7 +166,7 @@ mod test {
         genesis_block, store,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{InitPayload, Network},
-        with_state_mut,
+        with_state,
     };
 
     #[test]
@@ -322,7 +335,7 @@ mod test {
         let stability_threshold = blocks.len() as u128;
         init_state(blocks, stability_threshold);
 
-        with_state(|state| {
+        with_state_mut(|state| {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 4;
@@ -351,7 +364,7 @@ mod test {
         let stability_threshold = blocks.len() as u128;
         init_state(blocks, stability_threshold);
 
-        with_state(|state| {
+        with_state_mut(|state| {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 5;
@@ -382,7 +395,7 @@ mod test {
         let stability_threshold = blocks.len() as u128;
         init_state(blocks, stability_threshold);
 
-        with_state(|state| {
+        with_state_mut(|state| {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 5;
@@ -414,7 +427,7 @@ mod test {
         let stability_threshold = blocks.len() as u128;
         init_state(blocks, stability_threshold);
 
-        with_state(|state| {
+        with_state_mut(|state| {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 10_000;
@@ -434,7 +447,7 @@ mod test {
         let stability_threshold = 1;
         init_state(blocks, stability_threshold);
 
-        with_state(|state| {
+        with_state_mut(|state| {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
             let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
 
@@ -453,5 +466,27 @@ mod test {
         // Percentiles distributed evenly.
         assert_eq!(percentiles[0..50], [25; 50]);
         assert_eq!(percentiles[50..100], [33; 50]);
+    }
+
+    #[test]
+    fn get_current_fee_percentiles_caches_results() {
+        let number_of_blocks = 5;
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = 1;
+        init_state(blocks, stability_threshold);
+
+        let percentiles = get_current_fee_percentiles();
+        assert_eq!(percentiles.len(), 100);
+        // Percentiles distributed evenly.
+        assert_eq!(percentiles[0..50], [25; 50]);
+        assert_eq!(percentiles[50..100], [33; 50]);
+
+        // Percentiles are cached.
+        with_state(|state| {
+            assert_eq!(
+                state.fee_percentiles_cache.clone().unwrap().fee_percentiles,
+                percentiles
+            );
+        });
     }
 }
