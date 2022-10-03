@@ -5,11 +5,30 @@ use crate::{
 };
 use ic_btc_types::Satoshi;
 
+// Various profiling stats for tracking the performance of `get_balance`.
+#[derive(Debug, Default)]
+struct Stats {
+    // The total number of instructions used to process the request.
+    ins_total: u64,
+
+    // The number of instructions used to apply the unstable blocks.
+    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
+    #[allow(dead_code)]
+    ins_apply_unstable_blocks: u64,
+
+    // The number of instructions used to apply the unstable blocks.
+    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
+    #[allow(dead_code)]
+    ins_build_utxos_vec: u64,
+
+    // The number of instructions used to sum all the balances.
+    ins_sum_balances: u64,
+}
+
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
     let min_confirmations = request.min_confirmations.unwrap_or(0);
-
-    let res = with_state(|state| {
+    let (get_utxos_res, get_utxos_stats) = with_state(|state| {
         crate::api::get_utxos::get_utxos_internal(
             state,
             &request.address,
@@ -20,20 +39,25 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
         .expect("get_balance failed")
     });
 
+    let mut stats = Stats {
+        ins_apply_unstable_blocks: get_utxos_stats.ins_apply_unstable_blocks,
+        ins_build_utxos_vec: get_utxos_stats.ins_build_utxos_vec,
+        ..Default::default()
+    };
+
     // NOTE: It is safe to sum up the balances here without the risk of overflow.
     // The maximum number of bitcoins is 2.1 * 10^7, which is 2.1* 10^15 satoshis.
     // That is well below the max value of a `u64`.
+    let ins_start = performance_counter();
     let mut balance = 0;
-    for utxo in res.utxos {
+    for utxo in get_utxos_res.utxos {
         balance += utxo.value;
     }
+    stats.ins_sum_balances = performance_counter() - ins_start;
+    stats.ins_total = performance_counter();
 
     // Print the number of instructions it took to process this request.
-    print(&format!(
-        "[INSTRUCTION COUNT] {:?}: {}",
-        request,
-        performance_counter()
-    ));
+    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
 
     balance
 }
