@@ -21,9 +21,22 @@ use std::str::FromStr;
 // than 100_000 `Utxo`s are returned in a single response.
 const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
 
+/// Various profiling stats for tracking the performance of `get_utxos`.
+#[derive(Default, Debug)]
+pub(crate) struct Stats {
+    /// The total number of instructions used to process the request.
+    pub ins_total: u64,
+
+    /// The number of instructions used to apply the unstable blocks.
+    pub ins_apply_unstable_blocks: u64,
+
+    /// The number of instructions used to build the utxos vec.
+    pub ins_build_utxos_vec: u64,
+}
+
 /// Retrieves the UTXOs of the given Bitcoin address.
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
-    let res = with_state(|state| {
+    let (res, stats) = with_state(|state| {
         match &request.filter {
             None => {
                 // No filter is specified. Return all UTXOs for the address.
@@ -57,11 +70,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     .expect("get_utxos failed");
 
     // Print the number of instructions it took to process this request.
-    print(&format!(
-        "[INSTRUCTION COUNT] {:?}: {}",
-        request,
-        performance_counter()
-    ));
+    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
     res
 }
 
@@ -83,7 +92,7 @@ pub(crate) fn get_utxos_internal(
     min_confirmations: u32,
     page: Option<Vec<u8>>,
     utxo_limit: Option<usize>,
-) -> Result<GetUtxosResponse, GetUtxosError> {
+) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
     match page {
         // A page was provided in the request, so we should use it as a basis
         // to compute the next chunk of UTXOs to be returned.
@@ -122,7 +131,9 @@ fn get_utxos_from_chain(
     chain: BlockChain,
     offset: Option<(Height, OutPoint)>,
     utxo_limit: Option<usize>,
-) -> Result<GetUtxosResponse, GetUtxosError> {
+) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
+    let mut stats = Stats::default();
+
     if Address::from_str(address).is_err() {
         return Err(GetUtxosError::MalformedAddress);
     }
@@ -141,6 +152,7 @@ fn get_utxos_from_chain(
     let mut tip_block_height = state.utxos.next_height;
 
     // Apply unstable blocks to the UTXO set.
+    let ins_start = performance_counter();
     for (i, block) in chain.into_chain().iter().enumerate() {
         let block_height = state.utxos.next_height + (i as u32);
         let confirmations = chain_height - block_height + 1;
@@ -158,7 +170,9 @@ fn get_utxos_from_chain(
         tip_block_hash = block.block_hash();
         tip_block_height = block_height;
     }
+    stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 
+    let ins_start = performance_counter();
     let all_utxos = address_utxos.into_vec(offset);
     let mut next_page = None;
 
@@ -187,13 +201,17 @@ fn get_utxos_from_chain(
             utxos_to_return.to_vec()
         }
     };
-
-    Ok(GetUtxosResponse {
-        utxos,
-        tip_block_hash: tip_block_hash.to_vec(),
-        tip_height: tip_block_height,
-        next_page: next_page.map(ByteBuf::from),
-    })
+    stats.ins_build_utxos_vec = performance_counter() - ins_start;
+    stats.ins_total = performance_counter();
+    Ok((
+        GetUtxosResponse {
+            utxos,
+            tip_block_hash: tip_block_hash.to_vec(),
+            tip_height: tip_block_height,
+            next_page: next_page.map(ByteBuf::from),
+        },
+        stats,
+    ))
 }
 
 #[cfg(test)]
@@ -898,13 +916,15 @@ mod test {
 
             // Address 1 should have no UTXOs at zero confirmations.
             assert_eq!(
-                get_utxos_internal(&state, &address_1.to_string(), 0, None, None),
-                Ok(GetUtxosResponse {
+                get_utxos_internal(&state, &address_1.to_string(), 0, None, None)
+                    .unwrap()
+                    .0,
+                GetUtxosResponse {
                     utxos: vec![],
                     tip_block_hash: block_1.block_hash().to_vec(),
                     tip_height: 1,
                     next_page: None,
-                })
+                }
             );
         }
     }
@@ -935,6 +955,7 @@ mod test {
 
             let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, None)
                 .unwrap()
+                .0
                 .utxos;
 
             // Only some UTXOs can be included given that we use a utxo limit.
@@ -946,7 +967,8 @@ mod test {
                 // Allow 3 UTXOs to be returned.
                 Some(3),
             )
-            .unwrap();
+            .unwrap()
+            .0;
 
             assert_eq!(response.utxos.len(), 3);
             assert!(response.utxos.len() < utxo_set.len());
@@ -963,7 +985,8 @@ mod test {
                 // Allow 4 UTXOs to be returned.
                 Some(4),
             )
-            .unwrap();
+            .unwrap()
+            .0;
 
             assert_eq!(response.utxos.len(), 4);
             assert!(response.utxos.len() < utxo_set.len());
@@ -972,8 +995,9 @@ mod test {
             assert!(response.next_page.is_some());
 
             // A very big limit will result in the same as requesting UTXOs without any limit.
-            let response =
-                get_utxos_internal(&state, &address.to_string(), 0, None, Some(1000)).unwrap();
+            let response = get_utxos_internal(&state, &address.to_string(), 0, None, Some(1000))
+                .unwrap()
+                .0;
 
             assert_eq!(response.utxos.len(), num_transactions as usize);
             assert_eq!(response.utxos.len(), utxo_set.len());
@@ -1040,7 +1064,7 @@ mod test {
 
             // Get UTXO set without any pagination...
             let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, None)
-                .unwrap()
+                .unwrap().0
                 .utxos;
 
             // also get UTXO set with pagination until there are no
@@ -1055,7 +1079,7 @@ mod test {
                     page,
                     Some(utxo_limit),
                 )
-                .unwrap();
+                .unwrap().0;
                 utxos_chunked.extend(response.utxos);
                 if response.next_page.is_none() {
                     break;
