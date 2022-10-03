@@ -2,7 +2,7 @@
 set -Eexuo pipefail
 
 # Run dfx stop if we run into errors.
-trap "dfx stop" EXIT KILL SIGINT
+trap "dfx stop" EXIT SIGINT
 
 # Waits until the stable chain of the bitcoin canister has reached a certain height.
 wait_until_stable_height () {
