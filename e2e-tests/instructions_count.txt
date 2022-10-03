@@ -3,7 +3,8 @@ Ingest Block 1: BlockIngestionStats { num_rounds: 2, ins_total: 5489440309, ins_
 Ingest Block 2: BlockIngestionStats { num_rounds: 4, ins_total: 15248771696, ins_remove_inputs: 9619188049, ins_insert_outputs: 5624230488, ins_txids: 249684335, ins_insert_utxos: 5363094641 }
 GetBalanceRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", min_confirmations: None }: Stats { ins_total: 2663212461, ins_apply_unstable_blocks: 2275949956, ins_build_utxos_vec: 386954882, ins_sum_balances: 212 }
 GetBalanceRequest { address: "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf", min_confirmations: Some(2) }: Stats { ins_total: 1944001768, ins_apply_unstable_blocks: 49976, ins_build_utxos_vec: 1941405121, ins_sum_balances: 2303637 }
-GetUtxosRequest { address: "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh", filter: None }: Stats { ins_total: 2415599026, ins_apply_unstable_blocks: 1924453309, ins_build_utxos_vec: 490545734 }
-GetBalanceRequest { address: "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh", min_confirmations: None }: Stats { ins_total: 2406585593, ins_apply_unstable_blocks: 1921038484, ins_build_utxos_vec: 482208962, ins_sum_balances: 3097533 }
-get_current_fee_percentiles: 1552715649
-get_current_fee_percentiles: 91576
+GetUtxosRequest { address: "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf", filter: None }: Stats { ins_total: 4452461071, ins_apply_unstable_blocks: 1924453309, ins_build_utxos_vec: 2527407775 }
+GetUtxosRequest { address: "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh", filter: None }: Stats { ins_total: 2410714632, ins_apply_unstable_blocks: 1919670977, ins_build_utxos_vec: 490440108 }
+GetBalanceRequest { address: "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh", min_confirmations: None }: Stats { ins_total: 2406251285, ins_apply_unstable_blocks: 1920500482, ins_build_utxos_vec: 482330713, ins_sum_balances: 3179486 }
+get_current_fee_percentiles: 1554214113
+get_current_fee_percentiles: 91513
