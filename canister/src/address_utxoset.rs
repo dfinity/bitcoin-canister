@@ -103,15 +103,21 @@ impl<'a> AddressUtxoSet<'a> {
                 self.address.to_bytes(),
                 offset.as_ref().map(|x| x.to_bytes()),
             )
-            .map(|(k, _)| {
+            .filter_map(|(k, _)| {
                 let (_, _, outpoint) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
+
+                // Skip this outpoint if it has been removed in an unstable block.
+                if self.removed_utxos.contains_key(&outpoint) {
+                    return None;
+                }
+
                 let (txout, height) = self
                     .full_utxo_set
                     .utxos
                     .get(&outpoint)
                     .expect("outpoint must exist");
 
-                ((height, outpoint).to_bytes(), txout)
+                Some(((height, outpoint).to_bytes(), txout))
             })
             .collect();
 
@@ -141,17 +147,6 @@ impl<'a> AddressUtxoSet<'a> {
                         set.insert((height_and_outpoint, txout)),
                         "Cannot overwrite existing outpoint"
                     );
-                }
-            }
-        }
-
-        for (outpoint, (txout, height)) in self.removed_utxos {
-            if let Some(address) = Address::from_script(
-                &Script::from(txout.script_pubkey.clone()),
-                self.full_utxo_set.network.into(),
-            ) {
-                if address.to_string() == self.address {
-                    set.remove(&((height, outpoint).to_bytes(), txout));
                 }
             }
         }
