@@ -2,7 +2,7 @@
 set -Eexuo pipefail
 
 # Run dfx stop if we run into errors.
-trap "dfx stop" ERR EXIT
+trap "dfx stop" EXIT SIGINT
 
 # Waits until the stable chain of the bitcoin canister has reached a certain height.
 wait_until_stable_height () {
@@ -32,8 +32,7 @@ num_utxos () {
   echo "$UTXOS" | grep -o "record { height = " | wc -l | xargs echo
 }
 
-rm -rf .dfx
-dfx start --background
+dfx start --background --clean
 
 # Deploy a mock of the management canister that returns fake blocks.
 dfx deploy --no-wallet management-canister-mock
@@ -70,7 +69,20 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   exit 1
 fi
 
+UTXOS=$(dfx canister call bitcoin get_utxos '(record {
+  address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+})')
+
+# The address has no UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 0 ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
 # Verify that we are able to fetch the UTXOs of one address.
+# We temporarily pause outputting the commands to the terminal as
+# this command would print thousands of UTXOs.
+set +x
 UTXOS=$(dfx canister call bitcoin get_utxos '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
 })')
@@ -80,6 +92,7 @@ if ! [[ $(num_utxos "$UTXOS") = 10000 ]]; then
   echo "FAIL"
   exit 1
 fi
+set -x
 
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
