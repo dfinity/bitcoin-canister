@@ -38,6 +38,7 @@ impl TxOutCache {
         //    referenced by the unstable blocks.
         for tx in block.txdata() {
             for input in tx.input() {
+                println!("inserting input");
                 if input.previous_output.is_null() {
                     continue;
                 }
@@ -69,14 +70,14 @@ impl TxOutCache {
             }
 
             // Outputs can be inserted as-is into the cache, maintaining a count of how
-            // we inserted into the cache that reference them.
+            // many we inserted into the cache that reference them.
             for (i, txout) in tx.output().iter().enumerate() {
                 let outpoint = OutPoint {
                     txid: tx.txid(),
                     vout: i as u32,
                 };
 
-                // Retrive the associated entry in the cache and increment its count.
+                // Retrieve the associated entry in the cache and increment its count.
                 let entry = tx_outs.entry(outpoint.clone()).or_insert(TxOutInfo {
                     txout: txout.into(),
                     height: utxos.next_height,
@@ -303,5 +304,67 @@ mod test {
             cache.insert(&utxos, &block_1),
             Err(TxOutNotFound(outpoint_0))
         );
+    }
+
+    #[test]
+    fn inserting_a_block_is_atomic() {
+        let network = Network::Mainnet;
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+
+        let tx_0 = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .build();
+        let block_0 = BlockBuilder::genesis()
+            .with_transaction(tx_0.clone())
+            .build();
+
+        let utxos = UtxoSet::new(network);
+        let mut cache = TxOutCache::new();
+
+        cache.insert(&utxos, &block_0).unwrap();
+
+        // The outpoint of block 0.
+        let outpoint_0 = OutPoint {
+            txid: tx_0.txid(),
+            vout: 0,
+        };
+
+        // An outpoint that doesn't exist. A block containing this should fail.
+        let faulty_outpoint = OutPoint {
+            txid: tx_0.txid(),
+            vout: 1
+        };
+
+        // Insert a block that consumes the output of the genesis block.
+        let tx_1 = TransactionBuilder::new()
+            .with_input(outpoint_0.clone())
+            .with_input(faulty_outpoint.clone())
+            .with_output(&address_2, 2000)
+            .build();
+
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .with_transaction(tx_1)
+            .build();
+
+        // Inserting the block fails, as its referencing a faulty outpoint.
+        assert_eq!(
+            cache.insert(&utxos, &block_1),
+            Err(TxOutNotFound(faulty_outpoint))
+        );
+
+        // The cache doesn't contain anything from block 1
+        assert_eq!(
+            cache.0,
+            maplit::btreemap! {
+                outpoint_0.clone() => TxOutInfo {
+                    txout: (&tx_0.output()[0]).into(),
+                    height: 0,
+                    count: 1
+                }
+            }
+        );
+
+
     }
 }
