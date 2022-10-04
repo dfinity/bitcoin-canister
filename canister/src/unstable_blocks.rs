@@ -102,6 +102,7 @@ pub fn push(
 ) -> Result<(), BlockDoesNotExtendTree> {
     // TODO(EXC-1253): Make this whole function atomic.
     // TODO(EXC-1254): Add time-slicing as inserting a block into the TxOut cache can be expensive.
+    // TODO(EXC-1256): Do not maintain the TxOutCache until we're close to the tip.
     // TODO(EXC-1255): Propagate the error here.
     blocks.tx_out_cache.insert(utxos, &block).unwrap();
     blocktree::extend(&mut blocks.tree, block)?;
