@@ -44,9 +44,12 @@ impl State {
     /// block needs before it is considered stable. Stable blocks are assumed
     /// to be final and are never removed.
     pub fn new(stability_threshold: u32, network: Network, genesis_block: Block) -> Self {
+        let utxos = UtxoSet::new(network);
+        let unstable_blocks = UnstableBlocks::new(&utxos, stability_threshold, genesis_block);
+
         Self {
-            utxos: UtxoSet::new(network),
-            unstable_blocks: UnstableBlocks::new(stability_threshold, genesis_block),
+            utxos,
+            unstable_blocks,
             syncing_state: SyncingState::default(),
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
@@ -66,7 +69,7 @@ impl State {
 /// Inserts a block into the state.
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotExtendTree> {
-    unstable_blocks::push(&mut state.unstable_blocks, block)
+    unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
 }
 
 /// Pops any blocks in `UnstableBlocks` that are considered stable and ingests them to the UTXO set.

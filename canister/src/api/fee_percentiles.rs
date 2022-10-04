@@ -1,11 +1,11 @@
 use crate::{
     runtime::{performance_counter, print},
-    state::{FeePercentilesCache, State, UtxoSet},
-    types::{Block, OutPoint, Transaction},
-    unstable_blocks, with_state_mut,
+    state::{FeePercentilesCache, State},
+    types::{Block, Transaction},
+    unstable_blocks::{self, UnstableBlocks},
+    with_state_mut,
 };
-use bitcoin::TxIn;
-use ic_btc_types::{MillisatoshiPerByte, Satoshi};
+use ic_btc_types::MillisatoshiPerByte;
 
 // The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
@@ -43,7 +43,7 @@ fn get_current_fee_percentiles_internal(
     let fee_percentiles = percentiles(
         get_fees_per_byte(
             main_chain.into_chain(),
-            &state.utxos,
+            &state.unstable_blocks,
             number_of_transactions,
         ),
         NUM_PERCENTILES,
@@ -62,7 +62,7 @@ fn get_current_fee_percentiles_internal(
 // Eg. for transactions [..., Tn-2, Tn-1, Tn] fees would be [Fn, Fn-1, Fn-2, ...].
 fn get_fees_per_byte(
     main_chain: Vec<&Block>,
-    utxo_set: &UtxoSet,
+    unstable_blocks: &UnstableBlocks,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let mut fees = Vec::new();
@@ -76,7 +76,7 @@ fn get_fees_per_byte(
                 break;
             }
             tx_i += 1;
-            if let Some(fee) = get_tx_fee_per_byte(tx, utxo_set, &main_chain) {
+            if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
                 fees.push(fee);
             }
         }
@@ -87,8 +87,7 @@ fn get_fees_per_byte(
 // Computes the fees per byte of the given transaction.
 fn get_tx_fee_per_byte(
     tx: &Transaction,
-    utxo_set: &UtxoSet,
-    main_chain: &[&Block],
+    unstable_blocks: &UnstableBlocks,
 ) -> Option<MillisatoshiPerByte> {
     if tx.is_coin_base() {
         // Coinbase transactions do not have a fee.
@@ -97,14 +96,12 @@ fn get_tx_fee_per_byte(
 
     let mut satoshi = 0;
     for tx_in in tx.input() {
-        satoshi += match get_tx_input_value(tx_in, utxo_set, main_chain) {
-            Some(value) => value,
-            None => {
-                // Calculating fee is not possible when tx input value was not found.
-                // NOTE: This should be impossible if the block is valid.
-                return None;
-            }
-        }
+        let outpoint = (&tx_in.previous_output).into();
+        satoshi += unstable_blocks
+            .get_tx_out(&outpoint)
+            .unwrap_or_else(|| panic!("tx out of outpoint {:?} must exist", outpoint))
+            .0
+            .value;
     }
     for tx_out in tx.output() {
         satoshi -= tx_out.value;
@@ -116,30 +113,6 @@ fn get_tx_fee_per_byte(
     } else {
         // Calculating fee is not possible for a zero-size invalid transaction.
         None
-    }
-}
-
-// Looks up the value in Satoshis of a transaction input.
-// A transaction input's value can either be found in the UTXO set if
-// it's part of a stable block, or in one of the unstable blocks.
-fn get_tx_input_value(tx_in: &TxIn, utxo_set: &UtxoSet, main_chain: &[&Block]) -> Option<Satoshi> {
-    // Look up transaction's input value in the UTXO set first.
-    let result = utxo_set.utxos.get(&OutPoint::from(&tx_in.previous_output));
-    match result {
-        Some((txout, _height)) => Some(txout.value as Satoshi),
-        None => {
-            // The input's value wasn't found in the UTXO set.
-            // Look it up in the unstable blocks.
-            for block in main_chain.iter() {
-                for tx in block.txdata() {
-                    if tx.txid().to_vec() == tx_in.previous_output.txid.to_vec() {
-                        let idx = tx_in.previous_output.vout as usize;
-                        return Some(tx.output()[idx].value as Satoshi);
-                    }
-                }
-            }
-            None
-        }
     }
 }
 
@@ -165,9 +138,10 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{InitPayload, Network},
+        types::{InitPayload, Network, OutPoint},
         with_state,
     };
+    use ic_btc_types::Satoshi;
 
     #[test]
     fn percentiles_empty_input() {
@@ -307,7 +281,7 @@ mod test {
 
             let fees = get_fees_per_byte(
                 main_chain.clone(),
-                &state.utxos,
+                &state.unstable_blocks,
                 number_of_transactions as u32,
             );
 
@@ -339,7 +313,11 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 4;
-            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let fees = get_fees_per_byte(
+                main_chain.clone(),
+                &state.unstable_blocks,
+                number_of_transactions,
+            );
             // Initial transactions' fees [0, 1, 2, 3, 4, 5, 6, 7, 8] satoshi, with 119 bytes of transaction size
             // transfer into [0, 8, 16, 25, 33, 42, 50, 58] millisatoshi per byte fees in chronological order.
             // Extracted fees contain only last 4 transaction fees in a reversed order.
@@ -368,7 +346,11 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 5;
-            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let fees = get_fees_per_byte(
+                main_chain.clone(),
+                &state.unstable_blocks,
+                number_of_transactions,
+            );
             let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
 
             // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
@@ -399,7 +381,11 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 5;
-            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let fees = get_fees_per_byte(
+                main_chain.clone(),
+                &state.unstable_blocks,
+                number_of_transactions,
+            );
             let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
 
             // Initial transactions' fees [0, 1, 2, 3, ...] satoshi, with 119 bytes of transaction size
@@ -431,7 +417,11 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
 
             let number_of_transactions = 10_000;
-            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let fees = get_fees_per_byte(
+                main_chain.clone(),
+                &state.unstable_blocks,
+                number_of_transactions,
+            );
             assert_eq!(fees.len(), 0);
         });
 
@@ -449,7 +439,11 @@ mod test {
 
         with_state_mut(|state| {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
-            let fees = get_fees_per_byte(main_chain.clone(), &state.utxos, number_of_transactions);
+            let fees = get_fees_per_byte(
+                main_chain.clone(),
+                &state.unstable_blocks,
+                number_of_transactions,
+            );
 
             // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
             // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
