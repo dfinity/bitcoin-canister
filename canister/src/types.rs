@@ -1,4 +1,3 @@
-//! Types that are private to the crate.
 use crate::state::UTXO_KEY_SIZE;
 use bitcoin::{
     hashes::Hash, Block as BitcoinBlock, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
@@ -9,7 +8,7 @@ use ic_cdk::export::{candid::CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
-use std::convert::TryInto;
+use std::{convert::TryInto, str::FromStr};
 
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
@@ -94,7 +93,7 @@ impl Transaction {
         if self.txid.borrow().is_none() {
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
-            let txid = self.tx.txid().to_vec();
+            let txid = Txid::from(self.tx.txid().to_vec()); // TODO: implement a from trait?
             self.txid.borrow_mut().replace(txid);
         }
 
@@ -117,17 +116,15 @@ impl From<Transaction> for bitcoin::Transaction {
 }
 
 /// A reference to a transaction output.
-#[derive(
-    CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize,
-)]
+//#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct OutPoint {
-    #[serde(with = "serde_bytes")]
     pub txid: Txid,
     pub vout: u32,
 }
 
 impl OutPoint {
-    pub fn new(txid: Vec<u8>, vout: u32) -> Self {
+    pub fn new(txid: Txid, vout: u32) -> Self {
         Self { txid, vout }
     }
 }
@@ -135,7 +132,7 @@ impl OutPoint {
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self {
-            txid: bitcoin_outpoint.txid.to_vec(),
+            txid: Txid::from(bitcoin_outpoint.txid.to_vec()),
             vout: bitcoin_outpoint.vout,
         }
     }
@@ -146,7 +143,7 @@ impl From<OutPoint> for bitcoin::OutPoint {
     fn from(outpoint: OutPoint) -> Self {
         Self {
             txid: bitcoin::Txid::from_hash(
-                Hash::from_slice(&outpoint.txid).expect("txid must be valid"),
+                Hash::from_slice(outpoint.txid.as_bytes()).expect("txid must be valid"),
             ),
             vout: outpoint.vout,
         }
@@ -249,7 +246,7 @@ pub trait Storable {
 
 impl Storable for OutPoint {
     fn to_bytes(&self) -> Vec<u8> {
-        let mut v: Vec<u8> = self.txid.clone(); // Store the txid (32 bytes)
+        let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
         // An outpoint is always exactly to the key size (36 bytes).
@@ -261,7 +258,7 @@ impl Storable for OutPoint {
     fn from_bytes(bytes: Vec<u8>) -> Self {
         assert_eq!(bytes.len(), 36);
         OutPoint {
-            txid: bytes[..32].to_vec(),
+            txid: Txid::from(bytes[..32].to_vec()),
             vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
         }
     }
@@ -382,9 +379,50 @@ pub type BlockHeaderBlob = Vec<u8>;
 // A blob representing a block hash.
 pub type BlockHash = Vec<u8>;
 
-pub type Txid = Vec<u8>;
-
 type PageNumber = u8;
+
+#[derive(Clone, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
+pub struct Txid {
+    #[serde(with = "serde_bytes")]
+    bytes: Vec<u8>,
+}
+
+impl From<Vec<u8>> for Txid {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self { bytes }
+    }
+}
+
+impl FromStr for Txid {
+    type Err = String;
+
+    fn from_str(txid: &str) -> Result<Self, Self::Err> {
+        use bitcoin::Txid as BitcoinTxid;
+        let bytes = BitcoinTxid::from_str(txid).unwrap().to_vec();
+        Ok(Self::from(bytes))
+    }
+}
+
+impl Txid {
+    pub fn as_bytes(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
+
+    pub fn to_vec(self) -> Vec<u8> {
+        self.bytes
+    }
+
+    pub fn to_string(mut self) -> String {
+        self.bytes.reverse();
+        hex::encode(self.bytes)
+    }
+}
+
+impl std::fmt::Debug for Txid {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.clone().to_string())
+    }
+}
 
 /// A request to retrieve more blocks from the Bitcoin network.
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -475,4 +513,17 @@ pub struct HttpResponse {
 pub enum Slicing<T> {
     Paused(T),
     Done,
+}
+
+#[test]
+fn test_txid_to_string() {
+    let txid = Txid::from(vec![
+        148, 87, 230, 105, 220, 107, 52, 76, 0, 144, 209, 14, 178, 42, 3, 119, 2, 40, 152, 212, 96,
+        127, 189, 241, 227, 206, 242, 163, 35, 193, 63, 169,
+    ]);
+
+    assert_eq!(
+        txid.to_string(),
+        "a93fc123a3f2cee3f1bd7f60d498280277032ab20ed190004c346bdc69e65794"
+    );
 }
