@@ -115,7 +115,7 @@ impl TxOutCache {
 
             // Remove the outpoint if there are no more blocks in the cache referencing it.
             if entry.count == 0 {
-                cache.0.remove(&outpoint);
+                cache.0.remove(outpoint);
             }
         }
 
@@ -296,7 +296,7 @@ mod test {
             .build();
 
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
-            .with_transaction(tx_1.clone())
+            .with_transaction(tx_1)
             .build();
 
         assert_eq!(
