@@ -93,7 +93,7 @@ impl Transaction {
         if self.txid.borrow().is_none() {
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
-            let txid = Txid::from(self.tx.txid().to_vec()); // TODO: implement a from trait?
+            let txid = Txid::from(self.tx.txid().to_vec());
             self.txid.borrow_mut().replace(txid);
         }
 
