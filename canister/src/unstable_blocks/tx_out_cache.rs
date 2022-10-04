@@ -333,7 +333,7 @@ mod test {
         // An outpoint that doesn't exist. A block containing this should fail.
         let faulty_outpoint = OutPoint {
             txid: tx_0.txid(),
-            vout: 1
+            vout: 1,
         };
 
         // Insert a block that consumes the output of the genesis block.
@@ -357,14 +357,12 @@ mod test {
         assert_eq!(
             cache.0,
             maplit::btreemap! {
-                outpoint_0.clone() => TxOutInfo {
+                outpoint_0 => TxOutInfo {
                     txout: (&tx_0.output()[0]).into(),
                     height: 0,
                     count: 1
                 }
             }
         );
-
-
     }
 }
