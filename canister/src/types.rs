@@ -424,6 +424,12 @@ impl std::fmt::Debug for Txid {
     }
 }
 
+impl std::fmt::Display for Txid {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.clone().to_string())
+    }
+}
+
 /// A request to retrieve more blocks from the Bitcoin network.
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GetSuccessorsRequest {
