@@ -9,6 +9,7 @@ const UPGRADES: MemoryId = MemoryId::new(0);
 const ADDRESS_OUTPOINTS: MemoryId = MemoryId::new(1);
 const SMALL_UTXOS: MemoryId = MemoryId::new(2);
 const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
+const BALANCES: MemoryId = MemoryId::new(4);
 
 pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -31,6 +32,10 @@ pub fn get_utxos_small_memory() -> Memory {
 
 pub fn get_utxos_medium_memory() -> Memory {
     MEMORY_MANAGER.with(|m| m.get(MEDIUM_UTXOS))
+}
+
+pub fn get_balances_memory() -> Memory {
+    MEMORY_MANAGER.with(|m| m.get(BALANCES))
 }
 
 /// Writes the bytes at the specified offset, growing the memory size if needed.

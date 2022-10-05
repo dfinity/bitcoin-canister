@@ -1,65 +1,63 @@
 use crate::{
     runtime::{performance_counter, print},
-    types::GetBalanceRequest,
-    with_state,
+    types::{Address, GetBalanceRequest},
+    unstable_blocks, with_state,
 };
 use ic_btc_types::Satoshi;
-
-// Various profiling stats for tracking the performance of `get_balance`.
-#[derive(Debug, Default)]
-struct Stats {
-    // The total number of instructions used to process the request.
-    ins_total: u64,
-
-    // The number of instructions used to apply the unstable blocks.
-    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
-    #[allow(dead_code)]
-    ins_apply_unstable_blocks: u64,
-
-    // The number of instructions used to apply the unstable blocks.
-    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
-    #[allow(dead_code)]
-    ins_build_utxos_vec: u64,
-
-    // The number of instructions used to sum all the balances.
-    ins_sum_balances: u64,
-}
+use std::str::FromStr;
 
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
     let min_confirmations = request.min_confirmations.unwrap_or(0);
-    let (get_utxos_res, get_utxos_stats) = with_state(|state| {
-        crate::api::get_utxos::get_utxos_internal(
-            state,
-            &request.address,
-            min_confirmations,
-            None,
-            None,
-        )
-        .expect("get_balance failed")
-    });
-
-    let mut stats = Stats {
-        ins_apply_unstable_blocks: get_utxos_stats.ins_apply_unstable_blocks,
-        ins_build_utxos_vec: get_utxos_stats.ins_build_utxos_vec,
-        ..Default::default()
-    };
+    let address =
+        Address::from_str(&request.address).expect("get_balance failed: MalformedAddress");
 
     // NOTE: It is safe to sum up the balances here without the risk of overflow.
     // The maximum number of bitcoins is 2.1 * 10^7, which is 2.1* 10^15 satoshis.
     // That is well below the max value of a `u64`.
-    let ins_start = performance_counter();
-    let mut balance = 0;
-    for utxo in get_utxos_res.utxos {
-        balance += utxo.value;
-    }
-    stats.ins_sum_balances = performance_counter() - ins_start;
-    stats.ins_total = performance_counter();
+    with_state(|state| {
+        // Retrieve the balance that's pre-computed for stable blocks.
+        let mut balance = state.utxos.balances.get(&address).unwrap_or(0);
 
-    // Print the number of instructions it took to process this request.
-    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
+        // Apply all the unstable blocks.
+        let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+        let chain_height = state.utxos.next_height + (main_chain.len() as u32) - 1;
+        for (i, block) in main_chain.into_chain().iter().enumerate() {
+            let block_height = state.utxos.next_height + (i as u32);
+            let confirmations = chain_height - block_height + 1;
 
-    balance
+            if confirmations < min_confirmations {
+                // The block has fewer confirmations than requested.
+                // We can stop now since all remaining blocks will have fewer confirmations.
+                break;
+            }
+
+            for outpoint in state
+                .unstable_blocks
+                .get_added_outpoints(&block.block_hash().to_vec(), &address)
+            {
+                let (txout, _) = state.unstable_blocks.get_tx_out(outpoint).unwrap();
+                balance += txout.value;
+            }
+
+            for outpoint in state
+                .unstable_blocks
+                .get_removed_outpoints(&block.block_hash().to_vec(), &address)
+            {
+                let (txout, _) = state.unstable_blocks.get_tx_out(outpoint).unwrap();
+                balance -= txout.value;
+            }
+        }
+
+        // Print the number of instructions it took to process this request.
+        print(&format!(
+            "[INSTRUCTION COUNT] {:?}: {:?}",
+            request,
+            performance_counter()
+        ));
+
+        balance
+    })
 }
 
 #[cfg(test)]
