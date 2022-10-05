@@ -184,11 +184,11 @@ mod test {
         state::PartialStableBlock,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
-            BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, InitPayload,
-            Network,
+            Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
+            InitPayload, Network,
         },
     };
-    use bitcoin::{Address, BlockHeader};
+    use bitcoin::BlockHeader;
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);

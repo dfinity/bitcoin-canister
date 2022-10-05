@@ -1,10 +1,9 @@
 use crate::{
     blocktree::BlockChain,
     runtime::{performance_counter, print},
-    types::{GetUtxosRequest, OutPoint, Page, Txid},
-    unstable_blocks, utxoset, with_state, State,
+    types::{Address, GetUtxosRequest, OutPoint, Page, Txid},
+    unstable_blocks, with_state, State,
 };
-use bitcoin::Address;
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, Height, UtxosFilter};
 use serde_bytes::ByteBuf;
 use std::str::FromStr;
@@ -134,9 +133,7 @@ fn get_utxos_from_chain(
 ) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
     let mut stats = Stats::default();
 
-    if Address::from_str(address).is_err() {
-        return Err(GetUtxosError::MalformedAddress);
-    }
+    let address = Address::from_str(address).map_err(|_| GetUtxosError::MalformedAddress)?;
 
     if chain.len() < min_confirmations as usize {
         return Err(GetUtxosError::MinConfirmationsTooLarge {
@@ -145,7 +142,7 @@ fn get_utxos_from_chain(
         });
     }
 
-    let mut address_utxos = utxoset::get_utxos(&state.utxos, address);
+    let mut address_utxos = state.get_utxos(address);
     let chain_height = state.utxos.next_height + (chain.len() as u32) - 1;
 
     let mut tip_block_hash = chain.first().block_hash();
@@ -163,9 +160,7 @@ fn get_utxos_from_chain(
             break;
         }
 
-        for tx in block.txdata() {
-            address_utxos.insert_tx(tx, block_height);
-        }
+        address_utxos.apply_block(block);
 
         tip_block_hash = block.block_hash();
         tip_block_height = block_height;
@@ -219,11 +214,10 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, state,
-        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        test_utils::{random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder},
         types::{Block, InitPayload, Network},
         with_state_mut,
     };
-    use ic_btc_test_utils::random_p2tr_address;
     use ic_btc_types::{OutPoint, Utxo};
     use proptest::prelude::*;
 
@@ -322,7 +316,7 @@ mod test {
         });
 
         // Generate addresses.
-        let address_1 = random_p2tr_address(network.into());
+        let address_1 = random_p2tr_address(network);
         let address_2 = random_p2pkh_address(network);
 
         // Create a blockchain which alternates between giving some BTC to
@@ -415,7 +409,7 @@ mod test {
             blocks_source: None,
         });
 
-        let address = random_p2tr_address(network.into());
+        let address = random_p2tr_address(network);
 
         // Create a genesis block where 1000 satoshis are given to a taproot address.
         let coinbase_tx = TransactionBuilder::coinbase()

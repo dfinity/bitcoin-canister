@@ -1,9 +1,10 @@
 use crate::{
+    address_utxoset::AddressUtxoSet,
     blocktree::BlockDoesNotExtendTree,
     memory::Memory,
     types::{
-        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Network,
-        Slicing,
+        Address, Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
+        Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
     utxos::Utxos,
@@ -63,6 +64,11 @@ impl State {
     /// The height of the latest stable block.
     pub fn stable_height(&self) -> Height {
         self.utxos.next_height
+    }
+
+    /// Returns the UTXO set of a given bitcoin address.
+    pub fn get_utxos(&self, address: Address) -> AddressUtxoSet<'_> {
+        AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
     }
 }
 

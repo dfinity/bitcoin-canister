@@ -104,7 +104,7 @@ pub fn extend(block_tree: &mut BlockTree, block: Block) -> Result<(), BlockDoesN
 
     // Check if the block is a successor to any of the blocks in the tree.
     match find_mut(block_tree, &block.header().prev_blockhash) {
-        Some(block_subtree) => {
+        Some((block_subtree, _)) => {
             assert_eq!(
                 block_subtree.root.block_hash(),
                 block.header().prev_blockhash
@@ -202,19 +202,30 @@ pub fn depth(block_tree: &BlockTree) -> u32 {
 }
 
 // Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
-// if it exists, and `None` otherwise.
-fn find_mut<'a>(block_tree: &'a mut BlockTree, blockhash: &BlockHash) -> Option<&'a mut BlockTree> {
-    if block_tree.root.block_hash() == *blockhash {
-        return Some(block_tree);
-    }
-
-    for child in block_tree.children.iter_mut() {
-        if let res @ Some(_) = find_mut(child, blockhash) {
-            return res;
+// along with its depth if it exists, and `None` otherwise.
+pub fn find_mut<'a>(
+    block_tree: &'a mut BlockTree,
+    blockhash: &BlockHash,
+) -> Option<(&'a mut BlockTree, u32)> {
+    fn find_mut_helper<'a>(
+        block_tree: &'a mut BlockTree,
+        blockhash: &BlockHash,
+        depth: u32,
+    ) -> Option<(&'a mut BlockTree, u32)> {
+        if block_tree.root.block_hash() == *blockhash {
+            return Some((block_tree, depth));
         }
+
+        for child in block_tree.children.iter_mut() {
+            if let res @ Some(_) = find_mut_helper(child, blockhash, depth + 1) {
+                return res;
+            }
+        }
+
+        None
     }
 
-    None
+    find_mut_helper(block_tree, blockhash, 0)
 }
 
 // Returns true if a block exists in the tree, false otherwise.
