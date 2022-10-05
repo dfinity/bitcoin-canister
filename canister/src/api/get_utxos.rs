@@ -1,7 +1,7 @@
 use crate::{
     blocktree::BlockChain,
     runtime::{performance_counter, print},
-    types::{GetUtxosRequest, OutPoint, Page},
+    types::{GetUtxosRequest, OutPoint, Page, Txid},
     unstable_blocks, utxoset, with_state, State,
 };
 use bitcoin::Address;
@@ -190,7 +190,7 @@ fn get_utxos_from_chain(
                         tip_block_hash,
                         height: rest[0].height,
                         outpoint: OutPoint::new(
-                            rest[0].outpoint.txid.clone(),
+                            Txid::from(rest[0].outpoint.txid.clone()),
                             rest[0].outpoint.vout,
                         ),
                     }
