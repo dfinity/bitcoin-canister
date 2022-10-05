@@ -2,15 +2,15 @@ use crate::address_utxoset::AddressUtxoSet;
 use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::{BlockIngestionStats, PartialStableBlock, UtxoSet},
-    types::{Block, OutPoint, Slicing, Storable, Transaction},
+    types::{Block, OutPoint, Slicing, Storable, Transaction, Txid},
 };
-use bitcoin::{Address, Script, TxOut, Txid};
+use bitcoin::{Address, Script, TxOut};
 use std::str::FromStr;
 
 lazy_static::lazy_static! {
-    pub static ref DUPLICATE_TX_IDS: [Vec<u8>; 2] = [
-        Txid::from_str("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599").unwrap().to_vec(),
-        Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap().to_vec()
+    pub static ref DUPLICATE_TX_IDS: [Txid; 2] = [
+        Txid::from_str("d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599").unwrap(),
+        Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap(),
     ];
 }
 
@@ -240,7 +240,7 @@ fn insert_utxo(utxo_set: &mut UtxoSet, outpoint: OutPoint, output: TxOut) {
     // See: https://en.bitcoin.it/wiki/BIP_0030
     //      https://bitcoinexplorer.org/tx/d5d27987d2a3dfc724e359870c6644b40e497bdc0589a033220fe15429d88599
     //      https://bitcoinexplorer.org/tx/e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468
-    if outpoint_already_exists && !DUPLICATE_TX_IDS.contains(&outpoint.txid.to_vec()) {
+    if outpoint_already_exists && !DUPLICATE_TX_IDS.contains(&outpoint.txid) {
         panic!(
             "Cannot insert outpoint {:?} because it was already inserted. Block height: {}",
             outpoint, utxo_set.next_height
@@ -252,7 +252,7 @@ fn insert_utxo(utxo_set: &mut UtxoSet, outpoint: OutPoint, output: TxOut) {
 mod test {
     use super::*;
     use crate::test_utils::{random_p2pkh_address, TransactionBuilder};
-    use crate::types::{Network, OutPoint};
+    use crate::types::{Network, OutPoint, Txid};
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
     use bitcoin::{Network as BitcoinNetwork, TxOut};
     use ic_btc_types::{Address as AddressStr, Height};
@@ -391,7 +391,7 @@ mod test {
                 .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                (address_1.to_string(), 0, OutPoint::new(coinbase_tx.txid().to_vec(), 0))
+                (address_1.to_string(), 0, OutPoint::new(coinbase_tx.txid(), 0))
             }
         );
 
@@ -425,7 +425,7 @@ mod test {
                 .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                (address_2.to_string(), 1, OutPoint::new(tx.txid().to_vec(), 0))
+                (address_2.to_string(), 1, OutPoint::new(tx.txid(), 0))
             }
         );
     }
@@ -440,7 +440,12 @@ mod test {
         for height in [17u32, 0, 31, 4, 2].iter() {
             utxo.address_to_outpoints
                 .insert(
-                    (address.clone(), *height, OutPoint::new(vec![0; 32], 0)).to_bytes(),
+                    (
+                        address.clone(),
+                        *height,
+                        OutPoint::new(Txid::from(vec![0; 32]), 0),
+                    )
+                        .to_bytes(),
                     vec![],
                 )
                 .unwrap();
@@ -478,7 +483,7 @@ mod test {
             .output()[0]
             .clone();
 
-        let outpoint = OutPoint::new(vec![], 0);
+        let outpoint = OutPoint::new(Txid::from(vec![]), 0);
 
         insert_utxo(&mut utxo_set, outpoint.clone(), tx_out_1);
 
@@ -505,7 +510,11 @@ mod test {
             .output()[0]
             .clone();
 
-        insert_utxo(&mut utxo_set, OutPoint::new(vec![0; 32], 0), tx_out);
+        insert_utxo(
+            &mut utxo_set,
+            OutPoint::new(Txid::from(vec![0; 32]), 0),
+            tx_out,
+        );
 
         // Verify that this invalid address was not inserted into the address outpoints.
         assert!(utxo_set.address_to_outpoints.is_empty());
