@@ -411,22 +411,17 @@ impl Txid {
     pub fn to_vec(self) -> Vec<u8> {
         self.bytes
     }
-
-    pub fn to_string(mut self) -> String {
-        self.bytes.reverse();
-        hex::encode(self.bytes)
-    }
 }
 
 impl std::fmt::Debug for Txid {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.clone().to_string())
+        write!(f, "{}", self.clone())
     }
 }
 
 impl std::fmt::Display for Txid {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.clone().to_string())
+        write!(f, "{}", self.clone())
     }
 }
 
