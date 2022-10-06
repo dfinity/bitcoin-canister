@@ -20,17 +20,17 @@ use std::str::FromStr;
 // than 100_000 `Utxo`s are returned in a single response.
 const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
 
-/// Various profiling stats for tracking the performance of `get_utxos`.
+// Various profiling stats for tracking the performance of `get_utxos`.
 #[derive(Default, Debug)]
 struct Stats {
-    /// The total number of instructions used to process the request.
-    pub ins_total: u64,
+    // The total number of instructions used to process the request.
+    ins_total: u64,
 
-    /// The number of instructions used to apply the unstable blocks.
-    pub ins_apply_unstable_blocks: u64,
+    // The number of instructions used to apply the unstable blocks.
+    ins_apply_unstable_blocks: u64,
 
-    /// The number of instructions used to build the utxos vec.
-    pub ins_build_utxos_vec: u64,
+    // The number of instructions used to build the utxos vec.
+    ins_build_utxos_vec: u64,
 }
 
 /// Retrieves the UTXOs of the given Bitcoin address.
