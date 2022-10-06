@@ -1,13 +1,13 @@
-mod tx_out_cache;
+mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
     state::UtxoSet,
-    types::{Block, OutPoint, TxOut},
+    types::{Address, Block, OutPoint, TxOut},
 };
 use bitcoin::BlockHash;
 use ic_btc_types::Height;
+use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
-use tx_out_cache::TxOutCache;
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -18,27 +18,39 @@ use tx_out_cache::TxOutCache;
 pub struct UnstableBlocks {
     stability_threshold: u32,
     tree: BlockTree,
-    tx_out_cache: TxOutCache,
+    outpoints_cache: OutPointsCache,
 }
 
 impl UnstableBlocks {
     pub fn new(utxos: &UtxoSet, stability_threshold: u32, anchor: Block) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
-        let mut tx_out_cache = TxOutCache::new();
-        tx_out_cache
-            .insert(utxos, &anchor)
-            .expect("genesis block must be valid.");
+        let mut outpoints_cache = OutPointsCache::new();
+        outpoints_cache
+            .insert(utxos, &anchor, utxos.next_height)
+            .expect("anchor block must be valid.");
 
         Self {
             stability_threshold,
             tree: BlockTree::new(anchor.clone()),
-            tx_out_cache,
+            outpoints_cache,
         }
     }
 
     /// Retrieves the `TxOut` associated with the given `outpoint`, along with its height.
     pub fn get_tx_out(&self, outpoint: &OutPoint) -> Option<(&TxOut, Height)> {
-        self.tx_out_cache.get_tx_out(outpoint)
+        self.outpoints_cache.get_tx_out(outpoint)
+    }
+
+    /// Retrieves the list of outpoints that were added for the given address in the given block.
+    pub fn get_added_outpoints(&self, block_hash: &Vec<u8>, address: &Address) -> &[OutPoint] {
+        self.outpoints_cache
+            .get_added_outpoints(block_hash, address)
+    }
+
+    /// Retrieves the list of outpoints that were removed for the given address in the given block.
+    pub fn get_removed_outpoints(&self, block_hash: &Vec<u8>, address: &Address) -> &[OutPoint] {
+        self.outpoints_cache
+            .get_removed_outpoints(block_hash, address)
     }
 }
 
@@ -84,7 +96,7 @@ pub fn pop(blocks: &mut UnstableBlocks) -> Option<Block> {
             let deepest_child_tree = anchor_child_trees.pop().unwrap();
             let old_anchor = blocks.tree.root.clone();
             blocks.tree = deepest_child_tree;
-            blocks.tx_out_cache.remove(&old_anchor);
+            blocks.outpoints_cache.remove(&old_anchor);
             Some(old_anchor)
         }
         None => {
@@ -100,13 +112,21 @@ pub fn push(
     utxos: &UtxoSet,
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
+    let (parent_block_tree, depth) =
+        blocktree::find_mut(&mut blocks.tree, &block.header().prev_blockhash)
+            .ok_or_else(|| BlockDoesNotExtendTree(block.clone()))?;
+
+    let height = utxos.next_height + depth + 1;
+
     // TODO(EXC-1253): Make this whole function atomic.
-    // TODO(EXC-1254): Add time-slicing as inserting a block into the TxOut cache can be expensive.
-    // TODO(EXC-1256): Do not maintain the TxOutCache until we're close to the tip.
+    // TODO(EXC-1254): Add time-slicing as inserting a block into the outpoints cache can be expensive.
+    // TODO(EXC-1256): Do not maintain the OutPointsCache until we're close to the tip.
     // TODO(EXC-1255): Propagate the error here.
-    blocks.tx_out_cache.insert(utxos, &block).unwrap();
-    blocktree::extend(&mut blocks.tree, block)?;
-    Ok(())
+    blocks
+        .outpoints_cache
+        .insert(utxos, &block, height)
+        .unwrap();
+    blocktree::extend(parent_block_tree, block)
 }
 
 /// Returns the best guess on what the main blockchain is.

@@ -1,9 +1,10 @@
 use crate::{
     state::UtxoSet,
-    types::{OutPoint, Storable, Transaction, TxOut},
+    types::{Address, Block, OutPoint, Storable, TxOut},
+    unstable_blocks::UnstableBlocks,
 };
-use bitcoin::{Address, Script};
-use ic_btc_types::{Address as AddressStr, Height, Utxo};
+use bitcoin::Script;
+use ic_btc_types::{Height, Utxo};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A struct that tracks the UTXO set of a given address.
@@ -13,10 +14,12 @@ use std::collections::{BTreeMap, BTreeSet};
 /// is used for computing the UTXOs of an address at varying heights.
 pub struct AddressUtxoSet<'a> {
     // The address to track the UTXOs of.
-    address: String,
+    address: Address,
 
     // A reference to the (full) underlying UTXO set.
     full_utxo_set: &'a UtxoSet,
+
+    unstable_blocks: &'a UnstableBlocks,
 
     // Added UTXOs that are not present in the underlying UTXO set.
     added_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
@@ -27,70 +30,54 @@ pub struct AddressUtxoSet<'a> {
 
 impl<'a> AddressUtxoSet<'a> {
     /// Initialize an `AddressUtxoSet` that tracks the UTXO set of `address`.
-    pub fn new(address: String, full_utxo_set: &'a UtxoSet) -> Self {
+    pub fn new(
+        address: Address,
+        full_utxo_set: &'a UtxoSet,
+        unstable_blocks: &'a UnstableBlocks,
+    ) -> Self {
         Self {
             address,
             full_utxo_set,
+            unstable_blocks,
             removed_utxos: BTreeMap::new(),
             added_utxos: BTreeMap::new(),
         }
     }
 
-    /// Inserts a transaction at the given height.
-    pub fn insert_tx(&mut self, tx: &Transaction, height: Height) {
-        self.remove_spent_txs(tx);
-        self.insert_unspent_txs(tx, height);
-    }
+    pub fn apply_block(&mut self, block: &Block) {
+        for outpoint in self
+            .unstable_blocks
+            .get_removed_outpoints(&block.block_hash().to_vec(), &self.address)
+        {
+            let (txout, height) = self
+                .unstable_blocks
+                .get_tx_out(outpoint)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "tx out for outpoint {:?} must exist in removed outpoints",
+                        outpoint
+                    );
+                });
 
-    // Iterates over transaction inputs and removes spent outputs.
-    fn remove_spent_txs(&mut self, tx: &Transaction) {
-        if tx.is_coin_base() {
-            return;
+            self.removed_utxos
+                .insert(outpoint.clone(), (txout.clone(), height));
         }
 
-        for input in tx.input() {
-            let outpoint = (&input.previous_output).into();
-            match self.added_utxos.remove(&outpoint) {
-                Some(_) => {
-                    // The entry was found and removed.
-                }
-                None => {
-                    // The entry wasn't found in the `added_utxos`. It then must be in the
-                    // stable UTXO set.
-                    let (txout, height) =
-                        self.full_utxo_set.utxos.get(&outpoint).unwrap_or_else(|| {
-                            panic!("Cannot find outpoint: {}", &input.previous_output)
-                        });
-
-                    // Remove it.
-                    let old_value = self.removed_utxos.insert(outpoint, (txout.clone(), height));
-                    assert_eq!(old_value, None, "Cannot remove an output twice");
-                }
-            }
-        }
-    }
-
-    // Iterates over transaction outputs and adds unspents.
-    fn insert_unspent_txs(&mut self, tx: &Transaction, height: Height) {
-        for (vout, output) in tx.output().iter().enumerate() {
-            if !(output.script_pubkey.is_provably_unspendable()) {
-                // Insert the outpoint.
-                //
-                // NOTE: In theory we only need to store the UTXO here if it's owned
-                // by the address we're interested in. However, storing everything
-                // allows us to have stronger verification that all inputs/outputs
-                // are being consumed as expected.
-
-                assert!(
-                    self.added_utxos
-                        .insert(
-                            OutPoint::new(tx.txid(), vout as u32),
-                            (output.into(), height)
-                        )
-                        .is_none(),
-                    "Cannot insert same outpoint twice"
-                );
-            }
+        for outpoint in self
+            .unstable_blocks
+            .get_added_outpoints(&block.block_hash().to_vec(), &self.address)
+        {
+            let (txout, height) = self
+                .unstable_blocks
+                .get_tx_out(outpoint)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "tx out for outpoint {:?} must exist in added outpoints",
+                        outpoint
+                    );
+                });
+            self.added_utxos
+                .insert(outpoint.clone(), (txout.clone(), height));
         }
     }
 
@@ -104,7 +91,7 @@ impl<'a> AddressUtxoSet<'a> {
                 offset.as_ref().map(|x| x.to_bytes()),
             )
             .filter_map(|(k, _)| {
-                let (_, _, outpoint) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
+                let (_, _, outpoint) = <(Address, Height, OutPoint)>::from_bytes(k);
 
                 // Skip this outpoint if it has been removed in an unstable block.
                 if self.removed_utxos.contains_key(&outpoint) {
@@ -125,10 +112,18 @@ impl<'a> AddressUtxoSet<'a> {
         //
         // First, the UTXOs are encoded in a way that's consistent with the stable UTXO set
         // to preserve the ordering.
+        let removed_utxos = self.removed_utxos;
         let mut added_utxos_encoded: BTreeMap<_, _> = self
             .added_utxos
             .into_iter()
-            .map(|(outpoint, (txout, height))| ((height, outpoint).to_bytes(), txout))
+            .filter_map(|(outpoint, (txout, height))| {
+                // Filter out utxos that were removed.
+                if removed_utxos.contains_key(&outpoint) {
+                    return None;
+                }
+
+                Some(((height, outpoint).to_bytes(), txout))
+            })
             .collect();
 
         // If an offset is specified, then discard the UTXOs before the offset.
@@ -138,11 +133,11 @@ impl<'a> AddressUtxoSet<'a> {
         };
 
         for (height_and_outpoint, txout) in added_utxos_encoded {
-            if let Some(address) = Address::from_script(
+            if let Ok(address) = Address::from_script(
                 &Script::from(txout.script_pubkey.clone()),
-                self.full_utxo_set.network.into(),
+                self.full_utxo_set.network,
             ) {
-                if address.to_string() == self.address {
+                if address == self.address {
                     assert!(
                         set.insert((height_and_outpoint, txout)),
                         "Cannot overwrite existing outpoint"
@@ -170,8 +165,11 @@ impl<'a> AddressUtxoSet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{random_p2pkh_address, TransactionBuilder};
-    use crate::types::{Network, OutPoint};
+    use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
+    use crate::{
+        types::{Network, OutPoint},
+        unstable_blocks,
+    };
     use ic_btc_types::OutPoint as PublicOutPoint;
 
     #[test]
@@ -181,14 +179,20 @@ mod test {
 
         let utxo_set = UtxoSet::new(Network::Mainnet);
 
-        let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
-
         // Create a genesis block where 1000 satoshis are given to address 1.
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .build();
 
-        address_utxo_set.insert_tx(&coinbase_tx, 0);
+        let block_0 = BlockBuilder::genesis()
+            .with_transaction(coinbase_tx.clone())
+            .build();
+
+        let unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone());
+
+        let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
+
+        address_utxo_set.apply_block(&block_0);
 
         // Address should have that data.
         assert_eq!(
@@ -212,29 +216,35 @@ mod test {
 
         let utxo_set = UtxoSet::new(Network::Mainnet);
 
-        let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
-
         // Create a genesis block where 1000 satoshis are given to address 1.
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .build();
-
-        address_utxo_set.insert_tx(&coinbase_tx, 0);
+        let block_0 = BlockBuilder::genesis()
+            .with_transaction(coinbase_tx.clone())
+            .build();
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
         let tx = TransactionBuilder::new()
             .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .with_transaction(tx.clone())
+            .build();
 
-        address_utxo_set.insert_tx(&tx, 1);
+        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone());
+        unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
-        // Address should have that data.
+        let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
+        address_utxo_set.apply_block(&block_0);
+        address_utxo_set.apply_block(&block_1);
+
         assert_eq!(address_utxo_set.into_vec(None), vec![]);
 
-        let mut address_2_utxo_set = AddressUtxoSet::new(address_2.to_string(), &utxo_set);
-        address_2_utxo_set.insert_tx(&coinbase_tx, 0);
-        address_2_utxo_set.insert_tx(&tx, 1);
+        let mut address_2_utxo_set = AddressUtxoSet::new(address_2, &utxo_set, &unstable_blocks);
+        address_2_utxo_set.apply_block(&block_0);
+        address_2_utxo_set.apply_block(&block_1);
 
         assert_eq!(
             address_2_utxo_set.into_vec(None),
@@ -247,27 +257,6 @@ mod test {
                 height: 1
             }]
         );
-    }
-
-    #[test]
-    #[should_panic]
-    fn insert_same_tx_twice() {
-        // Create some BTC addresses.
-        let address_1 = random_p2pkh_address(Network::Mainnet);
-
-        let utxo_set = UtxoSet::new(Network::Mainnet);
-
-        let mut address_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
-
-        // Create a genesis block where 1000 satoshis are given to address 1.
-        let coinbase_tx = TransactionBuilder::coinbase()
-            .with_output(&address_1, 1000)
-            .build();
-
-        address_utxo_set.insert_tx(&coinbase_tx, 0);
-
-        // This should panic, as we already inserted that tx.
-        address_utxo_set.insert_tx(&coinbase_tx, 0);
     }
 
     #[test]
@@ -284,6 +273,9 @@ mod test {
             .with_output(&address_1, 1000)
             .with_output(&address_1, 1000)
             .build();
+        let block_0 = BlockBuilder::genesis()
+            .with_transaction(coinbase_tx.clone())
+            .build();
 
         // Address 1 spends both outputs in a single transaction.
         let tx = TransactionBuilder::new()
@@ -292,16 +284,22 @@ mod test {
             .with_output(&address_2, 1500)
             .with_output(&address_1, 400)
             .build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .with_transaction(tx.clone())
+            .build();
 
         // Process the blocks.
         let utxo_set = UtxoSet::new(Network::Mainnet);
-        let mut address_1_utxo_set = AddressUtxoSet::new(address_1.to_string(), &utxo_set);
-        address_1_utxo_set.insert_tx(&coinbase_tx, 0);
-        address_1_utxo_set.insert_tx(&tx, 1);
+        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone());
+        unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
-        let mut address_2_utxo_set = AddressUtxoSet::new(address_2.to_string(), &utxo_set);
-        address_2_utxo_set.insert_tx(&coinbase_tx, 0);
-        address_2_utxo_set.insert_tx(&tx, 1);
+        let mut address_1_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
+        address_1_utxo_set.apply_block(&block_0);
+        address_1_utxo_set.apply_block(&block_1);
+
+        let mut address_2_utxo_set = AddressUtxoSet::new(address_2, &utxo_set, &unstable_blocks);
+        address_2_utxo_set.apply_block(&block_0);
+        address_2_utxo_set.apply_block(&block_1);
 
         // Address 1 should have one UTXO corresponding to the remaining amount
         // it gave back to itself.

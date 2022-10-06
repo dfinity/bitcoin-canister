@@ -1,24 +1,31 @@
 use crate::{
     genesis_block,
-    types::{Block, Network, OutPoint, Transaction},
+    types::{Address, Block, Network, OutPoint, Transaction},
 };
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, BlockHeader, PublicKey,
+    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress, BlockHeader,
+    PublicKey,
 };
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
+use std::str::FromStr;
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
     let mut rng = OsRng::new().unwrap();
 
-    Address::p2pkh(
+    BitcoinAddress::p2pkh(
         &PublicKey::new(secp.generate_keypair(&mut rng).1),
         network.into(),
     )
+    .into()
+}
+
+pub fn random_p2tr_address(network: Network) -> Address {
+    ic_btc_test_utils::random_p2tr_address(network.into()).into()
 }
 
 /// Builds a random chain with the given number of block and transactions.
@@ -161,7 +168,10 @@ impl TransactionBuilder {
 
     pub fn with_output(self, address: &Address, value: u64) -> Self {
         Self {
-            builder: self.builder.with_output(address, value),
+            builder: self.builder.with_output(
+                &BitcoinAddress::from_str(&address.to_string()).unwrap(),
+                value,
+            ),
         }
     }
 

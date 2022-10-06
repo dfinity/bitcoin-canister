@@ -1,10 +1,9 @@
-use crate::address_utxoset::AddressUtxoSet;
 use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::{BlockIngestionStats, PartialStableBlock, UtxoSet},
-    types::{Block, OutPoint, Slicing, Storable, Transaction, Txid},
+    types::{Address, Block, OutPoint, Slicing, Storable, Transaction, Txid},
 };
-use bitcoin::{Address, Script, TxOut};
+use bitcoin::{Script, TxOut};
 use std::str::FromStr;
 
 lazy_static::lazy_static! {
@@ -17,11 +16,6 @@ lazy_static::lazy_static! {
 // The threshold at which time slicing kicks in.
 // At the time of this writing it is equivalent to 80% of the maximum instructions limit.
 const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
-
-/// Returns the `UtxoSet` of a given bitcoin address.
-pub fn get_utxos<'a>(utxo_set: &'a UtxoSet, address: &'a str) -> AddressUtxoSet<'a> {
-    AddressUtxoSet::new(address.to_string(), utxo_set)
-}
 
 /// Ingests a block into the `UtxoSet`.
 ///
@@ -150,11 +144,9 @@ fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> 
         // Remove the input from the UTXOs. The input *must* exist in the UTXO set.
         match utxo_set.utxos.remove(&(&input.previous_output).into()) {
             Some((txout, height)) => {
-                if let Some(address) = Address::from_script(
-                    &Script::from(txout.script_pubkey),
-                    utxo_set.network.into(),
-                ) {
-                    let address = address.to_string();
+                if let Ok(address) =
+                    Address::from_script(&Script::from(txout.script_pubkey), utxo_set.network)
+                {
                     let found = utxo_set
                         .address_to_outpoints
                         .remove(&(address, height, (&input.previous_output).into()).to_bytes());
@@ -207,26 +199,15 @@ fn insert_outputs(
 // A UTXO is represented by the the tuple: (outpoint, output)
 fn insert_utxo(utxo_set: &mut UtxoSet, outpoint: OutPoint, output: TxOut) {
     // Insert the outpoint.
-    if let Some(address) = Address::from_script(&output.script_pubkey, utxo_set.network.into()) {
-        let address_str = address.to_string();
-
-        // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
-        // that `Address:from_script` succeeds even if the address is invalid.
-        //
-        // To get around this bug, we convert the address to a string, and verify that this
-        // string is a valid address.
-        //
-        // See https://github.com/rust-bitcoin/rust-bitcoin/issues/995 for more information.
-        if Address::from_str(&address_str).is_ok() {
-            // Add the address to the index if we can parse it.
-            utxo_set
-                .address_to_outpoints
-                .insert(
-                    (address_str, utxo_set.next_height, outpoint.clone()).to_bytes(),
-                    vec![],
-                )
-                .expect("insertion must succeed");
-        }
+    if let Ok(address) = Address::from_script(&output.script_pubkey, utxo_set.network) {
+        // Add the address to the index if we can parse it.
+        utxo_set
+            .address_to_outpoints
+            .insert(
+                (address, utxo_set.next_height, outpoint.clone()).to_bytes(),
+                vec![],
+            )
+            .expect("insertion must succeed");
     }
 
     let outpoint_already_exists = utxo_set
@@ -252,10 +233,14 @@ fn insert_utxo(utxo_set: &mut UtxoSet, outpoint: OutPoint, output: TxOut) {
 mod test {
     use super::*;
     use crate::test_utils::{random_p2pkh_address, TransactionBuilder};
-    use crate::types::{Network, OutPoint, Txid};
+    use crate::{
+        address_utxoset::AddressUtxoSet,
+        types::{Network, OutPoint, Txid},
+        unstable_blocks::UnstableBlocks,
+    };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use bitcoin::{Network as BitcoinNetwork, TxOut};
-    use ic_btc_types::{Address as AddressStr, Height};
+    use bitcoin::TxOut;
+    use ic_btc_types::Height;
     use std::collections::BTreeSet;
 
     // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
@@ -263,45 +248,6 @@ mod test {
         assert_eq!(
             ingest_tx_with_slicing(utxo_set, tx, 0, 0, &mut BlockIngestionStats::default()),
             Slicing::Done
-        );
-    }
-
-    #[test]
-    fn coinbase_tx_mainnet() {
-        coinbase_test(Network::Mainnet);
-    }
-
-    #[test]
-    fn coinbase_tx_testnet() {
-        coinbase_test(Network::Testnet);
-    }
-
-    #[test]
-    fn coinbase_tx_regtest() {
-        coinbase_test(Network::Regtest);
-    }
-
-    fn coinbase_test(network: Network) {
-        let address = random_p2pkh_address(network);
-
-        let coinbase_tx = TransactionBuilder::coinbase()
-            .with_output(&address, 1000)
-            .build();
-
-        let mut utxo = UtxoSet::new(network);
-        ingest_tx(&mut utxo, &coinbase_tx);
-
-        assert_eq!(utxo.utxos.len(), 1);
-        assert_eq!(
-            get_utxos(&utxo, &address.to_string()).into_vec(None),
-            vec![ic_btc_types::Utxo {
-                outpoint: ic_btc_types::OutPoint {
-                    txid: coinbase_tx.txid().to_vec(),
-                    vout: 0,
-                },
-                value: 1000,
-                height: 0,
-            }]
         );
     }
 
@@ -372,6 +318,8 @@ mod test {
             .build();
         ingest_tx(&mut utxo, &coinbase_tx);
 
+        let unstable_blocks = UnstableBlocks::new(&utxo, 2, crate::genesis_block(network));
+
         let expected = vec![ic_btc_types::Utxo {
             outpoint: ic_btc_types::OutPoint {
                 txid: coinbase_tx.txid().to_vec(),
@@ -382,16 +330,16 @@ mod test {
         }];
 
         assert_eq!(
-            get_utxos(&utxo, &address_1.to_string()).into_vec(None),
+            AddressUtxoSet::new(address_1.clone(), &utxo, &unstable_blocks).into_vec(None),
             expected
         );
         assert_eq!(
             utxo.address_to_outpoints
                 .iter()
-                .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
+                .map(|(k, _)| <(Address, Height, OutPoint)>::from_bytes(k))
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                (address_1.to_string(), 0, OutPoint::new(coinbase_tx.txid(), 0))
+                (address_1.clone(), 0, OutPoint::new(coinbase_tx.txid(), 0))
             }
         );
 
@@ -405,11 +353,11 @@ mod test {
         ingest_tx(&mut utxo, &tx);
 
         assert_eq!(
-            get_utxos(&utxo, &address_1.to_string()).into_vec(None),
+            AddressUtxoSet::new(address_1, &utxo, &unstable_blocks).into_vec(None),
             vec![]
         );
         assert_eq!(
-            get_utxos(&utxo, &address_2.to_string()).into_vec(None),
+            AddressUtxoSet::new(address_2.clone(), &utxo, &unstable_blocks).into_vec(None),
             vec![ic_btc_types::Utxo {
                 outpoint: ic_btc_types::OutPoint {
                     txid: tx.txid().to_vec(),
@@ -422,17 +370,17 @@ mod test {
         assert_eq!(
             utxo.address_to_outpoints
                 .iter()
-                .map(|(k, _)| <(String, Height, OutPoint)>::from_bytes(k))
+                .map(|(k, _)| <(Address, Height, OutPoint)>::from_bytes(k))
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                (address_2.to_string(), 1, OutPoint::new(tx.txid(), 0))
+                (address_2, 1, OutPoint::new(tx.txid(), 0))
             }
         );
     }
 
     #[test]
     fn utxos_are_sorted_by_height() {
-        let address = random_p2pkh_address(Network::Testnet).to_string();
+        let address = random_p2pkh_address(Network::Testnet);
 
         let mut utxo = UtxoSet::new(Network::Testnet);
 
@@ -456,7 +404,7 @@ mod test {
             utxo.address_to_outpoints
                 .range(address.to_bytes(), None)
                 .map(|(k, _)| {
-                    let (_, height, _) = <(AddressStr, Height, OutPoint)>::from_bytes(k);
+                    let (_, height, _) = <(Address, Height, OutPoint)>::from_bytes(k);
                     height
                 })
                 .collect::<Vec<_>>(),
@@ -489,34 +437,5 @@ mod test {
 
         // Should panic, as we are trying to insert a UTXO with the same outpoint.
         insert_utxo(&mut utxo_set, outpoint, tx_out_2);
-    }
-
-    #[test]
-    fn malformed_addresses_are_not_inserted_in_address_outpoints() {
-        // A script that isn't valid, but can be successfully converted into an address
-        // due to a bug in the bitcoin crate. See:
-        // (https://github.com/rust-bitcoin/rust-bitcoin/issues/995)
-        let script = bitcoin::Script::from(vec![
-            0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
-        ]);
-
-        let address = bitcoin::Address::from_script(&script, BitcoinNetwork::Testnet).unwrap();
-
-        let mut utxo_set = UtxoSet::new(Network::Testnet);
-
-        let tx_out = TransactionBuilder::coinbase()
-            .with_output(&address, 1000)
-            .build()
-            .output()[0]
-            .clone();
-
-        insert_utxo(
-            &mut utxo_set,
-            OutPoint::new(Txid::from(vec![0; 32]), 0),
-            tx_out,
-        );
-
-        // Verify that this invalid address was not inserted into the address outpoints.
-        assert!(utxo_set.address_to_outpoints.is_empty());
     }
 }
