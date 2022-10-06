@@ -105,7 +105,14 @@ impl<'a> AddressUtxoSet<'a> {
         // to preserve the ordering.
         let mut added_utxos_encoded: BTreeMap<_, _> = added_utxos
             .into_iter()
-            .map(|(outpoint, (txout, height))| ((height, outpoint).to_bytes(), txout))
+            .filter_map(|(outpoint, (txout, height))| {
+                // Filter out utxos that were removed.
+                if removed_utxos.contains_key(&outpoint) {
+                    return None;
+                }
+
+                Some(((height, outpoint).to_bytes(), txout))
+            })
             .collect();
 
         // If an offset is specified, then discard the UTXOs before the offset.
