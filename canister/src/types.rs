@@ -1,9 +1,9 @@
 use crate::state::UTXO_KEY_SIZE;
 use bitcoin::{
-    hashes::Hash, Block as BitcoinBlock, BlockHash as BitcoinBlockHash, Network as BitcoinNetwork,
-    OutPoint as BitcoinOutPoint, TxOut as BitcoinTxOut,
+    hashes::Hash, Address as BitcoinAddress, Block as BitcoinBlock, BlockHash as BitcoinBlockHash,
+    Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
-use ic_btc_types::{Address, Height, UtxosFilter};
+use ic_btc_types::{Address as AddressStr, Height, UtxosFilter};
 use ic_cdk::export::{candid::CandidType, Principal};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -292,16 +292,20 @@ impl Storable for (TxOut, Height) {
 impl Storable for Address {
     fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = vec![self
+            .0
             .len()
             .try_into()
             .expect("Address length must be <= 255")];
-        bytes.append(&mut self.as_bytes().to_vec());
+        bytes.append(&mut self.0.as_bytes().to_vec());
         bytes
     }
 
     fn from_bytes(bytes: Vec<u8>) -> Self {
         let address_len = bytes[0] as usize;
-        String::from_utf8(bytes[1..address_len + 1].to_vec()).expect("Loading address cannot fail.")
+        Address(
+            String::from_utf8(bytes[1..address_len + 1].to_vec())
+                .expect("Loading address cannot fail."),
+        )
     }
 }
 
@@ -421,7 +425,9 @@ impl std::fmt::Debug for Txid {
 
 impl std::fmt::Display for Txid {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.clone())
+        let mut bytes = self.bytes.clone();
+        bytes.reverse();
+        write!(f, "{}", hex::encode(bytes))
     }
 }
 
@@ -478,16 +484,65 @@ pub struct GetSuccessorsPartialResponse {
     pub num_pages: u8,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct InvalidAddress;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq, Ord, PartialOrd)]
+pub struct Address(String);
+
+impl Address {
+    /// Creates a new address from a bitcoin script.
+    pub fn from_script(script: &Script, network: Network) -> Result<Self, InvalidAddress> {
+        let address = BitcoinAddress::from_script(script, network.into()).ok_or(InvalidAddress)?;
+
+        // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
+        // that `Address:from_script` succeeds even if the address is invalid.
+        //
+        // To get around this bug, we convert the address to a string, and verify that this
+        // string is a valid address.
+        //
+        // See https://github.com/rust-bitcoin/rust-bitcoin/issues/995 for more information.
+        let address_str = address.to_string();
+        if BitcoinAddress::from_str(&address_str).is_ok() {
+            Ok(Self(address_str))
+        } else {
+            Err(InvalidAddress)
+        }
+    }
+}
+
+impl From<BitcoinAddress> for Address {
+    fn from(address: BitcoinAddress) -> Self {
+        Self(address.to_string())
+    }
+}
+
+impl FromStr for Address {
+    type Err = InvalidAddress;
+
+    fn from_str(s: &str) -> Result<Self, InvalidAddress> {
+        BitcoinAddress::from_str(s)
+            .map(|address| Address(address.to_string()))
+            .map_err(|_| InvalidAddress)
+    }
+}
+
+impl std::fmt::Display for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(CandidType, Debug, Deserialize, PartialEq)]
 pub struct GetBalanceRequest {
-    pub address: Address,
+    pub address: AddressStr,
     pub min_confirmations: Option<u32>,
 }
 
 /// A request for getting the UTXOs for a given address.
 #[derive(CandidType, Debug, Deserialize, PartialEq)]
 pub struct GetUtxosRequest {
-    pub address: Address,
+    pub address: AddressStr,
     pub filter: Option<UtxosFilter>,
 }
 
@@ -526,5 +581,22 @@ fn test_txid_to_string() {
     assert_eq!(
         txid.to_string(),
         "a93fc123a3f2cee3f1bd7f60d498280277032ab20ed190004c346bdc69e65794"
+    );
+}
+
+#[test]
+fn address_handles_script_edge_case() {
+    // A script that isn't valid, but can be successfully converted into an address
+    // due to a bug in the bitcoin crate. See:
+    // (https://github.com/rust-bitcoin/rust-bitcoin/issues/995)
+    //
+    // This test verifies that we're protecting ourselves from that case.
+    let script = Script::from(vec![
+        0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
+    ]);
+
+    assert_eq!(
+        Address::from_script(&script, Network::Testnet),
+        Err(InvalidAddress)
     );
 }

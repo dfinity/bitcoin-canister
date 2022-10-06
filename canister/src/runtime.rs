@@ -2,8 +2,9 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use crate::types::{GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsResponse};
+use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse};
 use ic_cdk::{api::call::CallResult, export::Principal};
+#[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
 use std::future::Future;
 
@@ -46,6 +47,8 @@ pub fn call_get_successors(
     _id: Principal,
     _request: GetSuccessorsRequest,
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
+    use crate::types::GetSuccessorsCompleteResponse;
+
     let response = GET_SUCCESSORS_RESPONSES.with(|responses| {
         // Get the response at the current index.
         GET_SUCCESSORS_RESPONSES_INDEX.with(|i| {
