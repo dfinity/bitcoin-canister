@@ -1,5 +1,6 @@
 mod address_utxoset;
 mod api;
+mod block_header_store;
 mod blocktree;
 mod heartbeat;
 mod memory;

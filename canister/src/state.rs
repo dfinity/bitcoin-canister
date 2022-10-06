@@ -1,5 +1,6 @@
 use crate::{
     address_utxoset::AddressUtxoSet,
+    block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
     memory::Memory,
     types::{
@@ -36,6 +37,9 @@ pub struct State {
 
     /// Cache for the current fee percentiles.
     pub fee_percentiles_cache: Option<FeePercentilesCache>,
+
+    /// A store containing all the stable blocks' headers.
+    pub stable_block_headers: BlockHeaderStore,
 }
 
 impl State {
@@ -54,6 +58,7 @@ impl State {
             syncing_state: SyncingState::default(),
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
+            stable_block_headers: BlockHeaderStore::init(),
         }
     }
 
@@ -101,6 +106,11 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
     while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
+        // Store the block's header.
+        state
+            .stable_block_headers
+            .insert(&new_stable_block, state.utxos.next_height);
+
         match utxoset::ingest_block(&mut state.utxos, new_stable_block) {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done => {}
