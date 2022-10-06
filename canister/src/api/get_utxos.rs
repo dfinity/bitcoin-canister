@@ -22,7 +22,7 @@ const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
 
 /// Various profiling stats for tracking the performance of `get_utxos`.
 #[derive(Default, Debug)]
-pub(crate) struct Stats {
+struct Stats {
     /// The total number of instructions used to process the request.
     pub ins_total: u64,
 
@@ -73,19 +73,19 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     res
 }
 
-/// Returns the set of UTXOs for a given bitcoin address.
-///
-/// Transactions with confirmations < `min_confirmations` are not considered.
-///
-/// If the optional `page` is set, then it will be used to return the next chunk
-/// of UTXOs starting from that page reference.
-///
-/// The optional `utxo_limit` restricts the number of UTXOs that can be included
-/// in the response in case there are too many UTXOs for this address and they
-/// cannot fit in a single response. A `page` reference will be returned along
-/// the list of UTXOs in this case that can be used in a subsequent request
-/// to retrieve the remaining UTXOs.
-pub(crate) fn get_utxos_internal(
+// Returns the set of UTXOs for a given bitcoin address.
+//
+// Transactions with confirmations < `min_confirmations` are not considered.
+//
+// If the optional `page` is set, then it will be used to return the next chunk
+// of UTXOs starting from that page reference.
+//
+// The optional `utxo_limit` restricts the number of UTXOs that can be included
+// in the response in case there are too many UTXOs for this address and they
+// cannot fit in a single response. A `page` reference will be returned along
+// the list of UTXOs in this case that can be used in a subsequent request
+// to retrieve the remaining UTXOs.
+fn get_utxos_internal(
     state: &State,
     address: &str,
     min_confirmations: u32,
