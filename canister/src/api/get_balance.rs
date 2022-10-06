@@ -3,14 +3,18 @@ use crate::{
     types::{Address, GetBalanceRequest},
     unstable_blocks, with_state,
 };
-use ic_btc_types::Satoshi;
+use ic_btc_types::{GetBalanceError, Satoshi};
 use std::str::FromStr;
 
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+    get_balance_internal(request).expect("get_balance failed")
+}
+
+fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     let min_confirmations = request.min_confirmations.unwrap_or(0);
     let address =
-        Address::from_str(&request.address).expect("get_balance failed: MalformedAddress");
+        Address::from_str(&request.address).map_err(|_| GetBalanceError::MalformedAddress)?;
 
     // NOTE: It is safe to sum up the balances here without the risk of overflow.
     // The maximum number of bitcoins is 2.1 * 10^7, which is 2.1* 10^15 satoshis.
@@ -19,8 +23,15 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
         // Retrieve the balance that's pre-computed for stable blocks.
         let mut balance = state.utxos.balances.get(&address).unwrap_or(0);
 
-        // Apply all the unstable blocks.
         let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+        if main_chain.len() < min_confirmations as usize {
+            return Err(GetBalanceError::MinConfirmationsTooLarge {
+                given: min_confirmations,
+                max: main_chain.len() as u32,
+            });
+        }
+
+        // Apply all the unstable blocks.
         let chain_height = state.utxos.next_height + (main_chain.len() as u32) - 1;
         for (i, block) in main_chain.into_chain().iter().enumerate() {
             let block_height = state.utxos.next_height + (i as u32);
@@ -56,7 +67,7 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
             performance_counter()
         ));
 
-        balance
+        Ok(balance)
     })
 }
 
