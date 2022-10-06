@@ -6,6 +6,20 @@ use crate::{
 use ic_btc_types::{GetBalanceError, Satoshi};
 use std::str::FromStr;
 
+// Various profiling stats for tracking the performance of `get_balance`.
+#[derive(Debug, Default)]
+struct Stats {
+    // The total number of instructions used to process the request.
+    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
+    #[allow(dead_code)]
+    ins_total: u64,
+
+    // The number of instructions used to apply the unstable blocks.
+    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
+    #[allow(dead_code)]
+    ins_apply_unstable_blocks: u64,
+}
+
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
     get_balance_internal(request).expect("get_balance failed")
@@ -32,6 +46,7 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
         }
 
         // Apply all the unstable blocks.
+        let ins_start = performance_counter();
         let chain_height = state.utxos.next_height + (main_chain.len() as u32) - 1;
         for (i, block) in main_chain.into_chain().iter().enumerate() {
             let block_height = state.utxos.next_height + (i as u32);
@@ -60,12 +75,13 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
             }
         }
 
+        let stats = Stats {
+            ins_apply_unstable_blocks: performance_counter() - ins_start,
+            ins_total: performance_counter(),
+        };
+
         // Print the number of instructions it took to process this request.
-        print(&format!(
-            "[INSTRUCTION COUNT] {:?}: {:?}",
-            request,
-            performance_counter()
-        ));
+        print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats,));
 
         Ok(balance)
     })

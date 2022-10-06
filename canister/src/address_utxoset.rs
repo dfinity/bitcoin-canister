@@ -50,7 +50,15 @@ impl<'a> AddressUtxoSet<'a> {
             .unstable_blocks
             .get_removed_outpoints(&block.block_hash().to_vec(), &self.address)
         {
-            let (txout, height) = self.unstable_blocks.get_tx_out(outpoint).unwrap();
+            let (txout, height) = self
+                .unstable_blocks
+                .get_tx_out(outpoint)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "tx out for outpoint {:?} must exist in removed outpoints",
+                        outpoint
+                    );
+                });
             self.removed_utxos
                 .insert(outpoint.clone(), (txout.clone(), height));
         }
@@ -59,7 +67,15 @@ impl<'a> AddressUtxoSet<'a> {
             .unstable_blocks
             .get_added_outpoints(&block.block_hash().to_vec(), &self.address)
         {
-            let (txout, height) = self.unstable_blocks.get_tx_out(outpoint).unwrap();
+            let (txout, height) = self
+                .unstable_blocks
+                .get_tx_out(outpoint)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "tx out for outpoint {:?} must exist in added outpoints",
+                        outpoint
+                    );
+                });
             self.added_utxos
                 .insert(outpoint.clone(), (txout.clone(), height));
         }
@@ -92,18 +108,13 @@ impl<'a> AddressUtxoSet<'a> {
             })
             .collect();
 
-        let added_utxos: BTreeMap<_, _> = self
-            .added_utxos
-            .clone()
-            .into_iter()
-            .filter(|(outpoint, _)| !self.removed_utxos.contains_key(outpoint))
-            .collect();
-
         // Include all the newly added UTXOs for that address that are "after" the optional offset.
         //
         // First, the UTXOs are encoded in a way that's consistent with the stable UTXO set
         // to preserve the ordering.
-        let mut added_utxos_encoded: BTreeMap<_, _> = added_utxos
+        let removed_utxos = self.removed_utxos;
+        let mut added_utxos_encoded: BTreeMap<_, _> = self
+            .added_utxos
             .into_iter()
             .filter_map(|(outpoint, (txout, height))| {
                 // Filter out utxos that were removed.
