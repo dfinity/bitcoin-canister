@@ -108,13 +108,19 @@ impl<'a> AddressUtxoSet<'a> {
             })
             .collect();
 
+        let added_utxos: BTreeMap<_, _> = self
+            .added_utxos
+            .clone()
+            .into_iter()
+            .filter(|(outpoint, _)| !self.removed_utxos.contains_key(outpoint))
+            .collect();
+
         // Include all the newly added UTXOs for that address that are "after" the optional offset.
         //
         // First, the UTXOs are encoded in a way that's consistent with the stable UTXO set
         // to preserve the ordering.
         let removed_utxos = self.removed_utxos;
-        let mut added_utxos_encoded: BTreeMap<_, _> = self
-            .added_utxos
+        let mut added_utxos_encoded: BTreeMap<_, _> = added_utxos
             .into_iter()
             .filter_map(|(outpoint, (txout, height))| {
                 // Filter out utxos that were removed.
