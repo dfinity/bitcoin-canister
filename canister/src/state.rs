@@ -292,7 +292,14 @@ fn init_address_outpoints() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
 }
 
 fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
-    StableBTreeMap::init(crate::memory::get_balances_memory(), MAX_ADDRESS_SIZE, 8)
+    // A balance is a u64, which requires 8 bytes.
+    const BALANCE_SIZE: u32 = 8;
+
+    StableBTreeMap::init(
+        crate::memory::get_balances_memory(),
+        MAX_ADDRESS_SIZE,
+        BALANCE_SIZE,
+    )
 }
 
 /// Cache for storing last calculated fee percentiles
