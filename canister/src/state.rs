@@ -165,6 +165,11 @@ pub struct UtxoSet {
     #[serde(skip, default = "init_address_outpoints")]
     pub address_to_outpoints: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
 
+    // A map of an address and its current balance.
+    // NOTE: Stable structures don't need to be serialized.
+    #[serde(skip, default = "init_balances")]
+    pub balances: StableBTreeMap<Memory, Address, u64>,
+
     /// The height of the block that will be ingested next.
     // NOTE: The `next_height` is stored, rather than the current height, because:
     //   * The `UtxoSet` is initialized as empty with no blocks.
@@ -182,6 +187,7 @@ impl UtxoSet {
     pub fn new(network: Network) -> Self {
         Self {
             utxos: Utxos::default(),
+            balances: init_balances(),
             address_to_outpoints: init_address_outpoints(),
             network,
             next_height: 0,
@@ -198,7 +204,10 @@ impl PartialEq for UtxoSet {
         use crate::test_utils::is_stable_btreemap_equal;
         self.utxos == other.utxos
             && self.network == other.network
+            && self.next_height == other.next_height
+            && self.partial_stable_block == other.partial_stable_block
             && is_stable_btreemap_equal(&self.address_to_outpoints, &other.address_to_outpoints)
+            && is_stable_btreemap_equal(&self.balances, &other.balances)
     }
 }
 
@@ -279,6 +288,17 @@ fn init_address_outpoints() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
         crate::memory::get_address_outpoints_memory(),
         MAX_ADDRESS_OUTPOINT_SIZE,
         0, // No values are stored in the map.
+    )
+}
+
+fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
+    // A balance is a u64, which requires 8 bytes.
+    const BALANCE_SIZE: u32 = 8;
+
+    StableBTreeMap::init(
+        crate::memory::get_balances_memory(),
+        MAX_ADDRESS_SIZE,
+        BALANCE_SIZE,
     )
 }
 

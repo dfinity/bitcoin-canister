@@ -5,6 +5,7 @@ use bitcoin::{
 };
 use ic_btc_types::{Address as AddressStr, Height, UtxosFilter};
 use ic_cdk::export::{candid::CandidType, Principal};
+use ic_stable_structures::Storable as StableStructuresStorable;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
@@ -198,7 +199,7 @@ impl Page {
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
             self.tip_block_hash.to_vec(),
-            self.height.to_bytes(),
+            Storable::to_bytes(&self.height).to_vec(),
             OutPoint::to_bytes(&self.outpoint),
         ]
         .into_iter()
@@ -289,15 +290,15 @@ impl Storable for (TxOut, Height) {
     }
 }
 
-impl Storable for Address {
-    fn to_bytes(&self) -> Vec<u8> {
+impl StableStructuresStorable for Address {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         let mut bytes = vec![self
             .0
             .len()
             .try_into()
             .expect("Address length must be <= 255")];
         bytes.append(&mut self.0.as_bytes().to_vec());
-        bytes
+        std::borrow::Cow::Owned(bytes)
     }
 
     fn from_bytes(bytes: Vec<u8>) -> Self {
@@ -312,8 +313,8 @@ impl Storable for Address {
 impl Storable for (Address, Height, OutPoint) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
-            Address::to_bytes(&self.0),
-            self.1.to_bytes(),
+            Address::to_bytes(&self.0).to_vec(),
+            Storable::to_bytes(&self.1),
             OutPoint::to_bytes(&self.2),
         ]
         .into_iter()
@@ -330,7 +331,7 @@ impl Storable for (Address, Height, OutPoint) {
 
         (
             Address::from_bytes(bytes),
-            Height::from_bytes(height_bytes),
+            <Height as Storable>::from_bytes(height_bytes),
             OutPoint::from_bytes(outpoint_bytes),
         )
     }
@@ -357,7 +358,7 @@ impl Storable for Height {
 
 impl Storable for (Height, OutPoint) {
     fn to_bytes(&self) -> Vec<u8> {
-        vec![self.0.to_bytes(), OutPoint::to_bytes(&self.1)]
+        vec![Storable::to_bytes(&self.0), OutPoint::to_bytes(&self.1)]
             .into_iter()
             .flatten()
             .collect()
@@ -368,7 +369,7 @@ impl Storable for (Height, OutPoint) {
         let outpoint_bytes = bytes.split_off(outpoint_offset);
 
         (
-            Height::from_bytes(bytes),
+            <Height as Storable>::from_bytes(bytes),
             OutPoint::from_bytes(outpoint_bytes),
         )
     }

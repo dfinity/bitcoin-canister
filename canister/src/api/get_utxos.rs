@@ -20,17 +20,17 @@ use std::str::FromStr;
 // than 100_000 `Utxo`s are returned in a single response.
 const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
 
-/// Various profiling stats for tracking the performance of `get_utxos`.
+// Various profiling stats for tracking the performance of `get_utxos`.
 #[derive(Default, Debug)]
-pub(crate) struct Stats {
-    /// The total number of instructions used to process the request.
-    pub ins_total: u64,
+struct Stats {
+    // The total number of instructions used to process the request.
+    ins_total: u64,
 
-    /// The number of instructions used to apply the unstable blocks.
-    pub ins_apply_unstable_blocks: u64,
+    // The number of instructions used to apply the unstable blocks.
+    ins_apply_unstable_blocks: u64,
 
-    /// The number of instructions used to build the utxos vec.
-    pub ins_build_utxos_vec: u64,
+    // The number of instructions used to build the utxos vec.
+    ins_build_utxos_vec: u64,
 }
 
 /// Retrieves the UTXOs of the given Bitcoin address.
@@ -73,19 +73,19 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     res
 }
 
-/// Returns the set of UTXOs for a given bitcoin address.
-///
-/// Transactions with confirmations < `min_confirmations` are not considered.
-///
-/// If the optional `page` is set, then it will be used to return the next chunk
-/// of UTXOs starting from that page reference.
-///
-/// The optional `utxo_limit` restricts the number of UTXOs that can be included
-/// in the response in case there are too many UTXOs for this address and they
-/// cannot fit in a single response. A `page` reference will be returned along
-/// the list of UTXOs in this case that can be used in a subsequent request
-/// to retrieve the remaining UTXOs.
-pub(crate) fn get_utxos_internal(
+// Returns the set of UTXOs for a given bitcoin address.
+//
+// Transactions with confirmations < `min_confirmations` are not considered.
+//
+// If the optional `page` is set, then it will be used to return the next chunk
+// of UTXOs starting from that page reference.
+//
+// The optional `utxo_limit` restricts the number of UTXOs that can be included
+// in the response in case there are too many UTXOs for this address and they
+// cannot fit in a single response. A `page` reference will be returned along
+// the list of UTXOs in this case that can be used in a subsequent request
+// to retrieve the remaining UTXOs.
+fn get_utxos_internal(
     state: &State,
     address: &str,
     min_confirmations: u32,
