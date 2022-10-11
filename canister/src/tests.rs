@@ -104,6 +104,19 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     }
 }
 
+fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
+    let block_hash = BlockHash::from_str(block_hash).unwrap();
+
+    let header = state.stable_block_headers.get_with_height(height).unwrap();
+    let header_2 = state
+        .stable_block_headers
+        .get_with_block_hash(&block_hash.to_vec())
+        .unwrap();
+
+    assert_eq!(header, header_2);
+    assert_eq!(header.block_hash(), block_hash);
+}
+
 #[async_std::test]
 async fn mainnet_100k_blocks() {
     crate::init(crate::InitPayload {
@@ -319,6 +332,25 @@ async fn mainnet_100k_blocks() {
         }),
         0
     );
+
+    // Check the block headers/heights of a few random blocks.
+    crate::with_state(|state| {
+        verify_block_header(
+            state,
+            0,
+            &genesis_block(Network::Mainnet).block_hash().to_string(),
+        );
+        verify_block_header(
+            state,
+            14927,
+            "000000005d8210ad23a745aac32e1a5aeb22e597df906c1f05cd642a87a672fa",
+        );
+        verify_block_header(
+            state,
+            99989,
+            "000000000003e533769852c7373b155e898bbb6322c326c9a9ce3121f4fd5fd6",
+        );
+    });
 }
 
 #[async_std::test]
@@ -345,6 +377,30 @@ async fn testnet_10k_blocks() {
         }
 
         assert_eq!(state.utxos.next_height as u64 * 5000000000, total_supply);
+    });
+
+    // Check the block headers/heights of a few random blocks.
+    crate::with_state(|state| {
+        verify_block_header(
+            state,
+            0,
+            &genesis_block(Network::Testnet).block_hash().to_string(),
+        );
+        verify_block_header(
+            state,
+            10,
+            "00000000700e92a916b46b8b91a14d1303d5d91ef0b09eecc3151fb958fd9a2e",
+        );
+        verify_block_header(
+            state,
+            7182,
+            "00000000077ba5bfae938af835f0d6431a55a1dee5ca64de23786ff180ebe033",
+        );
+        verify_block_header(
+            state,
+            9997,
+            "00000000346b2ce3eab1bc5043d2a59e0e5b1e2da6554de26d8a4c683ecf5fdd",
+        );
     });
 }
 
