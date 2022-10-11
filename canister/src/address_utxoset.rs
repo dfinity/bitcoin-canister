@@ -5,6 +5,7 @@ use crate::{
 };
 use bitcoin::Script;
 use ic_btc_types::{Height, Utxo};
+use ic_stable_structures::Storable as _;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A struct that tracks the UTXO set of a given address.
@@ -58,7 +59,6 @@ impl<'a> AddressUtxoSet<'a> {
                         outpoint
                     );
                 });
-
             self.removed_utxos
                 .insert(outpoint.clone(), (txout.clone(), height));
         }
@@ -87,7 +87,7 @@ impl<'a> AddressUtxoSet<'a> {
             .full_utxo_set
             .address_to_outpoints
             .range(
-                self.address.to_bytes(),
+                self.address.to_bytes().to_vec(),
                 offset.as_ref().map(|x| x.to_bytes()),
             )
             .filter_map(|(k, _)| {

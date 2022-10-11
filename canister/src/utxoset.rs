@@ -147,15 +147,27 @@ fn remove_inputs(utxo_set: &mut UtxoSet, tx: &Transaction, start_idx: usize) -> 
                 if let Ok(address) =
                     Address::from_script(&Script::from(txout.script_pubkey), utxo_set.network)
                 {
-                    let found = utxo_set
-                        .address_to_outpoints
-                        .remove(&(address, height, (&input.previous_output).into()).to_bytes());
+                    let found = utxo_set.address_to_outpoints.remove(
+                        &(address.clone(), height, (&input.previous_output).into()).to_bytes(),
+                    );
 
                     assert!(
                         found.is_some(),
                         "Outpoint {:?} not found in the index.",
                         input.previous_output
                     );
+
+                    // Update the balance of the address.
+                    let address_balance = utxo_set.balances.get(&address).unwrap_or_else(|| {
+                        panic!("Address {} must exist in the balances map", address);
+                    });
+
+                    match address_balance - txout.value {
+                        // Remove the address from the map if balance is zero.
+                        0 => utxo_set.balances.remove(&address),
+                        // Update the balance in the map.
+                        balance => utxo_set.balances.insert(address, balance).unwrap(),
+                    };
                 }
             }
             None => {
@@ -204,9 +216,16 @@ fn insert_utxo(utxo_set: &mut UtxoSet, outpoint: OutPoint, output: TxOut) {
         utxo_set
             .address_to_outpoints
             .insert(
-                (address, utxo_set.next_height, outpoint.clone()).to_bytes(),
+                (address.clone(), utxo_set.next_height, outpoint.clone()).to_bytes(),
                 vec![],
             )
+            .expect("insertion must succeed");
+
+        // Update the balance of the address.
+        let address_balance = utxo_set.balances.get(&address).unwrap_or(0);
+        utxo_set
+            .balances
+            .insert(address, address_balance + output.value)
             .expect("insertion must succeed");
     }
 
@@ -241,6 +260,7 @@ mod test {
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
     use bitcoin::TxOut;
     use ic_btc_types::Height;
+    use ic_stable_structures::Storable as _;
     use std::collections::BTreeSet;
 
     // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
@@ -402,7 +422,7 @@ mod test {
         // Verify that the entries returned are sorted in descending height.
         assert_eq!(
             utxo.address_to_outpoints
-                .range(address.to_bytes(), None)
+                .range(address.to_bytes().to_vec(), None)
                 .map(|(k, _)| {
                     let (_, height, _) = <(Address, Height, OutPoint)>::from_bytes(k);
                     height
@@ -437,5 +457,37 @@ mod test {
 
         // Should panic, as we are trying to insert a UTXO with the same outpoint.
         insert_utxo(&mut utxo_set, outpoint, tx_out_2);
+    }
+
+    #[test]
+    fn addresses_with_empty_balances_are_removed() {
+        let network = Network::Testnet;
+        let mut utxo_set = UtxoSet::new(network);
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+
+        let tx_1 = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .build();
+
+        let tx_2 = TransactionBuilder::new()
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 0,
+            })
+            .with_output(&address_2, 1000)
+            .build();
+
+        // Ingesting the first transaction. There should be one entry in the balance
+        // map containing address 1.
+        ingest_tx(&mut utxo_set, &tx_1);
+        assert_eq!(utxo_set.balances.len(), 1);
+        assert_eq!(utxo_set.balances.get(&address_1), Some(1000));
+
+        // Ingesting the second transaction. There should be one entry in the balance
+        // map containing address 2. Address 1 should be removed as it's balance is zero.
+        ingest_tx(&mut utxo_set, &tx_2);
+        assert_eq!(utxo_set.balances.len(), 1);
+        assert_eq!(utxo_set.balances.get(&address_2), Some(1000));
     }
 }
