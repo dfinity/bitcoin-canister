@@ -89,33 +89,34 @@ async fn maybe_fetch_blocks() -> bool {
                     "Received partial response before processing previous response."
                 );
                 s.syncing_state.response_to_process =
-                    Some(ResponseToProcess::Partial(partial_response, 1));
+                    Some(ResponseToProcess::Partial(partial_response, 0));
             }
             GetSuccessorsResponse::FollowUp(mut block_bytes) => {
                 // Received a follow-up response.
                 // A follow-up response is only expected, and only makes sense, when there's
                 // a partial response to process.
 
-                let (mut partial_response, mut pages_processed) = match s.syncing_state.response_to_process.take() {
+                let (mut partial_response, mut follow_up_index) = match s.syncing_state.response_to_process.take() {
                     Some(ResponseToProcess::Partial(res, pages)) => (res, pages),
                     other => unreachable!("Cannot receive follow-up response without a previous partial response. Previous response found: {:?}", other)
                 };
 
                 // Append block to partial response and increment # pages processed.
                 partial_response.partial_block.append(&mut block_bytes);
-                pages_processed += 1;
+                follow_up_index += 1;
 
                 // If the response is now complete, store a complete response to process.
                 // Otherwise, store the updated partial response.
-                s.syncing_state.response_to_process =
-                    Some(if pages_processed == partial_response.num_pages {
+                s.syncing_state.response_to_process = Some(
+                    if follow_up_index == partial_response.remaining_follow_ups {
                         ResponseToProcess::Complete(GetSuccessorsCompleteResponse {
                             blocks: vec![partial_response.partial_block],
                             next: partial_response.next,
                         })
                     } else {
-                        ResponseToProcess::Partial(partial_response, pages_processed)
-                    });
+                        ResponseToProcess::Partial(partial_response, follow_up_index)
+                    },
+                );
             }
         };
     });
@@ -156,10 +157,10 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             // There's already a complete response waiting to be processed.
             None
         }
-        Some(ResponseToProcess::Partial(partial_response, pages_processed)) => {
+        Some(ResponseToProcess::Partial(partial_response, follow_up_index)) => {
             // There's a partial response. Create a follow-up request.
-            assert!(partial_response.num_pages > *pages_processed);
-            Some(GetSuccessorsRequest::FollowUp(pages_processed + 1))
+            assert!(partial_response.remaining_follow_ups >= *follow_up_index);
+            Some(GetSuccessorsRequest::FollowUp(*follow_up_index))
         }
         None => {
             // No response is present. Send an initial request for new blocks.
@@ -496,7 +497,7 @@ mod test {
             GetSuccessorsPartialResponse {
                 partial_block: block_bytes[0..40].to_vec(),
                 next: vec![],
-                num_pages: 3,
+                remaining_follow_ups: 2,
             },
         ));
 

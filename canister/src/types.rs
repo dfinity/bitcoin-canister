@@ -480,9 +480,9 @@ pub struct GetSuccessorsPartialResponse {
     /// Hashes of next block headers.
     pub next: Vec<BlockHeaderBlob>,
 
-    /// The number of pages in this response. The remaining pages need to be retrieved
-    /// via `FollowUp` requests/responses.
-    pub num_pages: u8,
+    /// The remaining number of follow ups to this response, which can be retrieved
+    /// via `FollowUp` requests.
+    pub remaining_follow_ups: u8,
 }
 
 #[derive(Debug, PartialEq, Eq)]
