@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc df40abf9ffc512cde9a11a6a4f2d25510aac867aa866ece52ec780fdf46690c3 # shrinks to stability_threshold = 124, network = Mainnet, num_blocks = 125, num_transactions_in_block = 1
