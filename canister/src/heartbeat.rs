@@ -164,13 +164,17 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
         }
         None => {
             // No response is present. Send an initial request for new blocks.
-            let processed_block_hashes: Vec<BlockHash> = state::get_unstable_blocks(state)
+            let mut processed_block_hashes: Vec<BlockHash> = state::get_unstable_blocks(state)
                 .iter()
                 .map(|b| b.block_hash().to_vec())
                 .collect();
 
+            // We are guaranteed that there's always at least one block.
+            let anchor = processed_block_hashes.remove(0);
+
             Some(GetSuccessorsRequest::Initial(GetSuccessorsRequestInitial {
                 network: state.network(),
+                anchor,
                 processed_block_hashes,
             }))
         }

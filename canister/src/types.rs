@@ -447,6 +447,7 @@ pub enum GetSuccessorsRequest {
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetSuccessorsRequestInitial {
     pub network: Network,
+    pub anchor: BlockHash,
     pub processed_block_hashes: Vec<BlockHash>,
 }
 
