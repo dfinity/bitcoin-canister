@@ -186,12 +186,12 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, init, runtime,
-        utxo_set::PartialStableBlock,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
             InitPayload, Network,
         },
+        utxo_set::PartialStableBlock,
     };
     use bitcoin::BlockHeader;
 
