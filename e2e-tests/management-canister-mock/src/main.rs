@@ -63,7 +63,7 @@ struct GetSuccessorsCompleteResponse {
 struct GetSuccessorsPartialResponse {
     partial_block: BlockBlob,
     next: Vec<BlockHeaderBlob>,
-    num_pages: u8,
+    remaining_follow_ups: u8,
 }
 
 thread_local! {
@@ -176,7 +176,7 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
         GetSuccessorsResponse::Partial(GetSuccessorsPartialResponse {
             partial_block: BLOCKS.with(|b| b.borrow()[1].clone())[0..20].to_vec(),
             next: vec![],
-            num_pages: 3,
+            remaining_follow_ups: 2,
         })
     } else if count == 2 {
         // Send another part of block 2.

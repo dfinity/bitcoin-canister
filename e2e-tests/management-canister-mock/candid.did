@@ -14,7 +14,7 @@ type get_successors_request = variant {
 
 type get_successors_response = variant {
   complete : record { blocks: vec blob; next: vec blob; };
-  partial : record { partial_block: blob; next: vec blob; num_pages: nat8; };
+  partial : record { partial_block: blob; next: vec blob; remaining_follow_ups: nat8; };
   follow_up : blob;
 };
 
