@@ -13,6 +13,7 @@ use std::fmt;
 // overflow if the structure is very deep.
 impl Serialize for BlockTree {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        // Flatten a block tree into a list.
         fn flatten(tree: &BlockTree, flattened_tree: &mut Vec<(Block, usize)>) {
             flattened_tree.push((tree.root.clone(), tree.children.len()));
 
@@ -47,12 +48,16 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
     type Value = BlockTree;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a blocktree")
+        formatter.write_str("A blocktree deserializer.")
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+        // Unflatten a block tree from a list back into a `BlockTree` struct.
         fn build_tree<'a, A: SeqAccess<'a>>(seq: &mut A) -> BlockTree {
-            let (root, num_children) = seq.next_element().unwrap().expect("root must exist");
+            let (root, num_children) = seq
+                .next_element()
+                .expect("reading next element must succeed")
+                .expect("root must exist");
 
             let mut block_tree = BlockTree::new(root);
             for _ in 0..num_children {
