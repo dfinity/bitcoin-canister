@@ -364,7 +364,6 @@ fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
     )
 }
 
-// TODO: make this private.
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
 /// Used for time slicing.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
