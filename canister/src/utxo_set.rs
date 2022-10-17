@@ -2,7 +2,9 @@ use crate::{
     memory::Memory,
     runtime::{inc_performance_counter, performance_counter, print},
     state::{BlockIngestionStats, OUTPOINT_SIZE},
-    types::{Address, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut, Txid},
+    types::{
+        Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut, Txid,
+    },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
@@ -37,8 +39,8 @@ pub struct UtxoSet {
 
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
-    #[serde(skip, default = "init_address_outpoints")]
-    address_to_outpoints: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    #[serde(skip, default = "init_address_utxos")]
+    address_utxos: StableBTreeMap<Memory, AddressUtxo, ()>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
@@ -63,7 +65,7 @@ impl UtxoSet {
         Self {
             utxos: Utxos::default(),
             balances: init_balances(),
-            address_to_outpoints: init_address_outpoints(),
+            address_utxos: init_address_utxos(),
             network,
             next_height: 0,
             partial_stable_block: None,
@@ -117,12 +119,12 @@ impl UtxoSet {
 
     /// Returns the outpoints owned by the given address.
     /// An optional offset can be specified for pagination.
-    pub fn get_address_outpoints(
+    pub fn get_address_utxos(
         &self,
         address: &Address,
         offset: &Option<(Height, OutPoint)>,
-    ) -> Iter<Memory, Vec<u8>, Vec<u8>> {
-        self.address_to_outpoints.range(
+    ) -> Iter<Memory, AddressUtxo, ()> {
+        self.address_utxos.range(
             address.to_bytes().to_vec(),
             offset.as_ref().map(|x| x.to_bytes()),
         )
@@ -134,8 +136,8 @@ impl UtxoSet {
     }
 
     /// Returns the number of UTXOs that are owned by supported addresses.
-    pub fn address_owned_utxos_len(&self) -> u64 {
-        self.address_to_outpoints.len()
+    pub fn address_utxos_len(&self) -> u64 {
+        self.address_utxos.len()
     }
 
     pub fn network(&self) -> Network {
@@ -240,9 +242,13 @@ impl UtxoSet {
                     if let Ok(address) =
                         Address::from_script(&Script::from(txout.script_pubkey), self.network)
                     {
-                        let found = self.address_to_outpoints.remove(
-                            &(address.clone(), height, (&input.previous_output).into()).to_bytes(),
-                        );
+                        let address_utxo = AddressUtxo {
+                            address: address.clone(),
+                            height,
+                            outpoint: (&input.previous_output).into(),
+                        };
+
+                        let found = self.address_utxos.remove(&address_utxo);
 
                         assert!(
                             found.is_some(),
@@ -306,10 +312,14 @@ impl UtxoSet {
         // Insert the outpoint.
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
-            self.address_to_outpoints
+            self.address_utxos
                 .insert(
-                    (address.clone(), self.next_height, outpoint.clone()).to_bytes(),
-                    vec![],
+                    AddressUtxo {
+                        address: address.clone(),
+                        height: self.next_height,
+                        outpoint: outpoint.clone(),
+                    },
+                    (),
                 )
                 .expect("insertion must succeed");
 
@@ -345,9 +355,9 @@ impl UtxoSet {
     }
 }
 
-fn init_address_outpoints() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
+fn init_address_utxos() -> StableBTreeMap<Memory, AddressUtxo, ()> {
     StableBTreeMap::init(
-        crate::memory::get_address_outpoints_memory(),
+        crate::memory::get_address_utxos_memory(),
         MAX_ADDRESS_OUTPOINT_SIZE,
         0, // No values are stored in the map.
     )
@@ -402,7 +412,7 @@ impl PartialEq for UtxoSet {
             && self.network == other.network
             && self.next_height == other.next_height
             && self.partial_stable_block == other.partial_stable_block
-            && is_stable_btreemap_equal(&self.address_to_outpoints, &other.address_to_outpoints)
+            && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
             && is_stable_btreemap_equal(&self.balances, &other.balances)
     }
 }
@@ -417,7 +427,6 @@ mod test {
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use ic_btc_types::Height;
     use std::collections::BTreeSet;
 
     // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
@@ -443,7 +452,7 @@ mod test {
             ingest_tx(&mut utxo, &coinbase_empty_tx);
 
             assert!(utxo.utxos.is_empty());
-            assert!(utxo.address_to_outpoints.is_empty());
+            assert!(utxo.address_utxos.is_empty());
         }
     }
 
@@ -465,7 +474,7 @@ mod test {
             ingest_tx(&mut utxo, &coinbase_op_return_tx);
 
             assert!(utxo.utxos.is_empty());
-            assert!(utxo.address_to_outpoints.is_empty());
+            assert!(utxo.address_utxos.is_empty());
         }
     }
 
@@ -511,12 +520,16 @@ mod test {
             expected
         );
         assert_eq!(
-            utxo.address_to_outpoints
+            utxo.address_utxos
                 .iter()
-                .map(|(k, _)| <(Address, Height, OutPoint)>::from_bytes(k))
+                .map(|(k, _)| k)
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                (address_1.clone(), 0, OutPoint::new(coinbase_tx.txid(), 0))
+                AddressUtxo {
+                    address: address_1.clone(),
+                    height: 0,
+                    outpoint: OutPoint::new(coinbase_tx.txid(), 0)
+                }
             }
         );
 
@@ -545,12 +558,16 @@ mod test {
             }]
         );
         assert_eq!(
-            utxo.address_to_outpoints
+            utxo.address_utxos
                 .iter()
-                .map(|(k, _)| <(Address, Height, OutPoint)>::from_bytes(k))
+                .map(|(k, _)| k)
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                (address_2, 1, OutPoint::new(tx.txid(), 0))
+                AddressUtxo {
+                    address: address_2,
+                    height: 1,
+                    outpoint: OutPoint::new(tx.txid(), 0)
+                }
             }
         );
     }
@@ -563,27 +580,23 @@ mod test {
 
         // Insert some entries into the map with different heights in some random order.
         for height in [17u32, 0, 31, 4, 2].iter() {
-            utxo.address_to_outpoints
+            utxo.address_utxos
                 .insert(
-                    (
-                        address.clone(),
-                        *height,
-                        OutPoint::new(Txid::from(vec![0; 32]), 0),
-                    )
-                        .to_bytes(),
-                    vec![],
+                    AddressUtxo {
+                        address: address.clone(),
+                        height: *height,
+                        outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
+                    },
+                    (),
                 )
                 .unwrap();
         }
 
         // Verify that the entries returned are sorted in descending height.
         assert_eq!(
-            utxo.address_to_outpoints
+            utxo.address_utxos
                 .range(address.to_bytes().to_vec(), None)
-                .map(|(k, _)| {
-                    let (_, height, _) = <(Address, Height, OutPoint)>::from_bytes(k);
-                    height
-                })
+                .map(|(address_utxo, _)| { address_utxo.height })
                 .collect::<Vec<_>>(),
             vec![31, 17, 4, 2, 0]
         );
