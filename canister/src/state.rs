@@ -219,7 +219,7 @@ mod test {
         #![proptest_config(ProptestConfig::with_cases(10))]
         #[test]
         fn serialize_deserialize_state(
-            stability_threshold in 1..100u32,
+            stability_threshold in 1..150u32,
             network in prop_oneof![
                 Just(Network::Mainnet),
                 Just(Network::Testnet),

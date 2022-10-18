@@ -1,7 +1,7 @@
 use crate::types::Block;
 use bitcoin::BlockHash;
-use serde::{Deserialize, Serialize};
 use std::fmt;
+mod serde;
 
 /// Represents a non-empty block chain as:
 /// * the first block of the chain
@@ -75,7 +75,7 @@ impl fmt::Display for EmptyChainError {
 }
 
 /// Maintains a tree of connected blocks.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockTree {
     pub root: Block,
     pub children: Vec<BlockTree>,
