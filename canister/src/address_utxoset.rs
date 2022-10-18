@@ -84,10 +84,9 @@ impl<'a> AddressUtxoSet<'a> {
         // Retrieve all the UTXOs of the address from the underlying UTXO set.
         let mut set: BTreeSet<_> = self
             .full_utxo_set
-            .get_address_outpoints(&self.address, &offset)
-            .filter_map(|(k, _)| {
-                let (_, _, outpoint) = <(Address, Height, OutPoint)>::from_bytes(k);
-
+            .get_address_utxos(&self.address, &offset)
+            .filter_map(|(address_utxo, _)| {
+                let outpoint = address_utxo.outpoint;
                 // Skip this outpoint if it has been removed in an unstable block.
                 if self.removed_utxos.contains_key(&outpoint) {
                     return None;

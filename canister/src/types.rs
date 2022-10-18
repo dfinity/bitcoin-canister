@@ -1,4 +1,4 @@
-use crate::state::UTXO_KEY_SIZE;
+use crate::state::OUTPOINT_SIZE;
 use bitcoin::{
     hashes::Hash, Address as BitcoinAddress, Block as BitcoinBlock, BlockHash as BitcoinBlockHash,
     Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
@@ -250,8 +250,8 @@ impl Storable for OutPoint {
         let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
-        // An outpoint is always exactly to the key size (36 bytes).
-        assert_eq!(v.len(), UTXO_KEY_SIZE as usize);
+        // An outpoint is always exactly 36 bytes.
+        assert_eq!(v.len(), OUTPOINT_SIZE as usize);
 
         v
     }
@@ -292,48 +292,44 @@ impl Storable for (TxOut, Height) {
 
 impl StableStructuresStorable for Address {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        let mut bytes = vec![self
-            .0
-            .len()
-            .try_into()
-            .expect("Address length must be <= 255")];
-        bytes.append(&mut self.0.as_bytes().to_vec());
-        std::borrow::Cow::Owned(bytes)
+        std::borrow::Cow::Borrowed(self.0.as_bytes())
     }
 
     fn from_bytes(bytes: Vec<u8>) -> Self {
-        let address_len = bytes[0] as usize;
-        Address(
-            String::from_utf8(bytes[1..address_len + 1].to_vec())
-                .expect("Loading address cannot fail."),
-        )
+        Address(String::from_utf8(bytes).expect("Loading address cannot fail."))
     }
 }
 
-impl Storable for (Address, Height, OutPoint) {
-    fn to_bytes(&self) -> Vec<u8> {
-        vec![
-            Address::to_bytes(&self.0).to_vec(),
-            Storable::to_bytes(&self.1),
-            OutPoint::to_bytes(&self.2),
+#[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
+pub struct AddressUtxo {
+    pub address: Address,
+    pub height: Height,
+    pub outpoint: OutPoint,
+}
+
+impl StableStructuresStorable for AddressUtxo {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        let bytes = vec![
+            Address::to_bytes(&self.address).to_vec(),
+            Storable::to_bytes(&self.height),
+            OutPoint::to_bytes(&self.outpoint),
         ]
         .into_iter()
         .flatten()
-        .collect()
+        .collect();
+
+        std::borrow::Cow::Owned(bytes)
     }
 
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
-        let address_len = bytes[0] as usize;
-        let height_offset = address_len + 1;
-        let outpoint_offset = address_len + 5;
-        let outpoint_bytes = bytes.split_off(outpoint_offset);
-        let height_bytes = bytes.split_off(height_offset);
+        let outpoint_bytes = bytes.split_off(bytes.len() - OUTPOINT_SIZE as usize);
+        let height_bytes = bytes.split_off(bytes.len() - 4);
 
-        (
-            Address::from_bytes(bytes),
-            <Height as Storable>::from_bytes(height_bytes),
-            OutPoint::from_bytes(outpoint_bytes),
-        )
+        Self {
+            address: Address::from_bytes(bytes),
+            height: <Height as Storable>::from_bytes(height_bytes),
+            outpoint: OutPoint::from_bytes(outpoint_bytes),
+        }
     }
 }
 

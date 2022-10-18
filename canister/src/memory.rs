@@ -24,7 +24,7 @@ pub fn get_upgrades_memory() -> Memory {
     MEMORY_MANAGER.with(|m| m.get(UPGRADES))
 }
 
-pub fn get_address_outpoints_memory() -> Memory {
+pub fn get_address_utxos_memory() -> Memory {
     MEMORY_MANAGER.with(|m| m.get(ADDRESS_OUTPOINTS))
 }
 
