@@ -87,6 +87,14 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
 ///
 /// Returns a bool indicating whether or not the state has changed.
 pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
+    fn pop_block(state: &mut State, ingested_block_hash: bitcoin::BlockHash) {
+        // Pop the stable block.
+        let popped_block = unstable_blocks::pop(&mut state.unstable_blocks);
+
+        // Sanity check that we just popped the same block that was ingested.
+        assert_eq!(popped_block.unwrap().block_hash(), ingested_block_hash);
+    }
+
     let prev_state = (
         state.utxos.next_height(),
         &state.utxos.partial_stable_block.clone(),
@@ -98,19 +106,20 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     // Finish ingesting the stable block that's partially ingested, if that exists.
     match state.utxos.ingest_block_continue() {
         Slicing::Paused(()) => return has_state_changed(state),
-        Slicing::Done => {}
+        Slicing::Done(None) => {}
+        Slicing::Done(Some(ingested_block_hash)) => pop_block(state, ingested_block_hash),
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
-    while let Some(new_stable_block) = unstable_blocks::pop(&mut state.unstable_blocks) {
+    while let Some(new_stable_block) = unstable_blocks::peek(&mut state.unstable_blocks) {
         // Store the block's header.
         state
             .stable_block_headers
             .insert(&new_stable_block, state.utxos.next_height());
 
-        match state.utxos.ingest_block(new_stable_block) {
+        match state.utxos.ingest_block(new_stable_block.clone()) {
             Slicing::Paused(()) => return has_state_changed(state),
-            Slicing::Done => {}
+            Slicing::Done(ingested_block_hash) => pop_block(state, ingested_block_hash),
         }
     }
 

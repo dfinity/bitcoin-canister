@@ -54,55 +54,28 @@ impl UnstableBlocks {
     }
 }
 
+/// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
+pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
+    get_stable_child(blocks).map(|_| &blocks.tree.root)
+}
+
 /// Pops the `anchor` block iff ∃ a child `C` of the `anchor` block that
 /// is stable. The child `C` becomes the new `anchor` block, and all its
 /// siblings are discarded.
 pub fn pop(blocks: &mut UnstableBlocks) -> Option<Block> {
-    // Take all the children of the anchor.
-    let mut anchor_child_trees = std::mem::take(&mut blocks.tree.children);
-
-    // Sort them by depth.
-    anchor_child_trees.sort_by_key(blocktree::depth);
-
-    match anchor_child_trees.last() {
-        Some(deepest_child_tree) => {
-            // The deepest child tree must have a depth >= stability_threshold.
-            if blocktree::depth(deepest_child_tree) < blocks.stability_threshold {
-                // Need a depth of at least >= stability_threshold
-                blocks.tree.children = anchor_child_trees;
-                return None;
-            }
-
-            // If there is more than one child, the difference in depth
-            // between the deepest child and all the others must be >= stability_threshold.
-            if anchor_child_trees.len() >= 2 {
-                if let Some(second_deepest_child_tree) =
-                    anchor_child_trees.get(anchor_child_trees.len() - 2)
-                {
-                    if blocktree::depth(deepest_child_tree)
-                        - blocktree::depth(second_deepest_child_tree)
-                        < blocks.stability_threshold
-                    {
-                        // Difference must be >= stability_threshold
-                        blocks.tree.children = anchor_child_trees;
-                        return None;
-                    }
-                }
-            }
-
-            // The root of the deepest child tree is stable. This deepest
-            // child tree becomes the new tree, with its root being the new
-            // `anchor` block. All the tree's siblings are discarded.
-            let deepest_child_tree = anchor_child_trees.pop().unwrap();
+    match get_stable_child(blocks) {
+        Some(stable_child_idx) => {
             let old_anchor = blocks.tree.root.clone();
-            blocks.tree = deepest_child_tree;
+
+            // Replace the unstable block tree with that of the stable child.
+            blocks.tree = blocks.tree.children.swap_remove(stable_child_idx);
+
+            // Remove the outpoints of the old anchor from the cache.
             blocks.outpoints_cache.remove(&old_anchor);
+
             Some(old_anchor)
         }
-        None => {
-            // The anchor has no children. Nothing to return.
-            None
-        }
+        None => None,
     }
 }
 
@@ -188,6 +161,48 @@ pub fn get_chain_with_tip<'a, 'b>(
     blocktree::get_chain_with_tip(&blocks.tree, tip)
 }
 
+// Returns the index of the `anchor`'s stable child if it exists.
+fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
+    // Compute the depth of all the children.
+    let mut depths: Vec<_> = blocks
+        .tree
+        .children
+        .iter()
+        .enumerate()
+        .map(|(idx, child)| (blocktree::depth(child), idx))
+        .collect();
+
+    // Sort by depth.
+    depths.sort_by_key(|(depth, _child_idx)| *depth);
+
+    match depths.last() {
+        Some((deepest_depth, child_idx)) => {
+            // The deepest child tree must have a depth >= stability_threshold.
+            if *deepest_depth < blocks.stability_threshold {
+                // Need a depth of at least >= stability_threshold
+                return None;
+            }
+
+            // If there is more than one child, the difference in depth
+            // between the deepest child and all the others must be >= stability_threshold.
+            if depths.len() >= 2 {
+                if let Some((second_deepest_depth, _)) = depths.get(depths.len() - 2) {
+                    if deepest_depth - second_deepest_depth < blocks.stability_threshold {
+                        // Difference must be >= stability_threshold
+                        return None;
+                    }
+                }
+            }
+
+            Some(*child_idx)
+        }
+        None => {
+            // The anchor has no children. Nothing to return.
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -198,6 +213,7 @@ mod test {
         let anchor = BlockBuilder::genesis().build();
         let utxos = UtxoSet::new(Network::Mainnet);
         let mut forest = UnstableBlocks::new(&utxos, 1, anchor);
+        assert_eq!(peek(&mut forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
@@ -211,16 +227,19 @@ mod test {
         let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone());
 
         push(&mut forest, &utxos, block_1).unwrap();
+        assert_eq!(peek(&mut forest), None);
         assert_eq!(pop(&mut forest), None);
 
         push(&mut forest, &utxos, block_2).unwrap();
 
         // Block 0 (the anchor) now has one stable child (Block 1).
         // Block 0 should be returned when calling `pop`.
+        assert_eq!(peek(&mut forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
 
         // Block 1 is now the anchor. It doesn't have children yet,
         // so calling `pop` should return `None`.
+        assert_eq!(peek(&mut forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
@@ -237,6 +256,7 @@ mod test {
         push(&mut forest, &utxos, forked_block.clone()).unwrap();
 
         // Neither forks are 1-stable, so we shouldn't get anything.
+        assert_eq!(peek(&mut forest), None);
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork2 by another block.
@@ -249,10 +269,12 @@ mod test {
 
         // Now fork2 should be 1-stable. The anchor should be returned on `pop`
         // and fork2 becomes the new anchor.
+        assert_eq!(peek(&mut forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
 
         // No stable children for fork 2
+        assert_eq!(peek(&mut forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
@@ -267,8 +289,11 @@ mod test {
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
 
+        assert_eq!(peek(&mut forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
+        assert_eq!(peek(&mut forest), Some(&block_1));
         assert_eq!(pop(&mut forest), Some(block_1));
+        assert_eq!(peek(&mut forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 

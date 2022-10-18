@@ -564,9 +564,9 @@ pub struct HttpResponse {
 /// A type used to facilitate time-slicing.
 #[must_use]
 #[derive(Debug, PartialEq, Eq)]
-pub enum Slicing<T> {
+pub enum Slicing<T, U> {
     Paused(T),
-    Done,
+    Done(U),
 }
 
 #[test]
