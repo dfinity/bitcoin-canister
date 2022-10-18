@@ -12,8 +12,8 @@ mod test_utils;
 mod tests;
 pub mod types;
 mod unstable_blocks;
-mod utxos;
-mod utxoset;
+mod utxo_set;
+use utxo_set::UtxoSet;
 
 use crate::{
     state::State,

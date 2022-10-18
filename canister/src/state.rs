@@ -2,18 +2,15 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
-    memory::Memory,
     types::{
         Address, Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
         Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
-    utxos::Utxos,
-    utxoset,
+    UtxoSet,
 };
 use ic_btc_types::{Height, MillisatoshiPerByte};
 use ic_cdk::export::Principal;
-use ic_stable_structures::StableBTreeMap;
 use serde::{Deserialize, Serialize};
 
 /// A structure used to maintain the entire state.
@@ -63,12 +60,12 @@ impl State {
     }
 
     pub fn network(&self) -> Network {
-        self.utxos.network
+        self.utxos.network()
     }
 
     /// The height of the latest stable block.
     pub fn stable_height(&self) -> Height {
-        self.utxos.next_height
+        self.utxos.next_height()
     }
 
     /// Returns the UTXO set of a given bitcoin address.
@@ -91,15 +88,15 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
 /// Returns a bool indicating whether or not the state has changed.
 pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     let prev_state = (
-        state.utxos.next_height,
+        state.utxos.next_height(),
         &state.utxos.partial_stable_block.clone(),
     );
     let has_state_changed = |state: &State| -> bool {
-        prev_state != (state.utxos.next_height, &state.utxos.partial_stable_block)
+        prev_state != (state.utxos.next_height(), &state.utxos.partial_stable_block)
     };
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
-    match utxoset::ingest_block_continue(&mut state.utxos) {
+    match state.utxos.ingest_block_continue() {
         Slicing::Paused(()) => return has_state_changed(state),
         Slicing::Done => {}
     }
@@ -109,9 +106,9 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         // Store the block's header.
         state
             .stable_block_headers
-            .insert(&new_stable_block, state.utxos.next_height);
+            .insert(&new_stable_block, state.utxos.next_height());
 
-        match utxoset::ingest_block(&mut state.utxos, new_stable_block) {
+        match state.utxos.ingest_block(new_stable_block) {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done => {}
         }
@@ -121,7 +118,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 }
 
 pub fn main_chain_height(state: &State) -> Height {
-    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height
+    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height()
         - 1
 }
 
@@ -132,7 +129,7 @@ pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
 // The size of an outpoint in bytes.
 const OUTPOINT_TX_ID_SIZE: u32 = 32; // The size of the transaction ID.
 const OUTPOINT_VOUT_SIZE: u32 = 4; // The size of a transaction's vout.
-const OUTPOINT_SIZE: u32 = OUTPOINT_TX_ID_SIZE + OUTPOINT_VOUT_SIZE;
+pub const OUTPOINT_SIZE: u32 = OUTPOINT_TX_ID_SIZE + OUTPOINT_VOUT_SIZE;
 
 // The maximum size in bytes of a bitcoin script for it to be considered "small".
 const TX_OUT_SCRIPT_MAX_SIZE_SMALL: u32 = 25;
@@ -158,68 +155,6 @@ pub const UTXO_VALUE_MAX_SIZE_SMALL: u32 = TX_OUT_MAX_SIZE_SMALL + HEIGHT_SIZE;
 
 /// The max size of a value in the "medium UTXOs" map.
 pub const UTXO_VALUE_MAX_SIZE_MEDIUM: u32 = TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE;
-
-// The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-const MAX_ADDRESS_SIZE: u32 = 90;
-const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
-
-#[derive(Serialize, Deserialize)]
-pub struct UtxoSet {
-    pub utxos: Utxos,
-
-    pub network: Network,
-
-    // An index for fast retrievals of an address's UTXOs.
-    // NOTE: Stable structures don't need to be serialized.
-    #[serde(skip, default = "init_address_outpoints")]
-    pub address_to_outpoints: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
-
-    // A map of an address and its current balance.
-    // NOTE: Stable structures don't need to be serialized.
-    #[serde(skip, default = "init_balances")]
-    pub balances: StableBTreeMap<Memory, Address, u64>,
-
-    /// The height of the block that will be ingested next.
-    // NOTE: The `next_height` is stored, rather than the current height, because:
-    //   * The `UtxoSet` is initialized as empty with no blocks.
-    //   * The height of the genesis block is defined as zero.
-    //
-    // Rather than making this an optional to handle the case where the UTXO set is empty, we
-    // instead store the `next_height` to avoid having this special case.
-    pub next_height: Height,
-
-    /// A stable block that has partially been written to the UTXO set. Used for time slicing.
-    pub partial_stable_block: Option<PartialStableBlock>,
-}
-
-impl UtxoSet {
-    pub fn new(network: Network) -> Self {
-        Self {
-            utxos: Utxos::default(),
-            balances: init_balances(),
-            address_to_outpoints: init_address_outpoints(),
-            network,
-            next_height: 0,
-            partial_stable_block: None,
-        }
-    }
-}
-
-// NOTE: `PartialEq` is only available in tests as it would be impractically
-// expensive in production.
-#[cfg(test)]
-impl PartialEq for UtxoSet {
-    fn eq(&self, other: &Self) -> bool {
-        use crate::test_utils::is_stable_btreemap_equal;
-        self.utxos == other.utxos
-            && self.network == other.network
-            && self.next_height == other.next_height
-            && self.partial_stable_block == other.partial_stable_block
-            && is_stable_btreemap_equal(&self.address_to_outpoints, &other.address_to_outpoints)
-            && is_stable_btreemap_equal(&self.balances, &other.balances)
-    }
-}
 
 /// A response awaiting to be processed.
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -263,53 +198,6 @@ pub struct BlockIngestionStats {
 
     /// The number of instructions used to insert new utxos.
     pub ins_insert_utxos: u64,
-}
-
-/// A state for maintaining a stable block that is partially ingested into the UTXO set.
-/// Used for time slicing.
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
-pub struct PartialStableBlock {
-    pub block: Block,
-    pub next_tx_idx: usize,
-    pub next_input_idx: usize,
-    pub next_output_idx: usize,
-    pub stats: BlockIngestionStats,
-}
-
-impl PartialStableBlock {
-    pub fn new(
-        block: Block,
-        next_tx_idx: usize,
-        next_input_idx: usize,
-        next_output_idx: usize,
-    ) -> Self {
-        Self {
-            block,
-            next_tx_idx,
-            next_input_idx,
-            next_output_idx,
-            stats: BlockIngestionStats::default(),
-        }
-    }
-}
-
-fn init_address_outpoints() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
-    StableBTreeMap::init(
-        crate::memory::get_address_outpoints_memory(),
-        MAX_ADDRESS_OUTPOINT_SIZE,
-        0, // No values are stored in the map.
-    )
-}
-
-fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
-    // A balance is a u64, which requires 8 bytes.
-    const BALANCE_SIZE: u32 = 8;
-
-    StableBTreeMap::init(
-        crate::memory::get_balances_memory(),
-        MAX_ADDRESS_SIZE,
-        BALANCE_SIZE,
-    )
 }
 
 /// Cache for storing last calculated fee percentiles

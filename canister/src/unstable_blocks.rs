@@ -1,8 +1,8 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
-    state::UtxoSet,
     types::{Address, Block, OutPoint, TxOut},
+    UtxoSet,
 };
 use bitcoin::BlockHash;
 use ic_btc_types::Height;
@@ -26,7 +26,7 @@ impl UnstableBlocks {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
         outpoints_cache
-            .insert(utxos, &anchor, utxos.next_height)
+            .insert(utxos, &anchor, utxos.next_height())
             .expect("anchor block must be valid.");
 
         Self {
@@ -116,7 +116,7 @@ pub fn push(
         blocktree::find_mut(&mut blocks.tree, &block.header().prev_blockhash)
             .ok_or_else(|| BlockDoesNotExtendTree(block.clone()))?;
 
-    let height = utxos.next_height + depth + 1;
+    let height = utxos.next_height() + depth + 1;
 
     // TODO(EXC-1253): Make this whole function atomic.
     // TODO(EXC-1254): Add time-slicing as inserting a block into the outpoints cache can be expensive.
