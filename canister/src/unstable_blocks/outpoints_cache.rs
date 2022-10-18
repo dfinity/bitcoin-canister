@@ -32,8 +32,8 @@ impl OutPointsCache {
     pub fn get_added_outpoints(&self, block_hash: &BlockHash, address: &Address) -> &[OutPoint] {
         self.added_outpoints
             .get(block_hash)
-            .map(|address_outpoints| {
-                address_outpoints
+            .map(|address_utxos| {
+                address_utxos
                     .get(address)
                     .map(|outpoints| outpoints.as_slice())
                     .unwrap_or(&[])
@@ -45,8 +45,8 @@ impl OutPointsCache {
     pub fn get_removed_outpoints(&self, block_hash: &BlockHash, address: &Address) -> &[OutPoint] {
         self.removed_outpoints
             .get(block_hash)
-            .map(|address_outpoints| {
-                address_outpoints
+            .map(|address_utxos| {
+                address_utxos
                     .get(address)
                     .map(|outpoints| outpoints.as_slice())
                     .unwrap_or(&[])
@@ -86,7 +86,6 @@ impl OutPointsCache {
         //    referenced by the unstable blocks.
         for tx in block.txdata() {
             for input in tx.input() {
-                println!("inserting input");
                 if input.previous_output.is_null() {
                     continue;
                 }
