@@ -26,3 +26,4 @@ The Bitcoin canister is still in beta and does not yet implement the specificati
 
 * Block validation
 * Resending transactions
+* The wait-for-quiet mechanism
