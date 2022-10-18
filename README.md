@@ -22,7 +22,7 @@ To this end, it provides a low-level API with a small set of functions, which se
 
 ## Disclaimer
 
-The Bitcoin canister is still in beta and does not yet implementat the specification fully. The missing functionality includes (but is not limited to):
+The Bitcoin canister is still in beta and does not yet implement the specification fully. The missing functionality includes (but is not limited to):
 
 * Block validation
 * Resending transactions
