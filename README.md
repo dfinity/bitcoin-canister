@@ -1,6 +1,4 @@
-== Bitcoin Canister
-
-A collection of scalable data structures for the [Internet Computer](https://internetcomputer.org) that persist across upgrades.
+# Bitcoin Canister
 
 <div>
   <p>
@@ -11,6 +9,8 @@ A collection of scalable data structures for the [Internet Computer](https://int
   </p>
 </div>
 
-[Documentation](https://docs.rs/ic-stable-structures)
+## Overview
+The Bitcoin canister is the core component of the Bitcoin integration project. It enables other canisters deployed on the Internet Computer to use Bitcoin and interact with the Bitcoin network.
 
-See the `examples` directory for examples on how stable structures can be used.
+To this end, it provides a low-level API with a small set of functions, which serve as the foundation to build powerful Bitcoin libraries and other development tools, and Bitcoin smart contracts running on the Internet Computer.
+
