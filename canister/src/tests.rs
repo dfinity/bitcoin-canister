@@ -1,13 +1,12 @@
 use crate::{
     genesis_block, get_balance, get_utxos, heartbeat, runtime,
     state::main_chain_height,
-    state::PartialStableBlock,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
         BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
         GetUtxosRequest, Network,
     },
-    utxoset::DUPLICATE_TX_IDS,
+    utxo_set::{PartialStableBlock, DUPLICATE_TX_IDS},
     with_state,
 };
 use crate::{init, test_utils::random_p2pkh_address, InitPayload};
@@ -138,16 +137,13 @@ async fn mainnet_100k_blocks() {
     // Validate we've ingested all the blocks.
     assert_eq!(with_state(main_chain_height), 100_000);
 
-    let mut total_supply = 0;
     crate::with_state(|state| {
-        for (_, (v, _)) in state.utxos.utxos.iter() {
-            total_supply += v.value;
-        }
+        let total_supply = state.utxos.get_total_supply();
 
         // NOTE: The duplicate transactions cause us to lose some of the supply,
         // which we deduct in this assertion.
         assert_eq!(
-            ((state.utxos.next_height as u64) - DUPLICATE_TX_IDS.len() as u64) * 5000000000,
+            ((state.utxos.next_height() as u64) - DUPLICATE_TX_IDS.len() as u64) * 5000000000,
             total_supply
         );
     });
@@ -370,13 +366,9 @@ async fn testnet_10k_blocks() {
     assert_eq!(with_state(main_chain_height), 10_000);
 
     // Verify the total supply
-    let mut total_supply = 0;
     crate::with_state(|state| {
-        for (_, (v, _)) in state.utxos.utxos.iter() {
-            total_supply += v.value;
-        }
-
-        assert_eq!(state.utxos.next_height as u64 * 5000000000, total_supply);
+        let total_supply = state.utxos.get_total_supply();
+        assert_eq!(state.utxos.next_height() as u64 * 5000000000, total_supply);
     });
 
     // Check the block headers/heights of a few random blocks.
@@ -491,7 +483,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
     heartbeat().await;
 
     // The stable height is now updated to include `block_1`.
-    assert_eq!(with_state(|s| s.utxos.next_height), 2);
+    assert_eq!(with_state(|s| s.utxos.next_height()), 2);
 
     // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
     assert_eq!(

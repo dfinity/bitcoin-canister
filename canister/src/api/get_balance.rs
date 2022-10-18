@@ -35,7 +35,7 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
     // That is well below the max value of a `u64`.
     with_state(|state| {
         // Retrieve the balance that's pre-computed for stable blocks.
-        let mut balance = state.utxos.balances.get(&address).unwrap_or(0);
+        let mut balance = state.utxos.get_balance(&address);
 
         let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
         if main_chain.len() < min_confirmations as usize {
@@ -47,9 +47,9 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
 
         // Apply all the unstable blocks.
         let ins_start = performance_counter();
-        let chain_height = state.utxos.next_height + (main_chain.len() as u32) - 1;
+        let chain_height = state.utxos.next_height() + (main_chain.len() as u32) - 1;
         for (i, block) in main_chain.into_chain().iter().enumerate() {
-            let block_height = state.utxos.next_height + (i as u32);
+            let block_height = state.utxos.next_height() + (i as u32);
             let confirmations = chain_height - block_height + 1;
 
             if confirmations < min_confirmations {

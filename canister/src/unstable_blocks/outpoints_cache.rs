@@ -1,6 +1,6 @@
 use crate::{
-    state::UtxoSet,
     types::{Address, Block, BlockHash, OutPoint, TxOut},
+    UtxoSet,
 };
 use ic_btc_types::Height;
 use serde::{Deserialize, Serialize};
@@ -103,15 +103,14 @@ impl OutPointsCache {
 
                         // Lookup the `TxOut` in the UTXO set.
                         None => utxos
-                            .utxos
-                            .get(&outpoint)
+                            .get_utxo(&outpoint)
                             .ok_or_else(|| TxOutNotFound(outpoint.clone()))?,
                     },
                 };
 
                 if let Ok(address) = Address::from_script(
                     &bitcoin::Script::from(txout.script_pubkey.clone()),
-                    utxos.network,
+                    utxos.network(),
                 ) {
                     let entry = removed_outpoints.entry(address).or_insert(vec![]);
                     entry.push(outpoint.clone());
@@ -133,7 +132,7 @@ impl OutPointsCache {
                     vout: i as u32,
                 };
 
-                if let Ok(address) = Address::from_script(&txout.script_pubkey, utxos.network) {
+                if let Ok(address) = Address::from_script(&txout.script_pubkey, utxos.network()) {
                     let entry = added_outpoints.entry(address).or_insert(vec![]);
                     entry.push(outpoint.clone());
                 }

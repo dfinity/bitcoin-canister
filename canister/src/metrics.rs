@@ -43,13 +43,13 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "utxos_length",
-            state.utxos.utxos.len() as f64,
-            "The size of the UTXO set.",
+            state.utxos.utxos_len() as f64,
+            "The number of UTXOs in the set.",
         )?;
         w.encode_gauge(
-            "address_outpoints_length",
-            state.utxos.address_to_outpoints.len() as f64,
-            "The size of the address to outpoints map.",
+            "address_owned_utxos_length",
+            state.utxos.address_owned_utxos_len() as f64,
+            "The number of UTXOs that are owned by supported addresses.",
         )?;
         Ok(())
     })

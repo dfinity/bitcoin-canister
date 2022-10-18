@@ -186,12 +186,12 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, init, runtime,
-        state::PartialStableBlock,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
             InitPayload, Network,
         },
+        utxo_set::PartialStableBlock,
     };
     use bitcoin::BlockHeader;
 
@@ -244,7 +244,7 @@ mod test {
         assert_eq!(with_state(state::main_chain_height), 1);
 
         // The UTXO set hasn't been updated with the genesis block yet.
-        assert_eq!(with_state(|s| s.utxos.next_height), 0);
+        assert_eq!(with_state(|s| s.utxos.next_height()), 0);
 
         // Ingest the stable block (the genesis block) to the UTXO set.
         heartbeat().await;
@@ -253,7 +253,7 @@ mod test {
         assert_eq!(with_state(state::main_chain_height), 1);
 
         // The UTXO set has been updated with the genesis block.
-        assert_eq!(with_state(|s| s.utxos.next_height), 1);
+        assert_eq!(with_state(|s| s.utxos.next_height()), 1);
     }
 
     #[async_std::test]
@@ -325,7 +325,7 @@ mod test {
         assert_eq!(partial_block.next_output_idx, 0);
 
         // Only the genesis block has been fully processed, so the stable height is one.
-        assert_eq!(with_state(|s| s.utxos.next_height), 1);
+        assert_eq!(with_state(|s| s.utxos.next_height()), 1);
 
         // Ingest more stable blocks.
         runtime::performance_counter_reset();
@@ -338,7 +338,7 @@ mod test {
         assert_eq!(with_state(state::main_chain_height), 2);
 
         // The stable height is now updated to include `block_1`.
-        assert_eq!(with_state(|s| s.utxos.next_height), 2);
+        assert_eq!(with_state(|s| s.utxos.next_height()), 2);
     }
 
     #[async_std::test]
@@ -454,7 +454,7 @@ mod test {
         assert_eq!(with_state(state::main_chain_height), 3);
 
         // The stable height is now updated to include `block_1` and `block_2`.
-        assert_eq!(with_state(|s| s.utxos.next_height), 3);
+        assert_eq!(with_state(|s| s.utxos.next_height()), 3);
 
         // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
         assert_eq!(

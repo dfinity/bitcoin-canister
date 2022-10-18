@@ -4,7 +4,9 @@ use crate::{
     types::{OutPoint, Storable, TxOut},
 };
 use ic_btc_types::Height;
-use ic_stable_structures::{btreemap, Memory as MemoryTrait, StableBTreeMap};
+use ic_stable_structures::StableBTreeMap;
+#[cfg(test)]
+use ic_stable_structures::{btreemap, Memory as MemoryTrait};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -136,6 +138,7 @@ impl Utxos {
 
     /// Gets an iterator over the entries of the map.
     /// NOTE: The entries are not guaranteed to be sorted in any particular way.
+    #[cfg(test)]
     pub fn iter(&self) -> Iter<Memory> {
         Iter::new(self)
     }
@@ -144,12 +147,14 @@ impl Utxos {
         self.large_utxos.len() as u64 + self.small_utxos.len() + self.medium_utxos.len()
     }
 
+    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.large_utxos.is_empty() && self.small_utxos.is_empty() && self.medium_utxos.is_empty()
     }
 }
 
 /// An iterator over the entries in [`Utxos`].
+#[cfg(test)]
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a, M: MemoryTrait> {
     small_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
@@ -157,6 +162,7 @@ pub struct Iter<'a, M: MemoryTrait> {
     large_utxos_iter: std::collections::btree_map::Iter<'a, OutPoint, (TxOut, Height)>,
 }
 
+#[cfg(test)]
 impl<'a> Iter<'a, Memory> {
     fn new(utxos: &'a Utxos) -> Self {
         Self {
@@ -167,6 +173,7 @@ impl<'a> Iter<'a, Memory> {
     }
 }
 
+#[cfg(test)]
 impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
     type Item = (OutPoint, (TxOut, Height));
 
