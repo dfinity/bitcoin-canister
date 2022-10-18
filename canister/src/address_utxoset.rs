@@ -1,11 +1,10 @@
 use crate::{
-    state::UtxoSet,
     types::{Address, Block, OutPoint, Storable, TxOut},
     unstable_blocks::UnstableBlocks,
+    UtxoSet,
 };
 use bitcoin::Script;
 use ic_btc_types::{Height, Utxo};
-use ic_stable_structures::Storable as _;
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A struct that tracks the UTXO set of a given address.
@@ -85,11 +84,7 @@ impl<'a> AddressUtxoSet<'a> {
         // Retrieve all the UTXOs of the address from the underlying UTXO set.
         let mut set: BTreeSet<_> = self
             .full_utxo_set
-            .address_to_outpoints
-            .range(
-                self.address.to_bytes().to_vec(),
-                offset.as_ref().map(|x| x.to_bytes()),
-            )
+            .get_address_outpoints(&self.address, &offset)
             .filter_map(|(k, _)| {
                 let (_, _, outpoint) = <(Address, Height, OutPoint)>::from_bytes(k);
 
@@ -100,8 +95,7 @@ impl<'a> AddressUtxoSet<'a> {
 
                 let (txout, height) = self
                     .full_utxo_set
-                    .utxos
-                    .get(&outpoint)
+                    .get_utxo(&outpoint)
                     .expect("outpoint must exist");
 
                 Some(((height, outpoint).to_bytes(), txout))
@@ -141,7 +135,7 @@ impl<'a> AddressUtxoSet<'a> {
         for (height_and_outpoint, txout) in added_utxos_encoded {
             if let Ok(address) = Address::from_script(
                 &Script::from(txout.script_pubkey.clone()),
-                self.full_utxo_set.network,
+                self.full_utxo_set.network(),
             ) {
                 if address == self.address {
                     assert!(

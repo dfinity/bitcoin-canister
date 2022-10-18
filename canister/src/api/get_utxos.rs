@@ -143,15 +143,15 @@ fn get_utxos_from_chain(
     }
 
     let mut address_utxos = state.get_utxos(address);
-    let chain_height = state.utxos.next_height + (chain.len() as u32) - 1;
+    let chain_height = state.utxos.next_height() + (chain.len() as u32) - 1;
 
     let mut tip_block_hash = chain.first().block_hash();
-    let mut tip_block_height = state.utxos.next_height;
+    let mut tip_block_height = state.utxos.next_height();
 
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();
     for (i, block) in chain.into_chain().iter().enumerate() {
-        let block_height = state.utxos.next_height + (i as u32);
+        let block_height = state.utxos.next_height() + (i as u32);
         let confirmations = chain_height - block_height + 1;
 
         if confirmations < min_confirmations {
