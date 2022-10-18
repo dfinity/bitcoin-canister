@@ -776,7 +776,6 @@ mod test {
         assert_eq!(utxo_set.balances.get(&address_2), Some(1000));
     }
 
-
     // If a block is being ingested, `get_balance` returns results as if the ingesting block
     // doesn't exist. The balances are updated only after the block is fully ingested.
     #[test]
@@ -840,7 +839,10 @@ mod test {
         runtime::performance_counter_reset();
 
         // Ingestion is done. `get_balance` should return the updated balances.
-        assert_eq!(utxo_set.ingest_block_continue(), Slicing::Done(Some(block_hash)));
+        assert_eq!(
+            utxo_set.ingest_block_continue(),
+            Slicing::Done(Some(block_hash))
+        );
         assert_eq!(utxo_set.get_balance(&address_1), 200);
         assert_eq!(utxo_set.get_balance(&address_2), 400);
         assert_eq!(utxo_set.get_balance(&address_3), 400);

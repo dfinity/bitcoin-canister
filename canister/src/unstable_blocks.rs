@@ -213,7 +213,7 @@ mod test {
         let anchor = BlockBuilder::genesis().build();
         let utxos = UtxoSet::new(Network::Mainnet);
         let mut forest = UnstableBlocks::new(&utxos, 1, anchor);
-        assert_eq!(peek(&mut forest), None);
+        assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
@@ -227,19 +227,19 @@ mod test {
         let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone());
 
         push(&mut forest, &utxos, block_1).unwrap();
-        assert_eq!(peek(&mut forest), None);
+        assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
         push(&mut forest, &utxos, block_2).unwrap();
 
         // Block 0 (the anchor) now has one stable child (Block 1).
         // Block 0 should be returned when calling `pop`.
-        assert_eq!(peek(&mut forest), Some(&block_0));
+        assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
 
         // Block 1 is now the anchor. It doesn't have children yet,
         // so calling `pop` should return `None`.
-        assert_eq!(peek(&mut forest), None);
+        assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
@@ -256,7 +256,7 @@ mod test {
         push(&mut forest, &utxos, forked_block.clone()).unwrap();
 
         // Neither forks are 1-stable, so we shouldn't get anything.
-        assert_eq!(peek(&mut forest), None);
+        assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork2 by another block.
@@ -269,12 +269,12 @@ mod test {
 
         // Now fork2 should be 1-stable. The anchor should be returned on `pop`
         // and fork2 becomes the new anchor.
-        assert_eq!(peek(&mut forest), Some(&genesis_block));
+        assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
 
         // No stable children for fork 2
-        assert_eq!(peek(&mut forest), None);
+        assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
@@ -289,11 +289,11 @@ mod test {
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
 
-        assert_eq!(peek(&mut forest), Some(&block_0));
+        assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
-        assert_eq!(peek(&mut forest), Some(&block_1));
+        assert_eq!(peek(&forest), Some(&block_1));
         assert_eq!(pop(&mut forest), Some(block_1));
-        assert_eq!(peek(&mut forest), None);
+        assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
