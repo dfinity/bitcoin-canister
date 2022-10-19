@@ -649,7 +649,7 @@ dependencies = [
  "candid",
  "ciborium",
  "hex",
- "ic-btc-test-utils",
+ "ic-btc-test-utils 0.1.0 (git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77)",
  "ic-btc-types",
  "ic-cdk",
  "ic-cdk-macros",
@@ -660,6 +660,13 @@ dependencies = [
  "serde",
  "serde_bytes",
  "tempfile",
+]
+
+[[package]]
+name = "ic-btc-test-utils"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
 ]
 
 [[package]]
@@ -864,18 +871,6 @@ dependencies = [
  "quote",
  "regex-syntax",
  "syn",
-]
-
-[[package]]
-name = "management-canister-mock"
-version = "0.1.0"
-dependencies = [
- "bitcoin",
- "candid",
- "ic-btc-test-utils",
- "ic-cdk",
- "ic-cdk-macros",
- "serde",
 ]
 
 [[package]]
@@ -1298,6 +1293,30 @@ dependencies = [
  "quick-error",
  "tempfile",
  "wait-timeout",
+]
+
+[[package]]
+name = "scenario-1"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid",
+ "ic-btc-test-utils 0.1.0 (git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77)",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "serde",
+]
+
+[[package]]
+name = "scenario-2"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid",
+ "ic-btc-test-utils 0.1.0",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "serde",
 ]
 
 [[package]]
