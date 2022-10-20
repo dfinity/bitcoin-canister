@@ -153,7 +153,7 @@ jobs:
           dfx cache install
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Run scenario 1
+      - name: Run Scenario 1
         run: |
           bash e2e-tests/scenario-1.sh
 
