@@ -74,7 +74,6 @@ const NUM_BLOCKS: u32 = 4;
 // The number of transactions in each of these blocks.
 const TXS_PER_BLOCK: u32 = 10_000;
 
-
 // Initialize the blocks.
 #[init]
 fn init() {
