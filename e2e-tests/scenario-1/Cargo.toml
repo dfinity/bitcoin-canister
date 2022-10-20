@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 bitcoin = "0.28.1"
-candid = "0.7.4"
-ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "0acc04638bb2be562c146c2480e6217eb572aa77" }
-ic-cdk = "0.5.6"
-ic-cdk-macros = "0.5.6"
+candid = "0.8.1"
+ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f167994de24c8ccf7ee37a4d8ac67" }
+ic-cdk = "0.6.1"
+ic-cdk-macros = "0.6.1"
 serde = "1.0.132"

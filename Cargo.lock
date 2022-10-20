@@ -297,17 +297,18 @@ checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
 
 [[package]]
 name = "candid"
-version = "0.7.16"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7e4287605536419ac6ce9d76d3aa5733677ca8c7c2891079b2c71a345cc17a3"
+checksum = "0571f3777880555f86d8aaa63080162560a8bf183d7853e0cc561d9a75458bbd"
 dependencies = [
  "anyhow",
  "binread",
  "byteorder",
  "candid_derive",
  "codespan-reporting",
+ "crc32fast",
+ "data-encoding",
  "hex",
- "ic-types",
  "lalrpop",
  "lalrpop-util",
  "leb128",
@@ -319,14 +320,15 @@ dependencies = [
  "pretty",
  "serde",
  "serde_bytes",
+ "sha2",
  "thiserror",
 ]
 
 [[package]]
 name = "candid_derive"
-version = "0.4.5"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e02c03c4d547674a3f3f3109538fb49871fbe636216daa019f06a62faca9061"
+checksum = "58f1f4db7c7d04b87b70b3a35c5dc5c2c9dd73cef8bdf6760e2f18a0d45350dd"
 dependencies = [
  "lazy_static",
  "proc-macro2",
@@ -649,7 +651,7 @@ dependencies = [
  "candid",
  "ciborium",
  "hex",
- "ic-btc-test-utils 0.1.0 (git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77)",
+ "ic-btc-test-utils",
  "ic-btc-types",
  "ic-cdk",
  "ic-cdk-macros",
@@ -665,14 +667,7 @@ dependencies = [
 [[package]]
 name = "ic-btc-test-utils"
 version = "0.1.0"
-dependencies = [
- "bitcoin",
-]
-
-[[package]]
-name = "ic-btc-test-utils"
-version = "0.1.0"
-source = "git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77#0acc04638bb2be562c146c2480e6217eb572aa77"
+source = "git+https://github.com/dfinity/ic?rev=c905ede6e62f167994de24c8ccf7ee37a4d8ac67#c905ede6e62f167994de24c8ccf7ee37a4d8ac67"
 dependencies = [
  "bitcoin",
 ]
@@ -680,7 +675,7 @@ dependencies = [
 [[package]]
 name = "ic-btc-types"
 version = "0.1.0"
-source = "git+https://github.com/dfinity/ic?rev=8d413d09e36acd961608ed5665e318e34da7d85c#8d413d09e36acd961608ed5665e318e34da7d85c"
+source = "git+https://github.com/dfinity/ic?rev=c905ede6e62f167994de24c8ccf7ee37a4d8ac67#c905ede6e62f167994de24c8ccf7ee37a4d8ac67"
 dependencies = [
  "candid",
  "serde",
@@ -689,9 +684,9 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk"
-version = "0.5.6"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ebabbd2e082472e93928ec9725a5aeec4572284e07bf399f3e1eb6a358a4ba6"
+checksum = "2ebcbfc8818378990e9a79ee61a2de5d372c97db24a0c27c5f47b08c93786250"
 dependencies = [
  "candid",
  "cfg-if",
@@ -700,9 +695,9 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-macros"
-version = "0.5.6"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d453dcbe269b19ebd9b3a377819c9f32b3c5c99c3dd42bfd6789600aa77b510c"
+checksum = "feb7c9d8c91637e09b56c8c413b1892958cb15a6a5a1001870de658962bbf917"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -718,21 +713,6 @@ name = "ic-stable-structures"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8350199eb1cd4cbe548897008d701ee8cc03c3945d7a29b8d19454900ad86ca5"
-
-[[package]]
-name = "ic-types"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82e9cac29df1f2906137c327ed24dfc398460eda054abaa6107273c11afe6384"
-dependencies = [
- "crc32fast",
- "data-encoding",
- "hex",
- "serde",
- "serde_bytes",
- "sha2",
- "thiserror",
-]
 
 [[package]]
 name = "indexmap"
@@ -1301,7 +1281,7 @@ version = "0.1.0"
 dependencies = [
  "bitcoin",
  "candid",
- "ic-btc-test-utils 0.1.0 (git+https://github.com/dfinity/ic?rev=0acc04638bb2be562c146c2480e6217eb572aa77)",
+ "ic-btc-test-utils",
  "ic-cdk",
  "ic-cdk-macros",
  "serde",
@@ -1313,7 +1293,7 @@ version = "0.1.0"
 dependencies = [
  "bitcoin",
  "candid",
- "ic-btc-test-utils 0.1.0",
+ "ic-btc-test-utils",
  "ic-cdk",
  "ic-cdk-macros",
  "serde",
