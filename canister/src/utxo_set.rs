@@ -237,7 +237,8 @@ impl UtxoSet {
             }
 
             // Remove the input from the UTXOs. The input *must* exist in the UTXO set.
-            match self.utxos.remove(&(&input.previous_output).into()) {
+            let outpoint = (&input.previous_output).into();
+            match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
                     if let Ok(address) =
                         Address::from_script(&Script::from(txout.script_pubkey), self.network)
@@ -245,7 +246,7 @@ impl UtxoSet {
                         let address_utxo = AddressUtxo {
                             address: address.clone(),
                             height,
-                            outpoint: (&input.previous_output).into(),
+                            outpoint,
                         };
 
                         let found = self.address_utxos.remove(&address_utxo);
@@ -260,14 +261,12 @@ impl UtxoSet {
                         if txout.value != 0 {
                             let address_balance =
                                 self.balances.get(&address).unwrap_or_else(|| {
-                                    panic!("Address {} must exist in the balances map", address);
+                                    panic!("Address {} must exist in the balances map (trying to remove outpoint {:?})", address, input.previous_output);
                                 });
 
                             match address_balance - txout.value {
                                 // Remove the address from the map if balance is zero.
-                                0 => {
-                                    self.balances.remove(&address)
-                                }
+                                0 => self.balances.remove(&address),
                                 // Update the balance in the map.
                                 balance => self.balances.insert(address, balance).unwrap(),
                             };
@@ -275,7 +274,7 @@ impl UtxoSet {
                     }
                 }
                 None => {
-                    panic!("Outpoint {:?} not found.", input.previous_output);
+                    panic!("Outpoint {:?} not found.", outpoint);
                 }
             }
         }
