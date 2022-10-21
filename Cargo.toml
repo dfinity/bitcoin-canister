@@ -2,6 +2,7 @@
 
 members = [
     "canister",
-    "e2e-tests/management-canister-mock",
+    "e2e-tests/scenario-1",
+    "e2e-tests/scenario-2",
 ]
 
