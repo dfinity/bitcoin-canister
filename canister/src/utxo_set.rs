@@ -257,16 +257,21 @@ impl UtxoSet {
                         );
 
                         // Update the balance of the address.
-                        let address_balance = self.balances.get(&address).unwrap_or_else(|| {
-                            panic!("Address {} must exist in the balances map", address);
-                        });
+                        if txout.value != 0 {
+                            let address_balance =
+                                self.balances.get(&address).unwrap_or_else(|| {
+                                    panic!("Address {} must exist in the balances map", address);
+                                });
 
-                        match address_balance - txout.value {
-                            // Remove the address from the map if balance is zero.
-                            0 => self.balances.remove(&address),
-                            // Update the balance in the map.
-                            balance => self.balances.insert(address, balance).unwrap(),
-                        };
+                            match address_balance - txout.value {
+                                // Remove the address from the map if balance is zero.
+                                0 => {
+                                    self.balances.remove(&address)
+                                }
+                                // Update the balance in the map.
+                                balance => self.balances.insert(address, balance).unwrap(),
+                            };
+                        }
                     }
                 }
                 None => {
@@ -420,7 +425,7 @@ impl PartialEq for UtxoSet {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{random_p2pkh_address, TransactionBuilder};
+    use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{
         address_utxoset::AddressUtxoSet,
         types::{Network, OutPoint, Txid},
@@ -659,5 +664,46 @@ mod test {
         ingest_tx(&mut utxo_set, &tx_2);
         assert_eq!(utxo_set.balances.len(), 1);
         assert_eq!(utxo_set.balances.get(&address_2), Some(1000));
+    }
+
+    // An edge case where an address has a UTXO with zero value. The address starts with a
+    // positive balance, then all positive UTXOs are consumed, then the UTXO with zero value
+    // is consumed.
+    // This cannot happen on mainnet, but can and has happened on testnet.
+    #[test]
+    fn consuming_an_input_with_value_zero() {
+        let network = Network::Testnet;
+        let mut utxo_set = UtxoSet::new(network);
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+
+        let tx_1 = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .with_output(&address_1, 0) // an input with zero value
+            .build();
+
+        // Consume the first input in tx 1
+        let tx_2 = TransactionBuilder::new()
+            // Consume the positive UTXO
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 0,
+            })
+            // then consume the zero UTXO
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 1,
+            })
+            .with_output(&address_2, 1000)
+            .build();
+
+        let block = BlockBuilder::genesis()
+            .with_transaction(tx_1)
+            .with_transaction(tx_2)
+            .build();
+
+        assert_eq!(utxo_set.ingest_block(block), Slicing::Done);
+        assert_eq!(utxo_set.get_balance(&address_1), 0);
+        assert_eq!(utxo_set.get_balance(&address_2), 1_000);
     }
 }
