@@ -158,7 +158,7 @@ jobs:
           bash e2e-tests/scenario-1.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
