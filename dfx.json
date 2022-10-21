@@ -7,11 +7,17 @@
       "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
       "build": "./canister/build.sh"
     },
-    "management-canister-mock": {
+    "e2e-scenario-1": {
       "type": "rust",
-      "candid": "./e2e-tests/management-canister-mock/candid.did",
-      "package": "management-canister-mock",
-      "wasm": "./target/wasm32-unknown-unknown/release/management-canister-mock.wasm"
+      "candid": "./e2e-tests/scenario-1/candid.did",
+      "package": "scenario-1",
+      "wasm": "./target/wasm32-unknown-unknown/release/scenario-1.wasm"
+    },
+    "e2e-scenario-2": {
+      "type": "rust",
+      "candid": "./e2e-tests/scenario-2/candid.did",
+      "package": "scenario-2",
+      "wasm": "./target/wasm32-unknown-unknown/release/scenario-2.wasm"
     }
   },
   "defaults": {
