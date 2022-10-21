@@ -458,7 +458,7 @@ mod test {
 
         // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
         assert_eq!(
-            crate::get_balance(crate::types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address_1.to_string(),
                 min_confirmations: None
             }),
@@ -466,7 +466,7 @@ mod test {
         );
 
         assert_eq!(
-            crate::get_balance(crate::types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address_2.to_string(),
                 min_confirmations: None
             }),
@@ -522,7 +522,7 @@ mod test {
 
         // The response hasn't been fully processed yet, so the balance should still be zero.
         assert_eq!(
-            crate::get_balance(crate::types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: None
             }),
@@ -534,7 +534,7 @@ mod test {
 
         // Query the balance, validating the block was processed.
         assert_eq!(
-            crate::get_balance(crate::types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: None
             }),
