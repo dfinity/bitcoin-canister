@@ -125,7 +125,7 @@ jobs:
       env:
         SHELLCHECK_OPTS: -e SC1090 -e SC2119 -e SC1091
 
-  e2e-syncing:
+  e2e-scenario-1:
     runs-on: ubuntu-20.04
     needs: cargo-build
 
@@ -153,12 +153,12 @@ jobs:
           dfx cache install
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Run syncing test
+      - name: Run Scenario 1
         run: |
-          bash e2e-tests/syncing_test.sh
+          bash e2e-tests/scenario-1.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes

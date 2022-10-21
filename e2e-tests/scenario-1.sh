@@ -1,47 +1,22 @@
 #!/usr/bin/env bash
 set -Eexuo pipefail
 
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/utils.sh"
+
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT
 
-# Waits until the stable chain of the bitcoin canister has reached a certain height.
-wait_until_stable_height () {
-  HEIGHT=$1
-  ATTEMPTS=$2
-
-  BITCOIN_CANISTER_ID=$(dfx canister id bitcoin)
-
-  while
-    METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$BITCOIN_CANISTER_ID")
-    ! [[ "$METRICS" == *"stable_height $HEIGHT"* ]]; do
-      ((ATTEMPTS-=1))
-
-      if [[ $ATTEMPTS -eq 0 ]]; then
-	echo "TIMED OUT"
-	exit 1
-      fi
-
-      sleep 1
-  done
-}
-
-# Returns the number of UTXOs found in a response.
-num_utxos () {
-  UTXOS=$1
-  # Count the occurrences of a substring of a UTXO.
-  echo "$UTXOS" | grep -o "record { height = " | wc -l | xargs echo
-}
-
 dfx start --background --clean
 
-# Deploy a mock of the management canister that returns fake blocks.
-dfx deploy --no-wallet management-canister-mock
+# Deploy the canister that returns the blocks for scenario 1.
+dfx deploy --no-wallet e2e-scenario-1
 
-# Deploy the bitcoin canister, setting the blocks_source to be the mock above.
+# Deploy the bitcoin canister, setting the blocks_source to be the source above.
 dfx deploy --no-wallet bitcoin --argument "(record {
   stability_threshold = 2;
   network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id management-canister-mock)\"
+  blocks_source = principal \"$(dfx canister id e2e-scenario-1)\"
 })"
 
 # Wait until the ingestion of stable blocks is complete.
