@@ -169,23 +169,24 @@ fn get_utxos_from_chain(
 
     // Attempt to retrieve UTXOs up to the given limit + 1. The additional UTXO, if it exists,
     // provides information needed for pagination.
-    let utxos_to_take = match utxo_limit.overflowing_add(1) {
-        (utxos_to_take, overflow) => {
-            assert!(!overflow, "overflow when computing utxos to take");
-            utxos_to_take
-        }
-    };
+    let (utxos_to_take, overflow) = utxo_limit.overflowing_add(1);
+    assert!(!overflow, "overflow when computing utxos to take");
 
     let mut utxos: Vec<_> = address_utxos
         .into_iter(offset)
         .take(utxos_to_take)
-        .map(|utxo| PublicUtxo {
-            value: utxo.value,
-            height: utxo.height,
-            outpoint: ic_btc_types::OutPoint {
-                vout: utxo.outpoint.vout,
-                txid: utxo.outpoint.txid.to_vec(),
-            },
+        .map(|utxo| {
+            // Convert UTXOs to their public representation.
+            // The way UTXOs are represented in the response is different from how it's represented
+            // internally because the internal representation of UTXOs offer more type-checks.
+            PublicUtxo {
+                value: utxo.value,
+                height: utxo.height,
+                outpoint: ic_btc_types::OutPoint {
+                    vout: utxo.outpoint.vout,
+                    txid: utxo.outpoint.txid.to_vec(),
+                },
+            }
         })
         .collect();
 

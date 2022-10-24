@@ -79,7 +79,7 @@ impl<'a> AddressUtxoSet<'a> {
             .added_utxos
             .into_iter()
             .filter(move |utxo| match &offset {
-                Some(offset) => utxo >= &offset,
+                Some(offset) => utxo >= offset,
                 None => true,
             });
 

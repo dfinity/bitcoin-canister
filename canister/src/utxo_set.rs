@@ -130,7 +130,7 @@ impl UtxoSet {
                 address.to_bytes().to_vec(),
                 offset
                     .as_ref()
-                    .map(|u| (u.height, u.outpoint.clone().into()).to_bytes()),
+                    .map(|u| (u.height, u.outpoint.clone()).to_bytes()),
             )
             .map(move |(address_utxo, _)| {
                 let (tx_out, _) = self.get_utxo(&address_utxo.outpoint).unwrap_or_else(|| {
