@@ -165,6 +165,10 @@ fn get_utxos_from_chain(
     }
     stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 
+    let ins_start = performance_counter();
+
+    // Attempt to retrieve UTXOs up to the given limit + 1. The additional UTXO, if it exists,
+    // provides information needed for pagination.
     let utxos_to_take = match utxo_limit.overflowing_add(1) {
         (utxos_to_take, overflow) => {
             assert!(!overflow, "overflow when computing utxos to take");
@@ -172,7 +176,6 @@ fn get_utxos_from_chain(
         }
     };
 
-    let ins_start = performance_counter();
     let mut utxos: Vec<_> = address_utxos
         .into_iter(offset)
         .take(utxos_to_take)
@@ -186,9 +189,8 @@ fn get_utxos_from_chain(
         })
         .collect();
 
-    // There's some limit, so use it to chunk up the UTXOs if they don't fit.
+    // If there are remaining UTXOs, then add to the response the pagination offset.
     let rest = utxos.split_off(utxos.len().min(utxo_limit as usize));
-
     let next_page = rest.first().map(|next| {
         Page {
             tip_block_hash,
@@ -200,6 +202,7 @@ fn get_utxos_from_chain(
 
     stats.ins_build_utxos_vec = performance_counter() - ins_start;
     stats.ins_total = performance_counter();
+
     Ok((
         GetUtxosResponse {
             utxos,
