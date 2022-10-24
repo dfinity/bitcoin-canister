@@ -19,10 +19,11 @@ use crate::{
     state::State,
     types::{Block, InitPayload, Network},
 };
-pub use api::get_balance;
-pub use api::get_current_fee_percentiles;
-pub use api::get_utxos;
 pub use heartbeat::heartbeat;
+use ic_btc_types::{
+    GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
+    MillisatoshiPerByte, Satoshi,
+};
 use ic_stable_structures::Memory;
 use std::cell::RefCell;
 use std::convert::TryInto;
@@ -77,6 +78,23 @@ pub fn init(payload: InitPayload) {
     }
 }
 
+pub fn get_current_fee_percentiles(
+    request: GetCurrentFeePercentilesRequest,
+) -> Vec<MillisatoshiPerByte> {
+    verify_network(request.network.into());
+    api::get_current_fee_percentiles()
+}
+
+pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+    verify_network(request.network.into());
+    api::get_balance(request.into())
+}
+
+pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
+    verify_network(request.network.into());
+    api::get_utxos(request.into())
+}
+
 pub fn pre_upgrade() {
     // Serialize the state.
     let mut state_bytes = vec![];
@@ -113,10 +131,20 @@ pub fn genesis_block(network: Network) -> Block {
     Block::new(bitcoin::blockdata::constants::genesis_block(network.into()))
 }
 
+// Verifies that the network is equal to the one maintained by this canister's state.
+fn verify_network(network: Network) {
+    with_state(|state| {
+        if state.network() != network {
+            panic!("Network must be {}. Found {}", state.network(), network);
+        }
+    });
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{test_utils::build_regtest_chain, types::Network};
+    use ic_btc_types::NetworkInRequest;
     use proptest::prelude::*;
 
     proptest! {
@@ -182,5 +210,48 @@ mod test {
             // The new and old states should be equivalent.
             with_state(|new_state| assert!(new_state == &old_state));
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_balance_correct_network() {
+        init(InitPayload {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            blocks_source: None,
+        });
+        get_balance(GetBalanceRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Testnet,
+            min_confirmations: None,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_utxos_correct_network() {
+        init(InitPayload {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            blocks_source: None,
+        });
+        get_utxos(GetUtxosRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Testnet,
+            filter: None,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_current_fee_percentiles_correct_network() {
+        init(InitPayload {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            blocks_source: None,
+        });
+        get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
+            network: NetworkInRequest::Testnet,
+        });
     }
 }
