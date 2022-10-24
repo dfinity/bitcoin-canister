@@ -3,8 +3,7 @@ use crate::{
     unstable_blocks::UnstableBlocks,
     UtxoSet,
 };
-use std::collections::BTreeSet;
-use std::iter::Peekable;
+use std::{collections::BTreeSet, iter::Peekable, sync::Arc};
 
 /// A struct that tracks the UTXO set of a given address.
 ///
@@ -72,27 +71,43 @@ impl<'a> AddressUtxoSet<'a> {
         }
     }
 
+    /// Returns an iterator with the address's UTXOs starting from the given (optional) offset.
+    /// UTXOs are returned in descending order by height.
     pub fn into_iter(self, offset: Option<Utxo>) -> impl Iterator<Item = Utxo> + 'a {
-        let stable_utxos = self.full_utxo_set.get_address_utxos(&self.address, &offset);
+        // This method returns an iterator with closures, and for that to work closures must take
+        // ownership of whatever data they access. Here we move some data out of `self` so they can
+        // be owned by the closures that use them.
+        let removed_outpoints = Arc::new(self.removed_outpoints);
+        // A copy of removed outpoints to be used in a second closure.
+        let removed_outpoints_2 = Arc::clone(&removed_outpoints);
+        let full_utxo_set = self.full_utxo_set;
+
+        let stable_utxos = self
+            .full_utxo_set
+            .get_address_outpoints(&self.address, &offset)
+            .filter(move |outpoint| !removed_outpoints.contains(outpoint))
+            .map(move |outpoint| {
+                // Look up the UTXO corresponding to the given outpoint.
+                let (tx_out, height) = full_utxo_set.get_utxo(&outpoint).unwrap_or_else(|| {
+                    panic!("Could not find UTXO with outpoint: {:?}", outpoint);
+                });
+                Utxo {
+                    outpoint,
+                    height,
+                    value: tx_out.value,
+                }
+            });
 
         let unstable_utxos = self
             .added_utxos
             .into_iter()
+            .filter(move |utxo| !removed_outpoints_2.contains(&utxo.outpoint))
             .filter(move |utxo| match &offset {
                 Some(offset) => utxo >= offset,
                 None => true,
             });
 
-        let iter = MultiIter::new(stable_utxos, unstable_utxos);
-
-        let removed_outpoints = self.removed_outpoints;
-        iter.into_iter().filter_map(move |utxo| {
-            if removed_outpoints.contains(&utxo.outpoint) {
-                return None;
-            }
-
-            Some(utxo)
-        })
+        MultiIter::new(stable_utxos, unstable_utxos)
     }
 }
 

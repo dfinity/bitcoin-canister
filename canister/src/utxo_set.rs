@@ -118,13 +118,13 @@ impl UtxoSet {
         self.utxos.get(outpoint)
     }
 
-    /// Returns an iterator with the UTXOs of the given address.
+    /// Returns an iterator with the outpoints of the given address.
     /// An optional offset can be specified for pagination.
-    pub fn get_address_utxos(
+    pub fn get_address_outpoints(
         &self,
         address: &Address,
         offset: &Option<Utxo>,
-    ) -> impl Iterator<Item = Utxo> + '_ {
+    ) -> impl Iterator<Item = OutPoint> + '_ {
         self.address_utxos
             .range(
                 address.to_bytes().to_vec(),
@@ -132,16 +132,7 @@ impl UtxoSet {
                     .as_ref()
                     .map(|u| (u.height, u.outpoint.clone()).to_bytes()),
             )
-            .map(move |(address_utxo, _)| {
-                let (tx_out, _) = self.get_utxo(&address_utxo.outpoint).unwrap_or_else(|| {
-                    panic!("Could find UTXO with outpoint: {:?}", address_utxo.outpoint);
-                });
-                Utxo {
-                    outpoint: address_utxo.outpoint,
-                    height: address_utxo.height,
-                    value: tx_out.value,
-                }
-            })
+            .map(|(address_utxo, _)| address_utxo.outpoint)
     }
 
     /// Returns the number of UTXOs in the set.
