@@ -27,6 +27,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 wait_until_main_chain_height 4 60
 
 BALANCE=$(dfx canister call bitcoin get_balance '(record {
+  network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
@@ -40,6 +41,7 @@ fi
 # this command would print thousands of UTXOs.
 set +x
 UTXOS=$(dfx canister call bitcoin get_utxos '(record {
+  network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
