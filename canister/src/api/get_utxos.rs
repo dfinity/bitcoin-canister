@@ -178,7 +178,7 @@ fn get_utxos_from_chain(
         .map(|utxo| {
             // Convert UTXOs to their public representation.
             // The way UTXOs are represented in the response is different from how it's represented
-            // internally because the internal representation of UTXOs offer more type-checks.
+            // internally because the internal representation of UTXOs offers more type-checks.
             PublicUtxo {
                 value: utxo.value,
                 height: utxo.height,
