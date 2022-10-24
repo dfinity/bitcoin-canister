@@ -1,11 +1,9 @@
 use crate::{
-    types::{Address, Block, OutPoint, Storable, TxOut},
+    types::{Address, Block, OutPoint, Utxo},
     unstable_blocks::UnstableBlocks,
     UtxoSet,
 };
-use bitcoin::Script;
-use ic_btc_types::{Height, Utxo};
-use std::collections::{BTreeMap, BTreeSet};
+use std::{collections::BTreeSet, iter::Peekable, sync::Arc};
 
 /// A struct that tracks the UTXO set of a given address.
 ///
@@ -22,10 +20,10 @@ pub struct AddressUtxoSet<'a> {
     unstable_blocks: &'a UnstableBlocks,
 
     // Added UTXOs that are not present in the underlying UTXO set.
-    added_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
+    added_utxos: BTreeSet<Utxo>,
 
-    // Removed UTXOs that are still present in the underlying UTXO set.
-    removed_utxos: BTreeMap<OutPoint, (TxOut, Height)>,
+    // Outpoints of the removed UTXOs that are still present in the underlying UTXO set.
+    removed_outpoints: BTreeSet<OutPoint>,
 }
 
 impl<'a> AddressUtxoSet<'a> {
@@ -39,8 +37,8 @@ impl<'a> AddressUtxoSet<'a> {
             address,
             full_utxo_set,
             unstable_blocks,
-            removed_utxos: BTreeMap::new(),
-            added_utxos: BTreeMap::new(),
+            removed_outpoints: BTreeSet::new(),
+            added_utxos: BTreeSet::new(),
         }
     }
 
@@ -49,17 +47,7 @@ impl<'a> AddressUtxoSet<'a> {
             .unstable_blocks
             .get_removed_outpoints(&block.block_hash().to_vec(), &self.address)
         {
-            let (txout, height) = self
-                .unstable_blocks
-                .get_tx_out(outpoint)
-                .unwrap_or_else(|| {
-                    panic!(
-                        "tx out for outpoint {:?} must exist in removed outpoints",
-                        outpoint
-                    );
-                });
-            self.removed_utxos
-                .insert(outpoint.clone(), (txout.clone(), height));
+            self.removed_outpoints.insert(outpoint.clone());
         }
 
         for outpoint in self
@@ -75,89 +63,89 @@ impl<'a> AddressUtxoSet<'a> {
                         outpoint
                     );
                 });
-            self.added_utxos
-                .insert(outpoint.clone(), (txout.clone(), height));
+            self.added_utxos.insert(Utxo {
+                outpoint: outpoint.clone(),
+                value: txout.value,
+                height,
+            });
         }
     }
 
-    pub fn into_vec(self, offset: Option<(Height, OutPoint)>) -> Vec<Utxo> {
-        // Retrieve all the UTXOs of the address from the underlying UTXO set.
-        let mut set: BTreeSet<_> = self
+    /// Returns an iterator with the address's UTXOs starting from the given (optional) offset.
+    /// UTXOs are returned in descending order by height.
+    pub fn into_iter(self, offset: Option<Utxo>) -> impl Iterator<Item = Utxo> + 'a {
+        // This method returns an iterator with closures, and for that to work closures must take
+        // ownership of whatever data they access. Here we move some data out of `self` so they can
+        // be owned by the closures that use them.
+        let removed_outpoints = Arc::new(self.removed_outpoints);
+        // A copy of removed outpoints to be used in a second closure.
+        let removed_outpoints_2 = Arc::clone(&removed_outpoints);
+        let full_utxo_set = self.full_utxo_set;
+
+        let stable_utxos = self
             .full_utxo_set
-            .get_address_utxos(&self.address, &offset)
-            .filter_map(|(address_utxo, _)| {
-                let outpoint = address_utxo.outpoint;
-                // Skip this outpoint if it has been removed in an unstable block.
-                if self.removed_utxos.contains_key(&outpoint) {
-                    return None;
+            .get_address_outpoints(&self.address, &offset)
+            .filter(move |outpoint| !removed_outpoints.contains(outpoint))
+            .map(move |outpoint| {
+                // Look up the UTXO corresponding to the given outpoint.
+                let (tx_out, height) = full_utxo_set.get_utxo(&outpoint).unwrap_or_else(|| {
+                    panic!("Could not find UTXO with outpoint: {:?}", outpoint);
+                });
+                Utxo {
+                    outpoint,
+                    height,
+                    value: tx_out.value,
                 }
+            });
 
-                let (txout, height) = self
-                    .full_utxo_set
-                    .get_utxo(&outpoint)
-                    .expect("outpoint must exist");
-
-                Some(((height, outpoint).to_bytes(), txout))
-            })
-            .collect();
-
-        let added_utxos: BTreeMap<_, _> = self
+        let unstable_utxos = self
             .added_utxos
-            .clone()
             .into_iter()
-            .filter(|(outpoint, _)| !self.removed_utxos.contains_key(outpoint))
-            .collect();
+            .filter(move |utxo| !removed_outpoints_2.contains(&utxo.outpoint))
+            .filter(move |utxo| match &offset {
+                Some(offset) => utxo >= offset,
+                None => true,
+            });
 
-        // Include all the newly added UTXOs for that address that are "after" the optional offset.
-        //
-        // First, the UTXOs are encoded in a way that's consistent with the stable UTXO set
-        // to preserve the ordering.
-        let removed_utxos = self.removed_utxos;
-        let mut added_utxos_encoded: BTreeMap<_, _> = added_utxos
-            .into_iter()
-            .filter_map(|(outpoint, (txout, height))| {
-                // Filter out utxos that were removed.
-                if removed_utxos.contains_key(&outpoint) {
-                    return None;
-                }
+        MultiIter::new(stable_utxos, unstable_utxos)
+    }
+}
 
-                Some(((height, outpoint).to_bytes(), txout))
-            })
-            .collect();
+/// An iterator that consumes multiple iterators and returns their items interleaved in sorted order.
+/// The iterators themselves must be sorted.
+pub struct MultiIter<T, A: Iterator<Item = T>, B: Iterator<Item = T>> {
+    a: Peekable<A>,
+    b: Peekable<B>,
+}
 
-        // If an offset is specified, then discard the UTXOs before the offset.
-        let added_utxos_encoded = match offset {
-            Some(offset) => added_utxos_encoded.split_off(&offset.to_bytes()),
-            None => added_utxos_encoded,
-        };
+impl<T, A: Iterator<Item = T>, B: Iterator<Item = T>> MultiIter<T, A, B> {
+    fn new(a: A, b: B) -> Self {
+        Self {
+            a: a.peekable(),
+            b: b.peekable(),
+        }
+    }
+}
 
-        for (height_and_outpoint, txout) in added_utxos_encoded {
-            if let Ok(address) = Address::from_script(
-                &Script::from(txout.script_pubkey.clone()),
-                self.full_utxo_set.network(),
-            ) {
-                if address == self.address {
-                    assert!(
-                        set.insert((height_and_outpoint, txout)),
-                        "Cannot overwrite existing outpoint"
-                    );
+impl<T: PartialOrd, A: Iterator<Item = T>, B: Iterator<Item = T>> Iterator for MultiIter<T, A, B> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next_a = self.a.peek();
+        let next_b = self.b.peek();
+
+        match (next_a, next_b) {
+            (Some(next_a), Some(next_b)) => {
+                if next_a < next_b {
+                    self.a.next()
+                } else {
+                    self.b.next()
                 }
             }
+            (Some(_), None) => self.a.next(),
+            (None, Some(_)) => self.b.next(),
+            (None, None) => None,
         }
-
-        set.into_iter()
-            .map(|(height_and_outpoint, txout)| {
-                let (height, outpoint) = <(Height, OutPoint)>::from_bytes(height_and_outpoint);
-                Utxo {
-                    outpoint: ic_btc_types::OutPoint {
-                        txid: outpoint.txid.to_vec(),
-                        vout: outpoint.vout,
-                    },
-                    value: txout.value,
-                    height,
-                }
-            })
-            .collect()
     }
 }
 
@@ -169,7 +157,6 @@ mod test {
         types::{Network, OutPoint},
         unstable_blocks,
     };
-    use ic_btc_types::OutPoint as PublicOutPoint;
 
     #[test]
     fn add_tx_to_empty_utxo() {
@@ -195,10 +182,10 @@ mod test {
 
         // Address should have that data.
         assert_eq!(
-            address_utxo_set.into_vec(None),
+            address_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
-                outpoint: PublicOutPoint {
-                    txid: coinbase_tx.txid().to_vec(),
+                outpoint: OutPoint {
+                    txid: coinbase_tx.txid(),
                     vout: 0
                 },
                 value: 1000,
@@ -239,17 +226,17 @@ mod test {
         address_utxo_set.apply_block(&block_0);
         address_utxo_set.apply_block(&block_1);
 
-        assert_eq!(address_utxo_set.into_vec(None), vec![]);
+        assert_eq!(address_utxo_set.into_iter(None).collect::<Vec<_>>(), vec![]);
 
         let mut address_2_utxo_set = AddressUtxoSet::new(address_2, &utxo_set, &unstable_blocks);
         address_2_utxo_set.apply_block(&block_0);
         address_2_utxo_set.apply_block(&block_1);
 
         assert_eq!(
-            address_2_utxo_set.into_vec(None),
+            address_2_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
-                outpoint: PublicOutPoint {
-                    txid: tx.txid().to_vec(),
+                outpoint: OutPoint {
+                    txid: tx.txid(),
                     vout: 0
                 },
                 value: 1000,
@@ -303,10 +290,10 @@ mod test {
         // Address 1 should have one UTXO corresponding to the remaining amount
         // it gave back to itself.
         assert_eq!(
-            address_1_utxo_set.into_vec(None),
+            address_1_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
-                outpoint: PublicOutPoint {
-                    txid: tx.txid().to_vec(),
+                outpoint: OutPoint {
+                    txid: tx.txid(),
                     vout: 1
                 },
                 value: 400,
@@ -316,10 +303,10 @@ mod test {
 
         // Address 2 should receive 1500 Satoshi
         assert_eq!(
-            address_2_utxo_set.into_vec(None),
+            address_2_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
-                outpoint: PublicOutPoint {
-                    txid: tx.txid().to_vec(),
+                outpoint: OutPoint {
+                    txid: tx.txid(),
                     vout: 0
                 },
                 value: 1500,
