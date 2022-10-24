@@ -1075,7 +1075,7 @@ mod test {
             }
 
             // Get UTXO set without any pagination...
-            let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, MAX_UTXOS_PER_RESPONSE) // todo: make this u64::max?
+            let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, MAX_UTXOS_PER_RESPONSE)
                 .unwrap().0
                 .utxos;
 
