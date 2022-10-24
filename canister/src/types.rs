@@ -3,7 +3,11 @@ use bitcoin::{
     hashes::Hash, Address as BitcoinAddress, Block as BitcoinBlock, BlockHash as BitcoinBlockHash,
     Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
-use ic_btc_types::{Address as AddressStr, Height, Satoshi, UtxosFilter};
+use ic_btc_types::{
+    Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
+    GetUtxosRequest as PublicGetUtxosRequest, Height, NetworkInRequest, Satoshi, UtxosFilter,
+    UtxosFilterInRequest,
+};
 use ic_cdk::export::{candid::CandidType, Principal};
 use ic_stable_structures::Storable as StableStructuresStorable;
 use serde::{Deserialize, Serialize};
@@ -183,6 +187,32 @@ impl Into<BitcoinNetwork> for Network {
             Network::Mainnet => BitcoinNetwork::Bitcoin,
             Network::Testnet => BitcoinNetwork::Testnet,
             Network::Regtest => BitcoinNetwork::Regtest,
+        }
+    }
+}
+
+impl From<NetworkInRequest> for Network {
+    fn from(network: NetworkInRequest) -> Network {
+        match network {
+            NetworkInRequest::Mainnet | NetworkInRequest::mainnet => Network::Mainnet,
+            NetworkInRequest::Testnet | NetworkInRequest::testnet => Network::Testnet,
+            NetworkInRequest::Regtest | NetworkInRequest::regtest => Network::Regtest,
+        }
+    }
+}
+
+impl std::fmt::Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Mainnet => {
+                write!(f, "mainnet")
+            }
+            Self::Testnet => {
+                write!(f, "testnet")
+            }
+            Self::Regtest => {
+                write!(f, "regtest")
+            }
         }
     }
 }
@@ -536,11 +566,37 @@ pub struct GetBalanceRequest {
     pub min_confirmations: Option<u32>,
 }
 
+impl From<PublicGetBalanceRequest> for GetBalanceRequest {
+    fn from(request: PublicGetBalanceRequest) -> Self {
+        Self {
+            address: request.address,
+            min_confirmations: request.min_confirmations,
+        }
+    }
+}
+
 /// A request for getting the UTXOs for a given address.
 #[derive(CandidType, Debug, Deserialize, PartialEq)]
 pub struct GetUtxosRequest {
     pub address: AddressStr,
     pub filter: Option<UtxosFilter>,
+}
+
+impl From<PublicGetUtxosRequest> for GetUtxosRequest {
+    fn from(request: PublicGetUtxosRequest) -> Self {
+        Self {
+            address: request.address,
+            filter: request.filter.map(|f| match f {
+                UtxosFilterInRequest::MinConfirmations(min_confirmations)
+                | UtxosFilterInRequest::min_confirmations(min_confirmations) => {
+                    UtxosFilter::MinConfirmations(min_confirmations)
+                }
+                UtxosFilterInRequest::Page(page) | UtxosFilterInRequest::page(page) => {
+                    UtxosFilter::Page(page)
+                }
+            }),
+        }
+    }
 }
 
 type HeaderField = (String, String);

@@ -28,11 +28,13 @@ type init_payload = record {
 };
 
 type get_balance_request = record {
+  network: network;
   address : address;
   min_confirmations: opt nat32;
 };
 
 type get_utxos_request = record {
+  network: network;
   address : address;
   filter: opt variant {
     min_confirmations: nat32;
@@ -47,6 +49,10 @@ type get_utxos_response = record {
   next_page: opt blob;
 };
 
+type get_current_fee_percentiles_request = record {
+  network: network;
+};
+
 type millisatoshi_per_byte = nat64;
 
 service bitcoin: (init_payload) -> {
@@ -54,5 +60,5 @@ service bitcoin: (init_payload) -> {
   
   get_utxos: (get_utxos_request) -> (get_utxos_response);
 
-  get_current_fee_percentiles: () -> (vec millisatoshi_per_byte);
+  get_current_fee_percentiles: (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
 }

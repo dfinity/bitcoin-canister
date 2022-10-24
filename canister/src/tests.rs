@@ -1,5 +1,6 @@
 use crate::{
-    genesis_block, get_balance, get_utxos, heartbeat, runtime,
+    api::{get_balance, get_utxos},
+    genesis_block, heartbeat, runtime,
     state::main_chain_height,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
@@ -487,7 +488,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
     // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
     assert_eq!(
-        crate::get_balance(crate::types::GetBalanceRequest {
+        get_balance(crate::types::GetBalanceRequest {
             address: address_1.to_string(),
             min_confirmations: None
         }),
@@ -495,7 +496,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
     );
 
     assert_eq!(
-        crate::get_balance(crate::types::GetBalanceRequest {
+        get_balance(crate::types::GetBalanceRequest {
             address: address_2.to_string(),
             min_confirmations: None
         }),
