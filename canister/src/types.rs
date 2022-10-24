@@ -3,13 +3,13 @@ use bitcoin::{
     hashes::Hash, Address as BitcoinAddress, Block as BitcoinBlock, BlockHash as BitcoinBlockHash,
     Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
-use ic_btc_types::{Address as AddressStr, Height, UtxosFilter};
+use ic_btc_types::{Address as AddressStr, Height, Satoshi, UtxosFilter};
 use ic_cdk::export::{candid::CandidType, Principal};
 use ic_stable_structures::Storable as StableStructuresStorable;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
-use std::{convert::TryInto, str::FromStr};
+use std::{cmp::Ordering, convert::TryInto, str::FromStr};
 
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
@@ -117,7 +117,6 @@ impl From<Transaction> for bitcoin::Transaction {
 }
 
 /// A reference to a transaction output.
-//#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct OutPoint {
     pub txid: Txid,
@@ -567,6 +566,84 @@ pub struct HttpResponse {
 pub enum Slicing<T> {
     Paused(T),
     Done,
+}
+
+/// An unspent transaction output.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Utxo {
+    pub height: u32,
+    pub outpoint: OutPoint,
+    pub value: Satoshi,
+}
+
+impl Ord for Utxo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Sort by height in descending order.
+        match self.height.cmp(&other.height) {
+            Ordering::Less => Ordering::Greater,
+            Ordering::Greater => Ordering::Less,
+            // Then sort by outpoint.
+            Ordering::Equal => match self.outpoint.cmp(&other.outpoint) {
+                // Then by value.
+                Ordering::Equal => self.value.cmp(&other.value),
+                other => other,
+            },
+        }
+    }
+}
+
+impl PartialOrd for Utxo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[test]
+fn test_utxo_ordering() {
+    let a = Utxo {
+        height: 1,
+        outpoint: OutPoint {
+            txid: Txid::from(vec![]),
+            vout: 0,
+        },
+        value: 123,
+    };
+
+    let b = Utxo {
+        height: 2,
+        outpoint: OutPoint {
+            txid: Txid::from(vec![]),
+            vout: 0,
+        },
+        value: 123,
+    };
+
+    let c = Utxo {
+        height: 2,
+        outpoint: OutPoint {
+            txid: Txid::from(vec![1]),
+            vout: 0,
+        },
+        value: 123,
+    };
+
+    let d = Utxo {
+        height: 2,
+        outpoint: OutPoint {
+            txid: Txid::from(vec![1]),
+            vout: 0,
+        },
+        value: 123,
+    };
+
+    assert!(a > b);
+    assert!(a > c);
+    assert!(b < a);
+    assert!(b < c);
+    assert!(c > b);
+    assert!(c == d);
+    assert!(c <= d);
+    assert!(c >= d);
 }
 
 #[test]

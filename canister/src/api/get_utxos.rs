@@ -1,10 +1,10 @@
 use crate::{
     blocktree::BlockChain,
     runtime::{performance_counter, print},
-    types::{Address, GetUtxosRequest, OutPoint, Page, Txid},
+    types::{Address, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, with_state, State,
 };
-use ic_btc_types::{GetUtxosError, GetUtxosResponse, Height, UtxosFilter};
+use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use serde_bytes::ByteBuf;
 use std::str::FromStr;
 
@@ -39,13 +39,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
         match &request.filter {
             None => {
                 // No filter is specified. Return all UTXOs for the address.
-                get_utxos_internal(
-                    state,
-                    &request.address,
-                    0,
-                    None,
-                    Some(MAX_UTXOS_PER_RESPONSE),
-                )
+                get_utxos_internal(state, &request.address, 0, None, MAX_UTXOS_PER_RESPONSE)
             }
             Some(UtxosFilter::MinConfirmations(min_confirmations)) => {
                 // Return UTXOs with the requested number of confirmations.
@@ -54,7 +48,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
                     &request.address,
                     *min_confirmations,
                     None,
-                    Some(MAX_UTXOS_PER_RESPONSE),
+                    MAX_UTXOS_PER_RESPONSE,
                 )
             }
             Some(UtxosFilter::Page(page)) => get_utxos_internal(
@@ -62,7 +56,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
                 &request.address,
                 0,
                 Some(page.to_vec()),
-                Some(MAX_UTXOS_PER_RESPONSE),
+                MAX_UTXOS_PER_RESPONSE,
             ),
         }
     })
@@ -90,7 +84,7 @@ fn get_utxos_internal(
     address: &str,
     min_confirmations: u32,
     page: Option<Vec<u8>>,
-    utxo_limit: Option<usize>,
+    utxo_limit: usize,
 ) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
     match page {
         // A page was provided in the request, so we should use it as a basis
@@ -111,7 +105,11 @@ fn get_utxos_internal(
                 address,
                 min_confirmations,
                 chain,
-                Some((height, outpoint)),
+                Some(Utxo {
+                    height,
+                    outpoint,
+                    value: 0,
+                }),
                 utxo_limit,
             )
         }
@@ -128,8 +126,8 @@ fn get_utxos_from_chain(
     address: &str,
     min_confirmations: u32,
     chain: BlockChain,
-    offset: Option<(Height, OutPoint)>,
-    utxo_limit: Option<usize>,
+    offset: Option<Utxo>,
+    utxo_limit: usize,
 ) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
     let mut stats = Stats::default();
 
@@ -167,35 +165,39 @@ fn get_utxos_from_chain(
     }
     stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 
-    let ins_start = performance_counter();
-    let all_utxos = address_utxos.into_vec(offset);
-    let mut next_page = None;
-
-    let utxos = match utxo_limit {
-        // No specific limit set, we should return all utxos.
-        None => all_utxos,
-        // There's some limit, so use it to chunk up the UTXOs if they don't fit.
-        Some(utxo_limit) => {
-            let (utxos_to_return, rest) =
-                all_utxos.split_at(all_utxos.len().min(utxo_limit as usize));
-
-            if !rest.is_empty() {
-                next_page = Some(
-                    Page {
-                        tip_block_hash,
-                        height: rest[0].height,
-                        outpoint: OutPoint::new(
-                            Txid::from(rest[0].outpoint.txid.clone()),
-                            rest[0].outpoint.vout,
-                        ),
-                    }
-                    .to_bytes(),
-                );
-            }
-
-            utxos_to_return.to_vec()
+    let utxos_to_take = match utxo_limit.overflowing_add(1) {
+        (utxos_to_take, overflow) => {
+            assert!(!overflow, "overflow when computing utxos to take");
+            utxos_to_take
         }
     };
+
+    let ins_start = performance_counter();
+    let mut utxos: Vec<_> = address_utxos
+        .into_iter(offset)
+        .take(utxos_to_take)
+        .map(|utxo| PublicUtxo {
+            value: utxo.value,
+            height: utxo.height,
+            outpoint: ic_btc_types::OutPoint {
+                vout: utxo.outpoint.vout,
+                txid: utxo.outpoint.txid.to_vec(),
+            },
+        })
+        .collect();
+
+    // There's some limit, so use it to chunk up the UTXOs if they don't fit.
+    let rest = utxos.split_off(utxos.len().min(utxo_limit as usize));
+
+    let next_page = rest.first().map(|next| {
+        Page {
+            tip_block_hash,
+            height: next.height,
+            outpoint: OutPoint::new(Txid::from(next.outpoint.txid.clone()), next.outpoint.vout),
+        }
+        .to_bytes()
+    });
+
     stats.ins_build_utxos_vec = performance_counter() - ins_start;
     stats.ins_total = performance_counter();
     Ok((
@@ -910,9 +912,15 @@ mod test {
 
             // Address 1 should have no UTXOs at zero confirmations.
             assert_eq!(
-                get_utxos_internal(&state, &address_1.to_string(), 0, None, None)
-                    .unwrap()
-                    .0,
+                get_utxos_internal(
+                    &state,
+                    &address_1.to_string(),
+                    0,
+                    None,
+                    MAX_UTXOS_PER_RESPONSE
+                )
+                .unwrap()
+                .0,
                 GetUtxosResponse {
                     utxos: vec![],
                     tip_block_hash: block_1.block_hash().to_vec(),
@@ -947,10 +955,16 @@ mod test {
             let state = State::new(2, *network, block_0.clone());
             let tip_block_hash = block_0.block_hash();
 
-            let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, None)
-                .unwrap()
-                .0
-                .utxos;
+            let utxo_set = get_utxos_internal(
+                &state,
+                &address.to_string(),
+                0,
+                None,
+                MAX_UTXOS_PER_RESPONSE,
+            )
+            .unwrap()
+            .0
+            .utxos;
 
             // Only some UTXOs can be included given that we use a utxo limit.
             let response = get_utxos_internal(
@@ -959,7 +973,7 @@ mod test {
                 0,
                 None,
                 // Allow 3 UTXOs to be returned.
-                Some(3),
+                3,
             )
             .unwrap()
             .0;
@@ -977,7 +991,7 @@ mod test {
                 0,
                 None,
                 // Allow 4 UTXOs to be returned.
-                Some(4),
+                4,
             )
             .unwrap()
             .0;
@@ -989,7 +1003,7 @@ mod test {
             assert!(response.next_page.is_some());
 
             // A very big limit will result in the same as requesting UTXOs without any limit.
-            let response = get_utxos_internal(&state, &address.to_string(), 0, None, Some(1000))
+            let response = get_utxos_internal(&state, &address.to_string(), 0, None, 1000)
                 .unwrap()
                 .0;
 
@@ -1057,7 +1071,7 @@ mod test {
             }
 
             // Get UTXO set without any pagination...
-            let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, None)
+            let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, MAX_UTXOS_PER_RESPONSE) // todo: make this u64::max?
                 .unwrap().0
                 .utxos;
 
@@ -1071,7 +1085,7 @@ mod test {
                     &address.to_string(),
                     0,
                     page,
-                    Some(utxo_limit),
+                    utxo_limit,
                 )
                 .unwrap().0;
                 utxos_chunked.extend(response.utxos);

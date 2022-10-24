@@ -153,12 +153,44 @@ jobs:
           dfx cache install
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Run Scenario 1
+      - name: Run scenario 1
         run: |
           bash e2e-tests/scenario-1.sh
 
+  e2e-scenario-2:
+    runs-on: ubuntu-20.04
+    needs: cargo-build
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install DFX
+        run: |
+          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
+          bash install-dfx.sh < <(yes Y)
+          rm install-dfx.sh
+          dfx cache install
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run scenario 2
+        run: |
+          bash e2e-tests/scenario-2.sh
+
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes

@@ -3,14 +3,15 @@ use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::{BlockIngestionStats, OUTPOINT_SIZE},
     types::{
-        Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut, Txid,
+        Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut,
+        Txid, Utxo,
     },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
-use ic_stable_structures::{btreemap::Iter, StableBTreeMap, Storable as _};
+use ic_stable_structures::{StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{iter::Iterator, str::FromStr};
 mod utxos;
 use utxos::Utxos;
 
@@ -117,17 +118,30 @@ impl UtxoSet {
         self.utxos.get(outpoint)
     }
 
-    /// Returns the outpoints owned by the given address.
+    /// Returns an iterator with the UTXOs of the given address.
     /// An optional offset can be specified for pagination.
     pub fn get_address_utxos(
         &self,
         address: &Address,
-        offset: &Option<(Height, OutPoint)>,
-    ) -> Iter<Memory, AddressUtxo, ()> {
-        self.address_utxos.range(
-            address.to_bytes().to_vec(),
-            offset.as_ref().map(|x| x.to_bytes()),
-        )
+        offset: &Option<Utxo>,
+    ) -> impl Iterator<Item = Utxo> + '_ {
+        self.address_utxos
+            .range(
+                address.to_bytes().to_vec(),
+                offset
+                    .as_ref()
+                    .map(|u| (u.height, u.outpoint.clone().into()).to_bytes()),
+            )
+            .map(move |(address_utxo, _)| {
+                let (tx_out, _) = self.get_utxo(&address_utxo.outpoint).unwrap_or_else(|| {
+                    panic!("Could find UTXO with outpoint: {:?}", address_utxo.outpoint);
+                });
+                Utxo {
+                    outpoint: address_utxo.outpoint,
+                    height: address_utxo.height,
+                    value: tx_out.value,
+                }
+            })
     }
 
     /// Returns the number of UTXOs in the set.
@@ -510,9 +524,9 @@ mod test {
 
         let unstable_blocks = UnstableBlocks::new(&utxo, 2, crate::genesis_block(network));
 
-        let expected = vec![ic_btc_types::Utxo {
-            outpoint: ic_btc_types::OutPoint {
-                txid: coinbase_tx.txid().to_vec(),
+        let expected = vec![Utxo {
+            outpoint: OutPoint {
+                txid: coinbase_tx.txid(),
                 vout: 0,
             },
             value: 1000,
@@ -520,7 +534,9 @@ mod test {
         }];
 
         assert_eq!(
-            AddressUtxoSet::new(address_1.clone(), &utxo, &unstable_blocks).into_vec(None),
+            AddressUtxoSet::new(address_1.clone(), &utxo, &unstable_blocks)
+                .into_iter(None)
+                .collect::<Vec<_>>(),
             expected
         );
         assert_eq!(
@@ -547,14 +563,18 @@ mod test {
         ingest_tx(&mut utxo, &tx);
 
         assert_eq!(
-            AddressUtxoSet::new(address_1, &utxo, &unstable_blocks).into_vec(None),
+            AddressUtxoSet::new(address_1, &utxo, &unstable_blocks)
+                .into_iter(None)
+                .collect::<Vec<_>>(),
             vec![]
         );
         assert_eq!(
-            AddressUtxoSet::new(address_2.clone(), &utxo, &unstable_blocks).into_vec(None),
-            vec![ic_btc_types::Utxo {
-                outpoint: ic_btc_types::OutPoint {
-                    txid: tx.txid().to_vec(),
+            AddressUtxoSet::new(address_2.clone(), &utxo, &unstable_blocks)
+                .into_iter(None)
+                .collect::<Vec<_>>(),
+            vec![Utxo {
+                outpoint: OutPoint {
+                    txid: tx.txid(),
                     vout: 0
                 },
                 value: 1000,
