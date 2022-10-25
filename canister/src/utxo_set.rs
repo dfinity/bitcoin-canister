@@ -1,7 +1,7 @@
 use crate::{
     memory::Memory,
     runtime::{inc_performance_counter, performance_counter, print},
-    state::{BlockIngestionStats, OUTPOINT_SIZE},
+    state::OUTPOINT_SIZE,
     types::{
         Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut,
         Txid, Utxo,
@@ -57,8 +57,8 @@ pub struct UtxoSet {
     // instead store the `next_height` to avoid having this special case.
     next_height: Height,
 
-    /// A stable block that has partially been written to the UTXO set. Used for time slicing.
-    pub partial_stable_block: Option<PartialStableBlock>,
+    /// A block that is currently being ingested into the UtxoSet. Used for time slicing.
+    pub ingesting_block: Option<IngestingBlock>,
 }
 
 impl UtxoSet {
@@ -69,7 +69,7 @@ impl UtxoSet {
             address_utxos: init_address_utxos(),
             network,
             next_height: 0,
-            partial_stable_block: None,
+            ingesting_block: None,
         }
     }
 
@@ -83,41 +83,72 @@ impl UtxoSet {
     /// `ingest_block_continue` are necessary to finish the block ingestion.
     pub fn ingest_block(&mut self, block: Block) -> Slicing<(), BlockHash> {
         assert!(
-            self.partial_stable_block.is_none(),
+            self.ingesting_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
             self.next_height
         );
 
-        self.ingest_block_helper(block, 0, 0, 0, BlockIngestionStats::default())
+        // Store in the state the new block to be ingested.
+        self.ingesting_block = Some(IngestingBlock::new(block));
+
+        // Start ingesting.
+        self.ingest_block_continue()
+            .expect("a block to ingest must exist.")
     }
 
     /// Continue ingesting a block.
     /// Returns:
-    ///   * `Slicing::Done(None)` if there was no block to continue ingesting.
+    ///   * `None` if there was no block to continue ingesting.
     ///   * `Slicing::Done(block_hash)` if the partially ingested block is now fully ingested,
     ///      where `block_hash` is the hash of the ingested block.
-    ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced again.
-    pub fn ingest_block_continue(&mut self) -> Slicing<(), Option<BlockHash>> {
-        match self.partial_stable_block.take() {
-            Some(p) => {
-                let res = self.ingest_block_helper(
-                    p.block,
-                    p.next_tx_idx,
-                    p.next_input_idx,
-                    p.next_output_idx,
-                    p.stats,
-                );
+    ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
+    pub fn ingest_block_continue(&mut self) -> Option<Slicing<(), BlockHash>> {
+        let ins_start = performance_counter();
 
-                match res {
-                    Slicing::Done(block_hash) => Slicing::Done(Some(block_hash)),
-                    Slicing::Paused(e) => Slicing::Paused(e),
-                }
+        let IngestingBlock {
+            block,
+            next_tx_idx,
+            mut next_input_idx,
+            mut next_output_idx,
+            mut stats,
+        } = match self.ingesting_block.take() {
+            Some(p) => p,
+            None => return None,
+        };
+
+        stats.num_rounds += 1;
+        for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {
+            if let Slicing::Paused((next_input_idx, next_output_idx)) =
+                self.ingest_tx_with_slicing(tx, next_input_idx, next_output_idx, &mut stats)
+            {
+                stats.ins_total += performance_counter() - ins_start;
+
+                // Getting close to the the instructions limit. Pause execution.
+                self.ingesting_block = Some(IngestingBlock {
+                    block,
+                    next_tx_idx: tx_idx,
+                    next_input_idx,
+                    next_output_idx,
+                    stats,
+                });
+
+                return Some(Slicing::Paused(()));
             }
-            None => {
-                // No partially ingested block found. Nothing to do.
-                Slicing::Done(None)
-            }
+
+            // Current transaction was processed in full. Reset the indices for next transaction.
+            next_input_idx = 0;
+            next_output_idx = 0;
         }
+
+        stats.ins_total += performance_counter() - ins_start;
+        print(&format!(
+            "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
+            self.next_height, stats
+        ));
+
+        // Block ingestion complete.
+        self.next_height += 1;
+        Some(Slicing::Done(block.block_hash()))
     }
 
     /// Returns the balance of the given address.
@@ -163,51 +194,6 @@ impl UtxoSet {
 
     pub fn next_height(&self) -> Height {
         self.next_height
-    }
-
-    // Ingests a block starting from the given transaction and input/output indices.
-    fn ingest_block_helper(
-        &mut self,
-        block: Block,
-        next_tx_idx: usize,
-        mut next_input_idx: usize,
-        mut next_output_idx: usize,
-        mut stats: BlockIngestionStats,
-    ) -> Slicing<(), BlockHash> {
-        let ins_start = performance_counter();
-        stats.num_rounds += 1;
-        for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {
-            if let Slicing::Paused((next_input_idx, next_output_idx)) =
-                self.ingest_tx_with_slicing(tx, next_input_idx, next_output_idx, &mut stats)
-            {
-                stats.ins_total += performance_counter() - ins_start;
-
-                // Getting close to the the instructions limit. Pause execution.
-                self.partial_stable_block = Some(PartialStableBlock {
-                    block,
-                    next_tx_idx: tx_idx,
-                    next_input_idx,
-                    next_output_idx,
-                    stats,
-                });
-
-                return Slicing::Paused(());
-            }
-
-            // Current transaction was processed in full. Reset the indices for next transaction.
-            next_input_idx = 0;
-            next_output_idx = 0;
-        }
-
-        stats.ins_total += performance_counter() - ins_start;
-        print(&format!(
-            "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
-            self.next_height, stats
-        ));
-
-        // Block ingestion complete.
-        self.next_height += 1;
-        Slicing::Done(block.block_hash())
     }
 
     // Ingests a transaction into the given UTXO set.
@@ -398,16 +384,27 @@ fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
 /// Used for time slicing.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
-pub struct PartialStableBlock {
+pub struct IngestingBlock {
     pub block: Block,
     pub next_tx_idx: usize,
     pub next_input_idx: usize,
     pub next_output_idx: usize,
-    pub stats: BlockIngestionStats,
+    stats: BlockIngestionStats,
 }
 
-impl PartialStableBlock {
-    pub fn new(
+impl IngestingBlock {
+    pub fn new(block: Block) -> Self {
+        Self {
+            block,
+            next_tx_idx: 0,
+            next_input_idx: 0,
+            next_output_idx: 0,
+            stats: BlockIngestionStats::default(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_args(
         block: Block,
         next_tx_idx: usize,
         next_input_idx: usize,
@@ -423,6 +420,28 @@ impl PartialStableBlock {
     }
 }
 
+// Various profiling stats for tracking the performance of block ingestion.
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
+struct BlockIngestionStats {
+    // The number of rounds it took to ingest the block.
+    num_rounds: u32,
+
+    // The total number of instructions used to ingest the block.
+    ins_total: u64,
+
+    // The number of instructions used to remove the transaction inputs.
+    ins_remove_inputs: u64,
+
+    // The number of instructions used to insert the transaction outputs.
+    ins_insert_outputs: u64,
+
+    // The number of instructions used to compute the txids.
+    ins_txids: u64,
+
+    // The number of instructions used to insert new utxos.
+    ins_insert_utxos: u64,
+}
+
 // NOTE: `PartialEq` is only available in tests as it would be impractically
 // expensive in production.
 #[cfg(test)]
@@ -432,7 +451,7 @@ impl PartialEq for UtxoSet {
         self.utxos == other.utxos
             && self.network == other.network
             && self.next_height == other.next_height
-            && self.partial_stable_block == other.partial_stable_block
+            && self.ingesting_block == other.ingesting_block
             && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
             && is_stable_btreemap_equal(&self.balances, &other.balances)
     }

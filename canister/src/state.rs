@@ -97,17 +97,17 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
     let prev_state = (
         state.utxos.next_height(),
-        &state.utxos.partial_stable_block.clone(),
+        &state.utxos.ingesting_block.clone(),
     );
     let has_state_changed = |state: &State| -> bool {
-        prev_state != (state.utxos.next_height(), &state.utxos.partial_stable_block)
+        prev_state != (state.utxos.next_height(), &state.utxos.ingesting_block)
     };
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
     match state.utxos.ingest_block_continue() {
-        Slicing::Paused(()) => return has_state_changed(state),
-        Slicing::Done(None) => {}
-        Slicing::Done(Some(ingested_block_hash)) => pop_block(state, ingested_block_hash),
+        None => {}
+        Some(Slicing::Paused(())) => return has_state_changed(state),
+        Some(Slicing::Done(ingested_block_hash)) => pop_block(state, ingested_block_hash),
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
@@ -185,28 +185,6 @@ pub struct SyncingState {
 
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
-}
-
-/// Various profiling stats for tracking the performance of block ingestion.
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
-pub struct BlockIngestionStats {
-    /// The number of rounds it took to ingest the block.
-    pub num_rounds: u32,
-
-    /// The total number of instructions used to ingest the block.
-    pub ins_total: u64,
-
-    /// The number of instructions used to remove the transaction inputs.
-    pub ins_remove_inputs: u64,
-
-    /// The number of instructions used to insert the transaction outputs.
-    pub ins_insert_outputs: u64,
-
-    /// The number of instructions used to compute the txids.
-    pub ins_txids: u64,
-
-    /// The number of instructions used to insert new utxos.
-    pub ins_insert_utxos: u64,
 }
 
 /// Cache for storing last calculated fee percentiles
