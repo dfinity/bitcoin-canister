@@ -7,7 +7,7 @@ use crate::{
         Txid, Utxo,
     },
 };
-use bitcoin::{Script, TxOut as BitcoinTxOut};
+use bitcoin::{BlockHash, Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
 use ic_stable_structures::{StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};
@@ -81,7 +81,7 @@ impl UtxoSet {
     /// Returns `Slicing::Done` if ingestion is complete, or `Slicing::Paused` if ingestion hasn't
     /// fully completed due to instruction limits. In the latter case, one or more calls to
     /// `ingest_block_continue` are necessary to finish the block ingestion.
-    pub fn ingest_block(&mut self, block: Block) -> Slicing<()> {
+    pub fn ingest_block(&mut self, block: Block) -> Slicing<(), BlockHash> {
         assert!(
             self.partial_stable_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
@@ -92,18 +92,30 @@ impl UtxoSet {
     }
 
     /// Continue ingesting a block.
-    pub fn ingest_block_continue(&mut self) -> Slicing<()> {
+    /// Returns:
+    ///   * `Slicing::Done(None)` if there was no block to continue ingesting.
+    ///   * `Slicing::Done(block_hash)` if the partially ingested block is now fully ingested,
+    ///      where `block_hash` is the hash of the ingested block.
+    ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced again.
+    pub fn ingest_block_continue(&mut self) -> Slicing<(), Option<BlockHash>> {
         match self.partial_stable_block.take() {
-            Some(p) => self.ingest_block_helper(
-                p.block,
-                p.next_tx_idx,
-                p.next_input_idx,
-                p.next_output_idx,
-                p.stats,
-            ),
+            Some(p) => {
+                let res = self.ingest_block_helper(
+                    p.block,
+                    p.next_tx_idx,
+                    p.next_input_idx,
+                    p.next_output_idx,
+                    p.stats,
+                );
+
+                match res {
+                    Slicing::Done(block_hash) => Slicing::Done(Some(block_hash)),
+                    Slicing::Paused(e) => Slicing::Paused(e),
+                }
+            }
             None => {
                 // No partially ingested block found. Nothing to do.
-                Slicing::Done
+                Slicing::Done(None)
             }
         }
     }
@@ -161,7 +173,7 @@ impl UtxoSet {
         mut next_input_idx: usize,
         mut next_output_idx: usize,
         mut stats: BlockIngestionStats,
-    ) -> Slicing<()> {
+    ) -> Slicing<(), BlockHash> {
         let ins_start = performance_counter();
         stats.num_rounds += 1;
         for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {
@@ -195,7 +207,7 @@ impl UtxoSet {
 
         // Block ingestion complete.
         self.next_height += 1;
-        Slicing::Done
+        Slicing::Done(block.block_hash())
     }
 
     // Ingests a transaction into the given UTXO set.
@@ -210,7 +222,7 @@ impl UtxoSet {
         start_input_idx: usize,
         start_output_idx: usize,
         stats: &mut BlockIngestionStats,
-    ) -> Slicing<(usize, usize)> {
+    ) -> Slicing<(usize, usize), ()> {
         let ins_start = performance_counter();
         let res = self.remove_inputs(tx, start_input_idx);
         stats.ins_remove_inputs += performance_counter() - ins_start;
@@ -225,13 +237,13 @@ impl UtxoSet {
             return Slicing::Paused((tx.input().len(), output_idx));
         }
 
-        Slicing::Done
+        Slicing::Done(())
     }
 
     // Iterates over transaction inputs, starting from `start_idx`, and removes them from the UTXO set.
-    fn remove_inputs(&mut self, tx: &Transaction, start_idx: usize) -> Slicing<usize> {
+    fn remove_inputs(&mut self, tx: &Transaction, start_idx: usize) -> Slicing<usize, ()> {
         if tx.is_coin_base() {
-            return Slicing::Done;
+            return Slicing::Done(());
         }
 
         for (input_idx, input) in tx.input().iter().enumerate().skip(start_idx) {
@@ -284,7 +296,7 @@ impl UtxoSet {
             }
         }
 
-        Slicing::Done
+        Slicing::Done(())
     }
 
     // Iterates over transaction outputs, starting from `start_idx`, and inserts them into the UTXO set.
@@ -293,7 +305,7 @@ impl UtxoSet {
         tx: &Transaction,
         start_idx: usize,
         stats: &mut BlockIngestionStats,
-    ) -> Slicing<usize> {
+    ) -> Slicing<usize, ()> {
         for (vout, output) in tx.output().iter().enumerate().skip(start_idx) {
             // NOTE: We're using `inc_performance_counter` here to increment the mock performance
             // counter in the unit tests.
@@ -312,7 +324,7 @@ impl UtxoSet {
             }
         }
 
-        Slicing::Done
+        Slicing::Done(())
     }
 
     // Inserts a UTXO into the given UTXO set.
@@ -442,7 +454,7 @@ mod test {
     fn ingest_tx(utxo_set: &mut UtxoSet, tx: &Transaction) {
         assert_eq!(
             utxo_set.ingest_tx_with_slicing(tx, 0, 0, &mut BlockIngestionStats::default()),
-            Slicing::Done
+            Slicing::Done(())
         );
     }
 
@@ -712,7 +724,10 @@ mod test {
             .with_transaction(tx_2)
             .build();
 
-        assert_eq!(utxo_set.ingest_block(block), Slicing::Done);
+        assert_eq!(
+            utxo_set.ingest_block(block.clone()),
+            Slicing::Done(block.block_hash())
+        );
         assert_eq!(utxo_set.get_balance(&address_1), 0);
         assert_eq!(utxo_set.get_balance(&address_2), 1_000);
     }
