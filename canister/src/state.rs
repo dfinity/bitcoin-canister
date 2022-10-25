@@ -186,6 +186,7 @@ pub struct SyncingState {
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
 
+    /// A number of times an error is received when calling GetSuccessors.
     pub num_get_successors_rejects: u64,
 }
 
