@@ -66,7 +66,7 @@ async fn maybe_fetch_blocks() -> bool {
         let response = match response {
             Ok((response,)) => response,
             Err((code, msg)) => {
-                // TODO(EXC-1232): track these occurrences in a metric.
+                s.syncing_state.num_get_successors_rejects += 1;
                 print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
                 s.syncing_state.response_to_process = None;
                 return;

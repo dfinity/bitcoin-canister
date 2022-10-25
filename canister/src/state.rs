@@ -185,6 +185,8 @@ pub struct SyncingState {
 
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
+
+    pub num_get_successors_rejects: u64,
 }
 
 /// Various profiling stats for tracking the performance of block ingestion.
