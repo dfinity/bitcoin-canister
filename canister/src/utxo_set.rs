@@ -92,7 +92,8 @@ impl UtxoSet {
         self.ingesting_block = Some(IngestingBlock::new(block));
 
         // Start ingesting.
-        self.ingest_block_continue().expect("a block to ingest must exist.")
+        self.ingest_block_continue()
+            .expect("a block to ingest must exist.")
     }
 
     /// Continue ingesting a block.
