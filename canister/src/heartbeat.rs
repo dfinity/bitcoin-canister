@@ -191,7 +191,7 @@ mod test {
             Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
             InitPayload, Network,
         },
-        utxo_set::PartialStableBlock,
+        utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader;
 
@@ -307,7 +307,7 @@ mod test {
 
         // Assert that execution has been paused.
         // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
-        let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+        let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
         assert_eq!(partial_block.block, block_1);
         assert_eq!(partial_block.next_tx_idx, 2);
         assert_eq!(partial_block.next_input_idx, 1);
@@ -318,7 +318,7 @@ mod test {
         heartbeat().await;
 
         // Assert that execution has been paused. Ingested 3 more txs in block_1.
-        let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+        let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
         assert_eq!(partial_block.block, block_1);
         assert_eq!(partial_block.next_tx_idx, 5);
         assert_eq!(partial_block.next_input_idx, 1);
@@ -332,7 +332,7 @@ mod test {
         heartbeat().await;
 
         // Time slicing is complete.
-        assert!(with_state(|s| s.utxos.partial_stable_block.is_none()));
+        assert!(with_state(|s| s.utxos.ingesting_block.is_none()));
 
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(state::main_chain_height), 2);
@@ -421,12 +421,12 @@ mod test {
         // Run the heartbeat a few rounds to ingest the two stable blocks.
         // Three inputs/outputs are expected to be ingested per round.
         let expected_states = vec![
-            PartialStableBlock::new(block_1.clone(), 0, 1, 2),
-            PartialStableBlock::new(block_1.clone(), 0, 1, 5),
-            PartialStableBlock::new(block_2.clone(), 0, 2, 0),
-            PartialStableBlock::new(block_2.clone(), 0, 5, 0),
-            PartialStableBlock::new(block_2.clone(), 0, 6, 2),
-            PartialStableBlock::new(block_2.clone(), 0, 6, 5),
+            IngestingBlock::new_with_args(block_1.clone(), 0, 1, 2),
+            IngestingBlock::new_with_args(block_1.clone(), 0, 1, 5),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 2, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 5, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 6, 2),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 6, 5),
         ];
 
         for expected_state in expected_states.into_iter() {
@@ -435,7 +435,7 @@ mod test {
             heartbeat().await;
 
             // Assert that execution has been paused.
-            let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+            let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
             assert_eq!(partial_block.block, expected_state.block);
             assert_eq!(partial_block.next_tx_idx, expected_state.next_tx_idx);
             assert_eq!(partial_block.next_input_idx, expected_state.next_input_idx);
@@ -448,7 +448,7 @@ mod test {
         // Assert ingestion has finished.
         runtime::performance_counter_reset();
         heartbeat().await;
-        with_state(|s| assert_eq!(s.utxos.partial_stable_block, None));
+        with_state(|s| assert_eq!(s.utxos.ingesting_block, None));
 
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(state::main_chain_height), 3);
