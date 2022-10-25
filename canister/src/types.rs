@@ -657,7 +657,7 @@ impl PartialOrd for Utxo {
 #[test]
 fn test_utxo_ordering() {
     let a = Utxo {
-        height: 1,
+        height: 3,
         outpoint: OutPoint {
             txid: Txid::from(vec![]),
             vout: 0,
@@ -668,7 +668,7 @@ fn test_utxo_ordering() {
     let b = Utxo {
         height: 2,
         outpoint: OutPoint {
-            txid: Txid::from(vec![]),
+            txid: Txid::from(vec![1]),
             vout: 0,
         },
         value: 123,
@@ -689,17 +689,27 @@ fn test_utxo_ordering() {
             txid: Txid::from(vec![1]),
             vout: 0,
         },
-        value: 123,
+        value: 124,
     };
 
-    assert!(a > b);
-    assert!(a > c);
-    assert!(b < a);
-    assert!(b < c);
-    assert!(c > b);
-    assert!(c == d);
-    assert!(c <= d);
-    assert!(c >= d);
+    // a < b == c < d
+    assert!(a < b);
+    assert!(b < d);
+    assert!(a < c);
+    assert!(c < d);
+    assert!(a < d);
+
+    // d > c == b > a
+    assert!(d > c);
+    assert!(c > a);
+    assert!(d > b);
+    assert!(b > a);
+    assert!(d > a);
+
+    // c == b
+    assert!(c == b);
+    assert!(c <= b);
+    assert!(c >= b);
 }
 
 #[test]
