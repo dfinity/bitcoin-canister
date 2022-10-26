@@ -166,6 +166,12 @@ impl TransactionBuilder {
         }
     }
 
+    pub fn with_lock_time(self, i: u32) -> Self {
+        Self {
+            builder: self.builder.with_lock_time(i),
+        }
+    }
+
     pub fn with_output(self, address: &Address, value: u64) -> Self {
         Self {
             builder: self.builder.with_output(
