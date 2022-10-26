@@ -27,6 +27,12 @@ pub struct InitPayload {
     pub blocks_source: Option<Principal>,
 }
 
+// TODO(EXC-1278): Merge the `InitPayload` struct above into this one.
+#[derive(CandidType, Deserialize)]
+pub struct Config {
+    pub syncing: Flag,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Block {
     block: BitcoinBlock,
@@ -652,6 +658,21 @@ impl PartialOrd for Utxo {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
+}
+
+#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone)]
+pub enum Flag {
+    #[serde(rename = "enabled")]
+    Enabled,
+    #[serde(rename = "disabled")]
+    Disabled,
+}
+
+/// A request to update the canister's config.
+#[derive(CandidType, Deserialize)]
+pub struct UpdateConfigRequest {
+    /// Whether or not to enable/disable syncing of blocks from the network.
+    pub syncing: Option<Flag>,
 }
 
 #[test]

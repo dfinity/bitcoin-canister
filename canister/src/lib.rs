@@ -17,7 +17,7 @@ use utxo_set::UtxoSet;
 
 use crate::{
     state::State,
-    types::{Block, InitPayload, Network},
+    types::{Block, Config, InitPayload, Network, UpdateConfigRequest},
 };
 pub use heartbeat::heartbeat;
 use ic_btc_types::{
@@ -93,6 +93,20 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     verify_network(request.network.into());
     api::get_utxos(request.into())
+}
+
+pub fn get_config() -> Config {
+    with_state(|s| Config {
+        syncing: s.syncing_state.syncing,
+    })
+}
+
+pub fn update_config(request: UpdateConfigRequest) {
+    with_state_mut(|s| {
+        if let Some(syncing) = request.syncing {
+            s.syncing_state.syncing = syncing;
+        }
+    });
 }
 
 pub fn pre_upgrade() {

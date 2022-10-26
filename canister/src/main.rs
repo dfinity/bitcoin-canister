@@ -1,4 +1,4 @@
-use ic_btc_canister::types::{HttpRequest, HttpResponse, InitPayload};
+use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, InitPayload, UpdateConfigRequest};
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi,
@@ -43,6 +43,16 @@ pub fn get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
     ic_btc_canister::get_current_fee_percentiles(request)
+}
+
+#[query]
+pub fn get_config() -> Config {
+    ic_btc_canister::get_config()
+}
+
+#[update]
+pub fn update_config(request: UpdateConfigRequest) {
+    ic_btc_canister::update_config(request)
 }
 
 fn main() {}

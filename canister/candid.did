@@ -55,10 +55,27 @@ type get_current_fee_percentiles_request = record {
 
 type millisatoshi_per_byte = nat64;
 
+type flag = variant {
+  enabled;
+  disabled;
+};
+
+type update_config_request = record {
+  syncing: opt flag;
+};
+
+type config = record {
+  syncing: flag
+};
+
 service bitcoin: (init_payload) -> {
   get_balance: (get_balance_request) -> (satoshi);
   
   get_utxos: (get_utxos_request) -> (get_utxos_response);
 
   get_current_fee_percentiles: (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+
+  get_config: () -> (config) query;
+
+  update_config: (update_config_request) -> ();
 }
