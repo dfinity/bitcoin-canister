@@ -1,9 +1,9 @@
 use crate::{
     types::{Address, Block, OutPoint, Utxo},
     unstable_blocks::UnstableBlocks,
-    UtxoSet,
+    UtxoSet, multi_iter::MultiIter,
 };
-use std::{collections::BTreeSet, iter::Peekable, sync::Arc};
+use std::{collections::BTreeSet, sync::Arc};
 
 /// A struct that tracks the UTXO set of a given address.
 ///
@@ -108,44 +108,6 @@ impl<'a> AddressUtxoSet<'a> {
             });
 
         MultiIter::new(stable_utxos, unstable_utxos)
-    }
-}
-
-/// An iterator that consumes multiple iterators and returns their items interleaved in sorted order.
-/// The iterators themselves must be sorted.
-pub struct MultiIter<T, A: Iterator<Item = T>, B: Iterator<Item = T>> {
-    a: Peekable<A>,
-    b: Peekable<B>,
-}
-
-impl<T, A: Iterator<Item = T>, B: Iterator<Item = T>> MultiIter<T, A, B> {
-    fn new(a: A, b: B) -> Self {
-        Self {
-            a: a.peekable(),
-            b: b.peekable(),
-        }
-    }
-}
-
-impl<T: PartialOrd, A: Iterator<Item = T>, B: Iterator<Item = T>> Iterator for MultiIter<T, A, B> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let next_a = self.a.peek();
-        let next_b = self.b.peek();
-
-        match (next_a, next_b) {
-            (Some(next_a), Some(next_b)) => {
-                if next_a < next_b {
-                    self.a.next()
-                } else {
-                    self.b.next()
-                }
-            }
-            (Some(_), None) => self.a.next(),
-            (None, Some(_)) => self.b.next(),
-            (None, None) => None,
-        }
     }
 }
 
