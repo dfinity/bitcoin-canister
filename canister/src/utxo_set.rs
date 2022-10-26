@@ -196,6 +196,11 @@ impl UtxoSet {
         self.next_height
     }
 
+    /// Returns true if a block is in the process of being ingested, false otherwise.
+    pub fn is_ingesting_block(&self) -> bool {
+        self.ingesting_block.is_some()
+    }
+
     // Ingests a transaction into the given UTXO set.
     //
     // NOTE: This method does a form of time-slicing to stay within the instruction limit, and

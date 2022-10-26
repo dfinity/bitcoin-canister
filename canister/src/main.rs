@@ -45,6 +45,11 @@ pub fn get_current_fee_percentiles(
     ic_btc_canister::get_current_fee_percentiles(request)
 }
 
+#[update]
+pub fn is_ingesting_block() -> bool {
+    ic_btc_canister::is_ingesting_block()
+}
+
 fn main() {}
 
 /*

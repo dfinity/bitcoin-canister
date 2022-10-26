@@ -95,6 +95,10 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     api::get_utxos(request.into())
 }
 
+pub fn is_ingesting_block() -> bool {
+    with_state(|s| s.utxos.is_ingesting_block())
+}
+
 pub fn pre_upgrade() {
     // Serialize the state.
     let mut state_bytes = vec![];
