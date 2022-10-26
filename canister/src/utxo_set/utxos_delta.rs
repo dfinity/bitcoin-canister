@@ -28,7 +28,7 @@ pub struct UtxosDelta {
 }
 
 impl UtxosDelta {
-    /// Insert a UTXO for the given address.
+    /// Inserts a UTXO for the given address.
     pub fn insert(&mut self, address: Address, outpoint: OutPoint, tx_out: TxOut, height: Height) {
         self.added_outpoints
             .entry(address.clone())

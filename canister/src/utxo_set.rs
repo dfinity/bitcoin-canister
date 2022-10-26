@@ -56,10 +56,10 @@ pub struct UtxoSet {
     // instead store the `next_height` to avoid having this special case.
     next_height: Height,
 
-    // The predicate used to determine whether execution should be paused.
+    // The predicate used to determine whether or not we should time-slice.
     // The default predicate is to check the performance counter, but can be overridden for tests.
-    #[serde(skip, default = "default_time_slicing_predicate")]
-    time_slicing_predicate: Box<dyn FnMut() -> bool>,
+    #[serde(skip, default = "default_should_time_slice")]
+    should_time_slice: Box<dyn FnMut() -> bool>,
 
     /// A block that is currently being ingested into the UtxoSet. Used for time slicing.
     pub ingesting_block: Option<IngestingBlock>,
@@ -74,7 +74,7 @@ impl UtxoSet {
             network,
             next_height: 0,
             ingesting_block: None,
-            time_slicing_predicate: default_time_slicing_predicate(),
+            should_time_slice: default_should_time_slice(),
         }
     }
 
@@ -301,7 +301,7 @@ impl UtxoSet {
         }
 
         for (input_idx, input) in tx.input().iter().enumerate().skip(start_idx) {
-            if (self.time_slicing_predicate)() {
+            if (self.should_time_slice)() {
                 return Slicing::Paused(input_idx);
             }
 
@@ -363,7 +363,7 @@ impl UtxoSet {
         stats: &mut BlockIngestionStats,
     ) -> Slicing<usize, ()> {
         for (vout, output) in tx.output().iter().enumerate().skip(start_idx) {
-            if (self.time_slicing_predicate)() {
+            if (self.should_time_slice)() {
                 return Slicing::Paused(vout);
             }
 
@@ -542,7 +542,7 @@ impl PartialEq for UtxoSet {
 
 // The default predicate to use for time-slicing.
 // Checks that we're not approaching the instructions limit.
-fn default_time_slicing_predicate() -> Box<dyn FnMut() -> bool> {
+fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
     // The threshold at which time slicing kicks in.
     // At the time of this writing it is equivalent to 80% of the maximum instructions limit.
     const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
@@ -938,7 +938,7 @@ mod test {
             );
 
             // Update predicate to time-slice block 1 based on the ingestion rate.
-            utxo_set.time_slicing_predicate = ingestion_rate_predicate(ingestion_rate);
+            utxo_set.should_time_slice = ingestion_rate_predicate(ingestion_rate);
 
             let res = utxo_set.ingest_block(block_1);
             let mut num_rounds = 1;
@@ -1021,7 +1021,6 @@ mod test {
                 ((tx_cardinality * 4) as f32 / ingestion_rate as f32).ceil() as u32
             );
 
-            // TODO: address outpoints, UTXOs
             assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_1, &None)
