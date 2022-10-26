@@ -37,5 +37,3 @@ impl<T: PartialOrd, A: Iterator<Item = T>, B: Iterator<Item = T>> Iterator for M
         }
     }
 }
-
-

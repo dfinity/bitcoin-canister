@@ -1,7 +1,8 @@
 use crate::{
+    multi_iter::MultiIter,
     types::{Address, Block, OutPoint, Utxo},
     unstable_blocks::UnstableBlocks,
-    UtxoSet, multi_iter::MultiIter,
+    UtxoSet,
 };
 use std::{collections::BTreeSet, sync::Arc};
 
