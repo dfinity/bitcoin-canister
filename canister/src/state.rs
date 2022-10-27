@@ -3,8 +3,8 @@ use crate::{
     block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
     types::{
-        Address, Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-        Network, Slicing,
+        Address, Block, BlockHash, Flag, GetSuccessorsCompleteResponse,
+        GetSuccessorsPartialResponse, Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
     UtxoSet,
@@ -177,14 +177,27 @@ pub enum ResponseToProcess {
     Partial(GetSuccessorsPartialResponse, u8),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct SyncingState {
+    /// Whether or not new blocks should be fetched from the network.
+    pub syncing: Flag,
+
     /// A flag used to ensure that only one request for fetching blocks is
     /// being sent at a time.
     pub is_fetching_blocks: bool,
 
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
+}
+
+impl Default for SyncingState {
+    fn default() -> Self {
+        Self {
+            syncing: Flag::Enabled,
+            is_fetching_blocks: false,
+            response_to_process: None,
+        }
+    }
 }
 
 /// Cache for storing last calculated fee percentiles
