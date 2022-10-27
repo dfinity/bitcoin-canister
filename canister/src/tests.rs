@@ -10,7 +10,7 @@ use crate::{
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     with_state,
 };
-use crate::{init, test_utils::random_p2pkh_address, InitPayload};
+use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
@@ -119,10 +119,10 @@ fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
 
 #[async_std::test]
 async fn mainnet_100k_blocks() {
-    crate::init(crate::InitPayload {
+    crate::init(crate::Config {
         stability_threshold: 10,
         network: Network::Mainnet,
-        blocks_source: None,
+        ..Default::default()
     });
 
     // Set a reasonable performance counter step to trigger time-slicing.
@@ -352,10 +352,10 @@ async fn mainnet_100k_blocks() {
 
 #[async_std::test]
 async fn testnet_10k_blocks() {
-    crate::init(crate::InitPayload {
+    crate::init(crate::Config {
         stability_threshold: 2,
         network: Network::Testnet,
-        blocks_source: None,
+        ..Default::default()
     });
 
     // Set a reasonable performance counter step to trigger time-slicing.
@@ -400,10 +400,10 @@ async fn testnet_10k_blocks() {
 #[async_std::test]
 async fn time_slices_large_block_with_multiple_transactions() {
     let network = Network::Regtest;
-    init(InitPayload {
+    init(Config {
         stability_threshold: 0,
         network,
-        blocks_source: None,
+        ..Default::default()
     });
 
     let address_1 = random_p2pkh_address(network);

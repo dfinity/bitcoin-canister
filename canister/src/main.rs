@@ -1,4 +1,4 @@
-use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, InitPayload, SetConfigRequest};
+use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, SetConfigRequest};
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi,
@@ -9,8 +9,8 @@ use serde_bytes::ByteBuf;
 mod metrics;
 
 #[init]
-fn init(payload: InitPayload) {
-    ic_btc_canister::init(payload);
+fn init(config: Config) {
+    ic_btc_canister::init(config);
 }
 
 #[pre_upgrade]

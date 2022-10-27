@@ -52,6 +52,10 @@ impl UnstableBlocks {
         self.outpoints_cache
             .get_removed_outpoints(block_hash, address)
     }
+
+    pub fn stability_threshold(&self) -> u32 {
+        self.stability_threshold
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.

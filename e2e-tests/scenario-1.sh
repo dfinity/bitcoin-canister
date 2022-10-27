@@ -16,7 +16,15 @@ dfx deploy --no-wallet e2e-scenario-1
 dfx deploy --no-wallet bitcoin --argument "(record {
   stability_threshold = 2;
   network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id e2e-scenario-1)\"
+  blocks_source = principal \"$(dfx canister id e2e-scenario-1)\";
+  syncing = variant { enabled };
+  fees = record {
+    get_utxos = 0;
+    get_balance = 0;
+    get_current_fee_percentiles = 0;
+    send_transaction_base = 0;
+    send_transaction_per_byte = 0;
+  }
 })"
 
 # Wait until the ingestion of stable blocks is complete.
