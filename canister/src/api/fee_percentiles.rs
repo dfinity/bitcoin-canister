@@ -1,10 +1,10 @@
 use crate::{
-    charge_cycles, with_state,
+    charge_cycles,
     runtime::{performance_counter, print},
     state::{FeePercentilesCache, State},
     types::{Block, Transaction},
     unstable_blocks::{self, UnstableBlocks},
-    with_state_mut,
+    with_state, with_state_mut,
 };
 use ic_btc_types::MillisatoshiPerByte;
 
@@ -141,7 +141,7 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{Config, Network, OutPoint, Fees},
+        types::{Config, Fees, Network, OutPoint},
         with_state,
     };
     use ic_btc_types::Satoshi;
