@@ -479,6 +479,23 @@ mod test {
                 partial_block.next_output_idx,
                 expected_state.next_output_idx
             );
+
+            // The addresses 1 and 2 do not change while ingestion is in progress.
+            assert_eq!(
+                crate::api::get_balance(crate::types::GetBalanceRequest {
+                    address: address_1.to_string(),
+                    min_confirmations: None
+                }),
+                0
+            );
+
+            assert_eq!(
+                crate::api::get_balance(crate::types::GetBalanceRequest {
+                    address: address_2.to_string(),
+                    min_confirmations: None
+                }),
+                tx_cardinality as u64 * 1000
+            );
         }
 
         // Assert ingestion has finished.
