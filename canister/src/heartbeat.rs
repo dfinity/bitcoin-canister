@@ -2,7 +2,7 @@ use crate::{
     runtime::{call_get_successors, print},
     state::{self, ResponseToProcess},
     types::{
-        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
+        Block, BlockHash, Flag, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
@@ -32,8 +32,10 @@ pub async fn heartbeat() {
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
 // Returns true if a call to the `blocks_source` has been made, false otherwise.
 async fn maybe_fetch_blocks() -> bool {
-    if with_state(|s| s.syncing_state.is_fetching_blocks) {
-        // Already fetching blocks.
+    if with_state(|s| {
+        s.syncing_state.is_fetching_blocks || s.syncing_state.syncing == Flag::Disabled
+    }) {
+        // Already fetching blocks or syncing is disabled.
         return false;
     }
 
@@ -254,6 +256,40 @@ mod test {
 
         // The UTXO set has been updated with the genesis block.
         assert_eq!(with_state(|s| s.utxos.next_height()), 1);
+    }
+
+    #[async_std::test]
+    async fn does_not_fetch_blocks_if_syncing_is_disabled() {
+        let network = Network::Regtest;
+
+        init(InitPayload {
+            stability_threshold: 0,
+            network,
+            blocks_source: None,
+        });
+
+        with_state_mut(|s| {
+            s.syncing_state.syncing = Flag::Disabled;
+        });
+
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+
+        let mut block_bytes = vec![];
+        block.consensus_encode(&mut block_bytes).unwrap();
+
+        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![block_bytes],
+                next: vec![],
+            },
+        ));
+
+        // Try to fetch blocks
+        heartbeat().await;
+        heartbeat().await;
+
+        // Assert that the block has not been ingested.
+        assert_eq!(with_state(state::main_chain_height), 0);
     }
 
     #[async_std::test]
