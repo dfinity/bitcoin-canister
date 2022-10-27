@@ -187,11 +187,11 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, init, runtime, set_config,
+        genesis_block, init, runtime,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-            InitPayload, Network, SetConfigRequest,
+            InitPayload, Network,
         },
         utxo_set::IngestingBlock,
     };
@@ -268,8 +268,8 @@ mod test {
             blocks_source: None,
         });
 
-        set_config(SetConfigRequest {
-            syncing: Some(Flag::Disabled),
+        with_state_mut(|s| {
+            s.syncing_state.syncing = Flag::Disabled;
         });
 
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
