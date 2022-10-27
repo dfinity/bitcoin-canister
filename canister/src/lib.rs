@@ -168,10 +168,7 @@ fn verify_network(network: Network) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        test_utils::build_regtest_chain,
-        types::{Flag, Network},
-    };
+    use crate::{test_utils::build_regtest_chain, types::Network};
     use ic_btc_types::NetworkInRequest;
     use proptest::prelude::*;
 
