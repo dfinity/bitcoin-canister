@@ -1,4 +1,4 @@
-use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, InitPayload, UpdateConfigRequest};
+use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, InitPayload, SetConfigRequest};
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi,
@@ -51,8 +51,8 @@ pub fn get_config() -> Config {
 }
 
 #[update]
-pub fn update_config(request: UpdateConfigRequest) {
-    ic_btc_canister::update_config(request)
+pub fn set_config(request: SetConfigRequest) {
+    ic_btc_canister::set_config(request)
 }
 
 fn main() {}

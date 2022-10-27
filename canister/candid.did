@@ -60,7 +60,7 @@ type flag = variant {
   disabled;
 };
 
-type update_config_request = record {
+type set_config_request = record {
   syncing: opt flag;
 };
 
@@ -77,5 +77,5 @@ service bitcoin: (init_payload) -> {
 
   get_config: () -> (config) query;
 
-  update_config: (update_config_request) -> ();
+  set_config: (set_config_request) -> ();
 }

@@ -187,13 +187,12 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, init, runtime,
+        genesis_block, init, runtime, set_config,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-            InitPayload, Network, UpdateConfigRequest,
+            InitPayload, Network, SetConfigRequest,
         },
-        update_config,
         utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader;
@@ -269,7 +268,7 @@ mod test {
             blocks_source: None,
         });
 
-        update_config(UpdateConfigRequest {
+        set_config(SetConfigRequest {
             syncing: Some(Flag::Disabled),
         });
 

@@ -660,7 +660,7 @@ impl PartialOrd for Utxo {
     }
 }
 
-#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone)]
+#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Flag {
     #[serde(rename = "enabled")]
     Enabled,
@@ -670,7 +670,7 @@ pub enum Flag {
 
 /// A request to update the canister's config.
 #[derive(CandidType, Deserialize)]
-pub struct UpdateConfigRequest {
+pub struct SetConfigRequest {
     /// Whether or not to enable/disable syncing of blocks from the network.
     pub syncing: Option<Flag>,
 }
