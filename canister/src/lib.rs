@@ -105,7 +105,7 @@ pub fn get_config() -> Config {
 }
 
 pub fn set_config(request: SetConfigRequest) {
-    // TODO(): Instead of hard-coding a principal, check that the caller is a canister controller.
+    // TODO(EXC-1279): Instead of hard-coding a principal, check that the caller is a canister controller.
     if ic_cdk::api::caller()
         != Principal::from_str("5kqj4-ymytp-ozksm-u62pb-po22y-zqqzf-2o4th-5shdt-m5j6r-kgyfi-2qe")
             .unwrap()
