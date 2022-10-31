@@ -29,17 +29,17 @@ async fn heartbeat() {
 }
 
 #[update]
-pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+pub fn bitcoin_get_balance(request: GetBalanceRequest) -> Satoshi {
     ic_btc_canister::get_balance(request)
 }
 
 #[update]
-pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
+pub fn bitcoin_get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     ic_btc_canister::get_utxos(request)
 }
 
 #[update]
-pub fn get_current_fee_percentiles(
+pub fn bitcoin_get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
     ic_btc_canister::get_current_fee_percentiles(request)
