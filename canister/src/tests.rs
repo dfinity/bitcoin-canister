@@ -19,6 +19,7 @@ use bitcoin::{
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
+use ic_cdk::api::call::RejectionCode;
 use std::fs::File;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
@@ -504,4 +505,27 @@ async fn time_slices_large_block_with_multiple_transactions() {
         }),
         2000
     );
+}
+
+#[async_std::test]
+async fn test_rejections_counting() {
+    crate::init(crate::InitPayload {
+        stability_threshold: 2,
+        network: Network::Testnet,
+        blocks_source: None,
+    });
+
+    let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
+
+    runtime::set_successors_response(GetSuccessorsReply::Err(
+        RejectionCode::CanisterReject,
+        String::from("Test verification error."),
+    ));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    let counter_after = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
+
+    assert_eq!(counter_prior, counter_after - 1);
 }

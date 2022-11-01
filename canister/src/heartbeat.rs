@@ -2,7 +2,7 @@ use crate::{
     runtime::{call_get_successors, print},
     state::{self, ResponseToProcess},
     types::{
-        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsReply, GetSuccessorsRequest,
+        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
@@ -189,7 +189,7 @@ mod test {
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-            InitPayload, Network,
+            GetSuccessorsReply, InitPayload, Network,
         },
         utxo_set::PartialStableBlock,
     };
