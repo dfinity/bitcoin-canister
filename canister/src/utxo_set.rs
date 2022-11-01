@@ -1,7 +1,8 @@
 use crate::{
     memory::Memory,
+    multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
-    state::{BlockIngestionStats, OUTPOINT_SIZE},
+    state::OUTPOINT_SIZE,
     types::{
         Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut,
         Txid, Utxo,
@@ -11,9 +12,11 @@ use bitcoin::{BlockHash, Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
 use ic_stable_structures::{StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};
-use std::{iter::Iterator, str::FromStr};
+use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
+mod utxos_delta;
 use utxos::Utxos;
+use utxos_delta::UtxosDelta;
 
 lazy_static::lazy_static! {
     pub static ref DUPLICATE_TX_IDS: [Txid; 2] = [
@@ -21,10 +24,6 @@ lazy_static::lazy_static! {
         Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap(),
     ];
 }
-
-// The threshold at which time slicing kicks in.
-// At the time of this writing it is equivalent to 80% of the maximum instructions limit.
-const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
 
 // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
 // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
@@ -57,8 +56,13 @@ pub struct UtxoSet {
     // instead store the `next_height` to avoid having this special case.
     next_height: Height,
 
-    /// A stable block that has partially been written to the UTXO set. Used for time slicing.
-    pub partial_stable_block: Option<PartialStableBlock>,
+    // The predicate used to determine whether or not we should time-slice.
+    // The default predicate is to check the performance counter, but can be overridden for tests.
+    #[serde(skip, default = "default_should_time_slice")]
+    should_time_slice: Box<dyn FnMut() -> bool>,
+
+    /// A block that is currently being ingested into the UtxoSet. Used for time slicing.
+    pub ingesting_block: Option<IngestingBlock>,
 }
 
 impl UtxoSet {
@@ -69,7 +73,8 @@ impl UtxoSet {
             address_utxos: init_address_utxos(),
             network,
             next_height: 0,
-            partial_stable_block: None,
+            ingesting_block: None,
+            should_time_slice: default_should_time_slice(),
         }
     }
 
@@ -83,50 +88,122 @@ impl UtxoSet {
     /// `ingest_block_continue` are necessary to finish the block ingestion.
     pub fn ingest_block(&mut self, block: Block) -> Slicing<(), BlockHash> {
         assert!(
-            self.partial_stable_block.is_none(),
+            self.ingesting_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
             self.next_height
         );
 
-        self.ingest_block_helper(block, 0, 0, 0, BlockIngestionStats::default())
+        // Store in the state the new block to be ingested.
+        self.ingesting_block = Some(IngestingBlock::new(block));
+
+        // Start ingesting.
+        self.ingest_block_continue()
+            .expect("a block to ingest must exist.")
     }
 
     /// Continue ingesting a block.
     /// Returns:
-    ///   * `Slicing::Done(None)` if there was no block to continue ingesting.
+    ///   * `None` if there was no block to continue ingesting.
     ///   * `Slicing::Done(block_hash)` if the partially ingested block is now fully ingested,
     ///      where `block_hash` is the hash of the ingested block.
-    ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced again.
-    pub fn ingest_block_continue(&mut self) -> Slicing<(), Option<BlockHash>> {
-        match self.partial_stable_block.take() {
-            Some(p) => {
-                let res = self.ingest_block_helper(
-                    p.block,
-                    p.next_tx_idx,
-                    p.next_input_idx,
-                    p.next_output_idx,
-                    p.stats,
-                );
+    ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
+    pub fn ingest_block_continue(&mut self) -> Option<Slicing<(), BlockHash>> {
+        let ins_start = performance_counter();
 
-                match res {
-                    Slicing::Done(block_hash) => Slicing::Done(Some(block_hash)),
-                    Slicing::Paused(e) => Slicing::Paused(e),
-                }
+        let IngestingBlock {
+            block,
+            next_tx_idx,
+            mut next_input_idx,
+            mut next_output_idx,
+            mut utxos_delta,
+            mut stats,
+        } = match self.ingesting_block.take() {
+            Some(p) => p,
+            None => return None,
+        };
+
+        stats.num_rounds += 1;
+        for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {
+            if let Slicing::Paused((next_input_idx, next_output_idx)) = self.ingest_tx_with_slicing(
+                tx,
+                next_input_idx,
+                next_output_idx,
+                &mut utxos_delta,
+                &mut stats,
+            ) {
+                stats.ins_total += performance_counter() - ins_start;
+
+                // Getting close to the the instructions limit. Pause execution.
+                self.ingesting_block = Some(IngestingBlock {
+                    block,
+                    next_tx_idx: tx_idx,
+                    next_input_idx,
+                    next_output_idx,
+                    utxos_delta,
+                    stats,
+                });
+
+                return Some(Slicing::Paused(()));
             }
-            None => {
-                // No partially ingested block found. Nothing to do.
-                Slicing::Done(None)
-            }
+
+            // Current transaction was processed in full. Reset the indices for next transaction.
+            next_input_idx = 0;
+            next_output_idx = 0;
         }
+
+        stats.ins_total += performance_counter() - ins_start;
+        print(&format!(
+            "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
+            self.next_height, stats
+        ));
+
+        // Block ingestion complete.
+        self.next_height += 1;
+        Some(Slicing::Done(block.block_hash()))
     }
 
     /// Returns the balance of the given address.
     pub fn get_balance(&self, address: &Address) -> Satoshi {
-        self.balances.get(address).unwrap_or(0)
+        let mut balance = self.balances.get(address).unwrap_or(0);
+
+        // Revert any changes to the balance that were done by the ingesting block.
+        if let Some(ingesting_block) = &self.ingesting_block {
+            let utxos_delta = &ingesting_block.utxos_delta;
+
+            // Add any removed outpoints back to the balance.
+            for outpoint in utxos_delta.get_removed_outpoints(address) {
+                let (tx_out, _) = utxos_delta.get_utxo(outpoint).expect("UTXO must exist");
+                balance = balance.checked_add(tx_out.value).expect("Cannot overflow");
+            }
+
+            // Remove any added outpoints from the balance.
+            for outpoint in utxos_delta.get_added_outpoints(address) {
+                let (tx_out, _) = utxos_delta.get_utxo(outpoint).expect("UTXO must exist");
+                balance = balance.checked_sub(tx_out.value).expect("Cannot underflow");
+            }
+        }
+
+        balance
     }
 
     /// Returns the UTXO of the given outpoint.
     pub fn get_utxo(&self, outpoint: &OutPoint) -> Option<(TxOut, Height)> {
+        // Revert any changes to the UTXOs that were done by the ingesting block.
+        if let Some(b) = &self.ingesting_block {
+            if b.utxos_delta.is_outpoint_removed(outpoint) {
+                // The UTXO was removed by the ingesting block.
+                // Revert that removal by returning the UTXO.
+                return b.utxos_delta.get_utxo(outpoint).cloned();
+            }
+
+            if b.utxos_delta.is_outpoint_added(outpoint) {
+                // The UTXO was added by the ingesting block.
+                // Revert that addition by returning `None`.
+                return None;
+            }
+        };
+
+        // No modifications done by the ingesting block. Return the UTXO from the stable set.
         self.utxos.get(outpoint)
     }
 
@@ -137,7 +214,19 @@ impl UtxoSet {
         address: &Address,
         offset: &Option<Utxo>,
     ) -> impl Iterator<Item = OutPoint> + '_ {
-        self.address_utxos
+        // If there is an ingesting block, retrieve all the outpoints it added/removed.
+        let (added_outpoints, removed_outpoints) = match &self.ingesting_block {
+            Some(b) => (
+                b.utxos_delta.get_added_outpoints(address),
+                b.utxos_delta.get_removed_outpoints(address),
+            ),
+            None => (BTreeSet::new(), BTreeSet::new()),
+        };
+
+        // Retrieve all address's outpoints from the stable set, removing any outpoints
+        // that were added by the ingesting block.
+        let stable_outpoints = self
+            .address_utxos
             .range(
                 address.to_bytes().to_vec(),
                 offset
@@ -145,6 +234,10 @@ impl UtxoSet {
                     .map(|u| (u.height, u.outpoint.clone()).to_bytes()),
             )
             .map(|(address_utxo, _)| address_utxo.outpoint)
+            .filter(move |outpoint| !added_outpoints.contains(outpoint));
+
+        // Return the stable outpoints along with the outpoints removed by the ingesting block.
+        MultiIter::new(stable_outpoints, removed_outpoints.into_iter().cloned())
     }
 
     /// Returns the number of UTXOs in the set.
@@ -165,51 +258,6 @@ impl UtxoSet {
         self.next_height
     }
 
-    // Ingests a block starting from the given transaction and input/output indices.
-    fn ingest_block_helper(
-        &mut self,
-        block: Block,
-        next_tx_idx: usize,
-        mut next_input_idx: usize,
-        mut next_output_idx: usize,
-        mut stats: BlockIngestionStats,
-    ) -> Slicing<(), BlockHash> {
-        let ins_start = performance_counter();
-        stats.num_rounds += 1;
-        for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {
-            if let Slicing::Paused((next_input_idx, next_output_idx)) =
-                self.ingest_tx_with_slicing(tx, next_input_idx, next_output_idx, &mut stats)
-            {
-                stats.ins_total += performance_counter() - ins_start;
-
-                // Getting close to the the instructions limit. Pause execution.
-                self.partial_stable_block = Some(PartialStableBlock {
-                    block,
-                    next_tx_idx: tx_idx,
-                    next_input_idx,
-                    next_output_idx,
-                    stats,
-                });
-
-                return Slicing::Paused(());
-            }
-
-            // Current transaction was processed in full. Reset the indices for next transaction.
-            next_input_idx = 0;
-            next_output_idx = 0;
-        }
-
-        stats.ins_total += performance_counter() - ins_start;
-        print(&format!(
-            "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
-            self.next_height, stats
-        ));
-
-        // Block ingestion complete.
-        self.next_height += 1;
-        Slicing::Done(block.block_hash())
-    }
-
     // Ingests a transaction into the given UTXO set.
     //
     // NOTE: This method does a form of time-slicing to stay within the instruction limit, and
@@ -221,17 +269,18 @@ impl UtxoSet {
         tx: &Transaction,
         start_input_idx: usize,
         start_output_idx: usize,
+        utxos_delta: &mut UtxosDelta,
         stats: &mut BlockIngestionStats,
     ) -> Slicing<(usize, usize), ()> {
         let ins_start = performance_counter();
-        let res = self.remove_inputs(tx, start_input_idx);
+        let res = self.remove_inputs(tx, start_input_idx, utxos_delta);
         stats.ins_remove_inputs += performance_counter() - ins_start;
         if let Slicing::Paused(input_idx) = res {
             return Slicing::Paused((input_idx, 0));
         }
 
         let ins_start = performance_counter();
-        let res = self.insert_outputs(tx, start_output_idx, stats);
+        let res = self.insert_outputs(tx, start_output_idx, utxos_delta, stats);
         stats.ins_insert_outputs += performance_counter() - ins_start;
         if let Slicing::Paused(output_idx) = res {
             return Slicing::Paused((tx.input().len(), output_idx));
@@ -241,15 +290,18 @@ impl UtxoSet {
     }
 
     // Iterates over transaction inputs, starting from `start_idx`, and removes them from the UTXO set.
-    fn remove_inputs(&mut self, tx: &Transaction, start_idx: usize) -> Slicing<usize, ()> {
+    fn remove_inputs(
+        &mut self,
+        tx: &Transaction,
+        start_idx: usize,
+        utxos_delta: &mut UtxosDelta,
+    ) -> Slicing<usize, ()> {
         if tx.is_coin_base() {
             return Slicing::Done(());
         }
 
         for (input_idx, input) in tx.input().iter().enumerate().skip(start_idx) {
-            // NOTE: We're using `inc_performance_counter` here to increment the mock performance
-            // counter in the unit tests.
-            if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
+            if (self.should_time_slice)() {
                 return Slicing::Paused(input_idx);
             }
 
@@ -257,13 +309,14 @@ impl UtxoSet {
             let outpoint = (&input.previous_output).into();
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
-                    if let Ok(address) =
-                        Address::from_script(&Script::from(txout.script_pubkey), self.network)
-                    {
+                    if let Ok(address) = Address::from_script(
+                        &Script::from(txout.script_pubkey.clone()),
+                        self.network,
+                    ) {
                         let address_utxo = AddressUtxo {
                             address: address.clone(),
                             height,
-                            outpoint,
+                            outpoint: outpoint.clone(),
                         };
 
                         let found = self.address_utxos.remove(&address_utxo);
@@ -285,9 +338,11 @@ impl UtxoSet {
                                 // Remove the address from the map if balance is zero.
                                 0 => self.balances.remove(&address),
                                 // Update the balance in the map.
-                                balance => self.balances.insert(address, balance).unwrap(),
+                                balance => self.balances.insert(address.clone(), balance).unwrap(),
                             };
                         }
+
+                        utxos_delta.remove(address, outpoint, txout, height);
                     }
                 }
                 None => {
@@ -304,12 +359,11 @@ impl UtxoSet {
         &mut self,
         tx: &Transaction,
         start_idx: usize,
+        utxos_delta: &mut UtxosDelta,
         stats: &mut BlockIngestionStats,
     ) -> Slicing<usize, ()> {
         for (vout, output) in tx.output().iter().enumerate().skip(start_idx) {
-            // NOTE: We're using `inc_performance_counter` here to increment the mock performance
-            // counter in the unit tests.
-            if inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD {
+            if (self.should_time_slice)() {
                 return Slicing::Paused(vout);
             }
 
@@ -319,7 +373,11 @@ impl UtxoSet {
                 stats.ins_txids += performance_counter() - ins_start;
 
                 let ins_start = performance_counter();
-                self.insert_utxo(OutPoint::new(txid, vout as u32), output.clone());
+                self.insert_utxo(
+                    OutPoint::new(txid, vout as u32),
+                    output.clone(),
+                    utxos_delta,
+                );
                 stats.ins_insert_utxos += performance_counter() - ins_start;
             }
         }
@@ -329,8 +387,14 @@ impl UtxoSet {
 
     // Inserts a UTXO into the given UTXO set.
     // A UTXO is represented by the the tuple: (outpoint, output)
-    fn insert_utxo(&mut self, outpoint: OutPoint, output: BitcoinTxOut) {
+    fn insert_utxo(
+        &mut self,
+        outpoint: OutPoint,
+        output: BitcoinTxOut,
+        utxos_delta: &mut UtxosDelta,
+    ) {
         // Insert the outpoint.
+        let tx_out: TxOut = (&output).into();
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
             self.address_utxos
@@ -347,13 +411,15 @@ impl UtxoSet {
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address, address_balance + output.value)
+                .insert(address.clone(), address_balance + output.value)
                 .expect("insertion must succeed");
+
+            utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }
 
         let outpoint_already_exists = self
             .utxos
-            .insert(outpoint.clone(), ((&output).into(), self.next_height));
+            .insert(outpoint.clone(), (tx_out, self.next_height));
 
         // Verify that we aren't overwriting a previously seen outpoint.
         // NOTE: There was a bug where there were duplicate transactions. These transactions
@@ -398,16 +464,29 @@ fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
 /// Used for time slicing.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
-pub struct PartialStableBlock {
+pub struct IngestingBlock {
     pub block: Block,
     pub next_tx_idx: usize,
     pub next_input_idx: usize,
     pub next_output_idx: usize,
-    pub stats: BlockIngestionStats,
+    stats: BlockIngestionStats,
+    utxos_delta: UtxosDelta,
 }
 
-impl PartialStableBlock {
-    pub fn new(
+impl IngestingBlock {
+    pub fn new(block: Block) -> Self {
+        Self {
+            block,
+            next_tx_idx: 0,
+            next_input_idx: 0,
+            next_output_idx: 0,
+            stats: BlockIngestionStats::default(),
+            utxos_delta: UtxosDelta::default(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_args(
         block: Block,
         next_tx_idx: usize,
         next_input_idx: usize,
@@ -419,8 +498,31 @@ impl PartialStableBlock {
             next_input_idx,
             next_output_idx,
             stats: BlockIngestionStats::default(),
+            utxos_delta: UtxosDelta::default(),
         }
     }
+}
+
+// Various profiling stats for tracking the performance of block ingestion.
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
+struct BlockIngestionStats {
+    // The number of rounds it took to ingest the block.
+    num_rounds: u32,
+
+    // The total number of instructions used to ingest the block.
+    ins_total: u64,
+
+    // The number of instructions used to remove the transaction inputs.
+    ins_remove_inputs: u64,
+
+    // The number of instructions used to insert the transaction outputs.
+    ins_insert_outputs: u64,
+
+    // The number of instructions used to compute the txids.
+    ins_txids: u64,
+
+    // The number of instructions used to insert new utxos.
+    ins_insert_utxos: u64,
 }
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
@@ -432,10 +534,22 @@ impl PartialEq for UtxoSet {
         self.utxos == other.utxos
             && self.network == other.network
             && self.next_height == other.next_height
-            && self.partial_stable_block == other.partial_stable_block
+            && self.ingesting_block == other.ingesting_block
             && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
             && is_stable_btreemap_equal(&self.balances, &other.balances)
     }
+}
+
+// The default predicate to use for time-slicing.
+// Checks that we're not approaching the instructions limit.
+fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
+    // The threshold at which time slicing kicks in.
+    // At the time of this writing it is equivalent to 80% of the maximum instructions limit.
+    const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
+
+    // NOTE: We're using `inc_performance_counter` here to also increment the mock performance
+    // counter in the unit tests.
+    Box::new(|| inc_performance_counter() >= MAX_INSTRUCTIONS_THRESHOLD)
 }
 
 #[cfg(test)]
@@ -448,12 +562,19 @@ mod test {
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
+    use proptest::prelude::*;
     use std::collections::BTreeSet;
 
     // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
     fn ingest_tx(utxo_set: &mut UtxoSet, tx: &Transaction) {
         assert_eq!(
-            utxo_set.ingest_tx_with_slicing(tx, 0, 0, &mut BlockIngestionStats::default()),
+            utxo_set.ingest_tx_with_slicing(
+                tx,
+                0,
+                0,
+                &mut UtxosDelta::default(),
+                &mut BlockIngestionStats::default()
+            ),
             Slicing::Done(())
         );
     }
@@ -482,18 +603,23 @@ mod test {
         for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
             let mut utxo = UtxoSet::new(*network);
 
-            // op return coinbase
-            let coinbase_op_return_tx = Transaction::new(bitcoin::Transaction {
-                output: vec![BitcoinTxOut {
-                    value: 50_0000_0000,
-                    script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
-                }],
-                input: vec![],
-                version: 1,
-                lock_time: 0,
-            });
-            ingest_tx(&mut utxo, &coinbase_op_return_tx);
+            // A provably unspendable tx.
+            let block = BlockBuilder::genesis()
+                .with_transaction(Transaction::new(bitcoin::Transaction {
+                    output: vec![BitcoinTxOut {
+                        value: 50_0000_0000,
+                        script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
+                    }],
+                    input: vec![],
+                    version: 1,
+                    lock_time: 0,
+                }))
+                .build();
 
+            assert_eq!(
+                utxo.ingest_block(block.clone()),
+                Slicing::Done(block.block_hash())
+            );
             assert!(utxo.utxos.is_empty());
             assert!(utxo.address_utxos.is_empty());
         }
@@ -650,10 +776,10 @@ mod test {
 
         let outpoint = OutPoint::new(Txid::from(vec![]), 0);
 
-        utxo_set.insert_utxo(outpoint.clone(), tx_out_1);
+        utxo_set.insert_utxo(outpoint.clone(), tx_out_1, &mut UtxosDelta::default());
 
         // Should panic, as we are trying to insert a UTXO with the same outpoint.
-        utxo_set.insert_utxo(outpoint, tx_out_2);
+        utxo_set.insert_utxo(outpoint, tx_out_2, &mut UtxosDelta::default());
     }
 
     #[test]
@@ -730,5 +856,239 @@ mod test {
         );
         assert_eq!(utxo_set.get_balance(&address_1), 0);
         assert_eq!(utxo_set.get_balance(&address_2), 1_000);
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn atomicity_while_ingesting_block(
+            // The number of inputs/outputs to ingest per round.
+            ingestion_rate in 1..150u32,
+
+            // The number of inputs/outputs per transaction.
+            tx_cardinality in 1..200u64,
+
+            network in prop_oneof![
+                Just(Network::Mainnet),
+                Just(Network::Testnet),
+                Just(Network::Regtest),
+            ]) {
+
+            let address_1 = random_p2pkh_address(network);
+            let address_2 = random_p2pkh_address(network);
+            let address_3 = random_p2pkh_address(network);
+
+            let mut utxo_set = UtxoSet::new(network);
+
+            // Transaction 0: A coinbase tx with `tx_cardinality` inputs, each giving 1 Satoshi to
+            // address 1.
+            let mut tx_0 = TransactionBuilder::coinbase();
+            for i in 0..tx_cardinality {
+                tx_0 = tx_0.with_output(&address_1, 1).with_lock_time(i as u32)
+            }
+            let tx_0 = tx_0.build();
+
+            // Transaction 1: Consume all the outputs of transaction 0 *in reverse order* and create
+            // similar outputs for address 2.
+            //
+            // Consuming the inputs in reverse order here is deliberate as it allows to test
+            // whether or not they'll be sorted when they're re-added back in
+            // `get_address_outpoints`.
+            let mut tx_1 = TransactionBuilder::new();
+            for i in (0..tx_cardinality).rev() {
+                tx_1 = tx_1.with_input(OutPoint {
+                    vout: i as u32,
+                    txid: tx_0.txid(),
+                });
+            }
+            for i in 0..tx_cardinality {
+                tx_1 = tx_1.with_output(&address_2, 1).with_lock_time(i as u32);
+            }
+            let tx_1 = tx_1.build();
+
+            // Transaction 2: Consume all the outputs of transaction 1 and create similar outputs
+            // for address 3.
+            let mut tx_2 = TransactionBuilder::new();
+            for i in 0..tx_cardinality {
+                tx_2 = tx_2
+                    .with_input(OutPoint {
+                        vout: i as u32,
+                        txid: tx_1.txid(),
+                    })
+                    .with_output(&address_3, 1);
+            }
+            let tx_2 = tx_2.build();
+
+            // Block 0: Contains transaction 0.
+            let block_0 = BlockBuilder::genesis()
+                .with_transaction(tx_0.clone())
+                .build();
+
+            // Block 1: Contains transactions 1 and 2.
+            let block_1 = BlockBuilder::with_prev_header(block_0.header())
+                .with_transaction(tx_1.clone())
+                .with_transaction(tx_2.clone())
+                .build();
+
+
+            // Ingest block 0 without any time-slicing.
+            assert_eq!(
+                utxo_set.ingest_block(block_0.clone()),
+                Slicing::Done(block_0.block_hash())
+            );
+
+            // Update predicate to time-slice block 1 based on the ingestion rate.
+            utxo_set.should_time_slice = ingestion_rate_predicate(ingestion_rate);
+
+            let res = utxo_set.ingest_block(block_1);
+            let mut num_rounds = 1;
+
+            if Slicing::Paused(()) == res {
+                num_rounds += 1;
+                while let Some(Slicing::Paused(())) = utxo_set.ingest_block_continue() {
+
+                    // Block 1 ingestion is paused. Assert that the state is exactly
+                    // what we expect if only block 0 is ingested.
+
+                    assert_eq!(utxo_set.get_balance(&address_1), tx_cardinality);
+                    assert_eq!(utxo_set.get_balance(&address_2), 0);
+                    assert_eq!(utxo_set.get_balance(&address_3), 0);
+
+                    assert_eq!(
+                        utxo_set
+                            .get_address_outpoints(&address_1, &None)
+                            .collect::<Vec<_>>(),
+                        (0..tx_cardinality)
+                            .map(|i| OutPoint {
+                                txid: tx_0.txid(),
+                                vout: i as u32
+                            })
+                            .collect::<Vec<_>>()
+                    );
+
+                    assert_eq!(
+                        utxo_set
+                            .get_address_outpoints(&address_2, &None)
+                            .collect::<Vec<_>>(),
+                        vec![]
+                    );
+
+                    assert_eq!(
+                        utxo_set
+                            .get_address_outpoints(&address_3, &None)
+                            .collect::<Vec<_>>(),
+                        vec![]
+                    );
+
+                    for i in 0..tx_cardinality {
+                        // All the outpoints in block 0 exist.
+                        assert!(utxo_set
+                            .get_utxo(&OutPoint {
+                                vout: i as u32,
+                                txid: tx_0.txid(),
+                            })
+                            .is_some());
+
+                        // All the outpoints in block 1 do not exist.
+                        assert_eq!(
+                            utxo_set.get_utxo(&OutPoint {
+                                vout: i as u32,
+                                txid: tx_1.txid(),
+                            }),
+                            None
+                        );
+
+                        assert_eq!(
+                            utxo_set.get_utxo(&OutPoint {
+                                vout: i as u32,
+                                txid: tx_2.txid(),
+                            }),
+                            None
+                        );
+                    }
+
+                    num_rounds += 1;
+                }
+            }
+
+            // Finished ingesting block 1. Assert that the balances, addresses outpoints, and
+            // UTXOs are updated accordingly.
+            assert_eq!(utxo_set.get_balance(&address_1), 0);
+            assert_eq!(utxo_set.get_balance(&address_2), 0);
+            assert_eq!(utxo_set.get_balance(&address_3), tx_cardinality);
+            assert_eq!(
+                num_rounds,
+                ((tx_cardinality * 4) as f32 / ingestion_rate as f32).ceil() as u32
+            );
+
+            assert_eq!(
+                utxo_set
+                    .get_address_outpoints(&address_1, &None)
+                    .collect::<Vec<_>>(),
+                vec![]
+            );
+
+            assert_eq!(
+                utxo_set
+                    .get_address_outpoints(&address_2, &None)
+                    .collect::<Vec<_>>(),
+                vec![]
+            );
+
+            assert_eq!(
+                utxo_set
+                    .get_address_outpoints(&address_3, &None)
+                    .collect::<Vec<_>>(),
+                (0..tx_cardinality)
+                    .map(|i| OutPoint {
+                        txid: tx_2.txid(),
+                        vout: i as u32
+                    })
+                    .collect::<Vec<_>>()
+            );
+
+            for i in 0..tx_cardinality {
+                // All the outpoints in tx 0 don't exist.
+                assert_eq!(
+                    utxo_set.get_utxo(&OutPoint {
+                        vout: i as u32,
+                        txid: tx_0.txid(),
+                    }),
+                    None
+                );
+
+                // All the outpoints in tx 1 don't exist.
+                assert_eq!(
+                    utxo_set.get_utxo(&OutPoint {
+                        vout: i as u32,
+                        txid: tx_1.txid(),
+                    }),
+                    None
+                );
+
+                // All the outpoints in tx 2 exist.
+                assert!(utxo_set
+                    .get_utxo(&OutPoint {
+                        vout: i as u32,
+                        txid: tx_2.txid(),
+                    }).is_some());
+            }
+        }
+    }
+
+    // A predicate that allows the Utxo Set to ingest `ingestion_rate` inputs/outputs,
+    // then triggers time-slicing.
+    fn ingestion_rate_predicate(ingestion_rate: u32) -> Box<dyn FnMut() -> bool> {
+        let mut count = ingestion_rate + 1;
+        Box::new(move || {
+            count -= 1;
+            if count == 0 {
+                // Trigger time-slicing, but reset the counter before doing so.
+                count = ingestion_rate + 1;
+                true
+            } else {
+                false
+            }
+        })
     }
 }

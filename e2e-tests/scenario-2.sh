@@ -20,13 +20,21 @@ dfx deploy --no-wallet e2e-scenario-2
 dfx deploy --no-wallet bitcoin --argument "(record {
   stability_threshold = 1;
   network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id e2e-scenario-2)\"
+  blocks_source = principal \"$(dfx canister id e2e-scenario-2)\";
+  syncing = variant { enabled };
+  fees = record {
+    get_utxos = 0;
+    get_balance = 0;
+    get_current_fee_percentiles = 0;
+    send_transaction_base = 0;
+    send_transaction_per_byte = 0;
+  }
 })"
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_main_chain_height 4 60
 
-BALANCE=$(dfx canister call bitcoin get_balance '(record {
+BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
@@ -40,7 +48,7 @@ fi
 # We temporarily pause outputting the commands to the terminal as
 # this command would print thousands of UTXOs.
 set +x
-UTXOS=$(dfx canister call bitcoin get_utxos '(record {
+UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')

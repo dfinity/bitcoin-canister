@@ -16,14 +16,22 @@ dfx deploy --no-wallet e2e-scenario-1
 dfx deploy --no-wallet bitcoin --argument "(record {
   stability_threshold = 2;
   network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id e2e-scenario-1)\"
+  blocks_source = principal \"$(dfx canister id e2e-scenario-1)\";
+  syncing = variant { enabled };
+  fees = record {
+    get_utxos = 0;
+    get_balance = 0;
+    get_current_fee_percentiles = 0;
+    send_transaction_base = 0;
+    send_transaction_per_byte = 0;
+  }
 })"
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_stable_height 3 60
 
 # Fetch the balance of an address we do not expect to have funds.
-BALANCE=$(dfx canister call bitcoin get_balance '(record {
+BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
@@ -34,7 +42,7 @@ if ! [[ $BALANCE = "(0 : nat64)" ]]; then
 fi
 
 # Fetch the balance of an address we expect to have funds.
-BALANCE=$(dfx canister call bitcoin get_balance '(record {
+BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
   min_confirmations = opt 2;
@@ -46,7 +54,7 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   exit 1
 fi
 
-UTXOS=$(dfx canister call bitcoin get_utxos '(record {
+UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   network = variant { regtest };
   address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
 })')
@@ -61,7 +69,7 @@ fi
 # We temporarily pause outputting the commands to the terminal as
 # this command would print thousands of UTXOs.
 set +x
-UTXOS=$(dfx canister call bitcoin get_utxos '(record {
+UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
 })')
@@ -73,7 +81,7 @@ if ! [[ $(num_utxos "$UTXOS") = 10000 ]]; then
 fi
 set -x
 
-BALANCE=$(dfx canister call bitcoin get_balance '(record {
+BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 })')
@@ -84,10 +92,10 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
 fi
 
 # Request the current fee percentiles. This is only for profiling purposes.
-dfx canister call bitcoin get_current_fee_percentiles '(record {
+dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
   network = variant { regtest };
 })'
-dfx canister call bitcoin get_current_fee_percentiles '(record {
+dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
   network = variant { regtest };
 })'
 

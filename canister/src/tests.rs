@@ -7,10 +7,10 @@ use crate::{
         BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsReply,
         GetSuccessorsResponse, GetUtxosRequest, Network,
     },
-    utxo_set::{PartialStableBlock, DUPLICATE_TX_IDS},
+    utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     with_state,
 };
-use crate::{init, test_utils::random_p2pkh_address, InitPayload};
+use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
@@ -122,10 +122,10 @@ fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
 
 #[async_std::test]
 async fn mainnet_100k_blocks() {
-    crate::init(crate::InitPayload {
+    crate::init(crate::Config {
         stability_threshold: 10,
         network: Network::Mainnet,
-        blocks_source: None,
+        ..Default::default()
     });
 
     // Set a reasonable performance counter step to trigger time-slicing.
@@ -355,10 +355,10 @@ async fn mainnet_100k_blocks() {
 
 #[async_std::test]
 async fn testnet_10k_blocks() {
-    crate::init(crate::InitPayload {
+    crate::init(crate::Config {
         stability_threshold: 2,
         network: Network::Testnet,
-        blocks_source: None,
+        ..Default::default()
     });
 
     // Set a reasonable performance counter step to trigger time-slicing.
@@ -403,10 +403,10 @@ async fn testnet_10k_blocks() {
 #[async_std::test]
 async fn time_slices_large_block_with_multiple_transactions() {
     let network = Network::Regtest;
-    init(InitPayload {
+    init(Config {
         stability_threshold: 0,
         network,
-        blocks_source: None,
+        ..Default::default()
     });
 
     let address_1 = random_p2pkh_address(network);
@@ -462,8 +462,8 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
     // Run the heartbeat a few rounds to ingest the blocks.
     let expected_states = vec![
-        PartialStableBlock::new(block_1.clone(), 0, 1, 1),
-        PartialStableBlock::new(block_1.clone(), 1, 1, 1),
+        IngestingBlock::new_with_args(block_1.clone(), 0, 1, 1),
+        IngestingBlock::new_with_args(block_1.clone(), 1, 1, 1),
     ];
 
     for expected_state in expected_states.into_iter() {
@@ -472,7 +472,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
         heartbeat().await;
 
         // Assert that execution has been paused.
-        let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+        let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
         assert_eq!(partial_block.block, expected_state.block);
         assert_eq!(partial_block.next_tx_idx, expected_state.next_tx_idx);
         assert_eq!(partial_block.next_input_idx, expected_state.next_input_idx);

@@ -2,7 +2,7 @@ use crate::{
     runtime::{call_get_successors, print},
     state::{self, ResponseToProcess},
     types::{
-        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
+        Block, BlockHash, Flag, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
@@ -32,8 +32,10 @@ pub async fn heartbeat() {
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
 // Returns true if a call to the `blocks_source` has been made, false otherwise.
 async fn maybe_fetch_blocks() -> bool {
-    if with_state(|s| s.syncing_state.is_fetching_blocks) {
-        // Already fetching blocks.
+    if with_state(|s| {
+        s.syncing_state.is_fetching_blocks || s.syncing_state.syncing == Flag::Disabled
+    }) {
+        // Already fetching blocks or syncing is disabled.
         return false;
     }
 
@@ -188,10 +190,10 @@ mod test {
         genesis_block, init, runtime,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
-            Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-            GetSuccessorsReply, InitPayload, Network,
+            Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
+            GetSuccessorsPartialResponse, Network, GetSuccessorsReply,
         },
-        utxo_set::PartialStableBlock,
+        utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader;
 
@@ -216,10 +218,10 @@ mod test {
     async fn fetches_blocks_and_processes_response() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
@@ -257,13 +259,47 @@ mod test {
     }
 
     #[async_std::test]
+    async fn does_not_fetch_blocks_if_syncing_is_disabled() {
+        let network = Network::Regtest;
+
+        init(Config {
+            stability_threshold: 0,
+            network,
+            ..Default::default()
+        });
+
+        with_state_mut(|s| {
+            s.syncing_state.syncing = Flag::Disabled;
+        });
+
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+
+        let mut block_bytes = vec![];
+        block.consensus_encode(&mut block_bytes).unwrap();
+
+        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![block_bytes],
+                next: vec![],
+            },
+        ));
+
+        // Try to fetch blocks
+        heartbeat().await;
+        heartbeat().await;
+
+        // Assert that the block has not been ingested.
+        assert_eq!(with_state(state::main_chain_height), 0);
+    }
+
+    #[async_std::test]
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Setup a chain of two blocks.
@@ -307,7 +343,7 @@ mod test {
 
         // Assert that execution has been paused.
         // Ingested the genesis block (1 tx) + 2 txs of block_1 into the UTXO set.
-        let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+        let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
         assert_eq!(partial_block.block, block_1);
         assert_eq!(partial_block.next_tx_idx, 2);
         assert_eq!(partial_block.next_input_idx, 1);
@@ -318,7 +354,7 @@ mod test {
         heartbeat().await;
 
         // Assert that execution has been paused. Ingested 3 more txs in block_1.
-        let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+        let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
         assert_eq!(partial_block.block, block_1);
         assert_eq!(partial_block.next_tx_idx, 5);
         assert_eq!(partial_block.next_input_idx, 1);
@@ -332,7 +368,7 @@ mod test {
         heartbeat().await;
 
         // Time slicing is complete.
-        assert!(with_state(|s| s.utxos.partial_stable_block.is_none()));
+        assert!(with_state(|s| s.utxos.ingesting_block.is_none()));
 
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(state::main_chain_height), 2);
@@ -347,10 +383,10 @@ mod test {
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address_1 = random_p2pkh_address(network);
@@ -421,12 +457,12 @@ mod test {
         // Run the heartbeat a few rounds to ingest the two stable blocks.
         // Three inputs/outputs are expected to be ingested per round.
         let expected_states = vec![
-            PartialStableBlock::new(block_1.clone(), 0, 1, 2),
-            PartialStableBlock::new(block_1.clone(), 0, 1, 5),
-            PartialStableBlock::new(block_2.clone(), 0, 2, 0),
-            PartialStableBlock::new(block_2.clone(), 0, 5, 0),
-            PartialStableBlock::new(block_2.clone(), 0, 6, 2),
-            PartialStableBlock::new(block_2.clone(), 0, 6, 5),
+            IngestingBlock::new_with_args(block_1.clone(), 0, 1, 2),
+            IngestingBlock::new_with_args(block_1.clone(), 0, 1, 5),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 2, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 5, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 6, 2),
+            IngestingBlock::new_with_args(block_2.clone(), 0, 6, 5),
         ];
 
         for expected_state in expected_states.into_iter() {
@@ -435,7 +471,7 @@ mod test {
             heartbeat().await;
 
             // Assert that execution has been paused.
-            let partial_block = with_state(|s| s.utxos.partial_stable_block.clone().unwrap());
+            let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
             assert_eq!(partial_block.block, expected_state.block);
             assert_eq!(partial_block.next_tx_idx, expected_state.next_tx_idx);
             assert_eq!(partial_block.next_input_idx, expected_state.next_input_idx);
@@ -443,12 +479,29 @@ mod test {
                 partial_block.next_output_idx,
                 expected_state.next_output_idx
             );
+
+            // The addresses 1 and 2 do not change while ingestion is in progress.
+            assert_eq!(
+                crate::api::get_balance(crate::types::GetBalanceRequest {
+                    address: address_1.to_string(),
+                    min_confirmations: None
+                }),
+                0
+            );
+
+            assert_eq!(
+                crate::api::get_balance(crate::types::GetBalanceRequest {
+                    address: address_2.to_string(),
+                    min_confirmations: None
+                }),
+                tx_cardinality as u64 * 1000
+            );
         }
 
         // Assert ingestion has finished.
         runtime::performance_counter_reset();
         heartbeat().await;
-        with_state(|s| assert_eq!(s.utxos.partial_stable_block, None));
+        with_state(|s| assert_eq!(s.utxos.ingesting_block, None));
 
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(state::main_chain_height), 3);
@@ -478,10 +531,10 @@ mod test {
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address = random_p2pkh_address(network);

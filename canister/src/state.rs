@@ -3,8 +3,8 @@ use crate::{
     block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
     types::{
-        Address, Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-        Network, Slicing,
+        Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
+        GetSuccessorsPartialResponse, Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
     UtxoSet,
@@ -37,6 +37,8 @@ pub struct State {
 
     /// A store containing all the stable blocks' headers.
     pub stable_block_headers: BlockHeaderStore,
+
+    pub fees: Fees,
 }
 
 impl State {
@@ -56,6 +58,7 @@ impl State {
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
             stable_block_headers: BlockHeaderStore::init(),
+            fees: Fees::default(),
         }
     }
 
@@ -97,17 +100,17 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
     let prev_state = (
         state.utxos.next_height(),
-        &state.utxos.partial_stable_block.clone(),
+        &state.utxos.ingesting_block.clone(),
     );
     let has_state_changed = |state: &State| -> bool {
-        prev_state != (state.utxos.next_height(), &state.utxos.partial_stable_block)
+        prev_state != (state.utxos.next_height(), &state.utxos.ingesting_block)
     };
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
     match state.utxos.ingest_block_continue() {
-        Slicing::Paused(()) => return has_state_changed(state),
-        Slicing::Done(None) => {}
-        Slicing::Done(Some(ingested_block_hash)) => pop_block(state, ingested_block_hash),
+        None => {}
+        Some(Slicing::Paused(())) => return has_state_changed(state),
+        Some(Slicing::Done(ingested_block_hash)) => pop_block(state, ingested_block_hash),
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
@@ -177,8 +180,11 @@ pub enum ResponseToProcess {
     Partial(GetSuccessorsPartialResponse, u8),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct SyncingState {
+    /// Whether or not new blocks should be fetched from the network.
+    pub syncing: Flag,
+
     /// A flag used to ensure that only one request for fetching blocks is
     /// being sent at a time.
     pub is_fetching_blocks: bool,
@@ -190,26 +196,14 @@ pub struct SyncingState {
     pub num_get_successors_rejects: u64,
 }
 
-/// Various profiling stats for tracking the performance of block ingestion.
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
-pub struct BlockIngestionStats {
-    /// The number of rounds it took to ingest the block.
-    pub num_rounds: u32,
-
-    /// The total number of instructions used to ingest the block.
-    pub ins_total: u64,
-
-    /// The number of instructions used to remove the transaction inputs.
-    pub ins_remove_inputs: u64,
-
-    /// The number of instructions used to insert the transaction outputs.
-    pub ins_insert_outputs: u64,
-
-    /// The number of instructions used to compute the txids.
-    pub ins_txids: u64,
-
-    /// The number of instructions used to insert new utxos.
-    pub ins_insert_utxos: u64,
+impl Default for SyncingState {
+    fn default() -> Self {
+        Self {
+            syncing: Flag::Enabled,
+            is_fetching_blocks: false,
+            response_to_process: None,
+        }
+    }
 }
 
 /// Cache for storing last calculated fee percentiles

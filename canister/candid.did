@@ -21,10 +21,25 @@ type utxo = record {
   height: nat32;
 };
 
-type init_payload = record {
+type flag = variant {
+  enabled;
+  disabled;
+};
+
+type config = record {
   stability_threshold: nat;
   network: network;
   blocks_source: principal;
+  syncing: flag;
+  fees: fees;
+};
+
+type fees = record {
+  get_utxos: nat;
+  get_balance: nat;
+  get_current_fee_percentiles: nat;
+  send_transaction_base: nat;
+  send_transaction_per_byte: nat;
 };
 
 type get_balance_request = record {
@@ -55,10 +70,19 @@ type get_current_fee_percentiles_request = record {
 
 type millisatoshi_per_byte = nat64;
 
-service bitcoin: (init_payload) -> {
-  get_balance: (get_balance_request) -> (satoshi);
-  
-  get_utxos: (get_utxos_request) -> (get_utxos_response);
+type set_config_request = record {
+  syncing: opt flag;
+  fees: opt fees;
+};
 
-  get_current_fee_percentiles: (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+service bitcoin: (config) -> {
+  bitcoin_get_balance: (get_balance_request) -> (satoshi);
+
+  bitcoin_get_utxos: (get_utxos_request) -> (get_utxos_response);
+
+  bitcoin_get_current_fee_percentiles: (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+
+  get_config: () -> (config) query;
+
+  set_config: (set_config_request) -> ();
 }

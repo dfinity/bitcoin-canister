@@ -4,6 +4,7 @@ mod block_header_store;
 mod blocktree;
 mod heartbeat;
 mod memory;
+mod multi_iter;
 mod runtime;
 pub mod state;
 #[cfg(test)]
@@ -16,17 +17,20 @@ mod utxo_set;
 use utxo_set::UtxoSet;
 
 use crate::{
+    runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{Block, InitPayload, Network},
+    types::{Block, Config, Network, SetConfigRequest},
 };
 pub use heartbeat::heartbeat;
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi,
 };
+use ic_cdk::export::Principal;
 use ic_stable_structures::Memory;
 use std::cell::RefCell;
 use std::convert::TryInto;
+use std::str::FromStr;
 
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
@@ -63,19 +67,18 @@ fn set_state(state: State) {
 }
 
 /// Initializes the state of the Bitcoin canister.
-pub fn init(payload: InitPayload) {
+pub fn init(config: Config) {
     set_state(State::new(
-        payload
+        config
             .stability_threshold
             .try_into()
             .expect("stability threshold too large"),
-        payload.network,
-        genesis_block(payload.network),
+        config.network,
+        genesis_block(config.network),
     ));
 
-    if let Some(blocks_source) = payload.blocks_source {
-        with_state_mut(|s| s.blocks_source = blocks_source)
-    }
+    with_state_mut(|s| s.blocks_source = config.blocks_source);
+    with_state_mut(|s| s.fees = config.fees);
 }
 
 pub fn get_current_fee_percentiles(
@@ -93,6 +96,36 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     verify_network(request.network.into());
     api::get_utxos(request.into())
+}
+
+pub fn get_config() -> Config {
+    with_state(|s| Config {
+        stability_threshold: s.unstable_blocks.stability_threshold() as u128,
+        syncing: s.syncing_state.syncing,
+        blocks_source: s.blocks_source,
+        network: s.network(),
+        fees: s.fees.clone(),
+    })
+}
+
+pub fn set_config(request: SetConfigRequest) {
+    // TODO(EXC-1279): Instead of hard-coding a principal, check that the caller is a canister controller.
+    if ic_cdk::api::caller()
+        != Principal::from_str("5kqj4-ymytp-ozksm-u62pb-po22y-zqqzf-2o4th-5shdt-m5j6r-kgyfi-2qe")
+            .unwrap()
+    {
+        panic!("Unauthorized sender");
+    }
+
+    with_state_mut(|s| {
+        if let Some(syncing) = request.syncing {
+            s.syncing_state.syncing = syncing;
+        }
+
+        if let Some(fees) = request.fees {
+            s.fees = fees;
+        }
+    });
 }
 
 pub fn pre_upgrade() {
@@ -127,8 +160,26 @@ pub fn post_upgrade() {
 }
 
 /// Returns the genesis block of the given network.
-pub fn genesis_block(network: Network) -> Block {
+pub(crate) fn genesis_block(network: Network) -> Block {
     Block::new(bitcoin::blockdata::constants::genesis_block(network.into()))
+}
+
+pub(crate) fn charge_cycles(amount: u128) {
+    let amount: u64 = amount.try_into().expect("amount must be u64");
+
+    if msg_cycles_available() < amount {
+        panic!(
+            "Received {} cycles. {} cycles are required.",
+            msg_cycles_available(),
+            amount
+        );
+    }
+
+    assert_eq!(
+        msg_cycles_accept(amount),
+        amount,
+        "Accepting cycles must succeed"
+    );
 }
 
 // Verifies that the network is equal to the one maintained by this canister's state.
@@ -157,10 +208,10 @@ mod test {
                 Just(Network::Regtest),
             ],
         ) {
-            init(InitPayload {
+            init(Config {
                 stability_threshold,
                 network,
-                blocks_source: None
+                ..Default::default()
             });
 
             with_state(|state| {
@@ -181,10 +232,10 @@ mod test {
         ) {
             let network = Network::Regtest;
 
-            init(InitPayload {
+            init(Config {
                 stability_threshold,
                 network,
-                blocks_source: None
+                ..Default::default()
             });
 
             let blocks = build_regtest_chain(num_blocks, num_transactions_in_block);
@@ -215,10 +266,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_balance_correct_network() {
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
-            blocks_source: None,
+            ..Default::default()
         });
         get_balance(GetBalanceRequest {
             address: String::from(""),
@@ -230,10 +281,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_utxos_correct_network() {
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
-            blocks_source: None,
+            ..Default::default()
         });
         get_utxos(GetUtxosRequest {
             address: String::from(""),
@@ -245,10 +296,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_current_fee_percentiles_correct_network() {
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
-            blocks_source: None,
+            ..Default::default()
         });
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
             network: NetworkInRequest::Testnet,

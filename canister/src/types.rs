@@ -18,14 +18,40 @@ use std::{cmp::Ordering, convert::TryInto, str::FromStr};
 
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
-pub struct InitPayload {
+pub struct Config {
     pub stability_threshold: u128,
     pub network: Network,
 
-    /// The canister from which blocks are retrieved.
-    /// Defaults to the management canister in production and can be overridden
-    /// for testing.
-    pub blocks_source: Option<Principal>,
+    /// The principal from which blocks are retrieved.
+    ///
+    /// Setting this source to the management canister means that the blocks will be
+    /// fetched directly from the replica, and that's what is used in production.
+    pub blocks_source: Principal,
+
+    pub syncing: Flag,
+
+    pub fees: Fees,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            stability_threshold: 0,
+            network: Network::Regtest,
+            blocks_source: Principal::management_canister(),
+            syncing: Flag::Enabled,
+            fees: Fees::default(),
+        }
+    }
+}
+
+#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Default)]
+pub struct Fees {
+    pub get_utxos: u128,
+    pub get_balance: u128,
+    pub get_current_fee_percentiles: u128,
+    pub send_transaction_base: u128,
+    pub send_transaction_per_byte: u128,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
@@ -665,10 +691,28 @@ impl PartialOrd for Utxo {
     }
 }
 
+#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug)]
+pub enum Flag {
+    #[serde(rename = "enabled")]
+    Enabled,
+    #[serde(rename = "disabled")]
+    Disabled,
+}
+
+/// A request to update the canister's config.
+#[derive(CandidType, Deserialize)]
+pub struct SetConfigRequest {
+    /// Whether or not to enable/disable syncing of blocks from the network.
+    pub syncing: Option<Flag>,
+
+    /// The fees to charge for the various endpoints.
+    pub fees: Option<Fees>,
+}
+
 #[test]
 fn test_utxo_ordering() {
     let a = Utxo {
-        height: 1,
+        height: 3,
         outpoint: OutPoint {
             txid: Txid::from(vec![]),
             vout: 0,
@@ -679,7 +723,7 @@ fn test_utxo_ordering() {
     let b = Utxo {
         height: 2,
         outpoint: OutPoint {
-            txid: Txid::from(vec![]),
+            txid: Txid::from(vec![1]),
             vout: 0,
         },
         value: 123,
@@ -700,17 +744,27 @@ fn test_utxo_ordering() {
             txid: Txid::from(vec![1]),
             vout: 0,
         },
-        value: 123,
+        value: 124,
     };
 
-    assert!(a > b);
-    assert!(a > c);
-    assert!(b < a);
-    assert!(b < c);
-    assert!(c > b);
-    assert!(c == d);
-    assert!(c <= d);
-    assert!(c >= d);
+    // a < b == c < d
+    assert!(a < b);
+    assert!(b < d);
+    assert!(a < c);
+    assert!(c < d);
+    assert!(a < d);
+
+    // d > c == b > a
+    assert!(d > c);
+    assert!(c > a);
+    assert!(d > b);
+    assert!(b > a);
+    assert!(d > a);
+
+    // c == b
+    assert!(c == b);
+    assert!(c <= b);
+    assert!(c >= b);
 }
 
 #[test]

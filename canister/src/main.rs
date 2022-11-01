@@ -1,4 +1,4 @@
-use ic_btc_canister::types::{HttpRequest, HttpResponse, InitPayload};
+use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, SetConfigRequest};
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi,
@@ -9,8 +9,8 @@ use serde_bytes::ByteBuf;
 mod metrics;
 
 #[init]
-fn init(payload: InitPayload) {
-    ic_btc_canister::init(payload);
+fn init(config: Config) {
+    ic_btc_canister::init(config);
 }
 
 #[pre_upgrade]
@@ -29,20 +29,30 @@ async fn heartbeat() {
 }
 
 #[update]
-pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+pub fn bitcoin_get_balance(request: GetBalanceRequest) -> Satoshi {
     ic_btc_canister::get_balance(request)
 }
 
 #[update]
-pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
+pub fn bitcoin_get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     ic_btc_canister::get_utxos(request)
 }
 
 #[update]
-pub fn get_current_fee_percentiles(
+pub fn bitcoin_get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
     ic_btc_canister::get_current_fee_percentiles(request)
+}
+
+#[query]
+pub fn get_config() -> Config {
+    ic_btc_canister::get_config()
+}
+
+#[update]
+pub fn set_config(request: SetConfigRequest) {
+    ic_btc_canister::set_config(request)
 }
 
 fn main() {}
