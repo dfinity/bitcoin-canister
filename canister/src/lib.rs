@@ -4,8 +4,9 @@ mod block_header_store;
 mod blocktree;
 mod heartbeat;
 mod memory;
+pub use memory::get_memory;
 mod multi_iter;
-mod runtime;
+pub mod runtime;
 pub mod state;
 #[cfg(test)]
 mod test_utils;
