@@ -1,7 +1,7 @@
 use ic_btc_canister::types::HttpResponse;
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
-use std::{io, fmt::Display};
+use std::{fmt::Display, io};
 
 pub fn handle_metrics_request() -> HttpResponse {
     let now = time();
@@ -108,7 +108,7 @@ impl<W: io::Write> MetricsEncoder<W> {
         self.encode_single_value("gauge", name, value, help)
     }
 
-    fn encode_counter(&mut self, name: &str, value: u64, help: &str)-> io::Result<()> {
+    fn encode_counter(&mut self, name: &str, value: u64, help: &str) -> io::Result<()> {
         self.encode_single_value("counter", name, value, help)
     }
 }
