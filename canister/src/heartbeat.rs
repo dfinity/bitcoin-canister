@@ -190,8 +190,8 @@ mod test {
         genesis_block, init, runtime,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
-            Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-            InitPayload, Network,
+            Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
+            GetSuccessorsPartialResponse, Network,
         },
         utxo_set::IngestingBlock,
     };
@@ -218,10 +218,10 @@ mod test {
     async fn fetches_blocks_and_processes_response() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
@@ -262,10 +262,10 @@ mod test {
     async fn does_not_fetch_blocks_if_syncing_is_disabled() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         with_state_mut(|s| {
@@ -296,10 +296,10 @@ mod test {
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Setup a chain of two blocks.
@@ -383,10 +383,10 @@ mod test {
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address_1 = random_p2pkh_address(network);
@@ -531,10 +531,10 @@ mod test {
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address = random_p2pkh_address(network);

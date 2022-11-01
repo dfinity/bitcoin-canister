@@ -1,9 +1,10 @@
 use crate::{
+    charge_cycles,
     runtime::{performance_counter, print},
     state::{FeePercentilesCache, State},
     types::{Block, Transaction},
     unstable_blocks::{self, UnstableBlocks},
-    with_state_mut,
+    with_state, with_state_mut,
 };
 use ic_btc_types::MillisatoshiPerByte;
 
@@ -15,6 +16,8 @@ const NUM_PERCENTILES: u16 = 100;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
+    charge_cycles(with_state(|s| s.fees.get_current_fee_percentiles));
+
     let res = with_state_mut(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
 
     // Print the number of instructions it took to process this request.
@@ -138,7 +141,7 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{InitPayload, Network, OutPoint},
+        types::{Config, Fees, Network, OutPoint},
         with_state,
     };
     use ic_btc_types::Satoshi;
@@ -251,10 +254,10 @@ mod test {
     }
 
     fn init_state(blocks: Vec<Block>, stability_threshold: u128) {
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold,
             network: Network::Regtest,
-            blocks_source: None,
+            ..Default::default()
         });
 
         with_state_mut(|state| {
@@ -482,5 +485,20 @@ mod test {
                 percentiles
             );
         });
+    }
+
+    #[test]
+    fn charges_cycles() {
+        crate::init(Config {
+            fees: Fees {
+                get_current_fee_percentiles: 10,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        get_current_fee_percentiles();
+
+        assert_eq!(crate::runtime::get_cycles_balance(), 10);
     }
 }
