@@ -191,7 +191,7 @@ mod test {
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
-            GetSuccessorsPartialResponse, Network, GetSuccessorsReply,
+            GetSuccessorsPartialResponse, GetSuccessorsReply, Network,
         },
         utxo_set::IngestingBlock,
     };
@@ -277,12 +277,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
             },
-        ));
+        )));
 
         // Try to fetch blocks
         heartbeat().await;

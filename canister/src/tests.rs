@@ -509,10 +509,10 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
 #[async_std::test]
 async fn test_rejections_counting() {
-    crate::init(crate::InitPayload {
+    crate::init(crate::Config {
         stability_threshold: 2,
         network: Network::Testnet,
-        blocks_source: None,
+        ..Default::default()
     });
 
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);

@@ -202,6 +202,7 @@ impl Default for SyncingState {
             syncing: Flag::Enabled,
             is_fetching_blocks: false,
             response_to_process: None,
+            num_get_successors_rejects: 0,
         }
     }
 }
