@@ -32,6 +32,8 @@ thread_local! {
     static PERFORMANCE_COUNTER: RefCell<u64> = RefCell::new(0);
 
     static PERFORMANCE_COUNTER_STEP: RefCell<u64> = RefCell::new(0);
+
+    static CYCLES_BALANCE: RefCell<u64> = RefCell::new(0);
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -131,4 +133,31 @@ pub fn performance_counter_reset() {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn set_performance_counter_step(step_size: u64) {
     PERFORMANCE_COUNTER_STEP.with(|pc| *pc.borrow_mut() = step_size)
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn msg_cycles_available() -> u64 {
+    ic_cdk::api::call::msg_cycles_available()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn msg_cycles_available() -> u64 {
+    u64::MAX
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+    ic_cdk::api::call::msg_cycles_accept(max_amount)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+    CYCLES_BALANCE.with(|c| *c.borrow_mut() += max_amount);
+    max_amount
+}
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+pub fn get_cycles_balance() -> u64 {
+    CYCLES_BALANCE.with(|c| *c.borrow())
 }

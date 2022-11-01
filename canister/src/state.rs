@@ -3,7 +3,7 @@ use crate::{
     block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
     types::{
-        Address, Block, BlockHash, Flag, GetSuccessorsCompleteResponse,
+        Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
@@ -37,6 +37,8 @@ pub struct State {
 
     /// A store containing all the stable blocks' headers.
     pub stable_block_headers: BlockHeaderStore,
+
+    pub fees: Fees,
 }
 
 impl State {
@@ -56,6 +58,7 @@ impl State {
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
             stable_block_headers: BlockHeaderStore::init(),
+            fees: Fees::default(),
         }
     }
 
