@@ -152,10 +152,10 @@ impl UtxoSet {
         }
 
         stats.ins_total += performance_counter() - ins_start;
-        print(&format!(
+        /*print(&format!(
             "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
             self.next_height, stats
-        ));
+        ));*/
 
         // Block ingestion complete.
         self.next_height += 1;

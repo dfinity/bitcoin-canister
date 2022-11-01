@@ -16,11 +16,13 @@ use ic_btc_canister::{
     types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
     with_state,
 };
+use ic_stable_structures::Memory;
 use rusty_leveldb::{Options, DB};
 use std::{
     collections::BTreeMap,
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom, Write},
+    os::unix::fs::FileExt,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -28,6 +30,50 @@ use std::{
 type Height = u32;
 type FileNumber = u32;
 type FileOffset = u32;
+
+const WASM_PAGE_SIZE: u64 = 65536;
+
+struct FileMemory(File);
+
+impl Memory for FileMemory {
+    /// Returns the current size of the stable memory in WebAssembly
+    /// pages. (One WebAssembly page is 64Ki bytes.)
+    fn size(&self) -> u64 {
+        let len = self.0.metadata().unwrap().len();
+        assert_eq!(
+            len % WASM_PAGE_SIZE,
+            0,
+            "File size must correspond to exact page sizes"
+        );
+        len / WASM_PAGE_SIZE
+    }
+
+    /// Tries to grow the memory by new_pages many pages containing
+    /// zeroes.  If successful, returns the previous size of the
+    /// memory (in pages).  Otherwise, returns -1.
+    fn grow(&self, pages: u64) -> i64 {
+        let previous_size = self.size();
+        self.0
+            .set_len(pages * WASM_PAGE_SIZE)
+            .expect("grow must succeed");
+        previous_size as i64
+    }
+
+    /// Copies the data referred to by offset out of the stable memory
+    /// and replaces the corresponding bytes in dst.
+    fn read(&self, offset: u64, dst: &mut [u8]) {
+        let bytes_read = self.0.read_at(dst, offset).expect("offset out of bounds");
+
+        assert_eq!(bytes_read, dst.len(), "read out of bounds");
+    }
+
+    /// Copies the data referred to by src and replaces the
+    /// corresponding segment starting at offset in the stable memory.
+    fn write(&self, offset: u64, src: &[u8]) {
+        let bytes_written = self.0.write_at(src, offset).expect("offset out of bounds");
+        assert_eq!(bytes_written, src.len(), "write out of bounds");
+    }
+}
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -138,22 +184,42 @@ async fn main() {
 
     let tip = BlockHash::from_str(&args.tip).expect("tip must be valid.");
 
-    println!("Building block index...");
+    let memory_size = ic_btc_canister::get_memory().with(|m| m.size());
+    if memory_size == 0 {
+        println!("Initializing new state...");
+        ic_btc_canister::init(ic_btc_canister::types::InitPayload {
+            stability_threshold: 0,
+            network: args.network,
+            blocks_source: None,
+        });
+    } else {
+        println!("Loading existing state...");
+        ic_btc_canister::post_upgrade();
+    }
 
+    println!("Building block index...");
     let block_index = build_block_index(&args.blocks_path, tip);
 
-    println!("Initializing...");
+    /*ctrlc::set_handler(move || {
+        // Run the pre-upgrade hook to save all the state into the memory.
+        println!("Running pre-upgrade...");
+        pre_upgrade();
 
-    ic_btc_canister::init(ic_btc_canister::types::InitPayload {
-        stability_threshold: 0,
-        network: args.network,
-        blocks_source: None,
-    });
+        std::process::exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");*/
+
+
+    println!("state height: {}", with_state(main_chain_height));
 
     let mut blocks_path = args.blocks_path.clone();
     blocks_path.push("blocks");
 
     for (height, (file, offset)) in block_index.into_iter() {
+        if height < with_state(main_chain_height) {
+            continue;
+        }
+
         let block_bytes = read_block(&blocks_path, file, offset);
 
         runtime::set_successors_response(GetSuccessorsResponse::Complete(
@@ -167,19 +233,18 @@ async fn main() {
         while with_state(main_chain_height) != height {
             heartbeat().await;
         }
-
-        println!("Height :{:?}", with_state(main_chain_height));
     }
 
     // Run the pre-upgrade hook to save all the state into the memory.
+    println!("Running pre-upgrade...");
     pre_upgrade();
 
     println!(
         "memory size: {:?}",
-        ic_btc_canister::get_memory().with(|m| m.borrow().len())
+        ic_btc_canister::get_memory().with(|m| m.size())
     );
 
-    let mut file = match File::create(&args.state_path) {
+    /*let mut file = match File::create(&args.state_path) {
         Err(err) => panic!("couldn't create {}: {}", args.state_path.display(), err),
         Ok(file) => file,
     };
@@ -187,7 +252,5 @@ async fn main() {
     ic_btc_canister::get_memory().with(|m| match file.write_all(&m.borrow()) {
         Err(err) => panic!("couldn't write to {}: {}", args.state_path.display(), err),
         Ok(_) => println!("successfully wrote state to {}", args.state_path.display()),
-    });
+    });*/
 }
-
-

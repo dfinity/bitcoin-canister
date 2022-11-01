@@ -8,6 +8,8 @@ async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = "0.28.1"
 byteorder = "1.4.3"
 clap = { version = "4.0.11", features = ["derive"] }
+ctrlc = "3.2.3"
 ic-btc-canister = { path = "../../canister" }
+ic-stable-structures = "0.1.0"
 integer-encoding = "3.0.4"
 rusty-leveldb = "1.0.4"
