@@ -2,7 +2,7 @@ use crate::{
     runtime::{call_get_successors, print},
     state::{self, ResponseToProcess},
     types::{
-        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
+        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsReply, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
@@ -227,12 +227,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
             },
-        ));
+        )));
 
         // Fetch blocks.
         heartbeat().await;
@@ -281,12 +281,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks,
                 next: vec![],
             },
-        ));
+        )));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 inputs/outputs per round.
@@ -398,12 +398,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks,
                 next: vec![],
             },
-        ));
+        )));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 transactions inputs/outputs per round.
@@ -497,27 +497,27 @@ mod test {
         block.consensus_encode(&mut block_bytes).unwrap();
 
         // Split the block bytes into three pages.
-        runtime::set_successors_response(GetSuccessorsResponse::Partial(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Partial(
             GetSuccessorsPartialResponse {
                 partial_block: block_bytes[0..40].to_vec(),
                 next: vec![],
                 remaining_follow_ups: 2,
             },
-        ));
+        )));
 
         // Fetch blocks (initial response).
         heartbeat().await;
 
         // Fetch blocks (second page).
-        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::FollowUp(
             block_bytes[40..80].to_vec(),
-        ));
+        )));
         heartbeat().await;
 
         // Fetch blocks (third page).
-        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::FollowUp(
             block_bytes[80..].to_vec(),
-        ));
+        )));
         heartbeat().await;
 
         // The response hasn't been fully processed yet, so the balance should still be zero.

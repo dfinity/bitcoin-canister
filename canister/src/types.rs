@@ -8,6 +8,7 @@ use ic_btc_types::{
     GetUtxosRequest as PublicGetUtxosRequest, Height, NetworkInRequest, Satoshi, UtxosFilter,
     UtxosFilterInRequest,
 };
+use ic_cdk::api::call::RejectionCode;
 use ic_cdk::export::{candid::CandidType, Principal};
 use ic_stable_structures::Storable as StableStructuresStorable;
 use serde::{Deserialize, Serialize};
@@ -490,6 +491,16 @@ pub enum GetSuccessorsResponse {
     /// A follow-up response containing a blob of bytes to be appended to the partial response.
     #[serde(rename = "follow_up")]
     FollowUp(BlockBlob),
+}
+
+/// A reply from the Bitcoin network containing either GetSuccessorsResponse or Rejection
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Eq)]
+pub enum GetSuccessorsReply {
+    /// A response containing the successors block
+    Ok(GetSuccessorsResponse),
+
+    /// Rejection from the Bitcoin network
+    Err(RejectionCode, String),
 }
 
 #[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]

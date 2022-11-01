@@ -4,8 +4,8 @@ use crate::{
     state::main_chain_height,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
-        BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
-        GetUtxosRequest, Network,
+        BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsReply,
+        GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{PartialStableBlock, DUPLICATE_TX_IDS},
     with_state,
@@ -77,10 +77,12 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
         .map(|block| {
             let mut block_bytes = vec![];
             Block::consensus_encode(&block, &mut block_bytes).unwrap();
-            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-                blocks: vec![block_bytes],
-                next: vec![],
-            })
+            GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+                GetSuccessorsCompleteResponse {
+                    blocks: vec![block_bytes],
+                    next: vec![],
+                },
+            ))
         })
         .collect();
 
@@ -437,12 +439,12 @@ async fn time_slices_large_block_with_multiple_transactions() {
         })
         .collect();
 
-    runtime::set_successors_response(GetSuccessorsResponse::Complete(
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks,
             next: vec![],
         },
-    ));
+    )));
 
     // Set a large step for the performance_counter to exceed the instructions limit quickly.
     // This value allows ingesting 2 transactions inputs/outputs per round.
