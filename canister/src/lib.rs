@@ -14,23 +14,22 @@ mod tests;
 pub mod types;
 mod unstable_blocks;
 mod utxo_set;
-use utxo_set::UtxoSet;
 
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
     types::{Block, Config, Network, SetConfigRequest},
 };
+pub use api::set_config;
 pub use heartbeat::heartbeat;
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi,
 };
-use ic_cdk::export::Principal;
 use ic_stable_structures::Memory;
 use std::cell::RefCell;
 use std::convert::TryInto;
-use std::str::FromStr;
+use utxo_set::UtxoSet;
 
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
@@ -106,26 +105,6 @@ pub fn get_config() -> Config {
         network: s.network(),
         fees: s.fees.clone(),
     })
-}
-
-pub fn set_config(request: SetConfigRequest) {
-    // TODO(EXC-1279): Instead of hard-coding a principal, check that the caller is a canister controller.
-    if ic_cdk::api::caller()
-        != Principal::from_str("5kqj4-ymytp-ozksm-u62pb-po22y-zqqzf-2o4th-5shdt-m5j6r-kgyfi-2qe")
-            .unwrap()
-    {
-        panic!("Unauthorized sender");
-    }
-
-    with_state_mut(|s| {
-        if let Some(syncing) = request.syncing {
-            s.syncing_state.syncing = syncing;
-        }
-
-        if let Some(fees) = request.fees {
-            s.fees = fees;
-        }
-    });
 }
 
 pub fn pre_upgrade() {
