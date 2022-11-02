@@ -191,6 +191,9 @@ pub struct SyncingState {
 
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
+
+    /// A number of rejects received when calling GetSuccessors.
+    pub num_get_successors_rejects: u64,
 }
 
 impl Default for SyncingState {
@@ -199,6 +202,7 @@ impl Default for SyncingState {
             syncing: Flag::Enabled,
             is_fetching_blocks: false,
             response_to_process: None,
+            num_get_successors_rejects: 0,
         }
     }
 }
