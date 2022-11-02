@@ -3,6 +3,8 @@ use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
 use std::{fmt::Display, io};
 
+const WASM_PAGE_SIZE: u64 = 65536;
+
 pub fn handle_metrics_request() -> HttpResponse {
     let now = time();
     let mut writer = MetricsEncoder::new(vec![], now / 1_000_000);
@@ -50,6 +52,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "address_utxos_length",
             state.utxos.address_utxos_len() as f64,
             "The number of UTXOs that are owned by supported addresses.",
+        )?;
+        w.encode_gauge(
+            "stable_memory_size_in_bytes",
+            (ic_cdk::api::stable::stable_size() as u64 * WASM_PAGE_SIZE) as f64,
+            "The size of stable memory in pages.",
+        )?;
+        w.encode_gauge(
+            "heap_size_in_bytes",
+            get_heap_size() as f64,
+            "The size of the heap memory in pages.",
         )?;
         w.encode_counter(
             "num_get_successors_rejects",
@@ -110,5 +122,18 @@ impl<W: io::Write> MetricsEncoder<W> {
 
     fn encode_counter(&mut self, name: &str, value: u64, help: &str) -> io::Result<()> {
         self.encode_single_value("counter", name, value, help)
+    }
+}
+
+// Returns the size of the heap in pages.
+fn get_heap_size() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        (core::arch::wasm32::memory_size(0) * WASM_PAGE_SIZE) as u64
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        0
     }
 }
