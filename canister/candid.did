@@ -71,6 +71,7 @@ type get_current_fee_percentiles_request = record {
 type millisatoshi_per_byte = nat64;
 
 type set_config_request = record {
+  stability_threshold: opt nat;
   syncing: opt flag;
   fees: opt fees;
 };

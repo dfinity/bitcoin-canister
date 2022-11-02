@@ -56,6 +56,10 @@ impl UnstableBlocks {
     pub fn stability_threshold(&self) -> u32 {
         self.stability_threshold
     }
+
+    pub fn set_stability_threshold(&mut self, stability_threshold: u32) {
+        self.stability_threshold = stability_threshold;
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
