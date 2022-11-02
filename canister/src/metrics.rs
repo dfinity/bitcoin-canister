@@ -1,7 +1,7 @@
 use ic_btc_canister::types::HttpResponse;
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
-use std::io;
+use std::{fmt::Display, io};
 
 pub fn handle_metrics_request() -> HttpResponse {
     let now = time();
@@ -52,14 +52,19 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The number of UTXOs that are owned by supported addresses.",
         )?;
         w.encode_gauge(
-            "stable_memory_size",
+            "stable_memory_pages",
             ic_cdk::api::stable::stable_size() as f64,
             "The size of stable memory in pages.",
         )?;
         w.encode_gauge(
-            "heap_size",
+            "heap_pages",
             get_heap_size() as f64,
             "The size of the heap memory in pages.",
+        )?;
+        w.encode_counter(
+            "num_get_successors_rejects",
+            state.syncing_state.num_get_successors_rejects,
+            "The number of rejects received when calling GetSuccessors.",
         )?;
         Ok(())
     })
@@ -97,11 +102,11 @@ impl<W: io::Write> MetricsEncoder<W> {
         writeln!(self.writer, "# TYPE {} {}", name, typ)
     }
 
-    fn encode_single_value(
+    fn encode_single_value<T: Display>(
         &mut self,
         typ: &str,
         name: &str,
-        value: f64,
+        value: T,
         help: &str,
     ) -> io::Result<()> {
         self.encode_header(name, help, typ)?;
@@ -111,6 +116,10 @@ impl<W: io::Write> MetricsEncoder<W> {
     /// Encodes the metadata and the value of a gauge.
     fn encode_gauge(&mut self, name: &str, value: f64, help: &str) -> io::Result<()> {
         self.encode_single_value("gauge", name, value, help)
+    }
+
+    fn encode_counter(&mut self, name: &str, value: u64, help: &str) -> io::Result<()> {
+        self.encode_single_value("counter", name, value, help)
     }
 }
 

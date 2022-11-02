@@ -68,7 +68,7 @@ async fn maybe_fetch_blocks() -> bool {
         let response = match response {
             Ok((response,)) => response,
             Err((code, msg)) => {
-                // TODO(EXC-1232): track these occurrences in a metric.
+                s.syncing_state.num_get_successors_rejects += 1;
                 print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
                 s.syncing_state.response_to_process = None;
                 return;
@@ -187,7 +187,8 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, init, runtime,
+        genesis_block, init,
+        runtime::{self, GetSuccessorsReply},
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
@@ -229,12 +230,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
             },
-        ));
+        )));
 
         // Fetch blocks.
         heartbeat().await;
@@ -277,12 +278,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
             },
-        ));
+        )));
 
         // Try to fetch blocks
         heartbeat().await;
@@ -317,12 +318,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks,
                 next: vec![],
             },
-        ));
+        )));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 inputs/outputs per round.
@@ -434,12 +435,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks,
                 next: vec![],
             },
-        ));
+        )));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 transactions inputs/outputs per round.
@@ -550,27 +551,27 @@ mod test {
         block.consensus_encode(&mut block_bytes).unwrap();
 
         // Split the block bytes into three pages.
-        runtime::set_successors_response(GetSuccessorsResponse::Partial(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Partial(
             GetSuccessorsPartialResponse {
                 partial_block: block_bytes[0..40].to_vec(),
                 next: vec![],
                 remaining_follow_ups: 2,
             },
-        ));
+        )));
 
         // Fetch blocks (initial response).
         heartbeat().await;
 
         // Fetch blocks (second page).
-        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::FollowUp(
             block_bytes[40..80].to_vec(),
-        ));
+        )));
         heartbeat().await;
 
         // Fetch blocks (third page).
-        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::FollowUp(
             block_bytes[80..].to_vec(),
-        ));
+        )));
         heartbeat().await;
 
         // The response hasn't been fully processed yet, so the balance should still be zero.

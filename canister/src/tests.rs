@@ -1,6 +1,7 @@
 use crate::{
     api::{get_balance, get_utxos},
-    genesis_block, heartbeat, runtime,
+    genesis_block, heartbeat,
+    runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
@@ -19,6 +20,7 @@ use bitcoin::{
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
+use ic_cdk::api::call::RejectionCode;
 use std::fs::File;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
@@ -77,10 +79,12 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
         .map(|block| {
             let mut block_bytes = vec![];
             Block::consensus_encode(&block, &mut block_bytes).unwrap();
-            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-                blocks: vec![block_bytes],
-                next: vec![],
-            })
+            GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+                GetSuccessorsCompleteResponse {
+                    blocks: vec![block_bytes],
+                    next: vec![],
+                },
+            ))
         })
         .collect();
 
@@ -437,12 +441,12 @@ async fn time_slices_large_block_with_multiple_transactions() {
         })
         .collect();
 
-    runtime::set_successors_response(GetSuccessorsResponse::Complete(
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks,
             next: vec![],
         },
-    ));
+    )));
 
     // Set a large step for the performance_counter to exceed the instructions limit quickly.
     // This value allows ingesting 2 transactions inputs/outputs per round.
@@ -502,4 +506,23 @@ async fn time_slices_large_block_with_multiple_transactions() {
         }),
         2000
     );
+}
+
+#[async_std::test]
+async fn test_rejections_counting() {
+    crate::init(crate::Config::default());
+
+    let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
+
+    runtime::set_successors_response(GetSuccessorsReply::Err(
+        RejectionCode::CanisterReject,
+        String::from("Test verification error."),
+    ));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    let counter_after = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
+
+    assert_eq!(counter_prior, counter_after - 1);
 }

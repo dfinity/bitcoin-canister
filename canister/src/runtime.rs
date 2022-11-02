@@ -3,11 +3,12 @@
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
 use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse};
+use ic_cdk::api::call::RejectionCode;
 use ic_cdk::{api::call::CallResult, export::Principal};
+use serde::Deserialize;
 #[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
 use std::future::Future;
-
 #[cfg(not(target_arch = "wasm32"))]
 const INSTRUCTIONS_LIMIT: u64 = 5_000_000_000;
 
@@ -21,11 +22,22 @@ pub fn print(msg: &str) {
     println!("{}", msg);
 }
 
+/// A reply from the Bitcoin network containing either GetSuccessorsResponse or Rejection.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub enum GetSuccessorsReply {
+    /// A response containing the successor blocks.
+    Ok(GetSuccessorsResponse),
+
+    /// Rejection from the caller.
+    Err(RejectionCode, String),
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     // Mock responses to return when `call_get_successors` is invoked.
     // Responses are returned in the order provided.
-    static GET_SUCCESSORS_RESPONSES: RefCell<Vec<GetSuccessorsResponse>> = RefCell::new(Vec::default());
+    static GET_SUCCESSORS_RESPONSES: RefCell<Vec<GetSuccessorsReply>> = RefCell::new(Vec::default());
 
     static GET_SUCCESSORS_RESPONSES_INDEX: RefCell<usize> = RefCell::new(0);
 
@@ -51,18 +63,18 @@ pub fn call_get_successors(
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
     use crate::types::GetSuccessorsCompleteResponse;
 
-    let response = GET_SUCCESSORS_RESPONSES.with(|responses| {
+    let reply = GET_SUCCESSORS_RESPONSES.with(|responses| {
         // Get the response at the current index.
         GET_SUCCESSORS_RESPONSES_INDEX.with(|i| {
             let response = responses
                 .borrow()
                 .get(*i.borrow())
-                .unwrap_or(&GetSuccessorsResponse::Complete(
+                .unwrap_or(&GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
                     GetSuccessorsCompleteResponse {
                         blocks: vec![],
                         next: vec![],
                     },
-                ))
+                )))
                 .clone();
 
             // Increment index.
@@ -72,13 +84,16 @@ pub fn call_get_successors(
         })
     });
 
-    std::future::ready(Ok((response,)))
+    match reply {
+        GetSuccessorsReply::Ok(response) => std::future::ready(Ok((response,))),
+        GetSuccessorsReply::Err(code, msg) => std::future::ready(Err((code, msg))),
+    }
 }
 
 /// Sets a (mock) response to return whenever `call_get_successors` is invoked.
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
-pub fn set_successors_response(response: GetSuccessorsResponse) {
+pub fn set_successors_response(response: GetSuccessorsReply) {
     set_successors_responses(vec![response]);
 }
 
@@ -86,7 +101,7 @@ pub fn set_successors_response(response: GetSuccessorsResponse) {
 /// Responses are returned in order.
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
-pub fn set_successors_responses(responses: Vec<GetSuccessorsResponse>) {
+pub fn set_successors_responses(responses: Vec<GetSuccessorsReply>) {
     GET_SUCCESSORS_RESPONSES.with(|e| e.replace(responses));
     GET_SUCCESSORS_RESPONSES_INDEX.with(|e| e.replace(0));
 }
