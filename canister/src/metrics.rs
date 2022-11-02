@@ -55,7 +55,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "stable_memory_size_in_bytes",
-            (ic_cdk::api::stable::stable_size() as u64 * WASM_PAGE_SIZE) as f64,
+            (ic_cdk::api::stable::stable64_size() * WASM_PAGE_SIZE) as f64,
             "The size of stable memory in pages.",
         )?;
         w.encode_gauge(
@@ -129,7 +129,7 @@ impl<W: io::Write> MetricsEncoder<W> {
 fn get_heap_size() -> u64 {
     #[cfg(target_arch = "wasm32")]
     {
-        (core::arch::wasm32::memory_size(0) * WASM_PAGE_SIZE) as u64
+        core::arch::wasm32::memory_size(0) as u64 * WASM_PAGE_SIZE
     }
 
     #[cfg(not(target_arch = "wasm32"))]
