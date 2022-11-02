@@ -44,7 +44,11 @@ fn verify_caller() {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{init, with_state, Config};
+    use crate::{
+        init,
+        types::{Config, Fees, Flag},
+        with_state,
+    };
     use proptest::prelude::*;
 
     #[test]
@@ -63,6 +67,51 @@ mod test {
                 with_state(|s| s.unstable_blocks.stability_threshold()),
                 stability_threshold as u32
             );
+        });
+    }
+
+    #[test]
+    fn set_syncing() {
+        init(Config::default());
+
+        for flag in &[Flag::Enabled, Flag::Disabled] {
+            set_config(SetConfigRequest {
+                syncing: Some(*flag),
+                ..Default::default()
+            });
+
+            assert_eq!(
+                with_state(|s| s.syncing_state.syncing),
+                *flag
+            );
+        }
+    }
+
+    #[test]
+    fn set_fees() {
+        init(Config::default());
+
+        proptest!(|(
+            get_utxos in 0..1_000_000_000_000u128,
+            get_balance in 0..1_000_000_000_000u128,
+            get_current_fee_percentiles in 0..1_000_000_000_000u128,
+            send_transaction_base in 0..1_000_000_000_000u128,
+            send_transaction_per_byte in 0..1_000_000_000_000u128,
+        )| {
+            let fees = Fees {
+                get_utxos,
+                get_balance,
+                get_current_fee_percentiles,
+                send_transaction_base,
+                send_transaction_per_byte
+            };
+
+            set_config(SetConfigRequest {
+                fees: Some(fees.clone()),
+                ..Default::default()
+            });
+
+            with_state(|s| assert_eq!(s.fees, fees));
         });
     }
 }
