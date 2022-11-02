@@ -51,6 +51,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.utxos.address_utxos_len() as f64,
             "The number of UTXOs that are owned by supported addresses.",
         )?;
+        w.encode_gauge(
+            "stable_memory_size",
+            ic_cdk::api::stable::stable_size() as f64,
+            "The size of stable memory in pages.",
+        )?;
+        w.encode_gauge(
+            "heap_size",
+            get_heap_size() as f64,
+            "The size of the heap memory in pages.",
+        )?;
         Ok(())
     })
 }
@@ -101,5 +111,18 @@ impl<W: io::Write> MetricsEncoder<W> {
     /// Encodes the metadata and the value of a gauge.
     fn encode_gauge(&mut self, name: &str, value: f64, help: &str) -> io::Result<()> {
         self.encode_single_value("gauge", name, value, help)
+    }
+}
+
+// Returns the size of the heap in pages.
+fn get_heap_size() -> u64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        core::arch::wasm32::memory_size(0) as u64
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        0
     }
 }
