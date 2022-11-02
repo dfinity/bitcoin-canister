@@ -2,12 +2,13 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use crate::types::{GetSuccessorsReply, GetSuccessorsRequest, GetSuccessorsResponse};
+use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse};
+use ic_cdk::api::call::RejectionCode;
 use ic_cdk::{api::call::CallResult, export::Principal};
+use serde::Deserialize;
 #[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
 use std::future::Future;
-
 #[cfg(not(target_arch = "wasm32"))]
 const INSTRUCTIONS_LIMIT: u64 = 5_000_000_000;
 
@@ -19,6 +20,17 @@ pub fn print(msg: &str) {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn print(msg: &str) {
     println!("{}", msg);
+}
+
+/// A reply from the Bitcoin network containing either GetSuccessorsResponse or Rejection.
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub enum GetSuccessorsReply {
+    /// A response containing the successor blocks.
+    Ok(GetSuccessorsResponse),
+
+    /// Rejection from the caller.
+    Err(RejectionCode, String),
 }
 
 #[cfg(not(target_arch = "wasm32"))]

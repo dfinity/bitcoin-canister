@@ -187,11 +187,12 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, init, runtime,
+        genesis_block, init,
+        runtime::{self, GetSuccessorsReply},
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
             Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
-            GetSuccessorsPartialResponse, GetSuccessorsReply, Network,
+            GetSuccessorsPartialResponse, Network,
         },
         utxo_set::IngestingBlock,
     };

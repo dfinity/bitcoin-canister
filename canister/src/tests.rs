@@ -1,11 +1,12 @@
 use crate::{
     api::{get_balance, get_utxos},
-    genesis_block, heartbeat, runtime,
+    genesis_block, heartbeat,
+    runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
-        BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsReply,
-        GetSuccessorsResponse, GetUtxosRequest, Network,
+        BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
+        GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     with_state,
@@ -509,11 +510,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
 #[async_std::test]
 async fn test_rejections_counting() {
-    crate::init(crate::Config {
-        stability_threshold: 2,
-        network: Network::Testnet,
-        ..Default::default()
-    });
+    crate::init(crate::Config::default());
 
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 

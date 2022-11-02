@@ -54,7 +54,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         w.encode_counter(
             "num_get_successors_rejects",
             state.syncing_state.num_get_successors_rejects,
-            "The number of times an error is received when calling GetSuccessors.",
+            "The number of rejects received when calling GetSuccessors.",
         )?;
         Ok(())
     })
