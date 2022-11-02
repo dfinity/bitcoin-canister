@@ -192,8 +192,14 @@ pub struct SyncingState {
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
 
-    /// A number of rejects received when calling GetSuccessors.
+    /// The number of rejects received when calling GetSuccessors.
     pub num_get_successors_rejects: u64,
+
+    /// The number of errors occurred when deserializing blocks.
+    pub num_block_deserialize_errors: u64,
+
+    /// The number of errors occurred when inserting a block.
+    pub num_insert_block_errors: u64,
 }
 
 impl Default for SyncingState {
@@ -203,6 +209,8 @@ impl Default for SyncingState {
             is_fetching_blocks: false,
             response_to_process: None,
             num_get_successors_rejects: 0,
+            num_block_deserialize_errors: 0,
+            num_insert_block_errors: 0,
         }
     }
 }
