@@ -4,7 +4,6 @@ mod block_header_store;
 mod blocktree;
 mod heartbeat;
 mod memory;
-mod metrics;
 mod multi_iter;
 mod runtime;
 pub mod state;
@@ -143,7 +142,7 @@ pub fn post_upgrade() {
 pub fn http_request(req: HttpRequest) -> HttpResponse {
     let parts: Vec<&str> = req.url.split('?').collect();
     match parts[0] {
-        "/metrics" => metrics::handle_metrics_request(),
+        "/metrics" => crate::api::get_metrics(),
         _ => HttpResponse {
             status_code: 404,
             headers: vec![],

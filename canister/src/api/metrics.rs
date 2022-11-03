@@ -5,7 +5,7 @@ use std::{fmt::Display, io};
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
-pub fn handle_metrics_request() -> HttpResponse {
+pub fn get_metrics() -> HttpResponse {
     let now = time();
     let mut writer = MetricsEncoder::new(vec![], now / 1_000_000);
     match encode_metrics(&mut writer) {
