@@ -2,6 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
+    metrics::Metrics,
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
@@ -38,7 +39,11 @@ pub struct State {
     /// A store containing all the stable blocks' headers.
     pub stable_block_headers: BlockHeaderStore,
 
+    /// The fees to charge for each endpoint.
     pub fees: Fees,
+
+    /// Metrics for the various endpoints.
+    pub metrics: Metrics,
 }
 
 impl State {
@@ -59,6 +64,7 @@ impl State {
             fee_percentiles_cache: None,
             stable_block_headers: BlockHeaderStore::init(),
             fees: Fees::default(),
+            metrics: Metrics::default(),
         }
     }
 

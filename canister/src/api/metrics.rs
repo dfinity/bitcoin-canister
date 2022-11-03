@@ -1,4 +1,4 @@
-use crate::{state, types::HttpResponse, with_state};
+use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
 use std::{fmt::Display, io};
@@ -53,6 +53,8 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.utxos.address_utxos_len() as f64,
             "The number of UTXOs that are owned by supported addresses.",
         )?;
+
+        // Memory
         w.encode_gauge(
             "stable_memory_size_in_bytes",
             (ic_cdk::api::stable::stable64_size() * WASM_PAGE_SIZE) as f64,
@@ -63,6 +65,8 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             get_heap_size() as f64,
             "The size of the heap memory in pages.",
         )?;
+
+        // Errors
         w.encode_counter(
             "num_get_successors_rejects",
             state.syncing_state.num_get_successors_rejects,
@@ -78,6 +82,15 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.syncing_state.num_insert_block_errors,
             "The number of errors occurred when inserting a block.",
         )?;
+
+        // Profiling
+        w.encode_instruction_histogram(&state.metrics.get_utxos_total)?;
+        w.encode_instruction_histogram(&state.metrics.get_utxos_apply_unstable_blocks)?;
+        w.encode_instruction_histogram(&state.metrics.get_utxos_build_utxos_vec)?;
+        w.encode_instruction_histogram(&state.metrics.get_balance_total)?;
+        w.encode_instruction_histogram(&state.metrics.get_balance_apply_unstable_blocks)?;
+        w.encode_instruction_histogram(&state.metrics.get_current_fee_percentiles_total)?;
+
         Ok(())
     })
 }
@@ -132,6 +145,57 @@ impl<W: io::Write> MetricsEncoder<W> {
 
     fn encode_counter(&mut self, name: &str, value: u64, help: &str) -> io::Result<()> {
         self.encode_single_value("counter", name, value, help)
+    }
+
+    /// Encodes the metadata and the value of a histogram.
+    ///
+    /// SUM is the sum of all observed values, before they were put
+    /// into buckets.
+    ///
+    /// BUCKETS is a list (key, value) pairs, where KEY is the bucket
+    /// and VALUE is the number of items *in* this bucket (i.e., it's
+    /// not a cumulative value).
+    pub fn encode_histogram(
+        &mut self,
+        name: &str,
+        buckets: impl Iterator<Item = (f64, f64)>,
+        sum: f64,
+        help: &str,
+    ) -> io::Result<()> {
+        self.encode_header(name, help, "histogram")?;
+        let mut total: f64 = 0.0;
+        let mut saw_infinity = false;
+        for (bucket, v) in buckets {
+            total += v;
+            if bucket == std::f64::INFINITY {
+                saw_infinity = true;
+                writeln!(
+                    self.writer,
+                    "{}_bucket{{le=\"+Inf\"}} {} {}",
+                    name, total, self.now_millis
+                )?;
+            } else {
+                writeln!(
+                    self.writer,
+                    "{}_bucket{{le=\"{}\"}} {} {}",
+                    name, bucket, total, self.now_millis
+                )?;
+            }
+        }
+        if !saw_infinity {
+            writeln!(
+                self.writer,
+                "{}_bucket{{le=\"+Inf\"}} {} {}",
+                name, total, self.now_millis
+            )?;
+        }
+        writeln!(self.writer, "{}_sum {} {}", name, sum, self.now_millis)?;
+        writeln!(self.writer, "{}_count {} {}", name, total, self.now_millis)
+    }
+
+    /// Encodes an `InstructionHistogram`.
+    pub fn encode_instruction_histogram(&mut self, h: &InstructionHistogram) -> io::Result<()> {
+        self.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
     }
 }
 
