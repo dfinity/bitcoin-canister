@@ -138,10 +138,34 @@ fn maybe_process_response() {
 
         match response_to_process {
             Some(ResponseToProcess::Complete(response)) => {
-                for block in response.blocks.iter() {
-                    // TODO(EXC-1215): Gracefully handle the errors here.
-                    let block = BitcoinBlock::consensus_decode(block.as_slice()).unwrap();
-                    state::insert_block(state, Block::new(block)).unwrap();
+                for block_bytes in response.blocks.iter() {
+                    // Deserialize the block.
+                    let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
+                        Ok(block) => block,
+                        Err(err) => {
+                            print(&format!(
+                                "ERROR: Cannot deserialize block. Err: {:?}, Block bytes: {:?}. Full Response: {:?}",
+                                err,
+                                block_bytes,
+                                response,
+                            ));
+
+                            // Return, the remaining blocks in the response are dropped.
+                            state.syncing_state.num_block_deserialize_errors += 1;
+                            return;
+                        }
+                    };
+
+                    if let Err(err) = state::insert_block(state, Block::new(block)) {
+                        print(&format!(
+                            "ERROR: Failed to insert block. Err: {:?}, Block bytes: {:?}",
+                            err, block_bytes,
+                        ));
+
+                        // Return, the remaining blocks in the response are dropped.
+                        state.syncing_state.num_insert_block_errors += 1;
+                        return;
+                    }
                 }
             }
             other => {
@@ -594,5 +618,73 @@ mod test {
             }),
             1000
         );
+    }
+
+    #[async_std::test]
+    async fn handles_block_deserialize_errors() {
+        init(Config::default());
+
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![
+                    // Invalid block.
+                    vec![1, 2, 3],
+                ],
+                next: vec![],
+            },
+        )));
+
+        // Fetch response.
+        heartbeat().await;
+
+        // The number of deserialize errors is still zero.
+        assert_eq!(
+            with_state(|s| s.syncing_state.num_block_deserialize_errors),
+            0
+        );
+
+        // Process response.
+        heartbeat().await;
+
+        // The number of deserialize errors has been incremented to one and response is dropped.
+        with_state(|s| {
+            assert_eq!(s.syncing_state.num_block_deserialize_errors, 1);
+            assert_eq!(s.syncing_state.response_to_process, None);
+        });
+    }
+
+    #[async_std::test]
+    async fn handles_blocks_that_dont_extend_tree() {
+        init(Config::default());
+
+        let mut block_bytes = vec![];
+        genesis_block(Network::Regtest)
+            .consensus_encode(&mut block_bytes)
+            .unwrap();
+
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![
+                    // A valid block, but doesn't extend the tree.
+                    block_bytes,
+                ],
+                next: vec![],
+            },
+        )));
+
+        // Fetch response.
+        heartbeat().await;
+
+        // The number of insert block errors is still zero.
+        assert_eq!(with_state(|s| s.syncing_state.num_insert_block_errors), 0);
+
+        // Process response.
+        heartbeat().await;
+
+        // The number of insert block errors has been incremented to one and response is dropped.
+        with_state(|s| {
+            assert_eq!(s.syncing_state.num_insert_block_errors, 1);
+            assert_eq!(s.syncing_state.response_to_process, None);
+        });
     }
 }
