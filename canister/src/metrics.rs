@@ -68,6 +68,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.syncing_state.num_get_successors_rejects,
             "The number of rejects received when calling GetSuccessors.",
         )?;
+        w.encode_counter(
+            "num_block_deserialize_errors",
+            state.syncing_state.num_block_deserialize_errors,
+            "The number of errors occurred when deserializing blocks.",
+        )?;
+        w.encode_counter(
+            "num_insert_block_errors",
+            state.syncing_state.num_insert_block_errors,
+            "The number of errors occurred when inserting a block.",
+        )?;
         Ok(())
     })
 }
