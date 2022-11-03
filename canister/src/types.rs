@@ -689,8 +689,10 @@ pub enum Flag {
 }
 
 /// A request to update the canister's config.
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Default)]
 pub struct SetConfigRequest {
+    pub stability_threshold: Option<u128>,
+
     /// Whether or not to enable/disable syncing of blocks from the network.
     pub syncing: Option<Flag>,
 
