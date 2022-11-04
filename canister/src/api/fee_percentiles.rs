@@ -12,6 +12,7 @@ use ic_btc_types::MillisatoshiPerByte;
 const NUM_TRANSACTIONS: u32 = 10_000;
 
 // The number of percentiles to compute.
+// Should cover an inclusive range of [0, 100] percentiles.
 const NUM_PERCENTILE_BUCKETS: u32 = 101;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
