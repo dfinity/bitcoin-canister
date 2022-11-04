@@ -12,7 +12,7 @@ use ic_btc_types::MillisatoshiPerByte;
 const NUM_TRANSACTIONS: u32 = 10_000;
 
 // The number of percentiles to compute.
-const NUM_PERCENTILES: u16 = 100;
+const NUM_PERCENTILE_BUCKETS: u32 = 101;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
@@ -49,7 +49,7 @@ fn get_current_fee_percentiles_internal(
             &state.unstable_blocks,
             number_of_transactions,
         ),
-        NUM_PERCENTILES,
+        NUM_PERCENTILE_BUCKETS,
     );
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
@@ -120,22 +120,15 @@ fn get_tx_fee_per_byte(
 }
 
 // Returns a requested number of percentile buckets from an initial vector of values.
-fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
+fn percentiles(mut values: Vec<u64>, buckets: u32) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
     }
-    let buckets = buckets as usize;
     values.sort_unstable();
     (0..buckets)
         .map(|i| {
-            // The index is computed differently depending on the relation between values.len() and buckets.
-            let index = if values.len() >= buckets {
-                (i + 1) * values.len() / buckets - 1
-            } else {
-                i * values.len() / buckets
-            };
-
-            values[index]
+            let index = (values.len() as u32 - 1) * i / (buckets - 1);
+            values[index as usize]
         })
         .collect()
 }
@@ -165,27 +158,19 @@ mod test {
     }
 
     #[test]
-    fn percentiles_small_input_10_buckets() {
-        let buckets = 10;
+    fn percentiles_small_input_101_buckets() {
+        let buckets = 101;
         let result = percentiles(vec![5, 4, 3, 2, 1], buckets);
         assert_eq!(result.len(), buckets as usize);
-        assert_eq!(result, Vec::<u64>::from([1, 1, 2, 2, 3, 3, 4, 4, 5, 5]));
+        assert_eq!(result[0..25], [1; 25]);
+        assert_eq!(result[25..50], [2; 25]);
+        assert_eq!(result[50..75], [3; 25]);
+        assert_eq!(result[75..100], [4; 25]);
+        assert_eq!(result[100], 5);
     }
 
     #[test]
-    fn percentiles_small_input_100_buckets() {
-        let buckets = 100;
-        let result = percentiles(vec![5, 4, 3, 2, 1], buckets);
-        assert_eq!(result.len(), buckets as usize);
-        assert_eq!(result[0..20], [1; 20]);
-        assert_eq!(result[20..40], [2; 20]);
-        assert_eq!(result[40..60], [3; 20]);
-        assert_eq!(result[60..80], [4; 20]);
-        assert_eq!(result[80..100], [5; 20]);
-    }
-
-    #[test]
-    fn percentiles_big_input_100_buckets() {
+    fn percentiles_big_input_101_buckets() {
         let mut input = vec![];
         input.extend(vec![5; 1000]);
         input.extend(vec![4; 1000]);
@@ -203,13 +188,19 @@ mod test {
     }
 
     #[test]
-    /// Given the input [1, 2, ..., 1000] and 100 buckets, the test ensures that the computed fees
-    /// are [10, 20, ..., 1000].
+    /// Given the input [0, 1, 2, ..., 1000] and 101 buckets, the test ensures that the computed fees
+    /// are [0, 10, 20, ..., 1000].
     fn percentiles_sequential_numbers_100_buckets() {
-        let input = Vec::from_iter(1..1001);
-        let buckets = 100;
+        let input = Vec::from_iter(0..1_001);
+        let buckets = 101;
         let result = percentiles(input, buckets);
-        let expected_result = Vec::from_iter((10..1010).step_by(10));
+        assert_eq!(result[0], 0);
+        assert_eq!(result[1], 10);
+        assert_eq!(result[25], 250);
+        assert_eq!(result[50], 500);
+        assert_eq!(result[75], 750);
+        assert_eq!(result[100], 1_000);
+        let expected_result = Vec::from_iter((0..1_001).step_by(10));
         assert_eq!(result, expected_result);
     }
 
@@ -313,13 +304,12 @@ mod test {
         });
 
         let percentiles = get_current_fee_percentiles();
-        assert_eq!(percentiles.len(), 100);
-        // Percentiles distributed evenly.
-        assert_eq!(percentiles[0..20], [0; 20]);
-        assert_eq!(percentiles[20..40], [8; 20]);
-        assert_eq!(percentiles[40..60], [16; 20]);
-        assert_eq!(percentiles[60..80], [25; 20]);
-        assert_eq!(percentiles[80..100], [33; 20]);
+        assert_eq!(percentiles.len(), 101);
+        assert_eq!(percentiles[0..25], [0; 25]);
+        assert_eq!(percentiles[25..50], [8; 25]);
+        assert_eq!(percentiles[50..75], [16; 25]);
+        assert_eq!(percentiles[75..100], [25; 25]);
+        assert_eq!(percentiles[100], 33);
     }
 
     #[test]
@@ -346,12 +336,11 @@ mod test {
             assert_eq!(fees, vec![58, 50, 42, 33]);
 
             let percentiles = get_current_fee_percentiles_internal(state, 4);
-            assert_eq!(percentiles.len(), 100);
-            // Percentiles distributed evenly.
-            assert_eq!(percentiles[0..25], [33; 25]);
-            assert_eq!(percentiles[25..50], [42; 25]);
-            assert_eq!(percentiles[50..75], [50; 25]);
-            assert_eq!(percentiles[75..100], [58; 25]);
+            assert_eq!(percentiles.len(), 101);
+            assert_eq!(percentiles[0..34], [33; 34]);
+            assert_eq!(percentiles[34..67], [42; 33]);
+            assert_eq!(percentiles[67..100], [50; 33]);
+            assert_eq!(percentiles[100], 58);
         });
     }
 
@@ -379,13 +368,12 @@ mod test {
             // Fees are in a reversed order, in millisatoshi per byte units.
             assert_eq!(fees, vec![33, 25, 16, 8, 0]);
 
-            assert_eq!(percentiles.len(), 100);
-            // Percentiles distributed evenly.
-            assert_eq!(percentiles[0..20], [0; 20]);
-            assert_eq!(percentiles[20..40], [8; 20]);
-            assert_eq!(percentiles[40..60], [16; 20]);
-            assert_eq!(percentiles[60..80], [25; 20]);
-            assert_eq!(percentiles[80..100], [33; 20]);
+            assert_eq!(percentiles.len(), 101);
+            assert_eq!(percentiles[0..25], [0; 25]);
+            assert_eq!(percentiles[25..50], [8; 25]);
+            assert_eq!(percentiles[50..75], [16; 25]);
+            assert_eq!(percentiles[75..100], [25; 25]);
+            assert_eq!(percentiles[100], 33);
         });
     }
 
@@ -416,13 +404,12 @@ mod test {
             // 1000 * 999 / 119 = 8394 millisatosi/bite.
             assert_eq!(fees, vec![8394, 8386, 8378, 8369, 8361]);
 
-            assert_eq!(percentiles.len(), 100);
-            // Percentiles distributed evenly.
-            assert_eq!(percentiles[0..20], [8361; 20]);
-            assert_eq!(percentiles[20..40], [8369; 20]);
-            assert_eq!(percentiles[40..60], [8378; 20]);
-            assert_eq!(percentiles[60..80], [8386; 20]);
-            assert_eq!(percentiles[80..100], [8394; 20]);
+            assert_eq!(percentiles.len(), 101);
+            assert_eq!(percentiles[0..25], [8361; 25]);
+            assert_eq!(percentiles[25..50], [8369; 25]);
+            assert_eq!(percentiles[50..75], [8378; 25]);
+            assert_eq!(percentiles[75..100], [8386; 25]);
+            assert_eq!(percentiles[100], 8394);
         });
     }
 
@@ -476,10 +463,9 @@ mod test {
         });
 
         let percentiles = get_current_fee_percentiles();
-        assert_eq!(percentiles.len(), 100);
-        // Percentiles distributed evenly.
-        assert_eq!(percentiles[0..50], [25; 50]);
-        assert_eq!(percentiles[50..100], [33; 50]);
+        assert_eq!(percentiles.len(), 101);
+        assert_eq!(percentiles[0..100], [25; 100]);
+        assert_eq!(percentiles[100], 33);
     }
 
     #[test]
@@ -490,10 +476,9 @@ mod test {
         init_state(blocks, stability_threshold);
 
         let percentiles = get_current_fee_percentiles();
-        assert_eq!(percentiles.len(), 100);
-        // Percentiles distributed evenly.
-        assert_eq!(percentiles[0..50], [25; 50]);
-        assert_eq!(percentiles[50..100], [33; 50]);
+        assert_eq!(percentiles.len(), 101);
+        assert_eq!(percentiles[0..100], [25; 100]);
+        assert_eq!(percentiles[100], 33);
 
         // Percentiles are cached.
         with_state(|state| {
