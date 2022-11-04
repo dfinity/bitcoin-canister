@@ -25,6 +25,8 @@ use std::{
     str::FromStr,
 };
 
+const WASM_PAGE_SIZE: u64 = 65536;
+
 type Height = u32;
 type FileNumber = u32;
 type FileOffset = u32;
@@ -144,11 +146,21 @@ async fn main() {
 
     println!("Initializing...");
 
-    ic_btc_canister::init(ic_btc_canister::types::InitPayload {
+    ic_btc_canister::get_memory().with(|m| {
+        let mut file = File::open("foo.data").unwrap();
+
+        let mut data = vec![];
+        file.read_to_end(&mut data).unwrap();
+        m.replace(data);
+    });
+
+    // Run post upgrade to load memory.
+    pre_upgrade();
+    /*ic_btc_canister::init(ic_btc_canister::types::InitPayload {
         stability_threshold: 0,
         network: args.network,
         blocks_source: None,
-    });
+    });*/
 
     let mut blocks_path = args.blocks_path.clone();
     blocks_path.push("blocks");
@@ -189,5 +201,3 @@ async fn main() {
         Ok(_) => println!("successfully wrote state to {}", args.state_path.display()),
     });
 }
-
-
