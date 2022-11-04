@@ -124,15 +124,17 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
     }
+    let buckets = buckets as usize;
     values.sort_unstable();
     (0..buckets)
         .map(|i| {
             // The index is computed differently depending on the relation between values.len() and buckets.
-            let index = if values.len() >= buckets as usize {
-                (((i + 1) as u64) * (values.len() as u64) / buckets as u64 - 1) as usize
+            let index = if values.len() >= buckets {
+                (i + 1) * values.len() / buckets - 1
             } else {
-                ((i as u64) * (values.len() as u64) / buckets as u64) as usize
+                i * values.len() / buckets
             };
+
             values[index]
         })
         .collect()
