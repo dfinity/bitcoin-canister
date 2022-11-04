@@ -18,7 +18,7 @@ mod utxo_set;
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{Block, Config, Network, SetConfigRequest},
+    types::{Block, Config, HttpRequest, HttpResponse, Network, SetConfigRequest},
 };
 pub use api::set_config;
 pub use heartbeat::heartbeat;
@@ -27,6 +27,7 @@ use ic_btc_types::{
     MillisatoshiPerByte, Satoshi,
 };
 use ic_stable_structures::Memory;
+use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::convert::TryInto;
 use utxo_set::UtxoSet;
@@ -136,6 +137,18 @@ pub fn post_upgrade() {
     // Deserialize and set the state.
     let state = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
     set_state(state);
+}
+
+pub fn http_request(req: HttpRequest) -> HttpResponse {
+    let parts: Vec<&str> = req.url.split('?').collect();
+    match parts[0] {
+        "/metrics" => crate::api::get_metrics(),
+        _ => HttpResponse {
+            status_code: 404,
+            headers: vec![],
+            body: ByteBuf::from(String::from("Not found.")),
+        },
+    }
 }
 
 /// Returns the genesis block of the given network.

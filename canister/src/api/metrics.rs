@@ -1,11 +1,11 @@
-use ic_btc_canister::types::HttpResponse;
+use crate::{state, types::HttpResponse, with_state};
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
 use std::{fmt::Display, io};
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
-pub fn handle_metrics_request() -> HttpResponse {
+pub fn get_metrics() -> HttpResponse {
     let now = time();
     let mut writer = MetricsEncoder::new(vec![], now / 1_000_000);
     match encode_metrics(&mut writer) {
@@ -32,10 +32,10 @@ pub fn handle_metrics_request() -> HttpResponse {
 }
 
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
-    ic_btc_canister::with_state(|state| {
+    with_state(|state| {
         w.encode_gauge(
             "main_chain_height",
-            ic_btc_canister::state::main_chain_height(state) as f64,
+            state::main_chain_height(state) as f64,
             "Height of the main chain.",
         )?;
         w.encode_gauge(
