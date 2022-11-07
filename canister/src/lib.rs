@@ -6,7 +6,7 @@ mod heartbeat;
 mod memory;
 mod metrics;
 mod multi_iter;
-mod runtime;
+pub mod runtime;
 pub mod state;
 #[cfg(test)]
 mod test_utils;
@@ -28,6 +28,7 @@ use ic_btc_types::{
     MillisatoshiPerByte, Satoshi,
 };
 use ic_stable_structures::Memory;
+pub use memory::get_memory;
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::convert::TryInto;
