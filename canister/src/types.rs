@@ -206,10 +206,22 @@ pub enum Network {
     Regtest,
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<BitcoinNetwork> for Network {
-    fn into(self) -> BitcoinNetwork {
-        match self {
+impl FromStr for Network {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "mainnet" => Ok(Network::Mainnet),
+            "testnet" => Ok(Network::Testnet),
+            "regtest" => Ok(Network::Regtest),
+            _ => Err("Bad network".to_string()),
+        }
+    }
+}
+
+impl From<Network> for BitcoinNetwork {
+    fn from(network: Network) -> Self {
+        match network {
             Network::Mainnet => BitcoinNetwork::Bitcoin,
             Network::Testnet => BitcoinNetwork::Testnet,
             Network::Regtest => BitcoinNetwork::Regtest,

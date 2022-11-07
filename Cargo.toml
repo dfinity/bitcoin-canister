@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "bootstrap/state-builder",
     "canister",
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",

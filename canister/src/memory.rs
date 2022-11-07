@@ -2,6 +2,7 @@ use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
     DefaultMemoryImpl, Memory as MemoryTrait,
 };
+use std::thread::LocalKey;
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
@@ -16,8 +17,14 @@ const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
 thread_local! {
+    static MEMORY: DefaultMemoryImpl = DefaultMemoryImpl::default();
+
     static MEMORY_MANAGER: MemoryManager<DefaultMemoryImpl>
-        = MemoryManager::init(DefaultMemoryImpl::default());
+        = MemoryManager::init(MEMORY.with(|m| m.clone()));
+}
+
+pub fn get_memory() -> &'static LocalKey<DefaultMemoryImpl> {
+    &MEMORY
 }
 
 pub fn get_upgrades_memory() -> Memory {
