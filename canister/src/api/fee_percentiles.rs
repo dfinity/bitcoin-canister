@@ -21,10 +21,16 @@ pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
 
     let res = with_state_mut(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
 
-    // Print the number of instructions it took to process this request.
+    // Observe instruction count.
+    let ins_total = performance_counter();
+    with_state_mut(|s| {
+        s.metrics
+            .get_current_fee_percentiles_total
+            .observe(ins_total)
+    });
     print(&format!(
         "[INSTRUCTION COUNT] get_current_fee_percentiles: {}",
-        performance_counter()
+        ins_total
     ));
     res
 }

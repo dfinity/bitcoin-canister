@@ -3,7 +3,7 @@ use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
-    unstable_blocks, with_state, State,
+    unstable_blocks, with_state, with_state_mut, State,
 };
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use serde_bytes::ByteBuf;
@@ -64,6 +64,17 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
         }
     })
     .expect("get_utxos failed");
+
+    // Observe metrics
+    with_state_mut(|s| {
+        s.metrics.get_utxos_total.observe(stats.ins_total);
+        s.metrics
+            .get_utxos_apply_unstable_blocks
+            .observe(stats.ins_apply_unstable_blocks);
+        s.metrics
+            .get_utxos_build_utxos_vec
+            .observe(stats.ins_build_utxos_vec);
+    });
 
     // Print the number of instructions it took to process this request.
     print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
