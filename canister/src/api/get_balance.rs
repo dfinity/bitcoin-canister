@@ -2,7 +2,7 @@ use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, GetBalanceRequest},
-    unstable_blocks, with_state,
+    unstable_blocks, with_state, with_state_mut,
 };
 use ic_btc_types::{GetBalanceError, Satoshi};
 use std::str::FromStr;
@@ -11,13 +11,9 @@ use std::str::FromStr;
 #[derive(Debug, Default)]
 struct Stats {
     // The total number of instructions used to process the request.
-    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
-    #[allow(dead_code)]
     ins_total: u64,
 
     // The number of instructions used to apply the unstable blocks.
-    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
-    #[allow(dead_code)]
     ins_apply_unstable_blocks: u64,
 }
 
@@ -36,7 +32,7 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
     // NOTE: It is safe to sum up the balances here without the risk of overflow.
     // The maximum number of bitcoins is 2.1 * 10^7, which is 2.1* 10^15 satoshis.
     // That is well below the max value of a `u64`.
-    with_state(|state| {
+    let (balance, stats) = with_state(|state| {
         // Retrieve the balance that's pre-computed for stable blocks.
         let mut balance = state.utxos.get_balance(&address);
 
@@ -83,11 +79,21 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
             ins_total: performance_counter(),
         };
 
-        // Print the number of instructions it took to process this request.
-        print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats,));
+        Ok((balance, stats))
+    })?;
 
-        Ok(balance)
-    })
+    // Observe metrics
+    with_state_mut(|s| {
+        s.metrics.get_balance_total.observe(stats.ins_total);
+        s.metrics
+            .get_balance_apply_unstable_blocks
+            .observe(stats.ins_apply_unstable_blocks);
+    });
+
+    // Print the number of instructions it took to process this request.
+    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
+
+    Ok(balance)
 }
 
 #[cfg(test)]
