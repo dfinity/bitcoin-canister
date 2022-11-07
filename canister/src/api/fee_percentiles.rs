@@ -130,12 +130,17 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
     }
+    let buckets = buckets as usize;
     values.sort_unstable();
     (0..buckets)
         .map(|i| {
-            // Don't use floating point division to avoid non-determinism.
-            let mut index = (i as usize * values.len()) / buckets as usize;
-            index = std::cmp::min(index, values.len() - 1);
+            // The index is computed differently depending on the relation between values.len() and buckets.
+            let index = if values.len() >= buckets {
+                (i + 1) * values.len() / buckets - 1
+            } else {
+                i * values.len() / buckets
+            };
+
             values[index]
         })
         .collect()
@@ -151,6 +156,7 @@ mod test {
         with_state,
     };
     use ic_btc_types::Satoshi;
+    use std::iter::FromIterator;
 
     #[test]
     fn percentiles_empty_input() {
@@ -200,6 +206,17 @@ mod test {
         assert_eq!(result[40..60], [3; 20]);
         assert_eq!(result[60..80], [4; 20]);
         assert_eq!(result[80..100], [5; 20]);
+    }
+
+    #[test]
+    /// Given the input [1, 2, ..., 1000] and 100 buckets, the test ensures that the computed fees
+    /// are [10, 20, ..., 1000].
+    fn percentiles_sequential_numbers_100_buckets() {
+        let input = Vec::from_iter(1..1001);
+        let buckets = 100;
+        let result = percentiles(input, buckets);
+        let expected_result = Vec::from_iter((10..1010).step_by(10));
+        assert_eq!(result, expected_result);
     }
 
     // Generates a chain of blocks:
