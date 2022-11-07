@@ -91,10 +91,7 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
     });
 
     // Print the number of instructions it took to process this request.
-    print(&format!(
-        "[INSTRUCTION COUNT] {:?}: {:?}",
-        request, stats.ins_apply_unstable_blocks
-    ));
+    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
 
     Ok(balance)
 }
