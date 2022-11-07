@@ -17,20 +17,40 @@ use std::{cmp::Ordering, convert::TryInto, str::FromStr};
 
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
-pub struct InitPayload {
+pub struct Config {
     pub stability_threshold: u128,
     pub network: Network,
 
-    /// The canister from which blocks are retrieved.
-    /// Defaults to the management canister in production and can be overridden
-    /// for testing.
-    pub blocks_source: Option<Principal>,
+    /// The principal from which blocks are retrieved.
+    ///
+    /// Setting this source to the management canister means that the blocks will be
+    /// fetched directly from the replica, and that's what is used in production.
+    pub blocks_source: Principal,
+
+    pub syncing: Flag,
+
+    pub fees: Fees,
 }
 
-// TODO(EXC-1278): Merge the `InitPayload` struct above into this one.
-#[derive(CandidType, Deserialize)]
-pub struct Config {
-    pub syncing: Flag,
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            stability_threshold: 0,
+            network: Network::Regtest,
+            blocks_source: Principal::management_canister(),
+            syncing: Flag::Enabled,
+            fees: Fees::default(),
+        }
+    }
+}
+
+#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Default)]
+pub struct Fees {
+    pub get_utxos: u128,
+    pub get_balance: u128,
+    pub get_current_fee_percentiles: u128,
+    pub send_transaction_base: u128,
+    pub send_transaction_per_byte: u128,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
@@ -681,10 +701,15 @@ pub enum Flag {
 }
 
 /// A request to update the canister's config.
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Default)]
 pub struct SetConfigRequest {
+    pub stability_threshold: Option<u128>,
+
     /// Whether or not to enable/disable syncing of blocks from the network.
     pub syncing: Option<Flag>,
+
+    /// The fees to charge for the various endpoints.
+    pub fees: Option<Fees>,
 }
 
 #[test]

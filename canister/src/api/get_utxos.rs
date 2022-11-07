@@ -1,8 +1,9 @@
 use crate::{
     blocktree::BlockChain,
+    charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
-    unstable_blocks, with_state, State,
+    unstable_blocks, with_state, with_state_mut, State,
 };
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use serde_bytes::ByteBuf;
@@ -35,6 +36,8 @@ struct Stats {
 
 /// Retrieves the UTXOs of the given Bitcoin address.
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
+    charge_cycles(with_state(|s| s.fees.get_utxos));
+
     let (res, stats) = with_state(|state| {
         match &request.filter {
             None => {
@@ -61,6 +64,17 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
         }
     })
     .expect("get_utxos failed");
+
+    // Observe metrics
+    with_state_mut(|s| {
+        s.metrics.get_utxos_total.observe(stats.ins_total);
+        s.metrics
+            .get_utxos_apply_unstable_blocks
+            .observe(stats.ins_apply_unstable_blocks);
+        s.metrics
+            .get_utxos_build_utxos_vec
+            .observe(stats.ins_build_utxos_vec);
+    });
 
     // Print the number of instructions it took to process this request.
     print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
@@ -221,7 +235,7 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder},
-        types::{Block, InitPayload, Network},
+        types::{Block, Config, Fees, Network},
         with_state_mut,
     };
     use ic_btc_types::{OutPoint, Utxo};
@@ -230,10 +244,10 @@ mod test {
     #[test]
     #[should_panic(expected = "get_utxos failed: MalformedAddress")]
     fn get_utxos_malformed_address() {
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
-            blocks_source: None,
+            ..Default::default()
         });
 
         get_utxos(GetUtxosRequest {
@@ -245,10 +259,10 @@ mod test {
     #[test]
     fn genesis_block_only() {
         let network = Network::Regtest;
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         assert_eq!(
@@ -268,10 +282,10 @@ mod test {
     #[test]
     fn single_block() {
         let network = Network::Regtest;
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Generate an address.
@@ -315,10 +329,10 @@ mod test {
     fn returns_results_in_descending_height_order() {
         let network = Network::Regtest;
 
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Generate addresses.
@@ -409,10 +423,10 @@ mod test {
     fn supports_taproot_addresses() {
         let network = Network::Regtest;
 
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address = random_p2tr_address(network);
@@ -457,10 +471,10 @@ mod test {
     fn min_confirmations() {
         let network = Network::Regtest;
 
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 2,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Generate addresses.
@@ -566,10 +580,10 @@ mod test {
     #[should_panic(expected = "get_utxos failed: MinConfirmationsTooLarge { given: 2, max: 1 }")]
     fn panics_on_very_large_confirmations() {
         let network = Network::Regtest;
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 2,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address = random_p2pkh_address(network);
@@ -620,10 +634,10 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 2,
             network: Network::Regtest,
-            blocks_source: None,
+            ..Default::default()
         });
 
         with_state_mut(|state| {
@@ -835,10 +849,10 @@ mod test {
             .with_transaction(tx.clone())
             .build();
 
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         with_state_mut(|state| {
@@ -1103,5 +1117,23 @@ mod test {
             // and compare the two results.
             assert_eq!(utxo_set, utxos_chunked);
         }
+    }
+
+    #[test]
+    fn charges_cycles() {
+        crate::init(Config {
+            fees: Fees {
+                get_utxos: 10,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        get_utxos(GetUtxosRequest {
+            address: random_p2pkh_address(Network::Regtest).to_string(),
+            filter: None,
+        });
+
+        assert_eq!(crate::runtime::get_cycles_balance(), 10);
     }
 }

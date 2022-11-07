@@ -2,8 +2,9 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     blocktree::BlockDoesNotExtendTree,
+    metrics::Metrics,
     types::{
-        Address, Block, BlockHash, Flag, GetSuccessorsCompleteResponse,
+        Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
@@ -37,6 +38,12 @@ pub struct State {
 
     /// A store containing all the stable blocks' headers.
     pub stable_block_headers: BlockHeaderStore,
+
+    /// The fees to charge for each endpoint.
+    pub fees: Fees,
+
+    /// Metrics for the various endpoints.
+    pub metrics: Metrics,
 }
 
 impl State {
@@ -56,6 +63,8 @@ impl State {
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
             stable_block_headers: BlockHeaderStore::init(),
+            fees: Fees::default(),
+            metrics: Metrics::default(),
         }
     }
 
@@ -188,6 +197,15 @@ pub struct SyncingState {
 
     /// A response that needs to be processed.
     pub response_to_process: Option<ResponseToProcess>,
+
+    /// The number of rejects received when calling GetSuccessors.
+    pub num_get_successors_rejects: u64,
+
+    /// The number of errors occurred when deserializing blocks.
+    pub num_block_deserialize_errors: u64,
+
+    /// The number of errors occurred when inserting a block.
+    pub num_insert_block_errors: u64,
 }
 
 impl Default for SyncingState {
@@ -196,6 +214,9 @@ impl Default for SyncingState {
             syncing: Flag::Enabled,
             is_fetching_blocks: false,
             response_to_process: None,
+            num_get_successors_rejects: 0,
+            num_block_deserialize_errors: 0,
+            num_insert_block_errors: 0,
         }
     }
 }

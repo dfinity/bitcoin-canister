@@ -1,7 +1,8 @@
 use crate::{
+    charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, GetBalanceRequest},
-    unstable_blocks, with_state,
+    unstable_blocks, with_state, with_state_mut,
 };
 use ic_btc_types::{GetBalanceError, Satoshi};
 use std::str::FromStr;
@@ -10,18 +11,16 @@ use std::str::FromStr;
 #[derive(Debug, Default)]
 struct Stats {
     // The total number of instructions used to process the request.
-    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
-    #[allow(dead_code)]
     ins_total: u64,
 
     // The number of instructions used to apply the unstable blocks.
-    // NOTE: clippy thinks this is dead code as it's only used in a `print`.
-    #[allow(dead_code)]
     ins_apply_unstable_blocks: u64,
 }
 
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+    charge_cycles(with_state(|s| s.fees.get_balance));
+
     get_balance_internal(request).expect("get_balance failed")
 }
 
@@ -33,7 +32,7 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
     // NOTE: It is safe to sum up the balances here without the risk of overflow.
     // The maximum number of bitcoins is 2.1 * 10^7, which is 2.1* 10^15 satoshis.
     // That is well below the max value of a `u64`.
-    with_state(|state| {
+    let (balance, stats) = with_state(|state| {
         // Retrieve the balance that's pre-computed for stable blocks.
         let mut balance = state.utxos.get_balance(&address);
 
@@ -80,11 +79,21 @@ fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanc
             ins_total: performance_counter(),
         };
 
-        // Print the number of instructions it took to process this request.
-        print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats,));
+        Ok((balance, stats))
+    })?;
 
-        Ok(balance)
-    })
+    // Observe metrics
+    with_state_mut(|s| {
+        s.metrics.get_balance_total.observe(stats.ins_total);
+        s.metrics
+            .get_balance_apply_unstable_blocks
+            .observe(stats.ins_apply_unstable_blocks);
+    });
+
+    // Print the number of instructions it took to process this request.
+    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
+
+    Ok(balance)
 }
 
 #[cfg(test)]
@@ -93,17 +102,17 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{InitPayload, Network, OutPoint},
+        types::{Config, Fees, Network, OutPoint},
         with_state_mut,
     };
 
     #[test]
     #[should_panic(expected = "get_balance failed: MalformedAddress")]
     fn panics_on_malformed_address() {
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
-            blocks_source: None,
+            ..Default::default()
         });
 
         get_balance(GetBalanceRequest {
@@ -115,10 +124,10 @@ mod test {
     #[test]
     fn retrieves_the_balance_of_address() {
         let network = Network::Regtest;
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 2,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Create a block where 1000 satoshis are given to an address.
@@ -160,10 +169,10 @@ mod test {
     #[should_panic(expected = "get_balance failed: MinConfirmationsTooLarge { given: 2, max: 1 }")]
     fn panics_on_very_large_confirmations() {
         let network = Network::Regtest;
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 2,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address = random_p2pkh_address(network);
@@ -190,10 +199,10 @@ mod test {
     fn retrieves_balances_of_addresses_with_different_confirmations() {
         let network = Network::Regtest;
 
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold: 2,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Generate addresses.
@@ -260,5 +269,23 @@ mod test {
             }),
             1000
         );
+    }
+
+    #[test]
+    fn charges_cycles() {
+        crate::init(Config {
+            fees: Fees {
+                get_balance: 10,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        get_balance(GetBalanceRequest {
+            address: random_p2pkh_address(Network::Regtest).to_string(),
+            min_confirmations: None,
+        });
+
+        assert_eq!(crate::runtime::get_cycles_balance(), 10);
     }
 }

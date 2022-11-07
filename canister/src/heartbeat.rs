@@ -68,7 +68,7 @@ async fn maybe_fetch_blocks() -> bool {
         let response = match response {
             Ok((response,)) => response,
             Err((code, msg)) => {
-                // TODO(EXC-1232): track these occurrences in a metric.
+                s.syncing_state.num_get_successors_rejects += 1;
                 print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
                 s.syncing_state.response_to_process = None;
                 return;
@@ -138,10 +138,34 @@ fn maybe_process_response() {
 
         match response_to_process {
             Some(ResponseToProcess::Complete(response)) => {
-                for block in response.blocks.iter() {
-                    // TODO(EXC-1215): Gracefully handle the errors here.
-                    let block = BitcoinBlock::consensus_decode(block.as_slice()).unwrap();
-                    state::insert_block(state, Block::new(block)).unwrap();
+                for block_bytes in response.blocks.iter() {
+                    // Deserialize the block.
+                    let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
+                        Ok(block) => block,
+                        Err(err) => {
+                            print(&format!(
+                                "ERROR: Cannot deserialize block. Err: {:?}, Block bytes: {:?}. Full Response: {:?}",
+                                err,
+                                block_bytes,
+                                response,
+                            ));
+
+                            // Return, the remaining blocks in the response are dropped.
+                            state.syncing_state.num_block_deserialize_errors += 1;
+                            return;
+                        }
+                    };
+
+                    if let Err(err) = state::insert_block(state, Block::new(block)) {
+                        print(&format!(
+                            "ERROR: Failed to insert block. Err: {:?}, Block bytes: {:?}",
+                            err, block_bytes,
+                        ));
+
+                        // Return, the remaining blocks in the response are dropped.
+                        state.syncing_state.num_insert_block_errors += 1;
+                        return;
+                    }
                 }
             }
             other => {
@@ -187,11 +211,12 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, init, runtime,
+        genesis_block, init,
+        runtime::{self, GetSuccessorsReply},
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         types::{
-            Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-            InitPayload, Network,
+            Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
+            GetSuccessorsPartialResponse, Network,
         },
         utxo_set::IngestingBlock,
     };
@@ -218,10 +243,10 @@ mod test {
     async fn fetches_blocks_and_processes_response() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
@@ -229,12 +254,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
             },
-        ));
+        )));
 
         // Fetch blocks.
         heartbeat().await;
@@ -262,10 +287,10 @@ mod test {
     async fn does_not_fetch_blocks_if_syncing_is_disabled() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         with_state_mut(|s| {
@@ -277,12 +302,12 @@ mod test {
         let mut block_bytes = vec![];
         block.consensus_encode(&mut block_bytes).unwrap();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
             },
-        ));
+        )));
 
         // Try to fetch blocks
         heartbeat().await;
@@ -296,10 +321,10 @@ mod test {
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         // Setup a chain of two blocks.
@@ -317,12 +342,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks,
                 next: vec![],
             },
-        ));
+        )));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 inputs/outputs per round.
@@ -383,10 +408,10 @@ mod test {
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address_1 = random_p2pkh_address(network);
@@ -434,12 +459,12 @@ mod test {
             })
             .collect();
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
                 blocks,
                 next: vec![],
             },
-        ));
+        )));
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 transactions inputs/outputs per round.
@@ -531,10 +556,10 @@ mod test {
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
 
-        init(InitPayload {
+        init(Config {
             stability_threshold: 0,
             network,
-            blocks_source: None,
+            ..Default::default()
         });
 
         let address = random_p2pkh_address(network);
@@ -550,27 +575,27 @@ mod test {
         block.consensus_encode(&mut block_bytes).unwrap();
 
         // Split the block bytes into three pages.
-        runtime::set_successors_response(GetSuccessorsResponse::Partial(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Partial(
             GetSuccessorsPartialResponse {
                 partial_block: block_bytes[0..40].to_vec(),
                 next: vec![],
                 remaining_follow_ups: 2,
             },
-        ));
+        )));
 
         // Fetch blocks (initial response).
         heartbeat().await;
 
         // Fetch blocks (second page).
-        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::FollowUp(
             block_bytes[40..80].to_vec(),
-        ));
+        )));
         heartbeat().await;
 
         // Fetch blocks (third page).
-        runtime::set_successors_response(GetSuccessorsResponse::FollowUp(
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::FollowUp(
             block_bytes[80..].to_vec(),
-        ));
+        )));
         heartbeat().await;
 
         // The response hasn't been fully processed yet, so the balance should still be zero.
@@ -593,5 +618,73 @@ mod test {
             }),
             1000
         );
+    }
+
+    #[async_std::test]
+    async fn handles_block_deserialize_errors() {
+        init(Config::default());
+
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![
+                    // Invalid block.
+                    vec![1, 2, 3],
+                ],
+                next: vec![],
+            },
+        )));
+
+        // Fetch response.
+        heartbeat().await;
+
+        // The number of deserialize errors is still zero.
+        assert_eq!(
+            with_state(|s| s.syncing_state.num_block_deserialize_errors),
+            0
+        );
+
+        // Process response.
+        heartbeat().await;
+
+        // The number of deserialize errors has been incremented to one and response is dropped.
+        with_state(|s| {
+            assert_eq!(s.syncing_state.num_block_deserialize_errors, 1);
+            assert_eq!(s.syncing_state.response_to_process, None);
+        });
+    }
+
+    #[async_std::test]
+    async fn handles_blocks_that_dont_extend_tree() {
+        init(Config::default());
+
+        let mut block_bytes = vec![];
+        genesis_block(Network::Regtest)
+            .consensus_encode(&mut block_bytes)
+            .unwrap();
+
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![
+                    // A valid block, but doesn't extend the tree.
+                    block_bytes,
+                ],
+                next: vec![],
+            },
+        )));
+
+        // Fetch response.
+        heartbeat().await;
+
+        // The number of insert block errors is still zero.
+        assert_eq!(with_state(|s| s.syncing_state.num_insert_block_errors), 0);
+
+        // Process response.
+        heartbeat().await;
+
+        // The number of insert block errors has been incremented to one and response is dropped.
+        with_state(|s| {
+            assert_eq!(s.syncing_state.num_insert_block_errors, 1);
+            assert_eq!(s.syncing_state.response_to_process, None);
+        });
     }
 }

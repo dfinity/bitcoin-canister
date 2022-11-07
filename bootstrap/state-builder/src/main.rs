@@ -13,7 +13,7 @@ use clap::Parser;
 use ic_btc_canister::{
     heartbeat, pre_upgrade, runtime,
     state::main_chain_height,
-    types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
+    types::{Config, GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
     with_state,
 };
 use rusty_leveldb::{Options, DB};
@@ -76,7 +76,7 @@ impl VarIntRead for Cursor<Vec<u8>> {}
 
 // Builds an index of where the blocks are present in the files.
 fn build_block_index(path: &Path, tip: BlockHash) -> BTreeMap<Height, (FileNumber, FileOffset)> {
-    // The path of the levelsdb that contains the index.
+    // The path of the leveldb that contains the index.
     let mut block_index_path = path.to_path_buf();
     block_index_path.push("blocks");
     block_index_path.push("index");
@@ -93,7 +93,7 @@ fn build_block_index(path: &Path, tip: BlockHash) -> BTreeMap<Height, (FileNumbe
     block_index
 }
 
-// Reads a block's info from levelsDB.
+// Reads a block's info from leveldb.
 fn get_block_info(
     db: &mut DB,
     block_hash: &BlockHash,
@@ -128,7 +128,7 @@ fn read_block(block_path: &Path, file: u32, offset: u32) -> Vec<u8> {
     let block_size = blk_file.read_u32::<LittleEndian>().unwrap();
 
     let mut block_bytes = vec![0; block_size as usize];
-    blk_file.read(&mut block_bytes).unwrap();
+    blk_file.read_exact(&mut block_bytes).unwrap();
     block_bytes
 }
 
@@ -144,10 +144,10 @@ async fn main() {
 
     println!("Initializing...");
 
-    ic_btc_canister::init(ic_btc_canister::types::InitPayload {
+    ic_btc_canister::init(Config {
         stability_threshold: 0,
         network: args.network,
-        blocks_source: None,
+        ..Config::default()
     });
 
     let mut blocks_path = args.blocks_path.clone();
@@ -156,11 +156,11 @@ async fn main() {
     for (height, (file, offset)) in block_index.into_iter() {
         let block_bytes = read_block(&blocks_path, file, offset);
 
-        runtime::set_successors_response(GetSuccessorsResponse::Complete(
-            GetSuccessorsCompleteResponse {
+        runtime::set_successors_response(runtime::GetSuccessorsReply::Ok(
+            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
-            },
+            }),
         ));
 
         // Run the heartbeat until we process all the blocks.
@@ -189,5 +189,3 @@ async fn main() {
         Ok(_) => println!("successfully wrote state to {}", args.state_path.display()),
     });
 }
-
-

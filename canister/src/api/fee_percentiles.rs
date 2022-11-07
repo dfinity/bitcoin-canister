@@ -1,9 +1,10 @@
 use crate::{
+    charge_cycles,
     runtime::{performance_counter, print},
     state::{FeePercentilesCache, State},
     types::{Block, Transaction},
     unstable_blocks::{self, UnstableBlocks},
-    with_state_mut,
+    with_state, with_state_mut,
 };
 use ic_btc_types::MillisatoshiPerByte;
 
@@ -15,12 +16,20 @@ const NUM_PERCENTILES: u16 = 100;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
+    charge_cycles(with_state(|s| s.fees.get_current_fee_percentiles));
+
     let res = with_state_mut(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
 
-    // Print the number of instructions it took to process this request.
+    // Observe instruction count.
+    let ins_total = performance_counter();
+    with_state_mut(|s| {
+        s.metrics
+            .get_current_fee_percentiles_total
+            .observe(ins_total)
+    });
     print(&format!(
         "[INSTRUCTION COUNT] get_current_fee_percentiles: {}",
-        performance_counter()
+        ins_total
     ));
     res
 }
@@ -121,12 +130,17 @@ fn percentiles(mut values: Vec<u64>, buckets: u16) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
     }
+    let buckets = buckets as usize;
     values.sort_unstable();
     (0..buckets)
         .map(|i| {
-            // Don't use floating point division to avoid non-determinism.
-            let mut index = (i as usize * values.len()) / buckets as usize;
-            index = std::cmp::min(index, values.len() - 1);
+            // The index is computed differently depending on the relation between values.len() and buckets.
+            let index = if values.len() >= buckets {
+                (i + 1) * values.len() / buckets - 1
+            } else {
+                i * values.len() / buckets
+            };
+
             values[index]
         })
         .collect()
@@ -138,10 +152,11 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{InitPayload, Network, OutPoint},
+        types::{Config, Fees, Network, OutPoint},
         with_state,
     };
     use ic_btc_types::Satoshi;
+    use std::iter::FromIterator;
 
     #[test]
     fn percentiles_empty_input() {
@@ -191,6 +206,17 @@ mod test {
         assert_eq!(result[40..60], [3; 20]);
         assert_eq!(result[60..80], [4; 20]);
         assert_eq!(result[80..100], [5; 20]);
+    }
+
+    #[test]
+    /// Given the input [1, 2, ..., 1000] and 100 buckets, the test ensures that the computed fees
+    /// are [10, 20, ..., 1000].
+    fn percentiles_sequential_numbers_100_buckets() {
+        let input = Vec::from_iter(1..1001);
+        let buckets = 100;
+        let result = percentiles(input, buckets);
+        let expected_result = Vec::from_iter((10..1010).step_by(10));
+        assert_eq!(result, expected_result);
     }
 
     // Generates a chain of blocks:
@@ -251,10 +277,10 @@ mod test {
     }
 
     fn init_state(blocks: Vec<Block>, stability_threshold: u128) {
-        crate::init(InitPayload {
+        crate::init(Config {
             stability_threshold,
             network: Network::Regtest,
-            blocks_source: None,
+            ..Default::default()
         });
 
         with_state_mut(|state| {
@@ -482,5 +508,20 @@ mod test {
                 percentiles
             );
         });
+    }
+
+    #[test]
+    fn charges_cycles() {
+        crate::init(Config {
+            fees: Fees {
+                get_current_fee_percentiles: 10,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        get_current_fee_percentiles();
+
+        assert_eq!(crate::runtime::get_cycles_balance(), 10);
     }
 }

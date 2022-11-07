@@ -1,105 +1,192 @@
-use ic_btc_canister::types::HttpResponse;
-use ic_cdk::api::time;
-use serde_bytes::ByteBuf;
-use std::io;
+use serde::{Deserialize, Serialize};
 
-pub fn handle_metrics_request() -> HttpResponse {
-    let now = time();
-    let mut writer = MetricsEncoder::new(vec![], now / 1_000_000);
-    match encode_metrics(&mut writer) {
-        Ok(()) => {
-            let body = writer.into_inner();
-            HttpResponse {
-                status_code: 200,
-                headers: vec![
-                    (
-                        "Content-Type".to_string(),
-                        "text/plain; version=0.0.4".to_string(),
-                    ),
-                    ("Content-Length".to_string(), body.len().to_string()),
-                ],
-                body: ByteBuf::from(body),
-            }
+const M: u64 = 1_000_000;
+const BUCKET_SIZE: u64 = 500 * M;
+const NUM_BUCKETS: u64 = 21;
+
+/// Metrics for various endpoints.
+#[derive(Serialize, Deserialize, PartialEq)]
+pub struct Metrics {
+    pub get_utxos_total: InstructionHistogram,
+    pub get_utxos_apply_unstable_blocks: InstructionHistogram,
+    pub get_utxos_build_utxos_vec: InstructionHistogram,
+
+    pub get_balance_total: InstructionHistogram,
+    pub get_balance_apply_unstable_blocks: InstructionHistogram,
+
+    pub get_current_fee_percentiles_total: InstructionHistogram,
+}
+
+impl Default for Metrics {
+    fn default() -> Self {
+        Self {
+            get_utxos_total: InstructionHistogram::new(
+                "ins_get_utxos_total",
+                "Instructions needed to execute a get_utxos request.",
+            ),
+            get_utxos_apply_unstable_blocks: InstructionHistogram::new(
+                "ins_get_utxos_apply_unstable_blocks",
+                "Instructions needed to apply the unstable blocks in a get_utxos request.",
+            ),
+            get_utxos_build_utxos_vec: InstructionHistogram::new(
+                "inst_count_get_utxos_build_utxos_vec",
+                "Instructions needed to build the UTXOs vec in a get_utxos request.",
+            ),
+
+            get_balance_total: InstructionHistogram::new(
+                "ins_get_balance_total",
+                "Instructions needed to execute a get_balance request.",
+            ),
+            get_balance_apply_unstable_blocks: InstructionHistogram::new(
+                "ins_get_balance_apply_unstable_blocks",
+                "Instructions needed to apply the unstable blocks in a get_utxos request.",
+            ),
+
+            get_current_fee_percentiles_total: InstructionHistogram::new(
+                "ins_get_current_fee_percentiles_total",
+                "Instructions needed to execute a get_current_fee_percentiles request.",
+            ),
         }
-        Err(err) => HttpResponse {
-            status_code: 500,
-            headers: vec![],
-            body: ByteBuf::from(format!("Failed to encode metrics: {}", err)),
-        },
     }
 }
 
-fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
-    ic_btc_canister::with_state(|state| {
-        w.encode_gauge(
-            "main_chain_height",
-            ic_btc_canister::state::main_chain_height(state) as f64,
-            "Height of the main chain.",
-        )?;
-        w.encode_gauge(
-            "stable_height",
-            state.stable_height() as f64,
-            "The height of the latest stable block.",
-        )?;
-        w.encode_gauge(
-            "utxos_length",
-            state.utxos.utxos_len() as f64,
-            "The number of UTXOs in the set.",
-        )?;
-        w.encode_gauge(
-            "address_utxos_length",
-            state.utxos.address_utxos_len() as f64,
-            "The number of UTXOs that are owned by supported addresses.",
-        )?;
-        Ok(())
-    })
+/// A histogram for observing instruction counts.
+///
+/// The histogram observes the values in buckets of:
+///
+///  (500M, 1B, 1.5B, ..., 9B, 9.5B, 10B, +Inf)
+#[derive(Serialize, Deserialize, PartialEq)]
+pub struct InstructionHistogram {
+    pub name: String,
+    pub buckets: Vec<u64>,
+    pub sum: f64,
+    pub help: String,
 }
 
-// `MetricsEncoder` provides methods to encode metrics in a text format
-// that can be understood by Prometheus.
-//
-// Metrics are encoded with the block time included, to allow Prometheus
-// to discard out-of-order samples collected from replicas that are behind.
-//
-// See [Exposition Formats][1] for an informal specification of the text format.
-//
-// [1]: https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md
-struct MetricsEncoder<W: io::Write> {
-    writer: W,
-    now_millis: u64,
+impl InstructionHistogram {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Self {
+        Self {
+            name: name.into(),
+            help: help.into(),
+            sum: 0.0,
+            buckets: vec![0; 21],
+        }
+    }
+
+    /// Observes an instruction count.
+    pub fn observe(&mut self, value: u64) {
+        let bucket_idx = Self::get_bucket(value);
+
+        // Divide value by 1M to keep the counts sane.
+        let value: f64 = value as f64 / M as f64;
+
+        self.buckets[bucket_idx] += 1;
+
+        self.sum += value;
+    }
+
+    /// Returns an iterator with the various buckets.
+    pub fn buckets(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
+        (500..10_500)
+            .step_by((BUCKET_SIZE / M) as usize)
+            .map(|e| e as f64)
+            .chain([f64::INFINITY])
+            .zip(self.buckets.iter().map(|e| *e as f64))
+    }
+
+    // Returns the index of the bucket where the value belongs.
+    fn get_bucket(value: u64) -> usize {
+        if value == 0 {
+            return 0;
+        }
+
+        let idx = (value - 1) / BUCKET_SIZE;
+        std::cmp::min(idx, NUM_BUCKETS - 1) as usize
+    }
 }
 
-impl<W: io::Write> MetricsEncoder<W> {
-    /// Constructs a new encoder dumping metrics with the given timestamp into
-    /// the specified writer.
-    fn new(writer: W, now_millis: u64) -> Self {
-        Self { writer, now_millis }
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn empty_buckets() {
+        let h = InstructionHistogram::new("", "");
+        assert_eq!(
+            h.buckets().collect::<Vec<_>>(),
+            vec![
+                (500.0, 0.0),
+                (1000.0, 0.0),
+                (1500.0, 0.0),
+                (2000.0, 0.0),
+                (2500.0, 0.0),
+                (3000.0, 0.0),
+                (3500.0, 0.0),
+                (4000.0, 0.0),
+                (4500.0, 0.0),
+                (5000.0, 0.0),
+                (5500.0, 0.0),
+                (6000.0, 0.0),
+                (6500.0, 0.0),
+                (7000.0, 0.0),
+                (7500.0, 0.0),
+                (8000.0, 0.0),
+                (8500.0, 0.0),
+                (9000.0, 0.0),
+                (9500.0, 0.0),
+                (10000.0, 0.0),
+                (f64::INFINITY, 0.0),
+            ]
+        );
+        assert_eq!(h.sum, 0.0);
     }
 
-    /// Returns the internal buffer that was used to record the
-    /// metrics.
-    fn into_inner(self) -> W {
-        self.writer
+    #[test]
+    fn observing_values() {
+        let mut h = InstructionHistogram::new("", "");
+        h.observe(500 * M);
+        assert_eq!(
+            h.buckets().take(3).collect::<Vec<_>>(),
+            vec![(500.0, 1.0), (1000.0, 0.0), (1500.0, 0.0)]
+        );
+        assert_eq!(h.sum, 500_f64);
+
+        h.observe(1);
+        assert_eq!(
+            h.buckets().take(3).collect::<Vec<_>>(),
+            vec![(500.0, 2.0), (1000.0, 0.0), (1500.0, 0.0)]
+        );
+        assert_eq!(h.sum, 500.000001);
+
+        h.observe(500 * M + 1);
+        assert_eq!(
+            h.buckets().take(3).collect::<Vec<_>>(),
+            vec![(500.0, 2.0), (1000.0, 1.0), (1500.0, 0.0)]
+        );
+        assert_eq!(h.sum, 1000.000002);
+
+        h.observe(0);
+        assert_eq!(
+            h.buckets().take(3).collect::<Vec<_>>(),
+            vec![(500.0, 3.0), (1000.0, 1.0), (1500.0, 0.0)]
+        );
+        assert_eq!(h.sum, 1000.000002);
     }
 
-    fn encode_header(&mut self, name: &str, help: &str, typ: &str) -> io::Result<()> {
-        writeln!(self.writer, "# HELP {} {}", name, help)?;
-        writeln!(self.writer, "# TYPE {} {}", name, typ)
-    }
+    #[test]
+    fn infinity_bucket() {
+        let mut h = InstructionHistogram::new("", "");
+        h.observe(10_000 * M + 1);
+        assert_eq!(
+            h.buckets().skip(20).collect::<Vec<_>>(),
+            vec![(f64::INFINITY, 1.0)]
+        );
+        assert_eq!(h.sum, 10_000.000001);
 
-    fn encode_single_value(
-        &mut self,
-        typ: &str,
-        name: &str,
-        value: f64,
-        help: &str,
-    ) -> io::Result<()> {
-        self.encode_header(name, help, typ)?;
-        writeln!(self.writer, "{} {} {}", name, value, self.now_millis)
-    }
-
-    /// Encodes the metadata and the value of a gauge.
-    fn encode_gauge(&mut self, name: &str, value: f64, help: &str) -> io::Result<()> {
-        self.encode_single_value("gauge", name, value, help)
+        h.observe(u64::MAX);
+        assert_eq!(
+            h.buckets().skip(20).collect::<Vec<_>>(),
+            vec![(f64::INFINITY, 2.0)]
+        );
     }
 }
