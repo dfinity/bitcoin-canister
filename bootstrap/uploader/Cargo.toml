@@ -1,0 +1,28 @@
+[package]
+name = "uploader"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "uploader-canister"
+path = "src/main.rs"
+
+# The uploader script is added here as an example and not a binary because making it
+# a binary would force us to put all its dependencies under [dependencies], and they'll
+# break the canister compilation as several of them cannot be compiled into wasm.
+[[example]]
+name = "uploader-script"
+path = "src/upload.rs"
+
+[dependencies]
+candid = "0.7.4"
+ic-cdk = "0.5.6"
+ic-cdk-macros = "0.5.6"
+serde = "1.0.132"
+
+[dev-dependencies]
+async-std = { version = "1.12.0", features = ["attributes", "tokio1"] }
+clap = { version = "4.0.11", features = ["derive"] }
+garcon = "0.2.3"
+ic-agent = "0.21.0"
+url = "2.3.1"
