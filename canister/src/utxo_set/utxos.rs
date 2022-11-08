@@ -47,13 +47,14 @@ use std::collections::BTreeMap;
 pub struct Utxos {
     // A map storing the UTXOs that are "small" in size.
     // NOTE: Stable structures don't need to be serialized.
-    #[serde(skip, default = "init_small_utxos")]
-    pub small_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    //  #[serde(skip, default = "init_small_utxos")]
+    //    pub small_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    pub small_utxos: BTreeMap<Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "medium" in size.
     // NOTE: Stable structures don't need to be serialized.
-    #[serde(skip, default = "init_medium_utxos")]
-    pub medium_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    //    #[serde(skip, default = "init_medium_utxos")]
+    pub medium_utxos: BTreeMap<Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "large" in size.
     // The number of entries stored in this map is tiny (see docs above), so a
@@ -64,8 +65,8 @@ pub struct Utxos {
 impl Default for Utxos {
     fn default() -> Self {
         Self {
-            small_utxos: init_small_utxos(),
-            medium_utxos: init_medium_utxos(),
+            small_utxos: BTreeMap::default(), //init_small_utxos(),
+            medium_utxos: BTreeMap::default(),
             large_utxos: BTreeMap::default(),
         }
     }
@@ -92,12 +93,12 @@ impl Utxos {
         if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL as usize {
             self.small_utxos
                 .insert(key.to_bytes(), value_encoded)
-                .expect("Inserting small UTXO must succeed.")
+                //.expect("Inserting small UTXO must succeed.")
                 .is_some()
         } else if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_MEDIUM as usize {
             self.medium_utxos
                 .insert(key.to_bytes(), value_encoded)
-                .expect("Inserting medium UTXO must succeed.")
+                //.expect("Inserting medium UTXO must succeed.")
                 .is_some()
         } else {
             self.large_utxos.insert(key, value).is_some()
@@ -109,11 +110,11 @@ impl Utxos {
         let key_vec = key.to_bytes();
 
         if let Some(value) = self.small_utxos.get(&key_vec) {
-            return Some(<(TxOut, Height)>::from_bytes(value));
+            return Some(<(TxOut, Height)>::from_bytes(value.to_vec()));
         }
 
         if let Some(value) = self.medium_utxos.get(&key_vec) {
-            return Some(<(TxOut, Height)>::from_bytes(value));
+            return Some(<(TxOut, Height)>::from_bytes(value.to_vec()));
         }
 
         self.large_utxos.get(key).cloned()
@@ -144,7 +145,7 @@ impl Utxos {
     }
 
     pub fn len(&self) -> u64 {
-        self.large_utxos.len() as u64 + self.small_utxos.len() + self.medium_utxos.len()
+        self.large_utxos.len() as u64 + self.small_utxos.len() as u64 + self.medium_utxos.len() as u64
     }
 
     #[cfg(test)]

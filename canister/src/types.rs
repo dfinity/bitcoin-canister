@@ -367,7 +367,7 @@ impl StableStructuresStorable for Address {
     }
 }
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
+#[derive(PartialEq, Eq, Ord, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct AddressUtxo {
     pub address: Address,
     pub height: Height,

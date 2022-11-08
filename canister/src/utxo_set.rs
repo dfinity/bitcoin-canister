@@ -17,6 +17,7 @@ mod utxos;
 mod utxos_delta;
 use utxos::Utxos;
 use utxos_delta::UtxosDelta;
+use std::collections::BTreeMap;
 
 lazy_static::lazy_static! {
     pub static ref DUPLICATE_TX_IDS: [Txid; 2] = [
@@ -39,8 +40,9 @@ pub struct UtxoSet {
 
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
-    #[serde(skip, default = "init_address_utxos")]
-    address_utxos: StableBTreeMap<Memory, AddressUtxo, ()>,
+    //#[serde(skip, default = "init_address_utxos")]
+   // address_utxos: StableBTreeMap<Memory, AddressUtxo, ()>,
+    address_utxos: BTreeMap<AddressUtxo, ()>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
@@ -70,7 +72,7 @@ impl UtxoSet {
         Self {
             utxos: Utxos::default(),
             balances: init_balances(),
-            address_utxos: init_address_utxos(),
+            address_utxos: BTreeMap::default(), //init_address_utxos(),
             network,
             next_height: 0,
             ingesting_block: None,
@@ -152,10 +154,10 @@ impl UtxoSet {
         }
 
         stats.ins_total += performance_counter() - ins_start;
-        print(&format!(
+        /*print(&format!(
             "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
             self.next_height, stats
-        ));
+        ));*/
 
         // Block ingestion complete.
         self.next_height += 1;
@@ -223,7 +225,7 @@ impl UtxoSet {
             None => (BTreeSet::new(), BTreeSet::new()),
         };
 
-        // Retrieve all address's outpoints from the stable set, removing any outpoints
+        /*// Retrieve all address's outpoints from the stable set, removing any outpoints
         // that were added by the ingesting block.
         let stable_outpoints = self
             .address_utxos
@@ -235,6 +237,8 @@ impl UtxoSet {
             )
             .map(|(address_utxo, _)| address_utxo.outpoint)
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
+        */
+        let stable_outpoints = Vec::new().into_iter();
 
         // Return the stable outpoints along with the outpoints removed by the ingesting block.
         MultiIter::new(stable_outpoints, removed_outpoints.into_iter().cloned())
@@ -247,7 +251,7 @@ impl UtxoSet {
 
     /// Returns the number of UTXOs that are owned by supported addresses.
     pub fn address_utxos_len(&self) -> u64 {
-        self.address_utxos.len()
+        self.address_utxos.len() as u64
     }
 
     pub fn network(&self) -> Network {
@@ -405,14 +409,14 @@ impl UtxoSet {
                         outpoint: outpoint.clone(),
                     },
                     (),
-                )
-                .expect("insertion must succeed");
+                );
+                //.expect("insertion must succeed");
 
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value)
-                .expect("insertion must succeed");
+                .insert(address.clone(), address_balance + output.value);
+                //.expect("insertion must succeed");
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }

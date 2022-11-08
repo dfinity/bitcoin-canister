@@ -54,12 +54,12 @@ async fn maybe_fetch_blocks() -> bool {
         s.syncing_state.is_fetching_blocks = true;
     });
 
-    print(&format!("Sending request: {:?}", request));
+    //print(&format!("Sending request: {:?}", request));
 
     let response: Result<(GetSuccessorsResponse,), _> =
         call_get_successors(with_state(|s| s.blocks_source), request).await;
 
-    print(&format!("Received response: {:?}", response));
+    //print(&format!("Received response: {:?}", response));
 
     // Release the heartbeat lock and save the response.
     with_state_mut(|s| {
