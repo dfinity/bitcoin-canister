@@ -17,8 +17,8 @@ use std::{
     io::{BufReader, Read, Seek, SeekFrom},
     path::PathBuf,
 };
-use url::Url;
 use uploader::*;
+use url::Url;
 
 #[derive(Parser, Debug)]
 struct Args {
