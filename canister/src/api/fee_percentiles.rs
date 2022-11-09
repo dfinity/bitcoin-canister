@@ -126,6 +126,11 @@ fn get_tx_fee_per_byte(
     }
 }
 
+// Limits input value to stay within the range `min <= x <= max`.
+fn limit_min_max(x: i32, min: i32, max: i32) -> i32 {
+    std::cmp::max(min, std::cmp::min(x, max))
+}
+
 // Returns a requested number of percentile buckets from an initial vector of values.
 fn percentiles(mut values: Vec<u64>, buckets: u32) -> Vec<u64> {
     if values.is_empty() {
@@ -134,7 +139,15 @@ fn percentiles(mut values: Vec<u64>, buckets: u32) -> Vec<u64> {
     values.sort_unstable();
     (0..buckets)
         .map(|i| {
-            let index = (values.len() as u32 - 1) * i / (buckets - 1);
+            let i = i as i32;
+            let buckets = buckets as i32;
+            let n = values.len() as i32;
+            let x = if n < 100 {
+                n * (i - 1) / (buckets - 1)
+            } else {
+                n * i / (buckets - 1)
+            };
+            let index = limit_min_max(x, 0, n - 1);
             values[index as usize]
         })
         .collect()
@@ -165,15 +178,28 @@ mod test {
     }
 
     #[test]
+    fn percentiles_nearest_rank_method_simple_example() {
+        // https://en.wikipedia.org/wiki/Percentile#The_nearest-rank_method
+        let buckets = 101;
+        let result = percentiles(vec![15, 20, 35, 40, 50], buckets);
+        assert_eq!(result.len(), buckets as usize);
+        assert_eq!(result[0..21], [15; 21]);
+        assert_eq!(result[21..41], [20; 20]);
+        assert_eq!(result[41..61], [35; 20]);
+        assert_eq!(result[61..81], [40; 20]);
+        assert_eq!(result[81..101], [50; 20]);
+    }
+
+    #[test]
     fn percentiles_small_input_101_buckets() {
         let buckets = 101;
         let result = percentiles(vec![5, 4, 3, 2, 1], buckets);
         assert_eq!(result.len(), buckets as usize);
-        assert_eq!(result[0..25], [1; 25]);
-        assert_eq!(result[25..50], [2; 25]);
-        assert_eq!(result[50..75], [3; 25]);
-        assert_eq!(result[75..100], [4; 25]);
-        assert_eq!(result[100], 5);
+        assert_eq!(result[0..21], [1; 21]);
+        assert_eq!(result[21..41], [2; 20]);
+        assert_eq!(result[41..61], [3; 20]);
+        assert_eq!(result[61..81], [4; 20]);
+        assert_eq!(result[81..101], [5; 20]);
     }
 
     #[test]
@@ -312,11 +338,11 @@ mod test {
 
         let percentiles = get_current_fee_percentiles();
         assert_eq!(percentiles.len(), 101);
-        assert_eq!(percentiles[0..25], [0; 25]);
-        assert_eq!(percentiles[25..50], [8; 25]);
-        assert_eq!(percentiles[50..75], [16; 25]);
-        assert_eq!(percentiles[75..100], [25; 25]);
-        assert_eq!(percentiles[100], 33);
+        assert_eq!(percentiles[0..21], [0; 21]);
+        assert_eq!(percentiles[21..41], [8; 20]);
+        assert_eq!(percentiles[41..61], [16; 20]);
+        assert_eq!(percentiles[61..81], [25; 20]);
+        assert_eq!(percentiles[81..101], [33; 20]);
     }
 
     #[test]
@@ -344,10 +370,10 @@ mod test {
 
             let percentiles = get_current_fee_percentiles_internal(state, 4);
             assert_eq!(percentiles.len(), 101);
-            assert_eq!(percentiles[0..34], [33; 34]);
-            assert_eq!(percentiles[34..67], [42; 33]);
-            assert_eq!(percentiles[67..100], [50; 33]);
-            assert_eq!(percentiles[100], 58);
+            assert_eq!(percentiles[0..26], [33; 26]);
+            assert_eq!(percentiles[26..51], [42; 25]);
+            assert_eq!(percentiles[51..76], [50; 25]);
+            assert_eq!(percentiles[76..101], [58; 25]);
         });
     }
 
@@ -376,11 +402,11 @@ mod test {
             assert_eq!(fees, vec![33, 25, 16, 8, 0]);
 
             assert_eq!(percentiles.len(), 101);
-            assert_eq!(percentiles[0..25], [0; 25]);
-            assert_eq!(percentiles[25..50], [8; 25]);
-            assert_eq!(percentiles[50..75], [16; 25]);
-            assert_eq!(percentiles[75..100], [25; 25]);
-            assert_eq!(percentiles[100], 33);
+            assert_eq!(percentiles[0..21], [0; 21]);
+            assert_eq!(percentiles[21..41], [8; 20]);
+            assert_eq!(percentiles[41..61], [16; 20]);
+            assert_eq!(percentiles[61..81], [25; 20]);
+            assert_eq!(percentiles[81..101], [33; 20]);
         });
     }
 
@@ -412,11 +438,11 @@ mod test {
             assert_eq!(fees, vec![8394, 8386, 8378, 8369, 8361]);
 
             assert_eq!(percentiles.len(), 101);
-            assert_eq!(percentiles[0..25], [8361; 25]);
-            assert_eq!(percentiles[25..50], [8369; 25]);
-            assert_eq!(percentiles[50..75], [8378; 25]);
-            assert_eq!(percentiles[75..100], [8386; 25]);
-            assert_eq!(percentiles[100], 8394);
+            assert_eq!(percentiles[0..21], [8361; 21]);
+            assert_eq!(percentiles[21..41], [8369; 20]);
+            assert_eq!(percentiles[41..61], [8378; 20]);
+            assert_eq!(percentiles[61..81], [8386; 20]);
+            assert_eq!(percentiles[81..101], [8394; 20]);
         });
     }
 
@@ -471,8 +497,8 @@ mod test {
 
         let percentiles = get_current_fee_percentiles();
         assert_eq!(percentiles.len(), 101);
-        assert_eq!(percentiles[0..100], [25; 100]);
-        assert_eq!(percentiles[100], 33);
+        assert_eq!(percentiles[0..51], [25; 51]);
+        assert_eq!(percentiles[51..101], [33; 50]);
     }
 
     #[test]
@@ -484,8 +510,8 @@ mod test {
 
         let percentiles = get_current_fee_percentiles();
         assert_eq!(percentiles.len(), 101);
-        assert_eq!(percentiles[0..100], [25; 100]);
-        assert_eq!(percentiles[100], 33);
+        assert_eq!(percentiles[0..51], [25; 51]);
+        assert_eq!(percentiles[51..101], [33; 50]);
 
         // Percentiles are cached.
         with_state(|state| {
