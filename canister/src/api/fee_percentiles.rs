@@ -132,23 +132,22 @@ fn limit_min_max(x: i32, min: i32, max: i32) -> i32 {
 }
 
 // Returns a requested number of percentile buckets from an initial vector of values.
+// Uses standard nearest-rank method, inclusive, with the extension of a 0th percentile
 fn percentiles(mut values: Vec<u64>, buckets: u32) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
     }
     values.sort_unstable();
-    (0..buckets)
-        .map(|i| {
-            let i = i as i32;
-            let buckets = buckets as i32;
-            let n = values.len() as i32;
-            let x = if n < 100 {
-                n * (i - 1) / (buckets - 1)
+    (0..buckets as i32)
+        .map(|bucket_i| {
+            let max_bucket_i = buckets as i32 - 1;
+            let values_n = values.len() as i32;
+            let values_i = if values_n < 100 {
+                values_n * (bucket_i - 1) / max_bucket_i
             } else {
-                n * i / (buckets - 1)
+                values_n * bucket_i / max_bucket_i
             };
-            let index = limit_min_max(x, 0, n - 1);
-            values[index as usize]
+            values[limit_min_max(values_i, 0, values_n - 1) as usize]
         })
         .collect()
 }
