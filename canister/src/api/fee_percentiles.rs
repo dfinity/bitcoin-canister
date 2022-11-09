@@ -132,7 +132,7 @@ fn limit_min_max(x: i32, min: i32, max: i32) -> i32 {
 }
 
 // Returns a requested number of percentile buckets from an initial vector of values.
-// Uses standard nearest-rank method, inclusive, with the extension of a 0th percentile
+// Uses standard nearest-rank method, inclusive, with the extension of a 0th percentile.
 fn percentiles(mut values: Vec<u64>, buckets: u32) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
