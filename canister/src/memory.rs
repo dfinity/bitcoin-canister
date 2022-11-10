@@ -13,6 +13,7 @@ const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
 const BALANCES: MemoryId = MemoryId::new(4);
 const BLOCK_HEADERS: MemoryId = MemoryId::new(5);
 const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
+const ADDRESS_INDEX: MemoryId = MemoryId::new(7);
 
 pub type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -53,6 +54,10 @@ pub fn get_block_headers_memory() -> Memory {
 
 pub fn get_block_heights_memory() -> Memory {
     MEMORY_MANAGER.with(|m| m.get(BLOCK_HEIGHTS))
+}
+
+pub fn get_address_index_memory() -> Memory {
+    MEMORY_MANAGER.with(|m| m.get(ADDRESS_INDEX))
 }
 
 /// Writes the bytes at the specified offset, growing the memory size if needed.

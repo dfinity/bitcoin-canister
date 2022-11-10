@@ -4,8 +4,8 @@ use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::OUTPOINT_SIZE,
     types::{
-        Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut,
-        Txid, Utxo,
+        Address, AddressEntryNew, AddressUtxo, Block, Network, OutPoint, Slicing, Storable,
+        Transaction, TxOut, Txid, Utxo,
     },
 };
 use bitcoin::{BlockHash, Script, TxOut as BitcoinTxOut};
@@ -33,19 +33,19 @@ const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
 #[derive(Serialize, Deserialize)]
 pub struct UtxoSet {
-    utxos: Utxos,
+    pub utxos: Utxos,
 
     network: Network,
 
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_utxos")]
-    address_utxos: StableBTreeMap<Memory, AddressUtxo, ()>,
+    pub address_utxos: StableBTreeMap<Memory, AddressUtxo, ()>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_balances")]
-    balances: StableBTreeMap<Memory, Address, u64>,
+    pub balances: StableBTreeMap<Memory, Address, u64>,
 
     // The height of the block that will be ingested next.
     // NOTE: The `next_height` is stored, rather than the current height, because:
@@ -222,6 +222,8 @@ impl UtxoSet {
             ),
             None => (BTreeSet::new(), BTreeSet::new()),
         };
+
+        // TODO: get address from index
 
         // Retrieve all address's outpoints from the stable set, removing any outpoints
         // that were added by the ingesting block.

@@ -267,7 +267,7 @@ impl Page {
         vec![
             self.tip_block_hash.to_vec(),
             Storable::to_bytes(&self.height).to_vec(),
-            OutPoint::to_bytes(&self.outpoint),
+            Storable::to_bytes(&self.outpoint),
         ]
         .into_iter()
         .flatten()
@@ -300,7 +300,7 @@ impl Page {
         Ok(Page {
             tip_block_hash,
             height,
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: Storable::from_bytes(outpoint_bytes),
         })
     }
 }
@@ -321,6 +321,26 @@ impl Storable for OutPoint {
         assert_eq!(v.len(), OUTPOINT_SIZE as usize);
 
         v
+    }
+
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        assert_eq!(bytes.len(), 36);
+        OutPoint {
+            txid: Txid::from(bytes[..32].to_vec()),
+            vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
+        }
+    }
+}
+
+impl StableStructuresStorable for OutPoint {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
+        v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
+
+        // An outpoint is always exactly 36 bytes.
+        assert_eq!(v.len(), OUTPOINT_SIZE as usize);
+
+        std::borrow::Cow::Owned(v)
     }
 
     fn from_bytes(bytes: Vec<u8>) -> Self {
@@ -374,12 +394,41 @@ pub struct AddressUtxo {
     pub outpoint: OutPoint,
 }
 
+#[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
+pub struct AddressEntryNew {
+    pub address_index: u64,
+    pub height: Height,
+}
+
+impl StableStructuresStorable for AddressEntryNew {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        let bytes = vec![
+            StableStructuresStorable::to_bytes(&self.address_index).to_vec(),
+            Storable::to_bytes(&self.height),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        std::borrow::Cow::Owned(bytes)
+    }
+
+    fn from_bytes(mut bytes: Vec<u8>) -> Self {
+        let height_bytes = bytes.split_off(bytes.len() - 4);
+
+        Self {
+            address_index: StableStructuresStorable::from_bytes(bytes),
+            height: <Height as Storable>::from_bytes(height_bytes),
+        }
+    }
+}
+
 impl StableStructuresStorable for AddressUtxo {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         let bytes = vec![
             Address::to_bytes(&self.address).to_vec(),
             Storable::to_bytes(&self.height),
-            OutPoint::to_bytes(&self.outpoint),
+            Storable::to_bytes(&self.outpoint),
         ]
         .into_iter()
         .flatten()
@@ -395,7 +444,7 @@ impl StableStructuresStorable for AddressUtxo {
         Self {
             address: Address::from_bytes(bytes),
             height: <Height as Storable>::from_bytes(height_bytes),
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: Storable::from_bytes(outpoint_bytes),
         }
     }
 }
@@ -421,7 +470,7 @@ impl Storable for Height {
 
 impl Storable for (Height, OutPoint) {
     fn to_bytes(&self) -> Vec<u8> {
-        vec![Storable::to_bytes(&self.0), OutPoint::to_bytes(&self.1)]
+        vec![Storable::to_bytes(&self.0), Storable::to_bytes(&self.1)]
             .into_iter()
             .flatten()
             .collect()
@@ -433,7 +482,7 @@ impl Storable for (Height, OutPoint) {
 
         (
             <Height as Storable>::from_bytes(bytes),
-            OutPoint::from_bytes(outpoint_bytes),
+            Storable::from_bytes(outpoint_bytes),
         )
     }
 }

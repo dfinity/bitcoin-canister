@@ -1674,6 +1674,7 @@ dependencies = [
  "bitcoin",
  "byteorder",
  "clap",
+ "hex",
  "ic-btc-canister",
  "integer-encoding",
  "rusty-leveldb",
