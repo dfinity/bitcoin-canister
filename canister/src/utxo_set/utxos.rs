@@ -4,9 +4,9 @@ use crate::{
     types::{OutPoint, Storable, TxOut},
 };
 use ic_btc_types::Height;
-use ic_stable_structures::StableBTreeMap;
 #[cfg(test)]
 use ic_stable_structures::{btreemap, Memory as MemoryTrait};
+use ic_stable_structures::{StableBTreeMap, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -91,12 +91,12 @@ impl Utxos {
 
         if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL as usize {
             self.small_utxos
-                .insert(key.to_bytes(), value_encoded)
+                .insert(key.to_bytes().to_vec(), value_encoded)
                 .expect("Inserting small UTXO must succeed.")
                 .is_some()
         } else if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_MEDIUM as usize {
             self.medium_utxos
-                .insert(key.to_bytes(), value_encoded)
+                .insert(key.to_bytes().to_vec(), value_encoded)
                 .expect("Inserting medium UTXO must succeed.")
                 .is_some()
         } else {
@@ -106,7 +106,7 @@ impl Utxos {
 
     /// Returns the value associated with the given outpoint if it exists.
     pub fn get(&self, key: &OutPoint) -> Option<(TxOut, Height)> {
-        let key_vec = key.to_bytes();
+        let key_vec = key.to_bytes().to_vec();
 
         if let Some(value) = self.small_utxos.get(&key_vec) {
             return Some(<(TxOut, Height)>::from_bytes(value));
@@ -121,7 +121,7 @@ impl Utxos {
 
     /// Removes a key from the map, returning the previous value at the key if it exists.
     pub fn remove(&mut self, key: &OutPoint) -> Option<(TxOut, Height)> {
-        let key_vec = key.to_bytes();
+        let key_vec = key.to_bytes().to_vec();
 
         if let Some(value) = self.small_utxos.remove(&key_vec) {
             return Some(<(TxOut, Height)>::from_bytes(value));
