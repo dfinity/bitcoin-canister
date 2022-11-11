@@ -167,7 +167,7 @@ mod test {
     use std::iter::FromIterator;
 
     /// Covers an inclusive range of `[0, 100]` percentiles.
-    const PERCENTILE_BUCKETS: u32 = 101;
+    const PERCENTILE_BUCKETS: usize = 101;
 
     #[test]
     fn percentiles_empty_input() {
@@ -176,24 +176,24 @@ mod test {
 
     #[test]
     fn percentiles_nearest_rank_method_simple_example() {
-        let result = percentiles(vec![15, 20, 35, 40, 50]);
-        assert_eq!(result.len(), PERCENTILE_BUCKETS as usize);
-        assert_eq!(result[0..21], [15; 21]);
-        assert_eq!(result[21..41], [20; 20]);
-        assert_eq!(result[41..61], [35; 20]);
-        assert_eq!(result[61..81], [40; 20]);
-        assert_eq!(result[81..101], [50; 20]);
+        let percentiles = percentiles(vec![15, 20, 35, 40, 50]);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
+        assert_eq!(percentiles[0..21], [15; 21]);
+        assert_eq!(percentiles[21..41], [20; 20]);
+        assert_eq!(percentiles[41..61], [35; 20]);
+        assert_eq!(percentiles[61..81], [40; 20]);
+        assert_eq!(percentiles[81..101], [50; 20]);
     }
 
     #[test]
     fn percentiles_small_input() {
-        let result = percentiles(vec![5, 4, 3, 2, 1]);
-        assert_eq!(result.len(), PERCENTILE_BUCKETS as usize);
-        assert_eq!(result[0..21], [1; 21]);
-        assert_eq!(result[21..41], [2; 20]);
-        assert_eq!(result[41..61], [3; 20]);
-        assert_eq!(result[61..81], [4; 20]);
-        assert_eq!(result[81..101], [5; 20]);
+        let percentiles = percentiles(vec![5, 4, 3, 2, 1]);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
+        assert_eq!(percentiles[0..21], [1; 21]);
+        assert_eq!(percentiles[21..41], [2; 20]);
+        assert_eq!(percentiles[41..61], [3; 20]);
+        assert_eq!(percentiles[61..81], [4; 20]);
+        assert_eq!(percentiles[81..101], [5; 20]);
     }
 
     #[test]
@@ -204,13 +204,13 @@ mod test {
         input.extend(vec![3; 1000]);
         input.extend(vec![2; 1000]);
         input.extend(vec![1; 1000]);
-        let result = percentiles(input);
-        assert_eq!(result.len(), PERCENTILE_BUCKETS as usize);
-        assert_eq!(result[0..21], [1; 21]);
-        assert_eq!(result[21..41], [2; 20]);
-        assert_eq!(result[41..61], [3; 20]);
-        assert_eq!(result[61..81], [4; 20]);
-        assert_eq!(result[81..101], [5; 20]);
+        let percentiles = percentiles(input);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
+        assert_eq!(percentiles[0..21], [1; 21]);
+        assert_eq!(percentiles[21..41], [2; 20]);
+        assert_eq!(percentiles[41..61], [3; 20]);
+        assert_eq!(percentiles[61..81], [4; 20]);
+        assert_eq!(percentiles[81..101], [5; 20]);
     }
 
     #[test]
@@ -218,16 +218,17 @@ mod test {
     /// are [10, 20, ..., 1000].
     fn percentiles_sequential_numbers() {
         let input = Vec::from_iter(1..1_001);
-        let result = percentiles(input);
-        assert_eq!(result[0], 1);
-        assert_eq!(result[1], 10);
-        assert_eq!(result[25], 250);
-        assert_eq!(result[50], 500);
-        assert_eq!(result[75], 750);
-        assert_eq!(result[100], 1_000);
-        let mut expected_result = vec![1];
-        expected_result.extend_from_slice(&Vec::from_iter((10..1_001).step_by(10)));
-        assert_eq!(result, expected_result);
+        let percentiles = percentiles(input);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
+        assert_eq!(percentiles[0], 1);
+        assert_eq!(percentiles[1], 10);
+        assert_eq!(percentiles[25], 250);
+        assert_eq!(percentiles[50], 500);
+        assert_eq!(percentiles[75], 750);
+        assert_eq!(percentiles[100], 1_000);
+        let mut expected = vec![1];
+        expected.extend_from_slice(&Vec::from_iter((10..1_001).step_by(10)));
+        assert_eq!(percentiles, expected);
     }
 
     // Generates a chain of blocks:
@@ -330,7 +331,7 @@ mod test {
         });
 
         let percentiles = get_current_fee_percentiles();
-        assert_eq!(percentiles.len(), 101);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
         assert_eq!(percentiles[0..21], [0; 21]);
         assert_eq!(percentiles[21..41], [8; 20]);
         assert_eq!(percentiles[41..61], [16; 20]);
@@ -362,7 +363,7 @@ mod test {
             assert_eq!(fees, vec![58, 50, 42, 33]);
 
             let percentiles = get_current_fee_percentiles_internal(state, 4);
-            assert_eq!(percentiles.len(), 101);
+            assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
             assert_eq!(percentiles[0..26], [33; 26]);
             assert_eq!(percentiles[26..51], [42; 25]);
             assert_eq!(percentiles[51..76], [50; 25]);
@@ -394,7 +395,7 @@ mod test {
             // Fees are in a reversed order, in millisatoshi per byte units.
             assert_eq!(fees, vec![33, 25, 16, 8, 0]);
 
-            assert_eq!(percentiles.len(), 101);
+            assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
             assert_eq!(percentiles[0..21], [0; 21]);
             assert_eq!(percentiles[21..41], [8; 20]);
             assert_eq!(percentiles[41..61], [16; 20]);
@@ -430,7 +431,7 @@ mod test {
             // 1000 * 999 / 119 = 8394 millisatosi/bite.
             assert_eq!(fees, vec![8394, 8386, 8378, 8369, 8361]);
 
-            assert_eq!(percentiles.len(), 101);
+            assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
             assert_eq!(percentiles[0..21], [8361; 21]);
             assert_eq!(percentiles[21..41], [8369; 20]);
             assert_eq!(percentiles[41..61], [8378; 20]);
@@ -489,7 +490,7 @@ mod test {
         });
 
         let percentiles = get_current_fee_percentiles();
-        assert_eq!(percentiles.len(), 101);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
         assert_eq!(percentiles[0..51], [25; 51]);
         assert_eq!(percentiles[51..101], [33; 50]);
     }
@@ -502,7 +503,7 @@ mod test {
         init_state(blocks, stability_threshold);
 
         let percentiles = get_current_fee_percentiles();
-        assert_eq!(percentiles.len(), 101);
+        assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
         assert_eq!(percentiles[0..51], [25; 51]);
         assert_eq!(percentiles[51..101], [33; 50]);
 
