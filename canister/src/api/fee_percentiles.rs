@@ -8,12 +8,8 @@ use crate::{
 };
 use ic_btc_types::MillisatoshiPerByte;
 
-// The number of transactions to include in the percentiles calculation.
+/// The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
-
-// The number of percentiles to compute.
-// Should cover an inclusive range of [0, 100] percentiles.
-const NUM_PERCENTILE_BUCKETS: u32 = 101;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
@@ -50,14 +46,11 @@ fn get_current_fee_percentiles_internal(
     }
 
     // If tip block changed recalculate and cache results.
-    let fee_percentiles = percentiles(
-        get_fees_per_byte(
-            main_chain.into_chain(),
-            &state.unstable_blocks,
-            number_of_transactions,
-        ),
-        NUM_PERCENTILE_BUCKETS,
-    );
+    let fee_percentiles = percentiles(get_fees_per_byte(
+        main_chain.into_chain(),
+        &state.unstable_blocks,
+        number_of_transactions,
+    ));
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
         tip_block_hash,
@@ -67,9 +60,9 @@ fn get_current_fee_percentiles_internal(
     fee_percentiles
 }
 
-// Computes the fees per byte of the last `number_of_transactions` transactions on the main chain.
-// Fees are returned in a reversed order, starting with the most recent ones, followed by the older ones.
-// Eg. for transactions [..., Tn-2, Tn-1, Tn] fees would be [Fn, Fn-1, Fn-2, ...].
+/// Computes the fees per byte of the last `number_of_transactions` transactions on the main chain.
+/// Fees are returned in a reversed order, starting with the most recent ones, followed by the older ones.
+/// Eg. for transactions [..., Tn-2, Tn-1, Tn] fees would be [Fn, Fn-1, Fn-2, ...].
 fn get_fees_per_byte(
     main_chain: Vec<&Block>,
     unstable_blocks: &UnstableBlocks,
@@ -94,7 +87,7 @@ fn get_fees_per_byte(
     fees
 }
 
-// Computes the fees per byte of the given transaction.
+/// Computes the fees per byte of the given transaction.
 fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
@@ -126,28 +119,37 @@ fn get_tx_fee_per_byte(
     }
 }
 
-// Limits input value to stay within the range `min <= x <= max`.
+/// Limits input value to stay within the range `min <= x <= max`.
 fn limit_min_max(x: i32, min: i32, max: i32) -> i32 {
     std::cmp::max(min, std::cmp::min(x, max))
 }
 
-// Returns a requested number of percentile buckets from an initial vector of values.
-// Uses standard nearest-rank method, inclusive, with the extension of a 0th percentile.
-fn percentiles(mut values: Vec<u64>, buckets: u32) -> Vec<u64> {
+/// Returns the smallest integer greater or equal to `numerator / denominator`.
+fn ceil_div(numerator: u32, denominator: u32) -> u32 {
+    if numerator % denominator == 0 {
+        numerator / denominator
+    } else {
+        (numerator / denominator) + 1
+    }
+}
+
+/// Compute percentiles of input values.
+///
+/// Returns 101 bucket to cover `[0, 100]` percentiles range.
+/// Uses standard nearest-rank estimation method, inclusive, with the extension of a 0th percentile.
+/// See https://en.wikipedia.org/wiki/Percentile#The_nearest-rank_method.
+fn percentiles(mut values: Vec<u64>) -> Vec<u64> {
     if values.is_empty() {
         return vec![];
     }
     values.sort_unstable();
-    (0..buckets as i32)
-        .map(|bucket_i| {
-            let max_bucket_i = buckets as i32 - 1;
-            let values_n = values.len() as i32;
-            let values_i = if values_n < 100 {
-                values_n * (bucket_i - 1) / max_bucket_i
-            } else {
-                values_n * bucket_i / max_bucket_i
-            };
-            values[limit_min_max(values_i, 0, values_n - 1) as usize]
+    const MAX_PERCENTILE: u32 = 100;
+    (0..MAX_PERCENTILE + 1)
+        .map(|p| {
+            let n = values.len();
+            let ordinal_rank = ceil_div(p * n as u32, MAX_PERCENTILE);
+            let index = limit_min_max(ordinal_rank as i32 - 1, 0, n as i32 - 1);
+            values[index as usize]
         })
         .collect()
 }
@@ -164,24 +166,18 @@ mod test {
     use ic_btc_types::Satoshi;
     use std::iter::FromIterator;
 
-    #[test]
-    fn percentiles_empty_input() {
-        assert_eq!(percentiles(vec![], 10).len(), 0);
-    }
+    /// Covers an inclusive range of `[0, 100]` percentiles.
+    const PERCENTILE_BUCKETS: u32 = 101;
 
     #[test]
-    fn percentiles_small_input_0_buckets() {
-        let buckets = 0;
-        let result = percentiles(vec![5, 4, 3, 2, 1], buckets);
-        assert_eq!(result.len(), buckets as usize);
+    fn percentiles_empty_input() {
+        assert_eq!(percentiles(vec![]).len(), 0);
     }
 
     #[test]
     fn percentiles_nearest_rank_method_simple_example() {
-        // https://en.wikipedia.org/wiki/Percentile#The_nearest-rank_method
-        let buckets = 101;
-        let result = percentiles(vec![15, 20, 35, 40, 50], buckets);
-        assert_eq!(result.len(), buckets as usize);
+        let result = percentiles(vec![15, 20, 35, 40, 50]);
+        assert_eq!(result.len(), PERCENTILE_BUCKETS as usize);
         assert_eq!(result[0..21], [15; 21]);
         assert_eq!(result[21..41], [20; 20]);
         assert_eq!(result[41..61], [35; 20]);
@@ -190,10 +186,9 @@ mod test {
     }
 
     #[test]
-    fn percentiles_small_input_101_buckets() {
-        let buckets = 101;
-        let result = percentiles(vec![5, 4, 3, 2, 1], buckets);
-        assert_eq!(result.len(), buckets as usize);
+    fn percentiles_small_input() {
+        let result = percentiles(vec![5, 4, 3, 2, 1]);
+        assert_eq!(result.len(), PERCENTILE_BUCKETS as usize);
         assert_eq!(result[0..21], [1; 21]);
         assert_eq!(result[21..41], [2; 20]);
         assert_eq!(result[41..61], [3; 20]);
@@ -202,37 +197,36 @@ mod test {
     }
 
     #[test]
-    fn percentiles_big_input_101_buckets() {
+    fn percentiles_big_input() {
         let mut input = vec![];
         input.extend(vec![5; 1000]);
         input.extend(vec![4; 1000]);
         input.extend(vec![3; 1000]);
         input.extend(vec![2; 1000]);
         input.extend(vec![1; 1000]);
-        let buckets = 100;
-        let result = percentiles(input, buckets);
-        assert_eq!(result.len(), buckets as usize);
-        assert_eq!(result[0..20], [1; 20]);
-        assert_eq!(result[20..40], [2; 20]);
-        assert_eq!(result[40..60], [3; 20]);
-        assert_eq!(result[60..80], [4; 20]);
-        assert_eq!(result[80..100], [5; 20]);
+        let result = percentiles(input);
+        assert_eq!(result.len(), PERCENTILE_BUCKETS as usize);
+        assert_eq!(result[0..21], [1; 21]);
+        assert_eq!(result[21..41], [2; 20]);
+        assert_eq!(result[41..61], [3; 20]);
+        assert_eq!(result[61..81], [4; 20]);
+        assert_eq!(result[81..101], [5; 20]);
     }
 
     #[test]
-    /// Given the input [0, 1, 2, ..., 1000] and 101 buckets, the test ensures that the computed fees
-    /// are [0, 10, 20, ..., 1000].
-    fn percentiles_sequential_numbers_100_buckets() {
-        let input = Vec::from_iter(0..1_001);
-        let buckets = 101;
-        let result = percentiles(input, buckets);
-        assert_eq!(result[0], 0);
+    /// Given the input [1, 2, ..., 1000] the test ensures that the computed fees
+    /// are [10, 20, ..., 1000].
+    fn percentiles_sequential_numbers() {
+        let input = Vec::from_iter(1..1_001);
+        let result = percentiles(input);
+        assert_eq!(result[0], 1);
         assert_eq!(result[1], 10);
         assert_eq!(result[25], 250);
         assert_eq!(result[50], 500);
         assert_eq!(result[75], 750);
         assert_eq!(result[100], 1_000);
-        let expected_result = Vec::from_iter((0..1_001).step_by(10));
+        let mut expected_result = vec![1];
+        expected_result.extend_from_slice(&Vec::from_iter((10..1_001).step_by(10)));
         assert_eq!(result, expected_result);
     }
 
