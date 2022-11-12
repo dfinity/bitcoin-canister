@@ -119,18 +119,9 @@ fn get_tx_fee_per_byte(
     }
 }
 
-/// Limits input value to stay within the range `min <= x <= max`.
-fn limit_min_max(x: i32, min: i32, max: i32) -> i32 {
-    std::cmp::max(min, std::cmp::min(x, max))
-}
-
 /// Returns the smallest integer greater or equal to `numerator / denominator`.
 fn ceil_div(numerator: u32, denominator: u32) -> u32 {
-    if numerator % denominator == 0 {
-        numerator / denominator
-    } else {
-        (numerator / denominator) + 1
-    }
+    numerator / denominator + if numerator % denominator == 0 { 0 } else { 1 }
 }
 
 /// Compute percentiles of input values.
@@ -146,9 +137,8 @@ fn percentiles(mut values: Vec<u64>) -> Vec<u64> {
     const MAX_PERCENTILE: u32 = 100;
     (0..MAX_PERCENTILE + 1)
         .map(|p| {
-            let n = values.len();
-            let ordinal_rank = ceil_div(p * n as u32, MAX_PERCENTILE);
-            let index = limit_min_max(ordinal_rank as i32 - 1, 0, n as i32 - 1);
+            let ordinal_rank = ceil_div(p * values.len() as u32, MAX_PERCENTILE);
+            let index = std::cmp::max(0, ordinal_rank as i32 - 1);
             values[index as usize]
         })
         .collect()
