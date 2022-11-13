@@ -153,10 +153,17 @@ async fn main() {
     let mut blocks_path = args.blocks_path.clone();
     blocks_path.push("blocks");
 
-    for (height, (file, offset)) in block_index.into_iter() {
+    for (height, (file, offset)) in block_index.into_iter().rev() {
         let block_bytes = read_block(&blocks_path, file, offset);
 
-        runtime::set_successors_response(runtime::GetSuccessorsReply::Ok(
+        println!("height: {}", height);
+        println!("block_bytes: {}", hex::encode(block_bytes));
+
+        if height <= 100_000 {
+            break;
+        }
+
+        /*runtime::set_successors_response(runtime::GetSuccessorsReply::Ok(
             GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
                 blocks: vec![block_bytes],
                 next: vec![],
@@ -168,11 +175,11 @@ async fn main() {
             heartbeat().await;
         }
 
-        println!("Height :{:?}", with_state(main_chain_height));
+        println!("Height :{:?}", with_state(main_chain_height));*/
     }
 
     // Run the pre-upgrade hook to save all the state into the memory.
-    pre_upgrade();
+    /*pre_upgrade();
 
     println!(
         "memory size: {:?}",
@@ -187,5 +194,5 @@ async fn main() {
     ic_btc_canister::get_memory().with(|m| match file.write_all(&m.borrow()) {
         Err(err) => panic!("couldn't write to {}: {}", args.state_path.display(), err),
         Ok(_) => println!("successfully wrote state to {}", args.state_path.display()),
-    });
+    });*/
 }

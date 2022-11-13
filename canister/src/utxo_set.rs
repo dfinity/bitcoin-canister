@@ -54,7 +54,7 @@ pub struct UtxoSet {
     //
     // Rather than making this an optional to handle the case where the UTXO set is empty, we
     // instead store the `next_height` to avoid having this special case.
-    next_height: Height,
+    pub next_height: Height,
 
     // The predicate used to determine whether or not we should time-slice.
     // The default predicate is to check the performance counter, but can be overridden for tests.

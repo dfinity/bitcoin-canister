@@ -1704,6 +1704,7 @@ dependencies = [
  "clap",
  "hex",
  "ic-btc-canister",
+ "ic-btc-types",
  "ic-stable-structures",
  "integer-encoding",
  "rand 0.8.5",
