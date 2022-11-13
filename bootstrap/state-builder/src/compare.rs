@@ -8,7 +8,7 @@ use ic_stable_structures::{
 use std::fs::File;
 
 fn main() {
-    let balances_script_mem = FileMemory::new(File::open("./testnet_balances_100k").unwrap());
+    let balances_script_mem = FileMemory::new(File::open("./canister_testnet_100k/balances").unwrap());
 
     let mut balances: StableBTreeMap<_, Address, u64> =
         StableBTreeMap::init(balances_script_mem, 90, 8);
@@ -40,7 +40,7 @@ fn main() {
         0,       // No values are stored in the map.
     );
 
-    let address_utxos = FileMemory::new(File::open("./address_utxos").unwrap());
+    let address_utxos = FileMemory::new(File::open("./canister_testnet_100k/address_utxos").unwrap());
 
     let mut address_utxos: StableBTreeMap<_, AddressUtxo, ()> =
         StableBTreeMap::init(address_utxos, 90, 8);
@@ -57,7 +57,7 @@ fn main() {
         assert_eq!(v1, v2);
     }
 
-    let small_utxos = FileMemory::new(File::open("./small_utxos").unwrap());
+    let small_utxos = FileMemory::new(File::open("./canister_testnet_100k/small_utxos").unwrap());
 
     let mut small_utxos: StableBTreeMap<_, Vec<u8>, Vec<u8>> =
         StableBTreeMap::init(small_utxos, 0, 0);
@@ -76,7 +76,7 @@ fn main() {
         assert_eq!(v1, v2);
     }
 
-    let medium_utxos = FileMemory::new(File::open("./medium_utxos").unwrap());
+    let medium_utxos = FileMemory::new(File::open("./canister_testnet_100k/medium_utxos").unwrap());
 
     let mut medium_utxos: StableBTreeMap<_, Vec<u8>, Vec<u8>> =
         StableBTreeMap::init(medium_utxos, 0, 0);
