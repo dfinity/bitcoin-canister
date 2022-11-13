@@ -152,10 +152,10 @@ impl UtxoSet {
         }
 
         stats.ins_total += performance_counter() - ins_start;
-        print(&format!(
+        /*print(&format!(
             "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
             self.next_height, stats
-        ));
+        ));*/
 
         // Block ingestion complete.
         self.next_height += 1;
@@ -411,10 +411,12 @@ impl UtxoSet {
                 .expect("insertion must succeed");
 
             // Update the balance of the address.
-            let address_balance = self.balances.get(&address).unwrap_or(0);
-            self.balances
-                .insert(address.clone(), address_balance + output.value)
-                .expect("insertion must succeed");
+            if output.value != 0 {
+                let address_balance = self.balances.get(&address).unwrap_or(0);
+                self.balances
+                    .insert(address.clone(), address_balance + output.value)
+                    .expect("insertion must succeed");
+            }
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }
