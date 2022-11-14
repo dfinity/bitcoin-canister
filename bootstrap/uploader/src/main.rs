@@ -15,7 +15,7 @@ fn init(initial_size: u64) {
     // Grow the stable memory to the given size.
     stable::stable64_grow(initial_size).expect("cannot grow stabe memory");
 
-    // Initial the set of missing chunks.
+    // Initialize the set of missing chunks.
     MISSING_CHUNKS.with(|mr| {
         mr.replace(
             (0..initial_size)
@@ -31,7 +31,7 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
 
     // Verify the chunk is one of the missing chunks.
     if !MISSING_CHUNKS.with(|mr| mr.borrow().contains(&chunk_start)) {
-        panic!("invalid chunk");
+        panic!("invalid chunk or chunk is already uploaded: {}", chunk_start);
     }
 
     // Verify the length of the chunk is correct.

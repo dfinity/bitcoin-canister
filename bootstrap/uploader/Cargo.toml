@@ -7,11 +7,11 @@ edition = "2021"
 name = "uploader-canister"
 path = "src/main.rs"
 
-# The uploader script is added here as an example and not a binary because making it
+# The upload script is added here as an example and not a binary because making it
 # a binary would force us to put all its dependencies under [dependencies], and they'll
 # break the canister compilation as several of them cannot be compiled into wasm.
 [[example]]
-name = "uploader-script"
+name = "upload"
 path = "src/upload.rs"
 
 [dependencies]

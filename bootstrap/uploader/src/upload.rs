@@ -23,10 +23,6 @@ use url::Url;
 #[derive(Parser, Debug)]
 struct Args {
     /// A path to load the state from.
-    #[clap(long)]
-    canister_id: Principal,
-
-    /// A path to load the state from.
     #[clap(long, value_hint = clap::ValueHint::DirPath)]
     state: PathBuf,
 
@@ -37,6 +33,11 @@ struct Args {
     /// Whether or not to fetch the root key. Should be true for testnets, false otherwise.
     #[clap(long, default_value_t = false)]
     fetch_root_key: bool,
+
+    /// The canister to upload the state to.
+    #[clap(long)]
+    canister_id: Principal,
+
 }
 
 #[derive(CandidType)]
