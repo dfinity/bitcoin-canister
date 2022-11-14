@@ -37,7 +37,6 @@ struct Args {
     /// The canister to upload the state to.
     #[clap(long)]
     canister_id: Principal,
-
 }
 
 #[derive(CandidType)]

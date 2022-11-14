@@ -31,7 +31,10 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
 
     // Verify the chunk is one of the missing chunks.
     if !MISSING_CHUNKS.with(|mr| mr.borrow().contains(&chunk_start)) {
-        panic!("invalid chunk or chunk is already uploaded: {}", chunk_start);
+        panic!(
+            "invalid chunk or chunk is already uploaded: {}",
+            chunk_start
+        );
     }
 
     // Verify the length of the chunk is correct.
