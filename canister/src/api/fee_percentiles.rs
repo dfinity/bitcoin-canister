@@ -119,11 +119,6 @@ fn get_tx_fee_per_byte(
     }
 }
 
-/// Returns the smallest integer greater or equal to `numerator / denominator`.
-fn ceil_div(numerator: u32, denominator: u32) -> u32 {
-    numerator / denominator + if numerator % denominator == 0 { 0 } else { 1 }
-}
-
 /// Compute percentiles of input values.
 ///
 /// Returns 101 bucket to cover `[0, 100]` percentiles range.
@@ -135,8 +130,10 @@ fn percentiles(mut values: Vec<u64>) -> Vec<u64> {
     }
     values.sort_unstable();
     const MAX_PERCENTILE: u32 = 100;
+    let ceil_div = |a, b| a / b + if a % b == 0 { 0 } else { 1 };
     (0..MAX_PERCENTILE + 1)
         .map(|p| {
+            // `ordinal_rank = ceil(p/100 * n)`.
             let ordinal_rank = ceil_div(p * values.len() as u32, MAX_PERCENTILE);
             let index = std::cmp::max(0, ordinal_rank as i32 - 1);
             values[index as usize]
