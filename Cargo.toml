@@ -1,8 +1,11 @@
 [workspace]
 
 members = [
-    "bootstrap/state-builder",
     "canister",
+
+    # Crates used for development only.
+    "bootstrap/state-builder",
+    "bootstrap/uploader",
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
     "validation",
