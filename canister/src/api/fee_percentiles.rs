@@ -121,7 +121,7 @@ fn get_tx_fee_per_byte(
 
 /// Compute percentiles of input values.
 ///
-/// Returns 101 bucket to cover `[0, 100]` percentiles range.
+/// Returns 101 bucket to cover the percentiles range `[0, 100]`.
 /// Uses standard nearest-rank estimation method, inclusive, with the extension of a 0th percentile.
 /// See https://en.wikipedia.org/wiki/Percentile#The_nearest-rank_method.
 fn percentiles(mut values: Vec<u64>) -> Vec<u64> {
@@ -201,7 +201,7 @@ mod test {
     }
 
     #[test]
-    /// Given the input [1, 2, ..., 1000] the test ensures that the computed fees
+    /// Given the input [1, 2, ..., 1000], the test ensures that the computed fees
     /// are [10, 20, ..., 1000].
     fn percentiles_sequential_numbers() {
         let input = Vec::from_iter(1..1_001);
