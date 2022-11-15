@@ -14,8 +14,9 @@ use bitcoin::{
 };
 use clap::Parser;
 use ic_btc_canister::{
-    types::{Address as OurAddress, AddressUtxo, Config, Network, OutPoint, TxOut, Txid},
-    with_state_mut,
+    pre_upgrade,
+    types::{Address as OurAddress, AddressUtxo, Block, Config, Network, OutPoint, TxOut, Txid},
+    unstable_blocks, with_state, with_state_mut, UnstableBlocks,
 };
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
@@ -29,6 +30,10 @@ use std::{
 };
 
 const WASM_PAGE_SIZE: u64 = 65536;
+
+const BLOCK_ROOT: &str = "020000001e0a16bbadccde1d80c66597b1939e45f91b570d29f95fc158299e000000000041aa0dbf100d7c35d424e7829e8f9ced52d04fd1669d45637f4fc820ad315a4554ff055227f1001c9acbb5cc0101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0d03a186010144062f503253482fffffffff0100f2052a01000000232103202fa513e1f9e57f235d442849eb73d743a5b8b9f546d0727fcc410ad91031ccac00000000";
+
+const BLOCK_NEXT: &str = "020000002840bc6c31378c0a314609fb50f21811c5370f7df387b30d109d620000000000a9858cc9be942ea7459f026b09e3c25287706bc3d0d9ba2d59d8ea39168c6ce72400065227f1001c4a0c98870201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff3703a28601000427f1001c043b520100522cfabe6d6d0000000000000000000068692066726f6d20706f6f6c7365727665726aac1eeeed88ffffffff0100f2052a010000001976a914912e2b234f941f30b18afbb4fa46171214bf66c888ac000000000100000001c422ec82824d97c2894905ab8fcb73dbc0e16ee44797e1e1967db42cd9564218010000006c493046022100f18c97457e00c491d3eed5d9c2c5da33398595adf2708a07f677fb1e3eeeccba022100dc5c886192a9af7a28ab7689e766f3be6b01b61a4c675c97e8d2c99cd8b9d1320121037928262812eb9e73b9ca8039f8023db84b0a86c5caf6bc28cefb85e9943684acffffffff02a530ed10000000001976a91405e18e90cf803e17b9fa70abd2ad931389cc2cd488acd533591c000000001976a9148f3441dd22b15a30dcde56f9b3de7a61b7a3a74088ac00000000";
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -74,6 +79,7 @@ fn main() {
     let reader = BufReader::new(utxos_file);
 
     ic_btc_canister::init(Config {
+        stability_threshold: 0,
         network: args.network,
         ..Config::default()
     });
@@ -115,6 +121,12 @@ fn main() {
         }
     });
 
+    with_state_mut(|s| {
+        // insert genesis block.
+        s.utxos
+            .ingest_block(ic_btc_canister::genesis_block(args.network));
+    });
+
     let mut p = args.output.clone();
     p.push("small_utxos");
     write_mem_to_file(&p, MemoryId::new(2));
@@ -122,5 +134,29 @@ fn main() {
     p.push("medium_utxos");
     write_mem_to_file(&p, MemoryId::new(3));
 
-    // TODO: also save large UTXOs
+    println!(
+        "large utxos: {}",
+        with_state(|s| s.utxos.utxos.large_utxos.len())
+    );
+
+    // Insert unstable blocks.
+    let x = hex::decode(BLOCK_ROOT).unwrap();
+    let root_block = Block::new(BitcoinBlock::consensus_decode(x.as_slice()).unwrap());
+
+    let y = hex::decode(BLOCK_NEXT).unwrap();
+    let next_block = Block::new(BitcoinBlock::consensus_decode(y.as_slice()).unwrap());
+
+    println!("root block hash {}", root_block.block_hash().to_string());
+    println!("next block hash {}", next_block.block_hash().to_string());
+    with_state_mut(|s| {
+        s.unstable_blocks = UnstableBlocks::new(&s.utxos, 0, root_block);
+        unstable_blocks::push(&mut s.unstable_blocks, &s.utxos, next_block).unwrap();
+        s.utxos.next_height = 100_001; // FIXME
+    });
+
+    pre_upgrade();
+
+    let mut p = args.output.clone();
+    p.push("upgrade");
+    write_mem_to_file(&p, MemoryId::new(0));
 }

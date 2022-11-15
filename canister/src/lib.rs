@@ -155,7 +155,7 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
 }
 
 /// Returns the genesis block of the given network.
-pub(crate) fn genesis_block(network: Network) -> Block {
+pub fn genesis_block(network: Network) -> Block {
     Block::new(bitcoin::blockdata::constants::genesis_block(network.into()))
 }
 

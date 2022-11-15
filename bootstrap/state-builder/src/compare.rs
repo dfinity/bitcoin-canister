@@ -14,15 +14,17 @@ fn main() {
     let canister_mem_2 = FileMemory::new(File::open("./full_canister_100k_combined").unwrap());
     let memory_manager_2 = MemoryManager::init(canister_mem_2);
 
-    println!(
+    /*println!(
         "memory sizes: {:?}",
         memory_manager_2.inner.borrow().memory_sizes_in_pages
     );
     println!(
         "buckets: {:?}",
         memory_manager_2.inner.borrow().memory_buckets
-    );
+    );*/
 
+//    let balances_script_mem =
+//        FileMemory::new(File::open("./canister_testnet_100k/balances").unwrap());
     let balances_script_mem = memory_manager_2.get(MemoryId::new(4));
 
     let mut buf = vec![1; 1000];
@@ -34,7 +36,7 @@ fn main() {
 
     println!("# balances {}", balances.len());
 
-    /*let balance_mem_reference = memory_manager.get(MemoryId::new(4));
+    let balance_mem_reference = memory_manager.get(MemoryId::new(4));
 
     let mut balances_reference: StableBTreeMap<_, Address, u64> =
         StableBTreeMap::init(balance_mem_reference, 90, 8);
@@ -46,7 +48,9 @@ fn main() {
     for ((k1, v1), (k2, v2)) in std::iter::zip(balances.iter(), balances_reference.iter()) {
         assert_eq!(k1, k2);
         assert_eq!(v1, v2);
-    }*/
+    }
+
+    println!("balances match perfectly");
 
     let address_utxos_reference = memory_manager.get(MemoryId::new(1));
     use ic_stable_structures::Memory;
@@ -57,12 +61,13 @@ fn main() {
         0,       // No values are stored in the map.
     );
 
-    //let address_utxos = FileMemory::new(File::open("./canister_testnet_100k/address_utxos").unwrap());
+//    let address_utxos =
+  //      FileMemory::new(File::open("./canister_testnet_100k/address_utxos").unwrap());
     let address_utxos = memory_manager_2.get(MemoryId::new(1));
     let mut buf = vec![1; 10];
     address_utxos.read(0, &mut buf);
 
-    println!("address utxos first few bytes: {:?}", buf);
+    //println!("address utxos first few bytes: {:?}", buf);
 
     let mut address_utxos: StableBTreeMap<_, AddressUtxo, ()> =
         StableBTreeMap::init(address_utxos, 90, 8);
@@ -79,6 +84,9 @@ fn main() {
         assert_eq!(v1, v2);
     }
 
+    println!("address utxos match perfectly.");
+
+//    let small_utxos = FileMemory::new(File::open("./canister_testnet_100k/small_utxos").unwrap());
     let small_utxos = memory_manager_2.get(MemoryId::new(2));
 
     let mut small_utxos: StableBTreeMap<_, Vec<u8>, Vec<u8>> =
@@ -94,12 +102,24 @@ fn main() {
     for (i, ((k1, v1), (k2, v2))) in
         std::iter::zip(small_utxos.iter(), small_utxos_reference.iter()).enumerate()
     {
+        if k1 != k2 {
+            let k1 = OutPoint::from_bytes(k1.clone());
+            let k2 = OutPoint::from_bytes(k2.clone());
+            println!("reference: {:?}", k1);
+            println!("script: {:?}", k2);
+        }
         assert_eq!(k1, k2);
+        if v1 != v2 {
+            let v1 = <(TxOut, Height)>::from_bytes(v1.clone());
+            let v2 = <(TxOut, Height)>::from_bytes(v2.clone());
+            println!("reference: {:?}", v2);
+            println!("script: {:?}", v1);
+        }
         assert_eq!(v1, v2);
     }
 
+    //let medium_utxos = memory_manager_2.get(MemoryId::new(3));
     let medium_utxos = memory_manager_2.get(MemoryId::new(3));
-
     let mut medium_utxos: StableBTreeMap<_, Vec<u8>, Vec<u8>> =
         StableBTreeMap::init(medium_utxos, 0, 0);
 
