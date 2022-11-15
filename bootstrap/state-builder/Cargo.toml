@@ -12,6 +12,18 @@ name = "state-builder2"
 path = "src/main2.rs"
 
 [[bin]]
+name = "build-balances"
+path = "src/build_balances.rs"
+
+[[bin]]
+name = "build-address-utxos"
+path = "src/build_address_utxos.rs"
+
+[[bin]]
+name = "build-utxos"
+path = "src/build_utxos.rs"
+
+[[bin]]
 name = "chain_state"
 path = "src/chain_state.rs"
 

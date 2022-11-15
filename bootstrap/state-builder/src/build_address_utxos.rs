@@ -14,7 +14,7 @@ use bitcoin::{
 };
 use clap::Parser;
 use ic_btc_canister::{
-    types::{Address as OurAddress, AddressUtxo, Config, Network, OutPoint, TxOut, Txid},
+    types::{Address as OurAddress, AddressUtxo, Config, Network, OutPoint, Txid},
     with_state_mut,
 };
 use ic_stable_structures::{
@@ -85,42 +85,35 @@ fn main() {
 
             let txid = Txid::from(BitcoinTxid::from_str(parts[1]).unwrap().to_vec());
             let vout: u32 = parts[2].parse().unwrap();
-            let amount: u64 = parts[3].parse().unwrap();
             let address_str = parts[5];
-            let script = parts[6];
             let height: u32 = parts[9].parse().unwrap();
-            let mut script = hex::decode(script).unwrap();
 
             if i % 100_000 == 0 {
                 println!("Processed {}", i);
             }
 
-            if let Ok(address) = Address::from_str(parts[5]) {
-                // update the script.
-                script = address.script_pubkey().as_bytes().to_vec();
-            }
+            if let Ok(address) = Address::from_str(address_str) {
+                let address: OurAddress = address.into();
 
-            // Insert the UTXO
-            let outpoint = OutPoint { txid, vout };
-
-            if !bitcoin::Script::from(script.clone()).is_provably_unspendable() {
-                let txout = TxOut {
-                    value: amount,
-                    script_pubkey: script,
-                };
-
-                let x = s.utxos.utxos.insert(outpoint, (txout, height));
-                assert!(!x); // not seen this utxo before.
+                s.utxos
+                    .address_utxos
+                    .insert(
+                        AddressUtxo {
+                            address,
+                            height,
+                            outpoint: OutPoint {
+                                txid: txid.clone(),
+                                vout,
+                            },
+                        },
+                        (),
+                    )
+                    .unwrap();
             }
         }
     });
 
     let mut p = args.output.clone();
-    p.push("small_utxos");
-    write_mem_to_file(&p, MemoryId::new(2));
-    let mut p = args.output.clone();
-    p.push("medium_utxos");
-    write_mem_to_file(&p, MemoryId::new(3));
-
-    // TODO: also save large UTXOs
+    p.push("address_utxos");
+    write_mem_to_file(&p, MemoryId::new(1));
 }
