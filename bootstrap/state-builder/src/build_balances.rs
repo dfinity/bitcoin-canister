@@ -52,7 +52,7 @@ fn main() {
         let address_str = parts[5];
 
         if i % 100_000 == 0 {
-            println!("Processed {} UTXOS", i);
+            println!("Processed {} UTXOs", i);
         }
 
         if let Ok(address) = BitcoinAddress::from_str(address_str) {
