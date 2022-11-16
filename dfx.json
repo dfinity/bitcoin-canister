@@ -35,6 +35,10 @@
     "local": {
       "bind": "127.0.0.1:8000",
       "type": "ephemeral"
+    },
+    "medium08": {
+      "providers": ["http://[2607:fb58:9005:42:5000:8cff:fe0e:1fae]:8080"],
+      "type": "persistent"
     }
   },
   "version": 1

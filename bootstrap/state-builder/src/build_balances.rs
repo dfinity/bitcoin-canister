@@ -1,13 +1,11 @@
-//! A script for building the Bitcoin canister's state and storing it into a file.
+//! A script for building the Bitcoin canister's balances from a UTXO dump text file.
 //!
 //! Example run:
 //!
-//! FIXME
-//! cargo run --bin state-builder --release -- \
-//!     --state-path data.bin \
-//!     --network testnet \
-//!     --blocks-path /path/to/data/testnet3 \
-//!     --tip 000000002ce019cc4a8f2af62b3ecf7c30a19d29828b25268a0194dbac3cac50
+//! cargo run --release --bin build-balances -- \
+//!   --network testnet \
+//!   --output balances.bin \
+//!   --utxos-dump-path utxos-dump.csv
 use bitcoin::Address;
 use clap::Parser;
 use ic_btc_canister::types::{Address as OurAddress, Network};
@@ -82,17 +80,11 @@ fn main() {
 
     // Write the balances into a stable btreemap.
     for (address, amount) in balances.into_iter() {
-        if amount == 0 {
-            println!("found zero!!");
-        } else {
-            stable_balances.insert(address, amount).unwrap();
-        }
+        stable_balances.insert(address, amount).unwrap();
     }
 
     println!("Writing stable structure to file...");
-    let mut p = args.output.clone();
-    p.push("balances");
-    let mut balances_file = match File::create(&p) {
+    let mut balances_file = match File::create(&args.output) {
         Err(err) => panic!("couldn't create {}: {}", args.output.display(), err),
         Ok(file) => file,
     };
