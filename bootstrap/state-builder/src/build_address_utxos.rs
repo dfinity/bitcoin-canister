@@ -41,7 +41,7 @@ fn main() {
 
     let memory = DefaultMemoryImpl::default();
     let mut address_utxos: StableBTreeMap<_, AddressUtxo, ()> =
-        StableBTreeMap::init(memory.clone(), 90, 0);
+        StableBTreeMap::init(memory.clone(), 126, 0);
 
     for (i, line) in reader.lines().enumerate() {
         let line = line.unwrap();
