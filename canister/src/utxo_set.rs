@@ -1,10 +1,10 @@
 use crate::{
     memory::Memory,
     multi_iter::MultiIter,
-    runtime::{inc_performance_counter, performance_counter, print},
+    runtime::{inc_performance_counter, performance_counter},
     state::OUTPOINT_SIZE,
     types::{
-        Address, AddressEntryNew, AddressUtxo, Block, Network, OutPoint, Slicing, Storable,
+        Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable,
         Transaction, TxOut, Txid, Utxo,
     },
 };
