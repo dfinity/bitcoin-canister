@@ -421,10 +421,13 @@ impl Storable for Height {
 
 impl Storable for (Height, OutPoint) {
     fn to_bytes(&self) -> Vec<u8> {
-        vec![Storable::to_bytes(&self.0), OutPoint::to_bytes(&self.1).to_vec()]
-            .into_iter()
-            .flatten()
-            .collect()
+        vec![
+            Storable::to_bytes(&self.0),
+            OutPoint::to_bytes(&self.1).to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
     }
 
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
