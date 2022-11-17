@@ -2542,6 +2542,7 @@ dependencies = [
  "bitcoin",
  "byteorder",
  "clap",
+ "hex",
  "ic-btc-canister",
  "ic-stable-structures",
  "integer-encoding",
