@@ -2539,6 +2539,7 @@ dependencies = [
  "async-std",
  "bitcoin",
  "byteorder",
+ "ciborium",
  "clap",
  "hex",
  "ic-btc-canister",

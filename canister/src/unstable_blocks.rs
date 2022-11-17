@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 ///   ∀ b', height(b') = height(b): depth(b) - depth(b’) ≥ stability_threshold
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UnstableBlocks {
-    stability_threshold: u32,
-    tree: BlockTree,
-    outpoints_cache: OutPointsCache,
+    pub stability_threshold: u32,
+    pub tree: BlockTree,
+    pub outpoints_cache: OutPointsCache,
 }
 
 impl UnstableBlocks {

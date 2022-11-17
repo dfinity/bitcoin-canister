@@ -39,6 +39,7 @@ path = "src/combine.rs"
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = "0.28.1"
 byteorder = "1.4.3"
+ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
 clap = { version = "4.0.11", features = ["derive"] }
 hex = "0.4.3"
 ic-btc-canister = { path = "../../canister" }

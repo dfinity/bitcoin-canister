@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 /// A structure used to maintain the entire state.
 // NOTE: `PartialEq` is only available in tests as it would be impractically
 // expensive in production.
-#[derive(Serialize, Deserialize)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Serialize, Deserialize, PartialEq)]
+//#[cfg_attr(test, derive(PartialEq))]
 pub struct State {
     /// The UTXOs of all stable blocks since genesis.
     pub utxos: UtxoSet,
@@ -186,7 +186,7 @@ pub enum ResponseToProcess {
     Partial(GetSuccessorsPartialResponse, u8),
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct SyncingState {
     /// Whether or not new blocks should be fetched from the network.
     pub syncing: Flag,

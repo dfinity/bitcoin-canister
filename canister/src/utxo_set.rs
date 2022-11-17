@@ -531,16 +531,16 @@ struct BlockIngestionStats {
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
 // expensive in production.
-#[cfg(test)]
+//#[cfg(test)]
 impl PartialEq for UtxoSet {
     fn eq(&self, other: &Self) -> bool {
-        use crate::test_utils::is_stable_btreemap_equal;
+        //use crate::test_utils::is_stable_btreemap_equal;
         self.utxos == other.utxos
             && self.network == other.network
             && self.next_height == other.next_height
             && self.ingesting_block == other.ingesting_block
-            && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
-            && is_stable_btreemap_equal(&self.balances, &other.balances)
+       //     && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
+        //    && is_stable_btreemap_equal(&self.balances, &other.balances)
     }
 }
 

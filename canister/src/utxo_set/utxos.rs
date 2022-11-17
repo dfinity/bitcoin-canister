@@ -73,13 +73,13 @@ impl Default for Utxos {
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
 // expensive in production.
-#[cfg(test)]
+//#[cfg(test)]
 impl PartialEq for Utxos {
     fn eq(&self, other: &Self) -> bool {
-        use crate::test_utils::is_stable_btreemap_equal;
-        is_stable_btreemap_equal(&self.small_utxos, &other.small_utxos)
-            && is_stable_btreemap_equal(&self.medium_utxos, &other.medium_utxos)
-            && self.large_utxos == other.large_utxos
+        //use crate::test_utils::is_stable_btreemap_equal;
+        //is_stable_btreemap_equal(&self.small_utxos, &other.small_utxos)
+          //  && is_stable_btreemap_equal(&self.medium_utxos, &other.medium_utxos)
+           /* && */self.large_utxos == other.large_utxos
     }
 }
 

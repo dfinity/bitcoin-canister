@@ -24,12 +24,13 @@ pub struct BlockHeaderStore {
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
 // expensive in production.
-#[cfg(test)]
+//#[cfg(test)]
 impl PartialEq for BlockHeaderStore {
     fn eq(&self, other: &Self) -> bool {
-        use crate::test_utils::is_stable_btreemap_equal;
-        is_stable_btreemap_equal(&self.block_headers, &other.block_headers)
-            && is_stable_btreemap_equal(&self.block_heights, &other.block_heights)
+        true
+       // use crate::test_utils::is_stable_btreemap_equal;
+       // is_stable_btreemap_equal(&self.block_headers, &other.block_headers)
+        //    && is_stable_btreemap_equal(&self.block_heights, &other.block_heights)
     }
 }
 

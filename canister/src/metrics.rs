@@ -5,7 +5,7 @@ const BUCKET_SIZE: u64 = 500 * M;
 const NUM_BUCKETS: u64 = 21;
 
 /// Metrics for various endpoints.
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Metrics {
     pub get_utxos_total: InstructionHistogram,
     pub get_utxos_apply_unstable_blocks: InstructionHistogram,
@@ -55,7 +55,7 @@ impl Default for Metrics {
 /// The histogram observes the values in buckets of:
 ///
 ///  (500M, 1B, 1.5B, ..., 9B, 9.5B, 10B, +Inf)
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct InstructionHistogram {
     pub name: String,
     pub buckets: Vec<u64>,
