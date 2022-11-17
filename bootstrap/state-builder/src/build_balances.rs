@@ -76,9 +76,11 @@ fn main() {
     balances.shuffle(&mut rng);
 
     println!("Writing to stable structure...");
+    const ADDRESS_SIZE: u32 = 90;
+    const BALANCE_SIZE: u32 = 8;
     let memory = DefaultMemoryImpl::default();
     let mut stable_balances: StableBTreeMap<_, Address, u64> =
-        StableBTreeMap::init(memory.clone(), 90, 8);
+        StableBTreeMap::init(memory.clone(), ADDRESS_SIZE, BALANCE_SIZE);
 
     // Write the balances into a stable btreemap.
     for (address, amount) in balances.into_iter() {
