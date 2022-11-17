@@ -1,6 +1,6 @@
 use bitcoin::OutPoint as BitcoinOutPoint;
 use ic_btc_canister::{
-    state::State,
+    state::{State, main_chain_height},
     types::{Address, AddressUtxo, OutPoint, Storable as _, TxOut},
 };
 use ic_btc_types::Height;
@@ -50,23 +50,22 @@ fn main() {
     assert_eq!(state_ref.syncing_state, state_2.syncing_state);
     assert_eq!(state_ref.blocks_source, state_2.blocks_source);
 
-    println!("Reference large UTXOs");
-    for (k, (txout, height)) in &state_ref.utxos.utxos.large_utxos {
-        println!("{:?}, txid: {:?}, script len {:?}", k, 0, txout.script_pubkey.len());
-//        println!("{:?}, {:?}", k, v);
-    }
+    /*println!("Reference large UTXOs");
+        for (k, (txout, height)) in &state_ref.utxos.utxos.large_utxos {
+            println!("{:?}, txid: {:?}, script len {:?}", k, 0, txout.script_pubkey.len());
+    //        println!("{:?}, {:?}", k, v);
+        }
 
-    println!("script large UTXOs");
-    for (k, (txout, height)) in &state_2.utxos.utxos.large_utxos {
-        //println!("{:?}, {:?}", k, v);
-        println!("{:?}, txid: {:?}, script len {:?}", k, 0, txout.script_pubkey.len());
-    }
+        println!("script large UTXOs");
+        for (k, (txout, height)) in &state_2.utxos.utxos.large_utxos {
+            //println!("{:?}, {:?}", k, v);
+            println!("{:?}, txid: {:?}, script len {:?}", k, 0, txout.script_pubkey.len());
+        }*/
 
     assert_eq!(
         state_ref.utxos.utxos.large_utxos.keys().collect::<Vec<_>>(),
         state_2.utxos.utxos.large_utxos.keys().collect::<Vec<_>>(),
     );
-
 
     assert_eq!(
         state_ref.unstable_blocks.stability_threshold,
@@ -80,8 +79,9 @@ fn main() {
     );*/
 
     assert_eq!(state_ref.stable_height(), state_2.stable_height());
+    //assert_eq!(main_chain_height(&state_ref), main_chain_height(&state_2));
 
-    //    assert_eq!(state_ref.unstable_blocks.tree, state_2.unstable_blocks.tree);
+    assert_eq!(state_ref.unstable_blocks.tree, state_2.unstable_blocks.tree);
 
     /*println!(
         "memory sizes: {:?}",
