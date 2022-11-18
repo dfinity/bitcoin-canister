@@ -496,9 +496,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.0.23"
+version = "4.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eb41c13df48950b20eb4cd0eefa618819469df1bffc49d11e8487c4ba0037e5"
+checksum = "2148adefda54e14492fb9bddcc600b4344c5d1a3123bd666dcb939c6f0e0e57e"
 dependencies = [
  "atty",
  "bitflags",
@@ -720,9 +720,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.10.5"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
+checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer 0.10.3",
  "crypto-common",
@@ -777,7 +777,7 @@ dependencies = [
  "base16ct",
  "crypto-bigint",
  "der",
- "digest 0.10.5",
+ "digest 0.10.6",
  "ff",
  "generic-array",
  "group",
@@ -1087,7 +1087,7 @@ version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -1150,9 +1150,9 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.23.0"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d87c48c02e0dc5e3b849a2041db3029fd066650f8f717c07bf8ed78ccb895cac"
+checksum = "59df7c4e19c950e6e0e868dcc0a300b09a9b88e9ec55bd879ca819087a77355d"
 dependencies = [
  "http",
  "hyper",
@@ -1213,8 +1213,8 @@ dependencies = [
  "hex",
  "ic-btc-test-utils",
  "ic-btc-types",
- "ic-cdk 0.6.6",
- "ic-cdk-macros 0.6.6",
+ "ic-cdk 0.6.7",
+ "ic-cdk-macros 0.6.7",
  "ic-stable-structures",
  "lazy_static",
  "maplit",
@@ -1263,9 +1263,9 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk"
-version = "0.6.6"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc234b5fbb3e41ff88c7f287b490104e33ec5690d3f441dfefc686c37266c8b3"
+checksum = "e9a5581267f756cab81f618c4ab27e3ca89a5a72b1869f9fbd5a8ec97a50c4e9"
 dependencies = [
  "candid 0.8.3",
  "cfg-if",
@@ -1291,12 +1291,12 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-macros"
-version = "0.6.6"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbcec58ff3e0a6977a7a14bb47163a0d79a37f04eb92c0f69231a008c53cc375"
+checksum = "2f2c0d698c4efb47284fe469642f5c37db856889c3e8a3931d6a7561b9625247"
 dependencies = [
  "candid 0.8.3",
- "ic-cdk 0.6.6",
+ "ic-cdk 0.6.7",
  "proc-macro2",
  "quote",
  "serde",
@@ -2120,9 +2120,9 @@ dependencies = [
 
 [[package]]
 name = "reqwest"
-version = "0.11.12"
+version = "0.11.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "431949c384f4e2ae07605ccaa56d1d9d2ecdb5cadd4f9577ccfab29f2e5149fc"
+checksum = "68cc60575865c7831548863cc02356512e3f1dc2f3f82cb837d7fc4cc8f3c97c"
 dependencies = [
  "base64",
  "bytes",
@@ -2262,8 +2262,8 @@ dependencies = [
  "bitcoin",
  "candid 0.8.3",
  "ic-btc-test-utils",
- "ic-cdk 0.6.6",
- "ic-cdk-macros 0.6.6",
+ "ic-cdk 0.6.7",
+ "ic-cdk-macros 0.6.7",
  "serde",
 ]
 
@@ -2274,8 +2274,8 @@ dependencies = [
  "bitcoin",
  "candid 0.8.3",
  "ic-btc-test-utils",
- "ic-cdk 0.6.6",
- "ic-cdk-macros 0.6.6",
+ "ic-cdk 0.6.7",
+ "ic-cdk-macros 0.6.7",
  "serde",
 ]
 
@@ -2456,7 +2456,7 @@ checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
 dependencies = [
  "cfg-if",
  "cpufeatures",
- "digest 0.10.5",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -2465,7 +2465,7 @@ version = "1.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.6",
  "rand_core 0.6.4",
 ]
 
@@ -2541,7 +2541,9 @@ dependencies = [
  "async-std",
  "bitcoin",
  "byteorder",
+ "ciborium",
  "clap",
+ "hex",
  "ic-btc-canister",
  "ic-stable-structures",
  "integer-encoding",
