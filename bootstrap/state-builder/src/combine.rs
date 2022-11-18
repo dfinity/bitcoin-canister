@@ -60,7 +60,7 @@ fn main() {
     let memory_manager = MemoryManager::init(memory.clone());
 
     let mut p = args.memories_dir.clone();
-    p.push("./upgrade");
+    p.push("./state");
     write_memory(&memory_manager, 0, &p);
 
     let mut p = args.memories_dir.clone();
