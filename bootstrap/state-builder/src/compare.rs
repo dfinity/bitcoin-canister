@@ -63,8 +63,8 @@ fn main() {
         }*/
 
     assert_eq!(
-        state_ref.utxos.utxos.large_utxos.keys().collect::<Vec<_>>(),
-        state_2.utxos.utxos.large_utxos.keys().collect::<Vec<_>>(),
+        state_ref.utxos.utxos.large_utxos,
+        state_2.utxos.utxos.large_utxos,
     );
 
     assert_eq!(
@@ -72,14 +72,13 @@ fn main() {
         state_2.unstable_blocks.stability_threshold
     );
 
-    // TODO
-    /*assert_eq!(
+    assert_eq!(
         state_ref.unstable_blocks.outpoints_cache,
         state_2.unstable_blocks.outpoints_cache
-    );*/
+    );
 
     assert_eq!(state_ref.stable_height(), state_2.stable_height());
-    //assert_eq!(main_chain_height(&state_ref), main_chain_height(&state_2));
+    assert_eq!(main_chain_height(&state_ref), main_chain_height(&state_2));
 
     assert_eq!(state_ref.unstable_blocks.tree, state_2.unstable_blocks.tree);
 
