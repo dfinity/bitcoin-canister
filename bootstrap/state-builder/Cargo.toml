@@ -15,6 +15,10 @@ path = "src/build_address_utxos.rs"
 name = "build-utxos"
 path = "src/build_utxos.rs"
 
+[[bin]]
+name = "build-state"
+path = "src/build_state.rs"
+
 [dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = "0.28.1"
@@ -23,7 +27,8 @@ ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c36
 clap = { version = "4.0.11", features = ["derive"] }
 hex = "0.4.3"
 ic-btc-canister = { path = "../../canister" }
-ic-stable-structures = "0.1.0"
+ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f167994de24c8ccf7ee37a4d8ac67" }
+ic-stable-structures = { path = "../../../../stable-structures" }
 integer-encoding = "3.0.4"
 rand = "0.8.5"
 rand_chacha = "0.3.1"

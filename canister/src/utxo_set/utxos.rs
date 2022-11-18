@@ -6,7 +6,7 @@ use crate::{
 use ic_btc_types::Height;
 #[cfg(test)]
 use ic_stable_structures::{btreemap, Memory as MemoryTrait};
-use ic_stable_structures::{StableBTreeMap, Storable as StableStructuresStorable};
+use ic_stable_structures::{StableBTreeMap, Storable as StableStructuresStorable, FileMemory};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -48,12 +48,12 @@ pub struct Utxos {
     // A map storing the UTXOs that are "small" in size.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_small_utxos")]
-    pub small_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    pub small_utxos: StableBTreeMap<FileMemory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "medium" in size.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_medium_utxos")]
-    pub medium_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    pub medium_utxos: StableBTreeMap<FileMemory, Vec<u8>, Vec<u8>>,
 
     // A map storing the UTXOs that are "large" in size.
     // The number of entries stored in this map is tiny (see docs above), so a
@@ -201,17 +201,21 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
     }
 }
 
-fn init_small_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
+fn init_small_utxos() -> StableBTreeMap<FileMemory, Vec<u8>, Vec<u8>> {
+    use std::fs::File;
     StableBTreeMap::init(
-        crate::memory::get_utxos_small_memory(),
+        FileMemory::new(File::open("/tmp/canister_test_2/small_utxos").unwrap()),
+        //crate::memory::get_utxos_small_memory(),
         UTXO_KEY_SIZE,
         UTXO_VALUE_MAX_SIZE_SMALL,
     )
 }
 
-fn init_medium_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
+fn init_medium_utxos() -> StableBTreeMap<FileMemory, Vec<u8>, Vec<u8>> {
+    use std::fs::File;
     StableBTreeMap::init(
-        crate::memory::get_utxos_medium_memory(),
+        //crate::memory::get_utxos_medium_memory(),
+        FileMemory::new(File::open("/tmp/canister_test_2/medium_utxos").unwrap()),
         UTXO_KEY_SIZE,
         UTXO_VALUE_MAX_SIZE_MEDIUM,
     )

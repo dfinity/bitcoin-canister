@@ -13,7 +13,7 @@ mod test_utils;
 #[cfg(test)]
 mod tests;
 pub mod types;
-mod unstable_blocks;
+pub mod unstable_blocks;
 mod utxo_set;
 
 use crate::{

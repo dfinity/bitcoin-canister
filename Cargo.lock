@@ -1306,9 +1306,7 @@ dependencies = [
 
 [[package]]
 name = "ic-stable-structures"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c8ded18fe296ff693ba8d8fd9890189ea28df4fc75d8b009523e15918452d8b"
+version = "0.2.0"
 
 [[package]]
 name = "ic-types"
@@ -2545,6 +2543,7 @@ dependencies = [
  "clap",
  "hex",
  "ic-btc-canister",
+ "ic-btc-types",
  "ic-stable-structures",
  "integer-encoding",
  "rand 0.8.5",

@@ -101,6 +101,7 @@ fn main() {
             };
 
             // Insert the UTXO
+            // TODO: should this logic be shared?
             let outpoint = OutPoint { txid, vout };
             if !bitcoin::Script::from(script.clone()).is_provably_unspendable() {
                 let txout = TxOut {

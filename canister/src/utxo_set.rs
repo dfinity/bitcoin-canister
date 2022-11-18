@@ -54,7 +54,7 @@ pub struct UtxoSet {
     //
     // Rather than making this an optional to handle the case where the UTXO set is empty, we
     // instead store the `next_height` to avoid having this special case.
-    next_height: Height,
+    pub next_height: Height,
 
     // The predicate used to determine whether or not we should time-slice.
     // The default predicate is to check the performance counter, but can be overridden for tests.
@@ -368,17 +368,21 @@ impl UtxoSet {
             }
 
             if !(output.script_pubkey.is_provably_unspendable()) {
-                let ins_start = performance_counter();
-                let txid = tx.txid();
-                stats.ins_txids += performance_counter() - ins_start;
+                if output.script_pubkey.len() <= 10000 {
+                    let ins_start = performance_counter();
+                    let txid = tx.txid();
+                    stats.ins_txids += performance_counter() - ins_start;
 
-                let ins_start = performance_counter();
-                self.insert_utxo(
-                    OutPoint::new(txid, vout as u32),
-                    output.clone(),
-                    utxos_delta,
-                );
-                stats.ins_insert_utxos += performance_counter() - ins_start;
+                    let ins_start = performance_counter();
+                    self.insert_utxo(
+                        OutPoint::new(txid, vout as u32),
+                        output.clone(),
+                        utxos_delta,
+                    );
+                    stats.ins_insert_utxos += performance_counter() - ins_start;
+                } else {
+                    println!("script too long!");
+                }
             }
         }
 
