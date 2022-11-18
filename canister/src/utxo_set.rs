@@ -33,7 +33,7 @@ const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
 #[derive(Serialize, Deserialize)]
 pub struct UtxoSet {
-    utxos: Utxos,
+    pub utxos: Utxos,
 
     network: Network,
 

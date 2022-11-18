@@ -48,7 +48,7 @@ pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
 // A helper method to mutate the state.
 //
 // Precondition: the state is already initialized.
-fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
+pub fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
     STATE.with(|cell| f(cell.borrow_mut().as_mut().expect("state not initialized")))
 }
 
