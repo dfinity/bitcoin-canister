@@ -11,7 +11,7 @@ pushd "$SCRIPT_DIR"
 if [ "$(uname)" == "Darwin" ]; then
   LLVM_PATH=$(brew --prefix llvm)
   # On macs we need to use the brew versions
-  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build -p $1 --target $TARGET --release
+  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build -p "$1" --target $TARGET --release
 else
-  cargo build -p $1 --target $TARGET --release
+  cargo build -p "$1" --target $TARGET --release
 fi
