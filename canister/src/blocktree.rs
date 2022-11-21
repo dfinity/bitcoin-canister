@@ -1,5 +1,4 @@
-use crate::types::Block;
-use bitcoin::BlockHash;
+use crate::types::{Block, BlockHash};
 use std::fmt;
 mod serde;
 
@@ -103,11 +102,11 @@ pub fn extend(block_tree: &mut BlockTree, block: Block) -> Result<(), BlockDoesN
     }
 
     // Check if the block is a successor to any of the blocks in the tree.
-    match find_mut(block_tree, &block.header().prev_blockhash) {
+    match find_mut(block_tree, &block.header().prev_blockhash.into()) {
         Some((block_subtree, _)) => {
             assert_eq!(
-                block_subtree.root.block_hash(),
-                block.header().prev_blockhash
+                block_subtree.root.block_hash().to_vec(),
+                block.header().prev_blockhash.to_vec()
             );
             // Add the block as a successor.
             block_subtree.children.push(BlockTree::new(block));
@@ -316,7 +315,10 @@ mod test {
 
             // All blocks should be correctly chained to one another.
             for i in 1..chain.len() {
-                assert_eq!(chain[i - 1].block_hash(), chain[i].header().prev_blockhash)
+                assert_eq!(
+                    chain[i - 1].block_hash().to_vec(),
+                    chain[i].header().prev_blockhash.to_vec()
+                )
             }
         }
     }
@@ -352,7 +354,10 @@ mod test {
 
                 // All blocks should be correctly chained to one another.
                 for i in 1..chain.len() {
-                    assert_eq!(chain[i - 1].block_hash(), chain[i].header().prev_blockhash)
+                    assert_eq!(
+                        chain[i - 1].block_hash().to_vec(),
+                        chain[i].header().prev_blockhash.to_vec()
+                    )
                 }
             }
 
