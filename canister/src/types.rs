@@ -9,7 +9,7 @@ use ic_btc_types::{
     UtxosFilterInRequest,
 };
 use ic_cdk::export::{candid::CandidType, Principal};
-use ic_stable_structures::Storable as StableStructuresStorable;
+use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
@@ -332,6 +332,12 @@ impl StableStructuresStorable for OutPoint {
     }
 }
 
+impl BoundedStorable for OutPoint {
+    fn max_size() -> u32 {
+        OUTPOINT_SIZE
+    }
+}
+
 impl Storable for (TxOut, Height) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
@@ -367,6 +373,14 @@ impl StableStructuresStorable for Address {
     }
 }
 
+impl BoundedStorable for Address {
+    fn max_size() -> u32 {
+        // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
+        // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+        90
+    }
+}
+
 #[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
 pub struct AddressUtxo {
     pub address: Address,
@@ -397,6 +411,12 @@ impl StableStructuresStorable for AddressUtxo {
             height: <Height as Storable>::from_bytes(height_bytes),
             outpoint: OutPoint::from_bytes(outpoint_bytes),
         }
+    }
+}
+
+impl BoundedStorable for AddressUtxo {
+    fn max_size() -> u32 {
+        Address::max_size() + 4 /* height bytes */ + OutPoint::max_size()
     }
 }
 
@@ -445,7 +465,42 @@ impl Storable for (Height, OutPoint) {
 pub type BlockBlob = Vec<u8>;
 
 // A blob representing a block header in the standard bitcoin format.
-pub type BlockHeaderBlob = Vec<u8>;
+#[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash)]
+pub struct BlockHeaderBlob(Vec<u8>);
+
+impl StableStructuresStorable for BlockHeaderBlob {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        self.0.to_bytes()
+    }
+
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        Self::from(bytes)
+    }
+}
+
+impl BoundedStorable for BlockHeaderBlob {
+    fn max_size() -> u32 {
+        80
+    }
+}
+
+impl BlockHeaderBlob {
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<Vec<u8>> for BlockHeaderBlob {
+    fn from(bytes: Vec<u8>) -> Self {
+        assert_eq!(
+            bytes.len() as u32,
+            Self::max_size(),
+            "BlockHeader must {} bytes",
+            Self::max_size()
+        );
+        Self(bytes)
+    }
+}
 
 // A blob representing a block hash.
 #[derive(
@@ -463,6 +518,12 @@ impl StableStructuresStorable for BlockHash {
     }
 }
 
+impl BoundedStorable for BlockHash {
+    fn max_size() -> u32 {
+        32
+    }
+}
+
 impl BlockHash {
     pub fn to_vec(self) -> Vec<u8> {
         self.0
@@ -471,7 +532,12 @@ impl BlockHash {
 
 impl From<Vec<u8>> for BlockHash {
     fn from(bytes: Vec<u8>) -> Self {
-        assert_eq!(bytes.len(), 32, "BlockHash must 32 bytes");
+        assert_eq!(
+            bytes.len() as u32,
+            Self::max_size(),
+            "BlockHash must {} bytes",
+            Self::max_size()
+        );
         Self(bytes)
     }
 }

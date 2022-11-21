@@ -42,7 +42,7 @@ fn main() {
     const ADDRESS_UTXO_SIZE: u32 = 126;
     let memory = DefaultMemoryImpl::default();
     let mut address_utxos: StableBTreeMap<_, AddressUtxo, ()> =
-        StableBTreeMap::init(memory.clone(), ADDRESS_UTXO_SIZE, 0);
+        StableBTreeMap::init(memory.clone());
 
     for (i, line) in reader.lines().enumerate() {
         let line = line.unwrap();
