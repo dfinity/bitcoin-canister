@@ -6,7 +6,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 CANISTER=$1
 
-if ! [[ $CANISTER == "ic-btc-canister" || $CANISTER == "uploader" ]]; then
+if ! [[ "$CANISTER" == "ic-btc-canister" || "$CANISTER" == "uploader" ]]; then
   echo "You need to provide a canister to build. Possible values {ic-btc-canister|uploader}."
   false
 fi
