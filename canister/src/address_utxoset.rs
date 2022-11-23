@@ -46,14 +46,14 @@ impl<'a> AddressUtxoSet<'a> {
     pub fn apply_block(&mut self, block: &Block) {
         for outpoint in self
             .unstable_blocks
-            .get_removed_outpoints(&block.block_hash().to_vec(), &self.address)
+            .get_removed_outpoints(&block.block_hash(), &self.address)
         {
             self.removed_outpoints.insert(outpoint.clone());
         }
 
         for outpoint in self
             .unstable_blocks
-            .get_added_outpoints(&block.block_hash().to_vec(), &self.address)
+            .get_added_outpoints(&block.block_hash(), &self.address)
         {
             let (txout, height) = self
                 .unstable_blocks

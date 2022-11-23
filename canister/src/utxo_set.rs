@@ -4,11 +4,11 @@ use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     state::OUTPOINT_SIZE,
     types::{
-        Address, AddressUtxo, Block, Network, OutPoint, Slicing, Storable, Transaction, TxOut,
-        Txid, Utxo,
+        Address, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing, Storable, Transaction,
+        TxOut, Txid, Utxo,
     },
 };
-use bitcoin::{BlockHash, Script, TxOut as BitcoinTxOut};
+use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
 use ic_stable_structures::{StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};

@@ -1,10 +1,9 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
-    types::{Address, Block, OutPoint, TxOut},
+    types::{Address, Block, BlockHash, OutPoint, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHash;
 use ic_btc_types::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
@@ -42,13 +41,13 @@ impl UnstableBlocks {
     }
 
     /// Retrieves the list of outpoints that were added for the given address in the given block.
-    pub fn get_added_outpoints(&self, block_hash: &Vec<u8>, address: &Address) -> &[OutPoint] {
+    pub fn get_added_outpoints(&self, block_hash: &BlockHash, address: &Address) -> &[OutPoint] {
         self.outpoints_cache
             .get_added_outpoints(block_hash, address)
     }
 
     /// Retrieves the list of outpoints that were removed for the given address in the given block.
-    pub fn get_removed_outpoints(&self, block_hash: &Vec<u8>, address: &Address) -> &[OutPoint] {
+    pub fn get_removed_outpoints(&self, block_hash: &BlockHash, address: &Address) -> &[OutPoint] {
         self.outpoints_cache
             .get_removed_outpoints(block_hash, address)
     }
@@ -94,7 +93,7 @@ pub fn push(
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
     let (parent_block_tree, depth) =
-        blocktree::find_mut(&mut blocks.tree, &block.header().prev_blockhash)
+        blocktree::find_mut(&mut blocks.tree, &block.header().prev_blockhash.into())
             .ok_or_else(|| BlockDoesNotExtendTree(block.clone()))?;
 
     let height = utxos.next_height() + depth + 1;

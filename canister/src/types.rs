@@ -1,7 +1,7 @@
 use crate::state::OUTPOINT_SIZE;
 use bitcoin::{
-    hashes::Hash, Address as BitcoinAddress, Block as BitcoinBlock, BlockHash as BitcoinBlockHash,
-    Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
+    Address as BitcoinAddress, Block as BitcoinBlock, Network as BitcoinNetwork,
+    OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
 use ic_btc_types::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
@@ -75,8 +75,8 @@ impl Block {
         &self.block.header
     }
 
-    pub fn block_hash(&self) -> bitcoin::BlockHash {
-        self.block.block_hash()
+    pub fn block_hash(&self) -> BlockHash {
+        BlockHash::from(self.block.block_hash())
     }
 
     pub fn txdata(&self) -> &[Transaction] {
@@ -171,6 +171,8 @@ impl From<&BitcoinOutPoint> for OutPoint {
 #[cfg(test)]
 impl From<OutPoint> for bitcoin::OutPoint {
     fn from(outpoint: OutPoint) -> Self {
+        use bitcoin::hashes::Hash;
+
         Self {
             txid: bitcoin::Txid::from_hash(
                 Hash::from_slice(outpoint.txid.as_bytes()).expect("txid must be valid"),
@@ -257,7 +259,7 @@ impl std::fmt::Display for Network {
 
 /// Used to signal the cut-off point for returning chunked UTXOs results.
 pub struct Page {
-    pub tip_block_hash: BitcoinBlockHash,
+    pub tip_block_hash: BlockHash,
     pub height: Height,
     pub outpoint: OutPoint,
 }
@@ -265,7 +267,7 @@ pub struct Page {
 impl Page {
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.tip_block_hash.to_vec(),
+            self.tip_block_hash.clone().to_vec(),
             Storable::to_bytes(&self.height).to_vec(),
             OutPoint::to_bytes(&self.outpoint).to_vec(),
         ]
@@ -282,10 +284,8 @@ impl Page {
         let outpoint_bytes = bytes.split_off(outpoint_offset);
         let height_bytes = bytes.split_off(height_offset);
 
-        let tip_block_hash = BitcoinBlockHash::from_hash(
-            Hash::from_slice(&bytes)
-                .map_err(|err| format!("Could not parse tip block hash: {}", err))?,
-        );
+        let tip_block_hash = BlockHash::from_bytes(bytes);
+
         // The height is parsed from bytes that are given by the user, so ensure
         // that any errors are handled gracefully instead of using
         // `Height::from_bytes` that can panic.
@@ -448,7 +448,65 @@ pub type BlockBlob = Vec<u8>;
 pub type BlockHeaderBlob = Vec<u8>;
 
 // A blob representing a block hash.
-pub type BlockHash = Vec<u8>;
+#[derive(
+    CandidType, PartialEq, Clone, Debug, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash,
+)]
+pub struct BlockHash(Vec<u8>);
+
+impl StableStructuresStorable for BlockHash {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        self.0.to_bytes()
+    }
+
+    fn from_bytes(bytes: Vec<u8>) -> Self {
+        Self::from(bytes)
+    }
+}
+
+impl BlockHash {
+    pub fn to_vec(self) -> Vec<u8> {
+        self.0
+    }
+}
+
+impl From<Vec<u8>> for BlockHash {
+    fn from(bytes: Vec<u8>) -> Self {
+        assert_eq!(bytes.len(), 32, "BlockHash must 32 bytes");
+        Self(bytes)
+    }
+}
+
+impl From<bitcoin::BlockHash> for BlockHash {
+    fn from(block_hash: bitcoin::BlockHash) -> Self {
+        Self(block_hash.to_vec())
+    }
+}
+
+impl FromStr for BlockHash {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(
+            bitcoin::BlockHash::from_str(s)
+                .map_err(|e| e.to_string())?
+                .to_vec(),
+        ))
+    }
+}
+
+impl ToString for BlockHash {
+    fn to_string(&self) -> String {
+        let mut b = self.0.clone();
+        b.reverse();
+        hex::encode(b)
+    }
+}
+
+impl Default for BlockHash {
+    fn default() -> Self {
+        Self(vec![0; 32])
+    }
+}
 
 type PageNumber = u8;
 

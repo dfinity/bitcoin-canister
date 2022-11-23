@@ -42,7 +42,7 @@ impl BlockHeaderStore {
     }
 
     pub fn insert(&mut self, block: &Block, height: Height) {
-        let block_hash = block.block_hash().to_vec();
+        let block_hash = block.block_hash();
         let mut header_bytes = vec![];
         block
             .header()
