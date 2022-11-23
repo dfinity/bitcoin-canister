@@ -2460,6 +2460,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha256"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e334db67871c14c18fc066ad14af13f9fdf5f9a91c61af432d1e3a39c8c6a141"
+dependencies = [
+ "hex",
+ "sha2 0.9.9",
+]
+
+[[package]]
 name = "signature"
 version = "1.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2839,6 +2849,7 @@ dependencies = [
  "ic-cdk 0.5.7",
  "ic-cdk-macros 0.5.7",
  "serde",
+ "sha256",
  "url",
 ]
 
