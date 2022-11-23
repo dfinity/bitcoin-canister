@@ -15,6 +15,14 @@ use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::{cmp::Ordering, convert::TryInto, str::FromStr};
 
+// The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
+// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+const MAX_ADDRESS_LENGTH: u32 = 90;
+
+// A Bitcoin block header is always 80 bytes. See:
+// https://developer.bitcoin.org/reference/block_chain.html#block-headers
+const BLOCK_HEADER_LENGTH: u32 = 80;
+
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
 pub struct Config {
@@ -375,9 +383,7 @@ impl StableStructuresStorable for Address {
 
 impl BoundedStorable for Address {
     fn max_size() -> u32 {
-        // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-        // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-        90
+        MAX_ADDRESS_LENGTH
     }
 }
 
@@ -480,7 +486,7 @@ impl StableStructuresStorable for BlockHeaderBlob {
 
 impl BoundedStorable for BlockHeaderBlob {
     fn max_size() -> u32 {
-        80
+        BLOCK_HEADER_LENGTH
     }
 }
 
