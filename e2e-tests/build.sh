@@ -6,7 +6,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 pushd "$SCRIPT_DIR"
 
-# NOTE: On macOS a specific version of llvm-ar and clang need to be set here.
+# NOTE: On macs a specific version of llvm-ar and clang need to be set here.
 # Otherwise the wasm compilation of rust-secp256k1 will fail.
 if [ "$(uname)" == "Darwin" ]; then
   LLVM_PATH=$(brew --prefix llvm)
