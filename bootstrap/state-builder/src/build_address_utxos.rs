@@ -50,7 +50,7 @@ fn main() {
         let txid = Txid::from(BitcoinTxid::from_str(parts[1]).unwrap().to_vec());
         let vout: u32 = parts[2].parse().unwrap();
         let address_str = parts[5];
-        let height: u32 = parts[9].parse().unwrap();
+        let height: u32 = parts[0].parse().unwrap();
 
         if i % 100_000 == 0 {
             println!("Processed {} UTXOs", i);
