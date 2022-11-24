@@ -18,9 +18,9 @@ pushd "$SCRIPT_DIR"
 if [ "$(uname)" == "Darwin" ]; then
   LLVM_PATH=$(brew --prefix llvm)
   # On macs we need to use the brew versions
-  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build -p $CANISTER --target $TARGET --release
+  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build -p "$CANISTER" --target "$TARGET" --release
 else
-  cargo build -p $CANISTER --target $TARGET --release
+  cargo build -p "$CANISTER" --target "$TARGET" --release
 fi
 
 # Navigate to root directory.
