@@ -8,6 +8,7 @@ members = [
     "bootstrap/uploader",
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
+    "e2e-tests/scenario-3",
     "validation",
 ]
 

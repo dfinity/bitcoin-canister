@@ -2280,6 +2280,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "scenario-3"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid 0.8.3",
+ "ic-btc-test-utils",
+ "ic-cdk 0.6.7",
+ "ic-cdk-macros 0.6.7",
+ "serde",
+]
+
+[[package]]
 name = "schannel"
 version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
