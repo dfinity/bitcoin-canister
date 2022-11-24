@@ -2,7 +2,6 @@ use crate::{
     memory::Memory,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
-    state::OUTPOINT_SIZE,
     types::{
         Address, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing, Storable, Transaction,
         TxOut, Txid, Utxo,
@@ -24,12 +23,6 @@ lazy_static::lazy_static! {
         Txid::from_str("e3bf3d07d4b0375638d5f1db5255fe07ba2c4cb067cd81b84ee974b6585fb468").unwrap(),
     ];
 }
-
-// The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-const MAX_ADDRESS_SIZE: u32 = 90;
-
-const MAX_ADDRESS_OUTPOINT_SIZE: u32 = MAX_ADDRESS_SIZE + OUTPOINT_SIZE;
 
 #[derive(Serialize, Deserialize)]
 pub struct UtxoSet {
@@ -443,22 +436,11 @@ impl UtxoSet {
 }
 
 fn init_address_utxos() -> StableBTreeMap<Memory, AddressUtxo, ()> {
-    StableBTreeMap::init(
-        crate::memory::get_address_utxos_memory(),
-        MAX_ADDRESS_OUTPOINT_SIZE,
-        0, // No values are stored in the map.
-    )
+    StableBTreeMap::init(crate::memory::get_address_utxos_memory())
 }
 
 fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
-    // A balance is a u64, which requires 8 bytes.
-    const BALANCE_SIZE: u32 = 8;
-
-    StableBTreeMap::init(
-        crate::memory::get_balances_memory(),
-        MAX_ADDRESS_SIZE,
-        BALANCE_SIZE,
-    )
+    StableBTreeMap::init(crate::memory::get_balances_memory())
 }
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.

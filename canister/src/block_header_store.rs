@@ -1,6 +1,6 @@
 use crate::{
     memory::Memory,
-    types::{Block, BlockHash},
+    types::{Block, BlockHash, BlockHeaderBlob},
 };
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::BlockHeader;
@@ -14,7 +14,7 @@ pub struct BlockHeaderStore {
     /// A map of a block hash to its corresponding raw block header.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_block_headers")]
-    pub block_headers: StableBTreeMap<Memory, BlockHash, Vec<u8>>,
+    pub block_headers: StableBTreeMap<Memory, BlockHash, BlockHeaderBlob>,
 
     /// A map of a block height to its corresponding block hash.
     // NOTE: Stable structures don't need to be serialized.
@@ -50,7 +50,7 @@ impl BlockHeaderStore {
             .expect("block header must be valid");
 
         self.block_headers
-            .insert(block_hash.clone(), header_bytes)
+            .insert(block_hash.clone(), BlockHeaderBlob::from(header_bytes))
             .expect("block header insertion must succeed");
 
         self.block_heights
@@ -74,27 +74,15 @@ impl BlockHeaderStore {
     }
 }
 
-const BLOCK_HASH_LENGTH_IN_BYTES: u32 = 32;
-const BLOCK_HEADER_LENGTH_IN_BYTES: u32 = 80;
-const BLOCK_HEIGHT_LENGTH_IN_BYTES: u32 = 4;
-
-fn deserialize_block_header(block_header_bytes: Vec<u8>) -> BlockHeader {
-    BlockHeader::consensus_decode(block_header_bytes.as_slice())
+fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {
+    BlockHeader::consensus_decode(block_header_blob.as_slice())
         .expect("block header decoding must succeed")
 }
 
-fn init_block_headers() -> StableBTreeMap<Memory, BlockHash, Vec<u8>> {
-    StableBTreeMap::init(
-        crate::memory::get_block_headers_memory(),
-        BLOCK_HASH_LENGTH_IN_BYTES,
-        BLOCK_HEADER_LENGTH_IN_BYTES,
-    )
+fn init_block_headers() -> StableBTreeMap<Memory, BlockHash, BlockHeaderBlob> {
+    StableBTreeMap::init(crate::memory::get_block_headers_memory())
 }
 
 fn init_block_heights() -> StableBTreeMap<Memory, u32, BlockHash> {
-    StableBTreeMap::init(
-        crate::memory::get_block_heights_memory(),
-        BLOCK_HEIGHT_LENGTH_IN_BYTES,
-        BLOCK_HASH_LENGTH_IN_BYTES,
-    )
+    StableBTreeMap::init(crate::memory::get_block_heights_memory())
 }
