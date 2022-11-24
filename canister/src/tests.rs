@@ -5,8 +5,8 @@ use crate::{
     state::main_chain_height,
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
-        BlockBlob, GetBalanceRequest, GetSuccessorsCompleteResponse, GetSuccessorsResponse,
-        GetUtxosRequest, Network,
+        BlockBlob, BlockHash, GetBalanceRequest, GetSuccessorsCompleteResponse,
+        GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     with_state,
@@ -15,7 +15,7 @@ use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
-    BlockHash, Txid,
+    Txid,
 };
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
@@ -59,7 +59,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
 
         let block = Block::consensus_decode(&mut blk_file).unwrap();
 
-        blocks.insert(block.header.prev_blockhash, block);
+        blocks.insert(BlockHash::from(block.header.prev_blockhash), block);
     }
 
     println!("# blocks in file: {}", blocks.len());
@@ -67,7 +67,9 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     // Build the chain
     chain.push(blocks.remove(&genesis_block(network).block_hash()).unwrap());
     for _ in 1..num_blocks {
-        let next_block = blocks.remove(&chain[chain.len() - 1].block_hash()).unwrap();
+        let next_block = blocks
+            .remove(&chain[chain.len() - 1].block_hash().into())
+            .unwrap();
         chain.push(next_block);
     }
 
@@ -114,11 +116,11 @@ fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
     let header = state.stable_block_headers.get_with_height(height).unwrap();
     let header_2 = state
         .stable_block_headers
-        .get_with_block_hash(&block_hash.to_vec())
+        .get_with_block_hash(&block_hash)
         .unwrap();
 
     assert_eq!(header, header_2);
-    assert_eq!(header.block_hash(), block_hash);
+    assert_eq!(block_hash, header.block_hash().into());
 }
 
 #[async_std::test]

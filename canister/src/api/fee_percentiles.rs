@@ -36,7 +36,7 @@ fn get_current_fee_percentiles_internal(
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
-    let tip_block_hash = main_chain.tip().block_hash().to_vec();
+    let tip_block_hash = main_chain.tip().block_hash();
 
     // If fee percentiles were already cached, then return the cached results.
     if let Some(cache) = &state.fee_percentiles_cache {

@@ -96,7 +96,7 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotE
 ///
 /// Returns a bool indicating whether or not the state has changed.
 pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
-    fn pop_block(state: &mut State, ingested_block_hash: bitcoin::BlockHash) {
+    fn pop_block(state: &mut State, ingested_block_hash: BlockHash) {
         // Pop the stable block.
         let popped_block = unstable_blocks::pop(&mut state.unstable_blocks);
 
