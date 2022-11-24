@@ -26,9 +26,7 @@ pub async fn send_transaction(request: SendTransactionRequest) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        types::{Config, Fees, Network},
-    };
+    use crate::types::{Config, Fees, Network};
     use ic_btc_types::NetworkInRequest;
 
     #[async_std::test]
@@ -46,7 +44,8 @@ mod test {
         send_transaction(SendTransactionRequest {
             network: NetworkInRequest::Mainnet,
             transaction: vec![1, 2, 3],
-        }).await;
+        })
+        .await;
 
         assert_eq!(crate::runtime::get_cycles_balance(), 13 + 27 * 3);
     }
