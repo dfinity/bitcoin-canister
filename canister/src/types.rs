@@ -556,6 +556,13 @@ impl std::fmt::Display for Txid {
     }
 }
 
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SendTransactionInternalRequest {
+    pub network: Network,
+    #[serde(with = "serde_bytes")]
+    pub transaction: Vec<u8>,
+}
+
 /// A request to retrieve more blocks from the Bitcoin network.
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GetSuccessorsRequest {
