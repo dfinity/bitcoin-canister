@@ -39,7 +39,7 @@ Once it's done, run the following:
 ./check_chaintip.sh $BITCOIN_DIR
 ```
 
-Make sure that the outpoint of the above command specifies that you have a chain that has the status "active", and has a height of at least `$HEIGHT - 10`. For example, if you set the `$HEIGHT` to 10010 in the earlier steps, the height of the chain should be >= 10000. It would look something like this:
+Make sure that the output of the above command specifies that you have a chain that has the status "active", and has a height of at least `$HEIGHT - 10`. For example, if you set the `$HEIGHT` to 10010 in the earlier steps, the height of the chain should be >= 10000. It should look something like this:
 
 ```
 [
