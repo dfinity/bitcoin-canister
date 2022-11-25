@@ -132,7 +132,6 @@ pub fn post_upgrade() {
     let mut state_len_bytes = [0; 4];
     memory.read(0, &mut state_len_bytes);
     let state_len = u32::from_le_bytes(state_len_bytes) as usize;
-    println!("state len : {}", state_len); 
 
     // Read the bytes
     let mut state_bytes = vec![0; state_len];
