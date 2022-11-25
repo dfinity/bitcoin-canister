@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+#
+# Script for downloading the bitcoin state.
 set -euo pipefail
 
 BITCOIN_D=$1/bin/bitcoind

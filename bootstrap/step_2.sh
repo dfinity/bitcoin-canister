@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+#
+# Script for preparing the unstable blocks file and sets the chainstate database
+# to the exact height we need.
 set -euo pipefail
 
 BITCOIN_D=$1/bin/bitcoind
