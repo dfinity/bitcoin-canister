@@ -29,6 +29,11 @@ rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0d
 EOF
 
 LOG_FILE=$(mktemp)
-echo "Downloading the bitcoin blocks up to height $HEIGHT (output streamed to $LOG_FILE)..."
+echo "Downloading the bitcoin blocks up to height $HEIGHT (output streamed to $LOG_FILE)
+This can take several hours..."
 $BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > "$LOG_FILE"
+echo "Done."
+
+echo "Making a backup of the downloaded state in ./data_bk"
+cp -r ./data ./data_bk
 echo "Done."

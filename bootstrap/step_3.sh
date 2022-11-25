@@ -1,21 +1,51 @@
 #!/usr/bin/env bash
+#
+# Script for dumping the block headers into a file.
 set -euo pipefail
 
-# Generate the UTXO set.
-~/go/bin/bitcoin-utxo-dump -db ./data/chainstate -o utxodump.csv -f "height,txid,vout,amount,type,address,script,coinbase,nsize"
+BITCOIN_D=$1/bin/bitcoind
+BITCOIN_CLI=$1/bin/bitcoin-cli
+HEIGHT=$2
+STABLE_HEIGHT=$((HEIGHT-12))
 
-echo "Removing the headers from the file..."
-tail -n +2 utxodump.csv > utxodump.csv.tmp && mv utxodump.csv.tmp utxodump.csv
+# Kill all background processes on exit.
+trap "kill 0" EXIT
 
-echo "Sorting the file..."
-sort -n -o utxodump.csv utxodump.csv
+CONF_FILE=$(mktemp)
+cat <<- "EOF" > "$CONF_FILE"
+networkactive=0
 
-echo "Shuffling the file..."
-# Shuffling helps reduce the memory footprint of the stable btreemaps in the canister.
-RAND_SEED=$(mktemp)
-echo "1" > $RAND_SEED
-sort -R utxodump.csv --random-source=$RAND_SEED > utxodump.csv.tmp && mv utxodump.csv.tmp utxodump.csv
+# Reduce storage requirements by only storing most recent N MiB of block.
+prune=5000
 
-echo "Computing UTXO dump checksum..."
-sha256sum utxodump.csv
+# Dummy credentials that are required by `bitcoin-cli`.
+rpcuser=ic-btc-integration
+rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
+rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
+EOF
+
+# Delete any previously computed block headers file.
+rm -f block_headers
+
+echo "Fetching block headers..."
+# Run bitcoind in the background with no network access.
+$BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > /dev/null &
+
+# Wait for bitcoind to load.
+sleep 10
+
+# Retrieve the block hashes and headers via bitcoin-cli.
+for ((height = 0; height <= STABLE_HEIGHT; height++))
+do
+  BLOCK_HASH=$($BITCOIN_CLI -conf="$CONF_FILE" -datadir="$(pwd)/data" getblockhash "$height")
+  BLOCK_HEADER=$($BITCOIN_CLI -conf="$CONF_FILE" -datadir="$(pwd)/data" getblockheader "$BLOCK_HASH" false)
+
+  if [ "$((height % 100))" == 0 ]; then
+    echo "Processed $height headers"
+  fi
+
+  echo "$BLOCK_HASH,$BLOCK_HEADER" >> block_headers
+done
+
+sha256sum block_headers
 
