@@ -1,0 +1,22 @@
+type network = variant {
+  mainnet;
+  testnet;
+  regtest;
+};
+
+type send_transaction_request = record {
+  network: network;
+  transaction: blob;
+};
+
+type get_successors_response = variant {
+  complete : record { blocks: vec blob; next: vec blob; };
+  partial : record { partial_block: blob; next: vec blob; remaining_follow_ups: nat8; };
+  follow_up : blob;
+};
+
+service : {
+  bitcoin_send_transaction_internal: (send_transaction_request) -> ();
+  get_last_transaction: () -> (blob) query;
+}
+
