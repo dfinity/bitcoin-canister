@@ -8,10 +8,12 @@ thread_local! {
     // A set containing the indices of chunks that have not yet been uploaded.
     // An index here refers to the index of the Wasm page in stable memory where the chunk begins.
     static MISSING_CHUNKS: RefCell<BTreeSet<u64>> = RefCell::new(BTreeSet::new());
+
+    static CHUNK_HASHES: RefCell<Vec<String>> = RefCell::new(Vec::new());
 }
 
 #[init]
-fn init(initial_size: u64) {
+fn init(initial_size: u64, chunk_hashes: Vec<String>) {
     // Grow the stable memory to the given size.
     stable::stable64_grow(initial_size).expect("cannot grow stabe memory");
 
@@ -23,12 +25,12 @@ fn init(initial_size: u64) {
                 .collect(),
         )
     });
+
+    CHUNK_HASHES.with(|ch| ch.replace(chunk_hashes));
 }
 
 #[update]
 fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
-    // TODO(EXC-1286): Verify that the hash of `bytes` matches some hash that we expect.
-
     // Verify the chunk is one of the missing chunks.
     if !MISSING_CHUNKS.with(|mr| mr.borrow().contains(&chunk_start)) {
         panic!(
@@ -45,6 +47,19 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
             "expected chunk to be {} bytes but found {} bytes",
             expected_bytes_length,
             bytes.len()
+        );
+    }
+
+    // Verify that the hash of `bytes` matches some hash that we expect.
+    let expected_hash =
+        CHUNK_HASHES.with(|ch| ch.borrow()[(chunk_start / CHUNK_SIZE_IN_PAGES) as usize].clone());
+    let actual_hash = sha256::digest(&*bytes);
+    if actual_hash != expected_hash {
+        panic!(
+            "Expected digest {} but found {}. bytes snippet {:?}",
+            expected_hash,
+            actual_hash,
+            &bytes[0..100]
         );
     }
 
