@@ -60,13 +60,11 @@ fn main() {
         // we support, so if parsing the address itself fails, we try parsing the script directly.
         let address = if let Ok(address) = BitcoinAddress::from_str(address_str) {
             Some(address)
-        } else if let Some(address) = BitcoinAddress::from_script(
-            &Script::from(hex::decode(script).expect("script must be valid hex")),
-            args.network.into(),
-        ) {
-            Some(address)
         } else {
-            None
+            BitcoinAddress::from_script(
+                &Script::from(hex::decode(script).expect("script must be valid hex")),
+                args.network.into(),
+            )
         };
 
         if let Some(address) = address {
