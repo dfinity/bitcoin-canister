@@ -66,4 +66,4 @@ Make sure that the outpoint of the above command specifies that you have a chain
 ./step_4.sh
 ```
 
-This documented will be updated with future steps.
+This document will be updated with future steps.
