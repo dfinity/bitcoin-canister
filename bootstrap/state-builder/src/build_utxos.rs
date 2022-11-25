@@ -41,7 +41,7 @@ struct Args {
 }
 
 fn write_memory_to_file(path: &PathBuf, memory_id: MemoryId) {
-    let canister_mem = ic_btc_canister::get_memory().with(|m| m.clone());
+    let canister_mem = ic_btc_canister::get_memory();
     let memory_manager = MemoryManager::init(canister_mem);
 
     let memory = memory_manager.get(memory_id);
@@ -143,7 +143,7 @@ fn main() {
             .expect("failed to encode large utxos");
         match file.write_all(&bytes) {
             Err(err) => panic!("couldn't write to {}: {}", p.display(), err),
-            Ok(_) => println!("successfully wrote balances to {}", p.display()),
+            Ok(_) => println!("successfully wrote to {}", p.display()),
         };
     });
 }
