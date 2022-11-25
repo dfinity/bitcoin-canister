@@ -27,9 +27,5 @@ fn main() {
 
         let hash = sha256::digest(&chunk[0..bytes_read]);
         println!("{}", hash);
-
-        if bytes_read < CHUNK_SIZE_IN_BYTES as usize {
-            break;
-        }
     }
 }
