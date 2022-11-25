@@ -1,0 +1,5 @@
+target
+out
+
+# Filter out all "hidden" files and directories
+.*

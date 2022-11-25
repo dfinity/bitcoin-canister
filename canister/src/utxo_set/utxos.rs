@@ -202,7 +202,7 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
 }
 
 fn init_small_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
-    StableBTreeMap::init(
+    StableBTreeMap::init_with_sizes(
         crate::memory::get_utxos_small_memory(),
         UTXO_KEY_SIZE,
         UTXO_VALUE_MAX_SIZE_SMALL,
@@ -210,7 +210,7 @@ fn init_small_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
 }
 
 fn init_medium_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
-    StableBTreeMap::init(
+    StableBTreeMap::init_with_sizes(
         crate::memory::get_utxos_medium_memory(),
         UTXO_KEY_SIZE,
         UTXO_VALUE_MAX_SIZE_MEDIUM,

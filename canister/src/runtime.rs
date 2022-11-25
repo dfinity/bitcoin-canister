@@ -2,7 +2,7 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse};
+use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
 use ic_cdk::api::call::RejectionCode;
 use ic_cdk::{api::call::CallResult, export::Principal};
 use serde::Deserialize;
@@ -88,6 +88,23 @@ pub fn call_get_successors(
         GetSuccessorsReply::Ok(response) => std::future::ready(Ok((response,))),
         GetSuccessorsReply::Err(code, msg) => std::future::ready(Err((code, msg))),
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn call_send_transaction_internal(
+    id: Principal,
+    request: SendTransactionInternalRequest,
+) -> impl Future<Output = CallResult<()>> {
+    return ic_cdk::api::call::call(id, "bitcoin_send_transaction_internal", (request,));
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn call_send_transaction_internal(
+    _id: Principal,
+    _request: SendTransactionInternalRequest,
+) -> impl Future<Output = CallResult<()>> {
+    // Do nothing.
+    std::future::ready(Ok(()))
 }
 
 /// Sets a (mock) response to return whenever `call_get_successors` is invoked.

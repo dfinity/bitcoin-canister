@@ -21,6 +21,7 @@ use crate::{
     state::State,
     types::{Block, Config, HttpRequest, HttpResponse, Network, SetConfigRequest},
 };
+pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
 use ic_btc_types::{
