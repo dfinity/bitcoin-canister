@@ -79,11 +79,8 @@ fn main() {
     // Load large UTXOs.
     let mut p = args.canister_state_dir.clone();
     p.push("large_utxos");
-    println!("reading large utxos");
     let mut bytes = vec![];
     File::open(p).unwrap().read_to_end(&mut bytes).unwrap();
-
-    println!("done");
 
     let large_utxos: BTreeMap<OutPoint, (TxOut, Height)> =
         ciborium::de::from_reader(&*bytes).expect("failed to decode state");
