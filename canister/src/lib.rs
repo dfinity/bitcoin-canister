@@ -3,7 +3,7 @@ mod api;
 mod block_header_store;
 mod blocktree;
 mod heartbeat;
-mod memory;
+pub mod memory;
 mod metrics;
 mod multi_iter;
 pub mod runtime;
@@ -13,7 +13,7 @@ mod test_utils;
 #[cfg(test)]
 mod tests;
 pub mod types;
-mod unstable_blocks;
+pub mod unstable_blocks;
 mod utxo_set;
 
 use crate::{
@@ -46,9 +46,9 @@ pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
     STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
 }
 
-// A helper method to mutate the state.
-//
-// Precondition: the state is already initialized.
+/// A helper method to mutate the state.
+///
+/// Precondition: the state is already initialized.
 pub fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
     STATE.with(|cell| f(cell.borrow_mut().as_mut().expect("state not initialized")))
 }
@@ -132,6 +132,7 @@ pub fn post_upgrade() {
     let mut state_len_bytes = [0; 4];
     memory.read(0, &mut state_len_bytes);
     let state_len = u32::from_le_bytes(state_len_bytes) as usize;
+    println!("state len : {}", state_len); 
 
     // Read the bytes
     let mut state_bytes = vec![0; state_len];
