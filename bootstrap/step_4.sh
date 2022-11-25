@@ -15,7 +15,7 @@ sha256sum utxodump.csv
 
 echo "Shuffling the file..."
 # Shuffling helps reduce the memory footprint of the stable btreemaps in the canister.
-sort -R utxodump.csv --random-source=/dev/zero > utxodump.csv.tmp && mv utxodump.csv.tmp utxodump.csv
+awk 'BEGIN{srand(0);} {printf "%06d %s\n", rand()*1000000, $0;}' utxodump.csv | sort -n | cut -c8- > utxodump.csv.tmp && mv utxodump.csv.tmp utxodump.csv
 
 echo "Computing shuffled UTXO checksum..."
 sha256sum utxodump.csv
