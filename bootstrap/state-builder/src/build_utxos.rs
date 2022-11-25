@@ -85,7 +85,7 @@ fn main() {
             let vout: u32 = parts[2].parse().unwrap();
             let amount: u64 = parts[3].parse().unwrap();
             let script = parts[6];
-            let height: u32 = parts[9].parse().unwrap();
+            let height: u32 = parts[0].parse().unwrap();
             let address_str = parts[5];
 
             if i % 100_000 == 0 {
@@ -143,7 +143,7 @@ fn main() {
             .expect("failed to encode large utxos");
         match file.write_all(&bytes) {
             Err(err) => panic!("couldn't write to {}: {}", p.display(), err),
-            Ok(_) => println!("successfully wrote balances to {}", p.display()),
+            Ok(_) => println!("successfully wrote to {}", p.display()),
         };
     });
 }
