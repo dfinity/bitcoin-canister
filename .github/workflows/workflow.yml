@@ -37,7 +37,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          cargo build --release --all-targets --all-features
+          cargo build --release --all-targets
         env:
           RUST_BACKTRACE: 1
 
@@ -67,7 +67,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --all-features
+          cargo test --release --all-targets
         env:
           RUST_BACKTRACE: 1
 
