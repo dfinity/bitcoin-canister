@@ -20,5 +20,5 @@ RUN bitcoin-canister/bootstrap/step_1.sh ${BITCOIN_DIR} ${HEIGHT}
 RUN bitcoin-canister/bootstrap/check_chaintip.sh ${BITCOIN_DIR}
 RUN bitcoin-canister/bootstrap/step_2.sh ${BITCOIN_DIR} ${HEIGHT}
 RUN bitcoin-canister/bootstrap/step_3.sh ${BITCOIN_DIR} ${HEIGHT}
-RUN bitcoin-canister/bootstrap/step_4.sh
+RUN bitcoin-canister/bootstrap/step_4.sh ${HEIGHT}
 RUN sha256sum unstable_blocks block_headers utxodump.csv

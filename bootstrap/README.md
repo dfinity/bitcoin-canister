@@ -64,7 +64,7 @@ Make sure that the output of the above command specifies that you have a chain t
 ```
 
 ```
-./step_4.sh
+./step_4.sh $HEIGHT
 ```
 
 ```
