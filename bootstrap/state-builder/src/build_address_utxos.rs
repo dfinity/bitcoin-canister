@@ -6,9 +6,9 @@
 //!   --network testnet \
 //!   --output balances.bin \
 //!   --utxos-dump-path utxos-dump.csv
-use bitcoin::{Address, Txid as BitcoinTxid};
+use bitcoin::{Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
-use ic_btc_canister::types::{Address as OurAddress, AddressUtxo, Network, OutPoint, Txid};
+use ic_btc_canister::types::{Address, AddressUtxo, Network, OutPoint, Txid};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::{
     fs::File,
@@ -50,14 +50,26 @@ fn main() {
         let txid = Txid::from(BitcoinTxid::from_str(parts[1]).unwrap().to_vec());
         let vout: u32 = parts[2].parse().unwrap();
         let address_str = parts[5];
-        let height: u32 = parts[9].parse().unwrap();
+        let height: u32 = parts[0].parse().unwrap();
+        let script = parts[6];
 
         if i % 100_000 == 0 {
             println!("Processed {} UTXOs", i);
         }
 
-        if let Ok(address) = Address::from_str(address_str) {
-            let address: OurAddress = address.into();
+        // Load the address. The UTXO dump tool we use doesn't output all the addresses
+        // we support, so if parsing the address itself fails, we try parsing the script directly.
+        let address = if let Ok(address) = BitcoinAddress::from_str(address_str) {
+            Some(address)
+        } else {
+            BitcoinAddress::from_script(
+                &Script::from(hex::decode(script).expect("script must be valid hex")),
+                args.network.into(),
+            )
+        };
+
+        if let Some(address) = address {
+            let address: Address = address.into();
 
             address_utxos
                 .insert(
