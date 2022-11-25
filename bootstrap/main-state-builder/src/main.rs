@@ -48,7 +48,7 @@ struct Args {
 
     /// The stable height of the canister.
     #[clap(long)]
-    stable_height: u32,
+    anchor_height: u32,
 }
 
 fn read_block(reader: &mut BufReader<File>) -> Block {
@@ -104,7 +104,7 @@ fn main() {
     with_state_mut(|s| {
         s.utxos.utxos.large_utxos = large_utxos;
 
-        s.utxos.next_height = args.stable_height;
+        s.utxos.next_height = args.anchor_height;
 
         // Ingest the blocks.
         s.unstable_blocks =

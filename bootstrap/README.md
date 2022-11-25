@@ -23,6 +23,7 @@ go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce6
 ```
 BITCOIN_DIR=/path/to/bitcoin-22.0/
 HEIGHT=<height of the state you want to compute>
+STABILITY_THRESHOLD=30
 ```
 
 ## 3. Download the Bitcoin state
@@ -66,4 +67,10 @@ Make sure that the output of the above command specifies that you have a chain t
 ./step_4.sh
 ```
 
-This document will be updated with future steps.
+```
+./step_5.sh
+```
+
+```
+./step_6.sh $HEIGHT $STABILITY_THRESHOLD
+```
