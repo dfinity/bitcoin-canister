@@ -29,7 +29,7 @@ echo "Preparing the unstable blocks..."
 $BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > /dev/null &
 
 # Wait for bitcoind to load.
-sleep 10
+sleep 30
 
 STABLE_HEIGHT=$((HEIGHT-12))
 

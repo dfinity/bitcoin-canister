@@ -32,7 +32,7 @@ echo "Fetching block headers..."
 $BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > /dev/null &
 
 # Wait for bitcoind to load.
-sleep 10
+sleep 30
 
 # Retrieve the block hashes and headers via bitcoin-cli.
 for ((height = 0; height <= STABLE_HEIGHT; height++))
