@@ -349,9 +349,9 @@ impl BoundedStorable for OutPoint {
 impl Storable for (TxOut, Height) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.1.to_le_bytes().to_vec(),       // Store the height (4 bytes)
-            self.0.value.to_le_bytes().to_vec(), // Then the value (8 bytes)
+            self.0.value.to_bytes().to_vec(),    // Store the value (8 bytes)
             self.0.script_pubkey.clone(),        // Then the script (size varies)
+            Storable::to_bytes(&self.1),         // Then the height (4 bytes)
         ]
         .into_iter()
         .flatten()
@@ -359,12 +359,13 @@ impl Storable for (TxOut, Height) {
     }
 
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
-        let height = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let value = u64::from_le_bytes(bytes[4..12].try_into().unwrap());
+        let height = <Height as Storable>::from_bytes(bytes.split_off(bytes.len() - 4));
+        let script_pubkey = bytes.split_off(8);
+        let value = u64::from_bytes(bytes);
         (
             TxOut {
                 value,
-                script_pubkey: bytes.split_off(12),
+                script_pubkey,
             },
             height,
         )
