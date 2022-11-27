@@ -132,8 +132,6 @@ fn main() {
 
             (
                 BlockHash::from_str(&parts[0]).unwrap(),
-                //BlockHeader::consensus_decode(&mut hex::decode(&parts[1]).unwrap().as_slice())
-                //    .unwrap(),
                 hex::decode(&parts[1]).unwrap(),
             )
         });
