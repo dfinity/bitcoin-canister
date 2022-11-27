@@ -7,6 +7,7 @@ CANISTER_STATE_DIR=canister_state
 CANISTER_STATE_FILE=canister_state.bin
 UTXO_FILE=utxodump_shuffled.csv
 UNSTABLE_BLOCKS_FILE=unstable_blocks
+BLOCK_HEADERS_FILE=block_headers
 
 HEIGHT=$1
 ANCHOR_HEIGHT=$((HEIGHT-11))
@@ -38,7 +39,8 @@ cargo run --release -- \
    --network mainnet \
    --stability-threshold "$STABILITY_THRESHOLD" \
    --anchor-height "$ANCHOR_HEIGHT" \
-   --unstable-blocks "../$UNSTABLE_BLOCKS_FILE"
+   --unstable-blocks "../$UNSTABLE_BLOCKS_FILE" \
+   --block-headers "../$BLOCK_HEADERS_FILE"
 popd
 
 echo "Computing checksum of canister state..."
