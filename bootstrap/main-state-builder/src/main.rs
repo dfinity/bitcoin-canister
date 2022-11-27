@@ -11,7 +11,7 @@ use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use clap::Parser;
 use ic_btc_canister::{
     pre_upgrade,
-    types::{Block, Config, Network, OutPoint, TxOut},
+    types::{Block, BlockHash, Config, Network, OutPoint, TxOut},
     unstable_blocks::{self, UnstableBlocks},
     with_state, with_state_mut,
 };
@@ -22,6 +22,7 @@ use std::{
     fs::File,
     io::{BufRead, BufReader, Read},
     path::PathBuf,
+    str::FromStr,
 };
 
 #[derive(Parser, Debug)]
@@ -37,6 +38,10 @@ struct Args {
     /// The file containing the unstable blocks.
     #[clap(long, value_hint = clap::ValueHint::DirPath)]
     unstable_blocks: PathBuf,
+
+    /// The file containing the block headers.
+    #[clap(long, value_hint = clap::ValueHint::DirPath)]
+    block_headers: PathBuf,
 
     /// The bitcoin network.
     #[clap(long)]
@@ -110,6 +115,33 @@ fn main() {
         s.unstable_blocks =
             UnstableBlocks::new(&s.utxos, args.stability_threshold as u32, anchor_block);
         unstable_blocks::push(&mut s.unstable_blocks, &s.utxos, next_block).unwrap();
+    });
+
+    println!("Inserting block headers...");
+    let block_headers_file = BufReader::new(File::open(&args.block_headers).unwrap());
+
+    let block_headers  = block_headers_file
+        .lines()
+        .filter_map(|s| s.ok())
+        .map(|s| {
+            let parts = s
+                .replace('\n', "")
+                .split(',')
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>();
+
+            (
+                BlockHash::from_str(&parts[0]).unwrap(),
+                //BlockHeader::consensus_decode(&mut hex::decode(&parts[1]).unwrap().as_slice())
+                //    .unwrap(),
+                hex::decode(&parts[1]).unwrap(),
+            )
+        });
+
+    with_state_mut(|s| {
+        for (height, (block_hash, block_header)) in block_headers.enumerate() {
+            s.stable_block_headers.insert2(block_hash, block_header, height as u32);
+        }
     });
 
     println!(
