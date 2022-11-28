@@ -17,5 +17,4 @@ rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
 rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
 EOF
 
-LOG_FILE=$(mktemp)
 $BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data"
