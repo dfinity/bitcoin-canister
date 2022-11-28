@@ -51,9 +51,9 @@ Make sure that the output of the above command specifies that you have a chain t
     "status": "active"
   }
 ]
+```
 
 If the height returned here is < `$HEIGHT - 10`, then run `./step_1_retry.sh` for a minute or two, which downloads more Bitcoin blocks, and try again.
-```
 
 ## 4. Compute the files needed for the canister state
 
