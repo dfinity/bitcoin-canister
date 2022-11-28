@@ -176,7 +176,7 @@ async fn main() {
 
     println!(
         "memory size: {:?}",
-        ic_btc_canister::get_memory().with(|m| m.borrow().len())
+        ic_btc_canister::get_memory().borrow().len()
     );
 
     let mut file = match File::create(&args.state_path) {
@@ -184,8 +184,8 @@ async fn main() {
         Ok(file) => file,
     };
 
-    ic_btc_canister::get_memory().with(|m| match file.write_all(&m.borrow()) {
+    match file.write_all(&ic_btc_canister::get_memory().borrow()) {
         Err(err) => panic!("couldn't write to {}: {}", args.state_path.display(), err),
         Ok(_) => println!("successfully wrote state to {}", args.state_path.display()),
-    });
+    };
 }

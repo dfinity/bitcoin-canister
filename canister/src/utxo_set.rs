@@ -47,7 +47,7 @@ pub struct UtxoSet {
     //
     // Rather than making this an optional to handle the case where the UTXO set is empty, we
     // instead store the `next_height` to avoid having this special case.
-    next_height: Height,
+    pub next_height: Height,
 
     // The predicate used to determine whether or not we should time-slice.
     // The default predicate is to check the performance counter, but can be overridden for tests.
@@ -241,6 +241,11 @@ impl UtxoSet {
     /// Returns the number of UTXOs that are owned by supported addresses.
     pub fn address_utxos_len(&self) -> u64 {
         self.address_utxos.len()
+    }
+
+    /// Returns the number of addresses that we have balances for.
+    pub fn balances_len(&self) -> u64 {
+        self.balances.len()
     }
 
     pub fn network(&self) -> Network {

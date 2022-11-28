@@ -3,7 +3,7 @@ mod api;
 mod block_header_store;
 mod blocktree;
 mod heartbeat;
-mod memory;
+pub mod memory;
 mod metrics;
 mod multi_iter;
 pub mod runtime;
@@ -13,7 +13,7 @@ mod test_utils;
 #[cfg(test)]
 mod tests;
 pub mod types;
-mod unstable_blocks;
+pub mod unstable_blocks;
 mod utxo_set;
 
 use crate::{
@@ -46,9 +46,9 @@ pub fn with_state<R>(f: impl FnOnce(&State) -> R) -> R {
     STATE.with(|cell| f(cell.borrow().as_ref().expect("state not initialized")))
 }
 
-// A helper method to mutate the state.
-//
-// Precondition: the state is already initialized.
+/// A helper method to mutate the state.
+///
+/// Precondition: the state is already initialized.
 pub fn with_state_mut<R>(f: impl FnOnce(&mut State) -> R) -> R {
     STATE.with(|cell| f(cell.borrow_mut().as_mut().expect("state not initialized")))
 }

@@ -41,7 +41,7 @@ struct Args {
 }
 
 fn write_memory_to_file(path: &PathBuf, memory_id: MemoryId) {
-    let canister_mem = ic_btc_canister::get_memory().with(|m| m.clone());
+    let canister_mem = ic_btc_canister::get_memory();
     let memory_manager = MemoryManager::init(canister_mem);
 
     let memory = memory_manager.get(memory_id);
