@@ -55,7 +55,7 @@ Make sure that the output of the above command specifies that you have a chain t
 
 If the height returned here is < `$HEIGHT - 10`, then run `./step_1_retry.sh` for a minute or two, which downloads more Bitcoin blocks, and try again.
 
-## 4. Compute the files needed for the canister state
+## 4. Compute the Bitcoin Canister's State
 
 ```
 ./step_2.sh $BITCOIN_DIR $HEIGHT
@@ -67,10 +67,12 @@ If the height returned here is < `$HEIGHT - 10`, then run `./step_1_retry.sh` fo
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
 
-## 5. Compute the state's hashes.
+## 5. Compute the State's Hashes.
 
 A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
 
 ```
 cargo run --release --example compute_hashes -- --file ./canister_state.bin > chunk_hashes.txt
 ```
+
+The hash of each chunk is saved in `chunk_hashes.txt`.
