@@ -44,19 +44,13 @@ impl BlockHeaderStore {
     /// Inserts a block's header and hash into the store.
     pub fn insert_block(&mut self, block: &Block, height: Height) {
         let block_hash = block.block_hash();
-        let mut header_bytes = vec![];
+        let mut header_blob = vec![];
         block
             .header()
-            .consensus_encode(&mut header_bytes)
+            .consensus_encode(&mut header_blob)
             .expect("block header must be valid");
 
-        self.block_headers
-            .insert(block_hash.clone(), BlockHeaderBlob::from(header_bytes))
-            .expect("block header insertion must succeed");
-
-        self.block_heights
-            .insert(height, block_hash)
-            .expect("block height insertion must succeed");
+        self.insert(block_hash, BlockHeaderBlob::from(header_blob), height);
     }
 
     /// Inserts a block's header and hash into the store.
