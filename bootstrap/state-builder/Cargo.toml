@@ -15,6 +15,10 @@ path = "src/build_address_utxos.rs"
 name = "build-utxos"
 path = "src/build_utxos.rs"
 
+[[bin]]
+name = "combine-state"
+path = "src/combine_state.rs"
+
 [dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = "0.28.1"
