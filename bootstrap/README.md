@@ -28,10 +28,10 @@ STABILITY_THRESHOLD=30
 
 ## 3. Download the Bitcoin state
 
-Run `step_1`, which downloads the bitcoin state. This can several hours.
+Run `1_download_state.sh`, which downloads the bitcoin state. This can several hours.
 
 ```
-./step_1.sh $BITCOIN_DIR $HEIGHT
+./1_download_state.sh $BITCOIN_DIR $HEIGHT
 ```
 
 Once it's done, run the following:
@@ -53,16 +53,16 @@ Make sure that the output of the above command specifies that you have a chain t
 ]
 ```
 
-If the height returned here is < `$HEIGHT - 10`, then run `./step_1_retry.sh` for a minute or two, which downloads more Bitcoin blocks, and try again.
+If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh` for a minute or two, which downloads more Bitcoin blocks, and try again.
 
 ## 4. Compute the Bitcoin Canister's State
 
 ```
-./step_2.sh $BITCOIN_DIR $HEIGHT
-./step_3.sh $BITCOIN_DIR $HEIGHT
-./step_4.sh
-./step_5.sh
-./step_6.sh $HEIGHT $STABILITY_THRESHOLD
+./2_compute_unstable_blocks.sh $BITCOIN_DIR $HEIGHT
+./3_compute_block_headers.sh $BITCOIN_DIR $HEIGHT
+./4_compute_utxo_dump.sh
+./5_shuffle_utxo_dump.sh
+./6_compute_canister_state.sh $HEIGHT $STABILITY_THRESHOLD
 ```
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
