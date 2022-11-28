@@ -41,17 +41,8 @@ impl BlockHeaderStore {
         }
     }
 
-    pub fn insert2(&mut self, block_hash: BlockHash, header_bytes: Vec<u8>, height: Height) {
-        self.block_headers
-            .insert(block_hash.clone(), BlockHeaderBlob::from(header_bytes))
-            .expect("block header insertion must succeed");
-
-        self.block_heights
-            .insert(height, block_hash)
-            .expect("block height insertion must succeed");
-    }
-
-    pub fn insert(&mut self, block: &Block, height: Height) {
+    /// Inserts a block's header and hash into the store.
+    pub fn insert_block(&mut self, block: &Block, height: Height) {
         let block_hash = block.block_hash();
         let mut header_bytes = vec![];
         block
@@ -61,6 +52,17 @@ impl BlockHeaderStore {
 
         self.block_headers
             .insert(block_hash.clone(), BlockHeaderBlob::from(header_bytes))
+            .expect("block header insertion must succeed");
+
+        self.block_heights
+            .insert(height, block_hash)
+            .expect("block height insertion must succeed");
+    }
+
+    /// Inserts a block's header and hash into the store.
+    pub fn insert(&mut self, block_hash: BlockHash, header_blob: BlockHeaderBlob, height: Height) {
+        self.block_headers
+            .insert(block_hash.clone(), header_blob)
             .expect("block header insertion must succeed");
 
         self.block_heights

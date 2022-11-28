@@ -124,7 +124,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         // Store the block's header.
         state
             .stable_block_headers
-            .insert(new_stable_block, state.utxos.next_height());
+            .insert_block(new_stable_block, state.utxos.next_height());
 
         match state.utxos.ingest_block(new_stable_block.clone()) {
             Slicing::Paused(()) => return has_state_changed(state),

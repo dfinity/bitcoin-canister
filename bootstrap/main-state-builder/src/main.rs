@@ -11,7 +11,7 @@ use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use clap::Parser;
 use ic_btc_canister::{
     pre_upgrade,
-    types::{Block, BlockHash, Config, Network, OutPoint, TxOut},
+    types::{Block, BlockHash, BlockHeaderBlob, Config, Network, OutPoint, TxOut},
     unstable_blocks::{self, UnstableBlocks},
     with_state, with_state_mut,
 };
@@ -120,25 +120,23 @@ fn main() {
     println!("Inserting block headers...");
     let block_headers_file = BufReader::new(File::open(&args.block_headers).unwrap());
 
-    let block_headers  = block_headers_file
-        .lines()
-        .filter_map(|s| s.ok())
-        .map(|s| {
-            let parts = s
-                .replace('\n', "")
-                .split(',')
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>();
+    let block_headers = block_headers_file.lines().filter_map(|s| s.ok()).map(|s| {
+        let parts = s
+            .replace('\n', "")
+            .split(',')
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
 
-            (
-                BlockHash::from_str(&parts[0]).unwrap(),
-                hex::decode(&parts[1]).unwrap(),
-            )
-        });
+        (
+            BlockHash::from_str(&parts[0]).unwrap(),
+            BlockHeaderBlob::from(hex::decode(&parts[1]).unwrap()),
+        )
+    });
 
     with_state_mut(|s| {
         for (height, (block_hash, block_header)) in block_headers.enumerate() {
-            s.stable_block_headers.insert2(block_hash, block_header, height as u32);
+            s.stable_block_headers
+                .insert(block_hash, block_header, height as u32);
         }
     });
 
