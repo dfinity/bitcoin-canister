@@ -1,8 +1,12 @@
+#[cfg(not(feature = "file_memory"))]
+use ic_stable_structures::DefaultMemoryImpl;
+#[cfg(feature = "file_memory")]
+use ic_stable_structures::FileMemory;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
-    DefaultMemoryImpl, Memory as MemoryTrait,
+    Memory as MemoryTrait,
 };
-use std::thread::LocalKey;
+use std::cell::RefCell;
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
@@ -14,45 +18,82 @@ const BALANCES: MemoryId = MemoryId::new(4);
 const BLOCK_HEADERS: MemoryId = MemoryId::new(5);
 const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 
-pub type Memory = VirtualMemory<DefaultMemoryImpl>;
+#[cfg(feature = "file_memory")]
+type InnerMemory = FileMemory;
 
+#[cfg(not(feature = "file_memory"))]
+type InnerMemory = DefaultMemoryImpl;
+
+pub type Memory = VirtualMemory<InnerMemory>;
+
+#[cfg(feature = "file_memory")]
 thread_local! {
-    static MEMORY: DefaultMemoryImpl = DefaultMemoryImpl::default();
+    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(None);
 
-    static MEMORY_MANAGER: MemoryManager<DefaultMemoryImpl>
-        = MemoryManager::init(MEMORY.with(|m| m.clone()));
+    static MEMORY_MANAGER: RefCell<Option<MemoryManager<InnerMemory>>> = RefCell::new(None);
 }
 
-pub fn get_memory() -> &'static LocalKey<DefaultMemoryImpl> {
-    &MEMORY
+#[cfg(not(feature = "file_memory"))]
+thread_local! {
+    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(InnerMemory::default()));
+
+    static MEMORY_MANAGER: RefCell<Option<MemoryManager<InnerMemory>>> =
+        RefCell::new(Some(MemoryManager::init(MEMORY.with(|m| m.borrow().clone().unwrap()))));
+}
+
+fn with_memory_manager<R>(f: impl FnOnce(&MemoryManager<InnerMemory>) -> R) -> R {
+    MEMORY_MANAGER.with(|cell| {
+        f(cell
+            .borrow()
+            .as_ref()
+            .expect("memory manager not initialized"))
+    })
+}
+
+pub fn with_memory_manager_mut<R>(f: impl FnOnce(&mut MemoryManager<InnerMemory>) -> R) -> R {
+    MEMORY_MANAGER.with(|cell| {
+        f(cell
+            .borrow_mut()
+            .as_mut()
+            .expect("memory manager not initialized"))
+    })
+}
+
+pub fn get_memory() -> InnerMemory {
+    MEMORY.with(|m| m.borrow().clone().expect("memory not initialized"))
+}
+
+pub fn set_memory(memory: InnerMemory) {
+    MEMORY.with(|m| m.replace(Some(memory.clone())));
+    MEMORY_MANAGER.with(|memory_manager| memory_manager.replace(Some(MemoryManager::init(memory))));
 }
 
 pub fn get_upgrades_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(UPGRADES))
+    with_memory_manager(|m| m.get(UPGRADES))
 }
 
 pub fn get_address_utxos_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(ADDRESS_OUTPOINTS))
+    with_memory_manager(|m| m.get(ADDRESS_OUTPOINTS))
 }
 
 pub fn get_utxos_small_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(SMALL_UTXOS))
+    with_memory_manager(|m| m.get(SMALL_UTXOS))
 }
 
 pub fn get_utxos_medium_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(MEDIUM_UTXOS))
+    with_memory_manager(|m| m.get(MEDIUM_UTXOS))
 }
 
 pub fn get_balances_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(BALANCES))
+    with_memory_manager(|m| m.get(BALANCES))
 }
 
 pub fn get_block_headers_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(BLOCK_HEADERS))
+    with_memory_manager(|m| m.get(BLOCK_HEADERS))
 }
 
 pub fn get_block_heights_memory() -> Memory {
-    MEMORY_MANAGER.with(|m| m.get(BLOCK_HEIGHTS))
+    with_memory_manager(|m| m.get(BLOCK_HEIGHTS))
 }
 
 /// Writes the bytes at the specified offset, growing the memory size if needed.
