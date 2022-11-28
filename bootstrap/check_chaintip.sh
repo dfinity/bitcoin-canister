@@ -24,6 +24,6 @@ EOF
 $BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > /dev/null &
 
 # Wait for bitcoind to load.
-sleep 10
+sleep 30
 
 $BITCOIN_CLI -conf="$CONF_FILE" -datadir="$(pwd)/data" getchaintips

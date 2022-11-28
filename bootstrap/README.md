@@ -51,26 +51,26 @@ Make sure that the output of the above command specifies that you have a chain t
     "status": "active"
   }
 ]
+
+If the height returned here is < `$HEIGHT - 10`, then run `./step_1_retry.sh` for a minute or two, which downloads more Bitcoin blocks, and try again.
 ```
 
 ## 4. Compute the files needed for the canister state
 
 ```
 ./step_2.sh $BITCOIN_DIR $HEIGHT
-```
-
-```
 ./step_3.sh $BITCOIN_DIR $HEIGHT
-```
-
-```
 ./step_4.sh
-```
-
-```
 ./step_5.sh
+./step_6.sh $HEIGHT $STABILITY_THRESHOLD
 ```
 
+Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
+
+## 5. Compute the state's hashes.
+
+A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
+
 ```
-./step_6.sh $HEIGHT $STABILITY_THRESHOLD
+cargo run --release --example compute_hashes -- --file ./canister_state.bin > chunk_hashes.txt
 ```
