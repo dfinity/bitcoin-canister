@@ -15,6 +15,9 @@ pub struct Metrics {
     pub get_balance_apply_unstable_blocks: InstructionHistogram,
 
     pub get_current_fee_percentiles_total: InstructionHistogram,
+
+    /// The total number of (valid) requests sent to `send_transaction`.
+    pub send_transaction_count: u64,
 }
 
 impl Default for Metrics {
@@ -46,6 +49,8 @@ impl Default for Metrics {
                 "ins_get_current_fee_percentiles_total",
                 "Instructions needed to execute a get_current_fee_percentiles request.",
             ),
+
+            send_transaction_count: 0,
         }
     }
 }
