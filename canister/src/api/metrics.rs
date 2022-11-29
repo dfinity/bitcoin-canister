@@ -92,7 +92,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         w.encode_instruction_histogram(&state.metrics.get_current_fee_percentiles_total)?;
 
         w.encode_gauge(
-            "ins_send_transaction_count",
+            "send_transaction_count",
             state.metrics.send_transaction_count as f64,
             "The total number of (valid) requests to the send_transaction endpoint.",
         )?;
