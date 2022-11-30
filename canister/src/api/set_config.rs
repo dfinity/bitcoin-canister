@@ -3,7 +3,10 @@ use std::convert::TryInto;
 
 pub async fn set_config(request: SetConfigRequest) {
     verify_caller().await;
+    set_config_no_verification(request);
+}
 
+fn set_config_no_verification(request: SetConfigRequest) {
     crate::with_state_mut(|s| {
         if let Some(syncing) = request.syncing {
             s.syncing_state.syncing = syncing;
@@ -39,7 +42,7 @@ async fn verify_caller() {
             .controllers;
 
         if !controllers.contains(&ic_cdk::caller()) {
-            panic!("Unauthorized sender");
+            panic!("Only controllers can call set_config");
         }
     }
 }
@@ -61,7 +64,7 @@ mod test {
         proptest!(|(
             stability_threshold in 0..150u128,
         )| {
-            set_config(SetConfigRequest {
+            set_config_no_verification(SetConfigRequest {
                 stability_threshold: Some(stability_threshold),
                 ..Default::default()
             });
@@ -78,7 +81,7 @@ mod test {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
-            set_config(SetConfigRequest {
+            set_config_no_verification(SetConfigRequest {
                 syncing: Some(*flag),
                 ..Default::default()
             });
@@ -109,7 +112,7 @@ mod test {
                 send_transaction_per_byte
             };
 
-            set_config(SetConfigRequest {
+            set_config_no_verification(SetConfigRequest {
                 fees: Some(fees.clone()),
                 ..Default::default()
             });
