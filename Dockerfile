@@ -41,5 +41,5 @@ RUN sha256sum ic-btc-canister.wasm
 
 # Build uploader canister
 RUN scripts/build-canister.sh uploader
-RUN cp target/wasm32-unknown-unknown/release/canister.wasm uploader-canister.wasm
+RUN cp target/wasm32-unknown-unknown/release/uploader-canister.wasm uploader-canister.wasm
 RUN sha256sum uploader-canister.wasm
