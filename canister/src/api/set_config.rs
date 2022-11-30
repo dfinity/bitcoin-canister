@@ -1,8 +1,8 @@
 use crate::SetConfigRequest;
 use std::convert::TryInto;
 
-pub fn set_config(request: SetConfigRequest) {
-    verify_caller();
+pub async fn set_config(request: SetConfigRequest) {
+    verify_caller().await;
 
     crate::with_state_mut(|s| {
         if let Some(syncing) = request.syncing {
@@ -23,19 +23,22 @@ pub fn set_config(request: SetConfigRequest) {
     });
 }
 
-fn verify_caller() {
+async fn verify_caller() {
     #[cfg(target_arch = "wasm32")]
     {
-        use ic_cdk::export::Principal;
-        use std::str::FromStr;
+        use ic_cdk::api::management_canister::main::CanisterIdRecord;
 
-        // TODO(EXC-1279): Instead of hard-coding a principal, check that the caller is a canister controller.
-        if ic_cdk::api::caller()
-            != Principal::from_str(
-                "5kqj4-ymytp-ozksm-u62pb-po22y-zqqzf-2o4th-5shdt-m5j6r-kgyfi-2qe",
-            )
+        let controllers =
+            ic_cdk::api::management_canister::main::canister_status(CanisterIdRecord {
+                canister_id: ic_cdk::api::id(),
+            })
+            .await
             .unwrap()
-        {
+            .0
+            .settings
+            .controllers;
+
+        if !controllers.contains(&ic_cdk::caller()) {
             panic!("Unauthorized sender");
         }
     }
