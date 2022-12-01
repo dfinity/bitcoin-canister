@@ -30,9 +30,17 @@ cargo install ic-wasm --version 0.2.0 --root ./target
 STATUS=$?
 
 if [ "$STATUS" -eq "0" ]; then
-      ./target/bin/ic-wasm \
-      ./target/$TARGET/release/canister.wasm \
-      -o ./target/$TARGET/release/canister.wasm shrink
+    if [[ "$CANISTER" == "ic-btc-canister" ]]; then
+        ./target/bin/ic-wasm \
+        ./target/$TARGET/release/canister.wasm \
+        -o ./target/$TARGET/release/canister.wasm shrink
+    fi
+
+    if [[ "$CANISTER" == "uploader" ]]; then
+        ./target/bin/ic-wasm \
+        ./target/$TARGET/release/uploader-canister.wasm \
+        -o ./target/$TARGET/release/uploader-canister.wasm shrink
+    fi
   true
 else
   echo Could not install ic-wasm
