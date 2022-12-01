@@ -13,13 +13,13 @@ use std::str::FromStr;
 // `GetUtxosResponse`.
 //
 // Given the size of a `Utxo` is 48 bytes, this means that the size of a single
-// response can be ~500KiB (considering the size of remaining fields and
-// potential overhead for the candid serialization). This is still quite below
+// response can be ~50KiB (considering the size of remaining fields and potential
+// overhead for the candid serialization). This is still quite below
 // the max response payload size of 2MiB that the IC needs to respect.
-
+//
 // The value also conforms to the interface spec which requires that no more
-// than 100_000 `Utxo`s are returned in a single response.
-const MAX_UTXOS_PER_RESPONSE: usize = 10_000;
+// than 10_000 `Utxo`s are returned in a single response.
+const MAX_UTXOS_PER_RESPONSE: usize = 1_000;
 
 // Various profiling stats for tracking the performance of `get_utxos`.
 #[derive(Default, Debug)]
