@@ -19,9 +19,13 @@ dfx deploy --no-wallet bitcoin --argument "(record {
   blocks_source = principal \"$(dfx canister id e2e-scenario-3)\";
   syncing = variant { enabled };
   fees = record {
-    get_utxos = 0;
+    get_utxos_base = 0;
+    get_utxos_cycles_per_ten_instructions = 0;
+    get_utxos_maximum = 0;
     get_balance = 0;
+    get_balance_maximum = 0;
     get_current_fee_percentiles = 0;
+    get_current_fee_percentiles_maximum = 0;
     send_transaction_base = 0;
     send_transaction_per_byte = 0;
   }

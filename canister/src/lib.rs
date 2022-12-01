@@ -160,6 +160,18 @@ pub(crate) fn genesis_block(network: Network) -> Block {
 }
 
 pub(crate) fn charge_cycles(amount: u128) {
+    verify_has_enough_cycles(amount);
+
+    let amount: u64 = amount.try_into().expect("amount must be u64");
+    assert_eq!(
+        msg_cycles_accept(amount),
+        amount,
+        "Accepting cycles must succeed"
+    );
+}
+
+/// Panics if the request less than the amount of cycles given.
+pub(crate) fn verify_has_enough_cycles(amount: u128) {
     let amount: u64 = amount.try_into().expect("amount must be u64");
 
     if msg_cycles_available() < amount {
@@ -169,12 +181,6 @@ pub(crate) fn charge_cycles(amount: u128) {
             amount
         );
     }
-
-    assert_eq!(
-        msg_cycles_accept(amount),
-        amount,
-        "Accepting cycles must succeed"
-    );
 }
 
 // Verifies that the network is equal to the one maintained by this canister's state.

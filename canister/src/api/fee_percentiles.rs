@@ -4,7 +4,7 @@ use crate::{
     state::{FeePercentilesCache, State},
     types::{Block, Transaction},
     unstable_blocks::{self, UnstableBlocks},
-    with_state, with_state_mut,
+    verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_types::MillisatoshiPerByte;
 
@@ -13,6 +13,7 @@ const NUM_TRANSACTIONS: u32 = 10_000;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
+    verify_has_enough_cycles(with_state(|s| s.fees.get_current_fee_percentiles_maximum));
     charge_cycles(with_state(|s| s.fees.get_current_fee_percentiles));
 
     let res = with_state_mut(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));

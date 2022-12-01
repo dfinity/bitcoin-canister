@@ -2,7 +2,7 @@ use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, GetBalanceRequest},
-    unstable_blocks, with_state, with_state_mut,
+    unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_types::{GetBalanceError, Satoshi};
 use std::str::FromStr;
@@ -19,6 +19,7 @@ struct Stats {
 
 /// Retrieves the balance of the given Bitcoin address.
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+    verify_has_enough_cycles(with_state(|s| s.fees.get_balance_maximum));
     charge_cycles(with_state(|s| s.fees.get_balance));
 
     get_balance_internal(request).expect("get_balance failed")
