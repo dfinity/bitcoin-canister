@@ -87,19 +87,16 @@ pub fn init(config: Config) {
 pub fn get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
-    panic!("not enabled yet");
     verify_network(request.network.into());
     api::get_current_fee_percentiles()
 }
 
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
-    panic!("not enabled yet");
     verify_network(request.network.into());
     api::get_balance(request.into())
 }
 
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
-    panic!("not enabled yet");
     verify_network(request.network.into());
     api::get_utxos(request.into())
 }
