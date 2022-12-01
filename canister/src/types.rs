@@ -55,33 +55,42 @@ impl Default for Config {
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Default)]
 pub struct Fees {
     /// The base fee to charge for all `get_utxos` requests.
+    #[serde(default)]
     pub get_utxos_base: u128,
 
     /// The number of cycles to charge per 10 instructions.
+    #[serde(default)]
     pub get_utxos_cycles_per_ten_instructions: u128,
 
     /// The maximum amount of cycles that can be charged in a `get_utxos` request.
     /// A request must send at least this amount for it to be accepted.
+    #[serde(default)]
     pub get_utxos_maximum: u128,
 
     /// The flat fee to charge for a `get_balance` request.
+    #[serde(default)]
     pub get_balance: u128,
 
     /// The maximum amount of cycles that can be charged in a `get_balance` request.
     /// A request must send at least this amount for it to be accepted.
+    #[serde(default)]
     pub get_balance_maximum: u128,
 
     /// The flat fee to charge for a `get_current_fee_percentiles` request.
+    #[serde(default)]
     pub get_current_fee_percentiles: u128,
 
     /// The maximum amount of cycles that can be charged in a `get_current_fee_percentiles` request.
     /// A request must send at least this amount for it to be accepted.
+    #[serde(default)]
     pub get_current_fee_percentiles_maximum: u128,
 
     /// The base fee to charge for all `send_transaction` requests.
+    #[serde(default)]
     pub send_transaction_base: u128,
 
     /// The number of cycles to charge for each byte in the transaction.
+    #[serde(default)]
     pub send_transaction_per_byte: u128,
 }
 

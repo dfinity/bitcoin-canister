@@ -138,7 +138,24 @@ pub fn post_upgrade() {
     memory.read(4, &mut state_bytes);
 
     // Deserialize and set the state.
-    let state = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+    let mut state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+
+    // Set the fees.
+    state.fees = crate::types::Fees {
+        get_utxos_base: 50_000_000,
+        get_utxos_cycles_per_ten_instructions: 10,
+        get_utxos_maximum: 10_000_000_000,
+
+        get_current_fee_percentiles: 10_000_000,
+        get_current_fee_percentiles_maximum: 100_000_000,
+
+        get_balance: 10_000_000,
+        get_balance_maximum: 100_000_000,
+
+        send_transaction_base: 5_000_000_000,
+        send_transaction_per_byte: 20_000_000,
+    };
+
     set_state(state);
 }
 
