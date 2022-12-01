@@ -6,6 +6,7 @@ use bitcoin::{consensus::Decodable, Transaction};
 use ic_btc_types::SendTransactionRequest;
 
 pub async fn send_transaction(request: SendTransactionRequest) {
+    panic!("not enabled yet");
     verify_network(request.network.into());
 
     charge_cycles(with_state(|s| {
