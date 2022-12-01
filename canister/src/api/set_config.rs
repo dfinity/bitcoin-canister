@@ -92,16 +92,24 @@ mod test {
         init(Config::default());
 
         proptest!(|(
-            get_utxos in 0..1_000_000_000_000u128,
+            get_utxos_base in 0..1_000_000_000_000u128,
+            get_utxos_maximum in 0..1_000_000_000_000u128,
+            get_utxos_cycles_per_ten_instructions in 0..100u128,
+            get_balance_maximum in 0..1_000_000_000_000u128,
             get_balance in 0..1_000_000_000_000u128,
             get_current_fee_percentiles in 0..1_000_000_000_000u128,
+            get_current_fee_percentiles_maximum in 0..1_000_000_000_000u128,
             send_transaction_base in 0..1_000_000_000_000u128,
             send_transaction_per_byte in 0..1_000_000_000_000u128,
         )| {
             let fees = Fees {
-                get_utxos,
+                get_utxos_base,
+                get_utxos_maximum,
+                get_utxos_cycles_per_ten_instructions,
+                get_balance_maximum,
                 get_balance,
                 get_current_fee_percentiles,
+                get_current_fee_percentiles_maximum,
                 send_transaction_base,
                 send_transaction_per_byte
             };
