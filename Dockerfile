@@ -37,7 +37,7 @@ COPY . .
 # Build bitcoin canister
 RUN scripts/build-canister.sh ic-btc-canister
 RUN cp target/wasm32-unknown-unknown/release/canister.wasm ic-btc-canister.wasm
-RUN gzip ic-btc-canister.wasm
+RUN gzip -n -f ic-btc-canister.wasm
 RUN sha256sum ic-btc-canister.wasm.gz
 
 # Build uploader canister
