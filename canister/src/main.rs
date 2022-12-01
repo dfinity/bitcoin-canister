@@ -53,8 +53,8 @@ pub fn get_config() -> Config {
 }
 
 #[update]
-pub fn set_config(request: SetConfigRequest) {
-    ic_btc_canister::set_config(request)
+async fn set_config(request: SetConfigRequest) {
+    ic_btc_canister::set_config(request).await
 }
 
 #[query]
