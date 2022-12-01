@@ -17,6 +17,7 @@ pub struct Metrics {
     pub get_current_fee_percentiles_total: InstructionHistogram,
 
     /// The total number of (valid) requests sent to `send_transaction`.
+    #[serde(default)]
     pub send_transaction_count: u64,
 }
 
