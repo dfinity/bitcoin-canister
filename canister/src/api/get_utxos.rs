@@ -3,7 +3,7 @@ use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
-    unstable_blocks, with_state, with_state_mut, State,
+    unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use serde_bytes::ByteBuf;
@@ -36,7 +36,7 @@ struct Stats {
 
 /// Retrieves the UTXOs of the given Bitcoin address.
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
-    charge_cycles(with_state(|s| s.fees.get_utxos));
+    verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
 
     let (res, stats) = with_state(|state| {
         match &request.filter {
@@ -74,6 +74,16 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
         s.metrics
             .get_utxos_build_utxos_vec
             .observe(stats.ins_build_utxos_vec);
+    });
+
+    // Charge the fee.
+    with_state(|s| {
+        let fee = std::cmp::min(
+            s.fees.get_utxos_base
+                + (stats.ins_total / 10) as u128 * s.fees.get_utxos_cycles_per_ten_instructions,
+            s.fees.get_utxos_maximum,
+        );
+        charge_cycles(fee);
     });
 
     // Print the number of instructions it took to process this request.
@@ -233,7 +243,7 @@ fn get_utxos_from_chain(
 mod test {
     use super::*;
     use crate::{
-        genesis_block, state,
+        genesis_block, runtime, state,
         test_utils::{random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder},
         types::{Block, Config, Fees, Network},
         with_state_mut,
@@ -1123,7 +1133,8 @@ mod test {
     fn charges_cycles() {
         crate::init(Config {
             fees: Fees {
-                get_utxos: 10,
+                get_utxos_base: 10,
+                get_utxos_maximum: 100,
                 ..Default::default()
             },
             ..Default::default()
@@ -1134,6 +1145,55 @@ mod test {
             filter: None,
         });
 
-        assert_eq!(crate::runtime::get_cycles_balance(), 10);
+        assert_eq!(runtime::get_cycles_balance(), 10);
+    }
+
+    #[test]
+    fn charges_cycles_capped_at_maximum() {
+        crate::init(Config {
+            fees: Fees {
+                get_utxos_base: 10,
+                get_utxos_cycles_per_ten_instructions: 10,
+                get_utxos_maximum: 100,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        runtime::set_performance_counter_step(1000);
+        runtime::inc_performance_counter();
+
+        get_utxos(GetUtxosRequest {
+            address: random_p2pkh_address(Network::Regtest).to_string(),
+            filter: None,
+        });
+
+        // Charging is capped to the maximum fee.
+        assert_eq!(runtime::get_cycles_balance(), 100);
+    }
+
+    #[test]
+    fn charges_cycles_per_instructions() {
+        crate::init(Config {
+            fees: Fees {
+                get_utxos_base: 10,
+                get_utxos_cycles_per_ten_instructions: 10,
+                get_utxos_maximum: 100_000,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        // Set the number of instructions consumed.
+        runtime::set_performance_counter_step(1000);
+        runtime::inc_performance_counter();
+
+        get_utxos(GetUtxosRequest {
+            address: random_p2pkh_address(Network::Regtest).to_string(),
+            filter: None,
+        });
+
+        // Base fee + instructions are charged for.
+        assert_eq!(runtime::get_cycles_balance(), 10 + 1000);
     }
 }
