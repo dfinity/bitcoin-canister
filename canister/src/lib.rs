@@ -170,7 +170,7 @@ pub(crate) fn charge_cycles(amount: u128) {
     );
 }
 
-/// Panics if the request less than the amount of cycles given.
+/// Panics if the request contains less than the amount of cycles given.
 pub(crate) fn verify_has_enough_cycles(amount: u128) {
     let amount: u64 = amount.try_into().expect("amount must be u64");
 
