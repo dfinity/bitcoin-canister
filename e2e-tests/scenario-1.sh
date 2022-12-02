@@ -74,8 +74,8 @@ UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
 })')
 
-# The address has 10000 UTXOs.
-if ! [[ $(num_utxos "$UTXOS") = 10000 ]]; then
+# The address has 10000 UTXOs, but the response is capped to 1000 UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
   echo "FAIL"
   exit 1
 fi
