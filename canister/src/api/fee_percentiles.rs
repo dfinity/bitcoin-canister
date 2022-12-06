@@ -148,7 +148,7 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{Config, Fees, Network, OutPoint},
+        types::{Config, Cycles, Fees, Network, OutPoint},
         with_state,
     };
     use ic_btc_types::Satoshi;
@@ -508,7 +508,7 @@ mod test {
     fn charges_cycles() {
         crate::init(Config {
             fees: Fees {
-                get_current_fee_percentiles: 10,
+                get_current_fee_percentiles: Cycles::new(10),
                 ..Default::default()
             },
             ..Default::default()

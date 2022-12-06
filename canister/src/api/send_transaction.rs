@@ -9,8 +9,7 @@ pub async fn send_transaction(request: SendTransactionRequest) {
     verify_network(request.network.into());
 
     charge_cycles(with_state(|s| {
-        s.fees.send_transaction_base
-            + s.fees.send_transaction_per_byte * request.transaction.len() as u128
+        s.fees.send_transaction_base + s.fees.send_transaction_per_byte * request.transaction.len()
     }));
 
     // Decode the transaction as a sanity check that it's valid.
@@ -39,7 +38,7 @@ pub async fn send_transaction(request: SendTransactionRequest) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::{Config, Fees, Network};
+    use crate::types::{Config, Cycles, Fees, Network};
     use ic_btc_types::NetworkInRequest;
 
     fn empty_transaction() -> Vec<u8> {
@@ -62,8 +61,8 @@ mod test {
     async fn charges_cycles() {
         crate::init(Config {
             fees: Fees {
-                send_transaction_base: 13,
-                send_transaction_per_byte: 27,
+                send_transaction_base: Cycles::new(13),
+                send_transaction_per_byte: Cycles::new(27),
                 ..Default::default()
             },
             network: Network::Mainnet,
@@ -96,8 +95,8 @@ mod test {
     async fn invalid_tx_panics() {
         crate::init(Config {
             fees: Fees {
-                send_transaction_base: 13,
-                send_transaction_per_byte: 27,
+                send_transaction_base: Cycles::new(13),
+                send_transaction_per_byte: Cycles::new(27),
                 ..Default::default()
             },
             network: Network::Mainnet,

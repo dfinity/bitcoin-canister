@@ -52,7 +52,7 @@ mod test {
     use super::*;
     use crate::{
         init,
-        types::{Config, Fees, Flag},
+        types::{Config, Cycles, Fees, Flag},
         with_state,
     };
     use proptest::prelude::*;
@@ -101,23 +101,23 @@ mod test {
             get_utxos_base in 0..1_000_000_000_000u128,
             get_utxos_maximum in 0..1_000_000_000_000u128,
             get_utxos_cycles_per_ten_instructions in 0..100u128,
-            get_balance_maximum in 0..1_000_000_000_000u128,
             get_balance in 0..1_000_000_000_000u128,
+            get_balance_maximum in 0..1_000_000_000_000u128,
             get_current_fee_percentiles in 0..1_000_000_000_000u128,
             get_current_fee_percentiles_maximum in 0..1_000_000_000_000u128,
             send_transaction_base in 0..1_000_000_000_000u128,
             send_transaction_per_byte in 0..1_000_000_000_000u128,
         )| {
             let fees = Fees {
-                get_utxos_base,
-                get_utxos_maximum,
-                get_utxos_cycles_per_ten_instructions,
-                get_balance_maximum,
-                get_balance,
-                get_current_fee_percentiles,
-                get_current_fee_percentiles_maximum,
-                send_transaction_base,
-                send_transaction_per_byte
+                get_utxos_base: Cycles::new(get_utxos_base),
+                get_utxos_cycles_per_ten_instructions: Cycles::new(get_utxos_cycles_per_ten_instructions),
+                get_utxos_maximum: Cycles::new(get_utxos_maximum),
+                get_balance: Cycles::new(get_balance),
+                get_balance_maximum: Cycles::new(get_balance_maximum),
+                get_current_fee_percentiles: Cycles::new(get_current_fee_percentiles),
+                get_current_fee_percentiles_maximum: Cycles::new(get_current_fee_percentiles_maximum),
+                send_transaction_base: Cycles::new(send_transaction_base),
+                send_transaction_per_byte: Cycles::new(send_transaction_per_byte),
             };
 
             set_config_no_verification(SetConfigRequest {

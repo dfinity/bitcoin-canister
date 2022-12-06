@@ -103,7 +103,7 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{Config, Fees, Network, OutPoint},
+        types::{Config, Cycles, Fees, Network, OutPoint},
         with_state_mut,
     };
 
@@ -276,7 +276,7 @@ mod test {
     fn charges_cycles() {
         crate::init(Config {
             fees: Fees {
-                get_balance: 10,
+                get_balance: Cycles::new(10),
                 ..Default::default()
             },
             ..Default::default()

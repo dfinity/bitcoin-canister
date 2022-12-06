@@ -19,7 +19,7 @@ mod utxo_set;
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{Block, Config, HttpRequest, HttpResponse, Network, SetConfigRequest},
+    types::{Block, Config, Cycles, HttpRequest, HttpResponse, Network, SetConfigRequest},
 };
 pub use api::send_transaction;
 pub use api::set_config;
@@ -159,10 +159,10 @@ pub(crate) fn genesis_block(network: Network) -> Block {
     Block::new(bitcoin::blockdata::constants::genesis_block(network.into()))
 }
 
-pub(crate) fn charge_cycles(amount: u128) {
+pub(crate) fn charge_cycles(amount: Cycles) {
     verify_has_enough_cycles(amount);
 
-    let amount: u64 = amount.try_into().expect("amount must be u64");
+    let amount: u64 = amount.get().try_into().expect("amount must be u64");
     assert_eq!(
         msg_cycles_accept(amount),
         amount,
@@ -171,14 +171,15 @@ pub(crate) fn charge_cycles(amount: u128) {
 }
 
 /// Panics if the request contains less than the amount of cycles given.
-pub(crate) fn verify_has_enough_cycles(amount: u128) {
-    let amount: u64 = amount.try_into().expect("amount must be u64");
+pub(crate) fn verify_has_enough_cycles(amount: Cycles) {
+    let amount: u64 = amount.get().try_into().expect("amount must be u64");
 
     if msg_cycles_available() < amount {
+        // Use `Cycles` wrapper for pretty printing with underscore thousand separator.
         panic!(
             "Received {} cycles. {} cycles are required.",
-            msg_cycles_available(),
-            amount
+            Cycles::new(msg_cycles_available() as u128),
+            Cycles::new(amount as u128)
         );
     }
 }
@@ -305,5 +306,18 @@ mod test {
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
             network: NetworkInRequest::Testnet,
         });
+    }
+
+    #[test]
+    fn test_verify_has_enough_cycles_does_not_panic_with_enough_cycles() {
+        verify_has_enough_cycles(Cycles::new(1_000));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "Received 9_223_372_036_854_775_807 cycles. 18_446_744_073_709_551_615 cycles are required."
+    )]
+    fn test_verify_has_enough_cycles_panics_with_not_enough_cycles() {
+        verify_has_enough_cycles(Cycles::new(u64::MAX as u128));
     }
 }

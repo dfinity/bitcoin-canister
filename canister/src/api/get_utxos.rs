@@ -80,7 +80,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     with_state(|s| {
         let fee = std::cmp::min(
             s.fees.get_utxos_base
-                + (stats.ins_total / 10) as u128 * s.fees.get_utxos_cycles_per_ten_instructions,
+                + s.fees.get_utxos_cycles_per_ten_instructions * (stats.ins_total / 10),
             s.fees.get_utxos_maximum,
         );
         charge_cycles(fee);
@@ -245,7 +245,7 @@ mod test {
     use crate::{
         genesis_block, runtime, state,
         test_utils::{random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder},
-        types::{Block, Config, Fees, Network},
+        types::{Block, Config, Cycles, Fees, Network},
         with_state_mut,
     };
     use ic_btc_types::{OutPoint, Utxo};
@@ -1133,8 +1133,8 @@ mod test {
     fn charges_cycles() {
         crate::init(Config {
             fees: Fees {
-                get_utxos_base: 10,
-                get_utxos_maximum: 100,
+                get_utxos_base: Cycles::new(10),
+                get_utxos_maximum: Cycles::new(100),
                 ..Default::default()
             },
             ..Default::default()
@@ -1152,9 +1152,9 @@ mod test {
     fn charges_cycles_capped_at_maximum() {
         crate::init(Config {
             fees: Fees {
-                get_utxos_base: 10,
-                get_utxos_cycles_per_ten_instructions: 10,
-                get_utxos_maximum: 100,
+                get_utxos_base: Cycles::new(10),
+                get_utxos_cycles_per_ten_instructions: Cycles::new(10),
+                get_utxos_maximum: Cycles::new(100),
                 ..Default::default()
             },
             ..Default::default()
@@ -1176,9 +1176,9 @@ mod test {
     fn charges_cycles_per_instructions() {
         crate::init(Config {
             fees: Fees {
-                get_utxos_base: 10,
-                get_utxos_cycles_per_ten_instructions: 10,
-                get_utxos_maximum: 100_000,
+                get_utxos_base: Cycles::new(10),
+                get_utxos_cycles_per_ten_instructions: Cycles::new(10),
+                get_utxos_maximum: Cycles::new(100_000),
                 ..Default::default()
             },
             ..Default::default()

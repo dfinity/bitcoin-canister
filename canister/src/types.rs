@@ -13,7 +13,14 @@ use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
-use std::{cmp::Ordering, convert::TryInto, str::FromStr};
+use std::{
+    cmp::Ordering,
+    convert::TryInto,
+    fmt,
+    ops::{Add, Mul},
+    str::FromStr,
+};
+use thousands::Separable;
 
 // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
 // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
@@ -52,37 +59,82 @@ impl Default for Config {
     }
 }
 
+#[derive(
+    CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Copy, Default, PartialOrd, Ord,
+)]
+pub struct Cycles(u128);
+
+impl Cycles {
+    pub const fn new(input: u128) -> Self {
+        Self(input)
+    }
+
+    pub fn get(self) -> u128 {
+        self.0
+    }
+}
+
+impl fmt::Display for Cycles {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.separate_with_underscores())
+    }
+}
+
+impl Add for Cycles {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self(self.0.saturating_add(rhs.0))
+    }
+}
+
+impl Mul<u64> for Cycles {
+    type Output = Self;
+
+    fn mul(self, rhs: u64) -> Self {
+        Self(self.0.saturating_mul(rhs as u128))
+    }
+}
+
+impl Mul<usize> for Cycles {
+    type Output = Self;
+
+    fn mul(self, rhs: usize) -> Self {
+        Self(self.0.saturating_mul(rhs as u128))
+    }
+}
+
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Default)]
 pub struct Fees {
     /// The base fee to charge for all `get_utxos` requests.
-    pub get_utxos_base: u128,
+    pub get_utxos_base: Cycles,
 
     /// The number of cycles to charge per 10 instructions.
-    pub get_utxos_cycles_per_ten_instructions: u128,
+    pub get_utxos_cycles_per_ten_instructions: Cycles,
 
     /// The maximum amount of cycles that can be charged in a `get_utxos` request.
     /// A request must send at least this amount for it to be accepted.
-    pub get_utxos_maximum: u128,
+    pub get_utxos_maximum: Cycles,
 
     /// The flat fee to charge for a `get_balance` request.
-    pub get_balance: u128,
+    pub get_balance: Cycles,
 
     /// The maximum amount of cycles that can be charged in a `get_balance` request.
     /// A request must send at least this amount for it to be accepted.
-    pub get_balance_maximum: u128,
+    pub get_balance_maximum: Cycles,
 
     /// The flat fee to charge for a `get_current_fee_percentiles` request.
-    pub get_current_fee_percentiles: u128,
+    pub get_current_fee_percentiles: Cycles,
 
     /// The maximum amount of cycles that can be charged in a `get_current_fee_percentiles` request.
     /// A request must send at least this amount for it to be accepted.
-    pub get_current_fee_percentiles_maximum: u128,
+    pub get_current_fee_percentiles_maximum: Cycles,
 
     /// The base fee to charge for all `send_transaction` requests.
-    pub send_transaction_base: u128,
+    pub send_transaction_base: Cycles,
 
     /// The number of cycles to charge for each byte in the transaction.
-    pub send_transaction_per_byte: u128,
+    pub send_transaction_per_byte: Cycles,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
@@ -963,4 +1015,11 @@ fn address_handles_script_edge_case() {
         Address::from_script(&script, Network::Testnet),
         Err(InvalidAddress)
     );
+}
+
+#[test]
+fn test_formatting_with_underscore_saparators_small_number() {
+    let cycles = Cycles::new(1_234_567_890);
+    assert_eq!(format!("{}", cycles), "1_234_567_890");
+    assert_eq!(format!("{:?}", cycles), "Cycles(1234567890)");
 }
