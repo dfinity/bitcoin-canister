@@ -38,6 +38,9 @@ pub struct Config {
     pub syncing: Flag,
 
     pub fees: Fees,
+
+    /// Flag to control access to the apis provided by the canister.
+    pub api_access: Flag,
 }
 
 impl Default for Config {
@@ -48,6 +51,7 @@ impl Default for Config {
             blocks_source: Principal::management_canister(),
             syncing: Flag::Enabled,
             fees: Fees::default(),
+            api_access: Flag::Enabled,
         }
     }
 }
@@ -865,6 +869,12 @@ pub enum Flag {
     Disabled,
 }
 
+impl Default for Flag {
+    fn default() -> Self {
+        Flag::Enabled
+    }
+}
+
 /// A request to update the canister's config.
 #[derive(CandidType, Deserialize, Default)]
 pub struct SetConfigRequest {
@@ -875,6 +885,9 @@ pub struct SetConfigRequest {
 
     /// The fees to charge for the various endpoints.
     pub fees: Option<Fees>,
+
+    /// Whether or not to enable/disable the bitcoin apis.
+    pub api_access: Option<Flag>,
 }
 
 #[test]

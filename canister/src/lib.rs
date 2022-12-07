@@ -19,7 +19,7 @@ mod utxo_set;
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{Block, Config, HttpRequest, HttpResponse, Network, SetConfigRequest},
+    types::{Block, Config, Flag, HttpRequest, HttpResponse, Network, SetConfigRequest},
 };
 pub use api::send_transaction;
 pub use api::set_config;
@@ -82,24 +82,40 @@ pub fn init(config: Config) {
     ));
 
     with_state_mut(|s| s.blocks_source = config.blocks_source);
+    with_state_mut(|s| s.api_access = config.api_access);
     with_state_mut(|s| s.fees = config.fees);
 }
 
 pub fn get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
-    verify_network(request.network.into());
-    api::get_current_fee_percentiles()
+    match with_state(|s| s.api_access) {
+        Flag::Disabled => panic!("`bitcoin_get_current_fee_percentiles` is disabled."),
+        Flag::Enabled => {
+            verify_network(request.network.into());
+            api::get_current_fee_percentiles()
+        }
+    }
 }
 
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
-    verify_network(request.network.into());
-    api::get_balance(request.into())
+    match with_state(|s| s.api_access) {
+        Flag::Disabled => panic!("`bitcoin_get_balance` is disabled."),
+        Flag::Enabled => {
+            verify_network(request.network.into());
+            api::get_balance(request.into())
+        }
+    }
 }
 
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
-    verify_network(request.network.into());
-    api::get_utxos(request.into())
+    match with_state(|s| s.api_access) {
+        Flag::Disabled => panic!("`bitcoin_get_utxos` is disabled."),
+        Flag::Enabled => {
+            verify_network(request.network.into());
+            api::get_utxos(request.into())
+        }
+    }
 }
 
 pub fn get_config() -> Config {
@@ -109,6 +125,7 @@ pub fn get_config() -> Config {
         blocks_source: s.blocks_source,
         network: s.network(),
         fees: s.fees.clone(),
+        api_access: s.api_access,
     })
 }
 
@@ -320,5 +337,51 @@ mod test {
     )]
     fn test_verify_has_enough_cycles_panics_with_not_enough_cycles() {
         verify_has_enough_cycles(u64::MAX as u128);
+    }
+
+    #[test]
+    #[should_panic(expected = "`bitcoin_get_balance` is disabled")]
+    fn get_balance_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_balance(GetBalanceRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Mainnet,
+            min_confirmations: None,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "`bitcoin_get_utxos` is disabled")]
+    fn get_utxos_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_utxos(GetUtxosRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Mainnet,
+            filter: None,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "`bitcoin_get_current_fee_percentiles` is disabled")]
+    fn get_current_fee_percentiles_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
+            network: NetworkInRequest::Mainnet,
+        });
     }
 }

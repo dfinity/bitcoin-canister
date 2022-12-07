@@ -23,6 +23,10 @@ fn set_config_no_verification(request: SetConfigRequest) {
                     .expect("stability threshold too large"),
             );
         }
+
+        if let Some(api_access) = request.api_access {
+            s.api_access = api_access;
+        }
     });
 }
 
