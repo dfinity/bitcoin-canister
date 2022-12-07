@@ -170,9 +170,13 @@ pub fn msg_cycles_available() -> u64 {
     ic_cdk::api::call::msg_cycles_available()
 }
 
+/// Returns cycles available.
+///
+/// Non-wasm32 targets return a hardcoded value of `u64::MAX / 2` only for tests
+/// to check behavior both below and above the available limit.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn msg_cycles_available() -> u64 {
-    u64::MAX
+    u64::MAX / 2
 }
 
 #[cfg(target_arch = "wasm32")]
