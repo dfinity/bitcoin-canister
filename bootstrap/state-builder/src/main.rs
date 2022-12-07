@@ -13,7 +13,7 @@ use clap::Parser;
 use ic_btc_canister::{
     heartbeat, pre_upgrade, runtime,
     state::main_chain_height,
-    types::{Config, GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
+    types::{Config, Flag, GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
     with_state,
 };
 use rusty_leveldb::{Options, DB};
@@ -147,6 +147,7 @@ async fn main() {
     ic_btc_canister::init(Config {
         stability_threshold: 0,
         network: args.network,
+        api_access: Flag::Disabled,
         ..Config::default()
     });
 
