@@ -1,11 +1,12 @@
 use crate::{
-    charge_cycles, runtime, types::SendTransactionInternalRequest, verify_network, with_state,
-    with_state_mut,
+    charge_cycles, runtime, types::SendTransactionInternalRequest, verify_api_access,
+    verify_network, with_state, with_state_mut,
 };
 use bitcoin::{consensus::Decodable, Transaction};
 use ic_btc_types::SendTransactionRequest;
 
 pub async fn send_transaction(request: SendTransactionRequest) {
+    verify_api_access();
     verify_network(request.network.into());
 
     charge_cycles(with_state(|s| {
@@ -39,7 +40,7 @@ pub async fn send_transaction(request: SendTransactionRequest) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::{Config, Fees, Network};
+    use crate::types::{Config, Fees, Flag, Network};
     use ic_btc_types::NetworkInRequest;
 
     fn empty_transaction() -> Vec<u8> {
@@ -101,6 +102,27 @@ mod test {
                 ..Default::default()
             },
             network: Network::Mainnet,
+            ..Default::default()
+        });
+
+        send_transaction(SendTransactionRequest {
+            network: NetworkInRequest::Mainnet,
+            transaction: vec![1, 2, 3], // Invalid transaction
+        })
+        .await;
+    }
+
+    #[async_std::test]
+    #[should_panic(expected = "bitcoin API is disabled")]
+    async fn send_transaction_access_disabled() {
+        crate::init(Config {
+            fees: Fees {
+                send_transaction_base: 13,
+                send_transaction_per_byte: 27,
+                ..Default::default()
+            },
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
             ..Default::default()
         });
 

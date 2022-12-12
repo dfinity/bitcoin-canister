@@ -9,7 +9,7 @@
 use bitcoin::{Address, Txid as BitcoinTxid};
 use clap::Parser;
 use ic_btc_canister::{
-    types::{Config, Network, OutPoint, TxOut, Txid},
+    types::{Config, Flag, Network, OutPoint, TxOut, Txid},
     with_state, with_state_mut,
 };
 use ic_stable_structures::{
@@ -73,6 +73,7 @@ fn main() {
 
     ic_btc_canister::init(Config {
         network: args.network,
+        api_access: Flag::Disabled,
         ..Config::default()
     });
 
