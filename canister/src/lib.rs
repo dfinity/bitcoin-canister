@@ -201,7 +201,7 @@ fn verify_network(network: Network) {
 fn verify_api_access() {
     with_state(|state| {
         if state.api_access == Flag::Disabled {
-            panic!("bitcoin API is disabled");
+            panic!("Bitcoin API is disabled");
         }
     });
 }
@@ -335,7 +335,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "bitcoin API is disabled")]
+    #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_balance_access_disabled() {
         init(Config {
             stability_threshold: 0,
@@ -351,7 +351,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "bitcoin API is disabled")]
+    #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_access_disabled() {
         init(Config {
             stability_threshold: 0,
@@ -367,7 +367,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "bitcoin API is disabled")]
+    #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_current_fee_percentiles_access_disabled() {
         init(Config {
             stability_threshold: 0,
