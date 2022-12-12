@@ -1,51 +1,46 @@
 use crate::{
-    charge_cycles, runtime,
-    types::{Flag, SendTransactionInternalRequest},
+    charge_cycles, runtime, types::SendTransactionInternalRequest, verify_api_access,
     verify_network, with_state, with_state_mut,
 };
 use bitcoin::{consensus::Decodable, Transaction};
 use ic_btc_types::SendTransactionRequest;
 
 pub async fn send_transaction(request: SendTransactionRequest) {
-    match with_state(|s| s.api_access) {
-        Flag::Disabled => panic!("`bitcoin_send_transaction` is disabled."),
-        Flag::Enabled => {
-            verify_network(request.network.into());
+    verify_api_access();
+    verify_network(request.network.into());
 
-            charge_cycles(with_state(|s| {
-                s.fees.send_transaction_base
-                    + s.fees.send_transaction_per_byte * request.transaction.len() as u128
-            }));
+    charge_cycles(with_state(|s| {
+        s.fees.send_transaction_base
+            + s.fees.send_transaction_per_byte * request.transaction.len() as u128
+    }));
 
-            // Decode the transaction as a sanity check that it's valid.
-            let tx = Transaction::consensus_decode(request.transaction.as_slice())
-                .expect("Cannot decode transaction");
+    // Decode the transaction as a sanity check that it's valid.
+    let tx = Transaction::consensus_decode(request.transaction.as_slice())
+        .expect("Cannot decode transaction");
 
-            runtime::print(&format!("[send_transaction] Tx ID: {}", tx.txid()));
+    runtime::print(&format!("[send_transaction] Tx ID: {}", tx.txid()));
 
-            // Bump the counter for the number of (valid) requests received.
-            with_state_mut(|s| {
-                s.metrics.send_transaction_count += 1;
-            });
+    // Bump the counter for the number of (valid) requests received.
+    with_state_mut(|s| {
+        s.metrics.send_transaction_count += 1;
+    });
 
-            // Use the internal endpoint to send the transaction to the bitcoin network.
-            runtime::call_send_transaction_internal(
-                with_state(|s| s.blocks_source),
-                SendTransactionInternalRequest {
-                    network: request.network.into(),
-                    transaction: request.transaction,
-                },
-            )
-            .await
-            .expect("Sending transaction bitcoin network must succeed");
-        }
-    }
+    // Use the internal endpoint to send the transaction to the bitcoin network.
+    runtime::call_send_transaction_internal(
+        with_state(|s| s.blocks_source),
+        SendTransactionInternalRequest {
+            network: request.network.into(),
+            transaction: request.transaction,
+        },
+    )
+    .await
+    .expect("Sending transaction bitcoin network must succeed");
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::{Config, Fees, Network};
+    use crate::types::{Config, Fees, Flag, Network};
     use ic_btc_types::NetworkInRequest;
 
     fn empty_transaction() -> Vec<u8> {
@@ -118,7 +113,7 @@ mod test {
     }
 
     #[async_std::test]
-    #[should_panic(expected = "`bitcoin_send_transaction` is disabled.")]
+    #[should_panic(expected = "bitcoin API is disabled")]
     async fn send_transaction_access_disabled() {
         crate::init(Config {
             fees: Fees {

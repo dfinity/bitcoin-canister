@@ -89,33 +89,21 @@ pub fn init(config: Config) {
 pub fn get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
-    match with_state(|s| s.api_access) {
-        Flag::Disabled => panic!("`bitcoin_get_current_fee_percentiles` is disabled."),
-        Flag::Enabled => {
-            verify_network(request.network.into());
-            api::get_current_fee_percentiles()
-        }
-    }
+    verify_api_access();
+    verify_network(request.network.into());
+    api::get_current_fee_percentiles()
 }
 
 pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
-    match with_state(|s| s.api_access) {
-        Flag::Disabled => panic!("`bitcoin_get_balance` is disabled."),
-        Flag::Enabled => {
-            verify_network(request.network.into());
-            api::get_balance(request.into())
-        }
-    }
+    verify_api_access();
+    verify_network(request.network.into());
+    api::get_balance(request.into())
 }
 
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
-    match with_state(|s| s.api_access) {
-        Flag::Disabled => panic!("`bitcoin_get_utxos` is disabled."),
-        Flag::Enabled => {
-            verify_network(request.network.into());
-            api::get_utxos(request.into())
-        }
-    }
+    verify_api_access();
+    verify_network(request.network.into());
+    api::get_utxos(request.into())
 }
 
 pub fn get_config() -> Config {
@@ -207,6 +195,15 @@ fn verify_network(network: Network) {
     with_state(|state| {
         if state.network() != network {
             panic!("Network must be {}. Found {}", state.network(), network);
+        }
+    });
+}
+
+// Verifies that the access to bitcoin apis is enabled.
+fn verify_api_access() {
+    with_state(|state| {
+        if state.api_access == Flag::Disabled {
+            panic!("bitcoin API is disabled");
         }
     });
 }
@@ -340,7 +337,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "`bitcoin_get_balance` is disabled")]
+    #[should_panic(expected = "bitcoin API is disabled")]
     fn get_balance_access_disabled() {
         init(Config {
             stability_threshold: 0,
@@ -356,7 +353,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "`bitcoin_get_utxos` is disabled")]
+    #[should_panic(expected = "bitcoin API is disabled")]
     fn get_utxos_access_disabled() {
         init(Config {
             stability_threshold: 0,
@@ -372,7 +369,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "`bitcoin_get_current_fee_percentiles` is disabled")]
+    #[should_panic(expected = "bitcoin API is disabled")]
     fn get_current_fee_percentiles_access_disabled() {
         init(Config {
             stability_threshold: 0,
