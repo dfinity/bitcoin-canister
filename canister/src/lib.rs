@@ -33,7 +33,6 @@ pub use memory::get_memory;
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::convert::TryInto;
-use thousands::Separable;
 use utxo_set::UtxoSet;
 
 thread_local! {
@@ -181,11 +180,10 @@ pub(crate) fn verify_has_enough_cycles(amount: u128) {
     let amount: u64 = amount.try_into().expect("amount must be u64");
 
     if msg_cycles_available() < amount {
-        // Use `separate_with_underscores` to pretty printing with underscore thousand separator.
         panic!(
             "Received {} cycles. {} cycles are required.",
-            msg_cycles_available().separate_with_underscores(),
-            amount.separate_with_underscores()
+            msg_cycles_available(),
+            amount
         );
     }
 }
@@ -330,7 +328,7 @@ mod test {
 
     #[test]
     #[should_panic(
-        expected = "Received 9_223_372_036_854_775_807 cycles. 18_446_744_073_709_551_615 cycles are required."
+        expected = "Received 9223372036854775807 cycles. 18446744073709551615 cycles are required."
     )]
     fn test_verify_has_enough_cycles_panics_with_not_enough_cycles() {
         verify_has_enough_cycles(u64::MAX as u128);
