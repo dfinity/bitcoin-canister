@@ -28,7 +28,8 @@ dfx deploy --no-wallet bitcoin --argument "(record {
     get_current_fee_percentiles_maximum = 0;
     send_transaction_base = 0;
     send_transaction_per_byte = 0;
-  }
+  };
+  api_access = variant { enabled }
 })"
 
 # Wait until the ingestion of stable blocks is complete.

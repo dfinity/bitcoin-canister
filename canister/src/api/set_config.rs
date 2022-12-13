@@ -23,6 +23,10 @@ fn set_config_no_verification(request: SetConfigRequest) {
                     .expect("stability threshold too large"),
             );
         }
+
+        if let Some(api_access) = request.api_access {
+            s.api_access = api_access;
+        }
     });
 }
 
@@ -127,5 +131,22 @@ mod test {
 
             with_state(|s| assert_eq!(s.fees, fees));
         });
+    }
+
+    #[test]
+    fn set_api_access() {
+        init(Config::default());
+
+        for flag in &[Flag::Enabled, Flag::Disabled] {
+            set_config_no_verification(SetConfigRequest {
+                api_access: Some(*flag),
+                ..Default::default()
+            });
+
+            assert_eq!(
+                with_state(|s| s.api_access),
+                *flag
+            );
+        }
     }
 }

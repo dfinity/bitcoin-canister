@@ -11,7 +11,7 @@ use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use clap::Parser;
 use ic_btc_canister::{
     pre_upgrade,
-    types::{Block, BlockHash, BlockHeaderBlob, Config, Network, OutPoint, TxOut},
+    types::{Block, BlockHash, BlockHeaderBlob, Config, Flag, Network, OutPoint, TxOut},
     unstable_blocks::{self, UnstableBlocks},
     with_state, with_state_mut,
 };
@@ -78,6 +78,7 @@ fn main() {
     ic_btc_canister::init(Config {
         network: args.network,
         stability_threshold: args.stability_threshold,
+        api_access: Flag::Disabled,
         ..Config::default()
     });
 

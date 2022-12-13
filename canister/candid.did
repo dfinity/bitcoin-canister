@@ -32,6 +32,7 @@ type config = record {
   blocks_source: principal;
   syncing: flag;
   fees: fees;
+  api_access: flag;
 };
 
 type fees = record {
