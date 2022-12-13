@@ -4,7 +4,7 @@
     "bitcoin": {
       "type": "custom",
       "candid": "./canister/candid.did",
-      "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
+      "wasm": "target/wasm32-unknown-unknown/release/bitcoin-canister.wasm",
       "build": "./scripts/build-canister.sh bitcoin-canister"
     },
     "e2e-scenario-1": {
