@@ -44,6 +44,10 @@ pub struct State {
 
     /// Metrics for the various endpoints.
     pub metrics: Metrics,
+
+    /// Flag to control access to the apis provided by the canister.
+    #[serde(default)]
+    pub api_access: Flag,
 }
 
 impl State {
@@ -65,6 +69,7 @@ impl State {
             stable_block_headers: BlockHeaderStore::init(),
             fees: Fees::default(),
             metrics: Metrics::default(),
+            api_access: Flag::Enabled,
         }
     }
 
