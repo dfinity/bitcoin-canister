@@ -5,25 +5,25 @@
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/canister.wasm",
-      "build": "./canister/build.sh"
+      "build": "./scripts/build-canister.sh bitcoin-canister"
     },
     "e2e-scenario-1": {
       "type": "custom",
       "candid": "./e2e-tests/scenario-1/candid.did",
-      "build": "./e2e-tests/build.sh scenario-1",
+      "build": "./scripts/build-canister.sh scenario-1",
       "wasm": "./target/wasm32-unknown-unknown/release/scenario-1.wasm"
     },
     "e2e-scenario-2": {
       "type": "custom",
       "candid": "./e2e-tests/scenario-2/candid.did",
-      "build": "./e2e-tests/build.sh scenario-2",
+      "build": "./scripts/build-canister.sh scenario-2",
       "package": "scenario-2",
       "wasm": "./target/wasm32-unknown-unknown/release/scenario-2.wasm"
     },
     "e2e-scenario-3": {
       "type": "custom",
       "candid": "./e2e-tests/scenario-3/candid.did",
-      "build": "./e2e-tests/build.sh scenario-3",
+      "build": "./scripts/build-canister.sh scenario-3",
       "package": "scenario-3",
       "wasm": "./target/wasm32-unknown-unknown/release/scenario-3.wasm"
     },

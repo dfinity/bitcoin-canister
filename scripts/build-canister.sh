@@ -6,11 +6,6 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 CANISTER=$1
 
-if ! [[ "$CANISTER" == "ic-btc-canister" || "$CANISTER" == "uploader" ]]; then
-  echo "You need to provide a canister to build. Possible values {ic-btc-canister|uploader}."
-  false
-fi
-
 pushd "$SCRIPT_DIR"
 
 # NOTE: On macOS a specific version of llvm-ar and clang need to be set here.
@@ -18,7 +13,7 @@ pushd "$SCRIPT_DIR"
 if [ "$(uname)" == "Darwin" ]; then
   LLVM_PATH=$(brew --prefix llvm)
   # On macs we need to use the brew versions
-  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build -p "$CANISTER" --target "$TARGET" --release
+  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build --bin "$CANISTER" --target "$TARGET" --release
 else
   cargo build -p "$CANISTER" --target "$TARGET" --release
 fi
@@ -26,17 +21,20 @@ fi
 # Navigate to root directory.
 cd ..
 
-cargo install ic-wasm --version 0.2.0 --root ./target
-STATUS=$?
-
-if [ "$STATUS" -eq "0" ]; then
+# If we're building the bitcoin canister, then shrink it.
+# We don't shrink other canisters as installing ic-wasm in CI can take quite some time.
+if [[ "$CANISTER" == "bitcoin-canister" ]]; then
+  cargo install ic-wasm --version 0.2.0 --root ./target
+  STATUS=$?
+  if [[ "$STATUS" -eq "0" ]]; then
       ./target/bin/ic-wasm \
-      ./target/$TARGET/release/canister.wasm \
-      -o ./target/$TARGET/release/canister.wasm shrink
-  true
-else
-  echo Could not install ic-wasm
-  false
+      "./target/$TARGET/release/$CANISTER.wasm" \
+      -o "./target/$TARGET/release/$CANISTER.wasm" shrink
+    true
+  else
+    echo Could not install ic-wasm
+    false
+  fi
 fi
 
 popd
