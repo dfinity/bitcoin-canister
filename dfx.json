@@ -30,7 +30,7 @@
     "uploader": {
       "type": "custom",
       "candid": "./bootstrap/uploader/candid.did",
-      "build": "cargo build --release --target wasm32-unknown-unknown --bin uploader-canister",
+      "build": "./scripts/build-canister.sh uploader-canister",
       "wasm": "./target/wasm32-unknown-unknown/release/uploader-canister.wasm"
     }
   },
