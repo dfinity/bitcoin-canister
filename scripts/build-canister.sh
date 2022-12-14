@@ -12,11 +12,11 @@ pushd "$SCRIPT_DIR"
 # Otherwise the wasm compilation of rust-secp256k1 will fail.
 if [ "$(uname)" == "Darwin" ]; then
   LLVM_PATH=$(brew --prefix llvm)
-  # On macs we need to use the brew versions
-  AR="${LLVM_PATH}/bin/llvm-ar" CC="${LLVM_PATH}/bin/clang" cargo build --bin "$CANISTER" --target "$TARGET" --release
-else
-  cargo build -p "$CANISTER" --target "$TARGET" --release
+  export AR="${LLVM_PATH}/bin/llvm-ar"
+  export CC="${LLVM_PATH}/bin/clang"
 fi
+
+cargo build --bin "$CANISTER" --target "$TARGET" --release
 
 # Navigate to root directory.
 cd ..
