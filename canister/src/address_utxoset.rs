@@ -120,13 +120,15 @@ mod test {
         types::{Network, OutPoint},
         unstable_blocks,
     };
+    use bitcoin::Network as BitcoinNetwork;
 
     #[test]
     fn add_tx_to_empty_utxo() {
         // Create some BTC addresses.
-        let address_1 = random_p2pkh_address(Network::Mainnet);
+        let network = Network::Mainnet;
+        let address_1 = random_p2pkh_address(network);
 
-        let utxo_set = UtxoSet::new(Network::Mainnet);
+        let utxo_set = UtxoSet::new(network);
 
         // Create a genesis block where 1000 satoshis are given to address 1.
         let coinbase_tx = TransactionBuilder::coinbase()
@@ -137,7 +139,8 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        let unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone());
+        let unstable_blocks =
+            UnstableBlocks::new(&utxo_set, 2, block_0.clone(), BitcoinNetwork::from(network));
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
 
@@ -159,11 +162,12 @@ mod test {
 
     #[test]
     fn add_tx_then_transfer() {
+        let network = Network::Mainnet;
         // Create some BTC addresses.
-        let address_1 = random_p2pkh_address(Network::Mainnet);
-        let address_2 = random_p2pkh_address(Network::Mainnet);
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
 
-        let utxo_set = UtxoSet::new(Network::Mainnet);
+        let utxo_set = UtxoSet::new(network);
 
         // Create a genesis block where 1000 satoshis are given to address 1.
         let coinbase_tx = TransactionBuilder::coinbase()
@@ -182,7 +186,8 @@ mod test {
             .with_transaction(tx.clone())
             .build();
 
-        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone());
+        let mut unstable_blocks =
+            UnstableBlocks::new(&utxo_set, 2, block_0.clone(), BitcoinNetwork::from(network));
         unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
@@ -239,7 +244,8 @@ mod test {
 
         // Process the blocks.
         let utxo_set = UtxoSet::new(Network::Mainnet);
-        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone());
+        let mut unstable_blocks =
+            UnstableBlocks::new(&utxo_set, 2, block_0.clone(), BitcoinNetwork::from(network));
         unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
         let mut address_1_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);

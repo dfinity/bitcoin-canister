@@ -1,4 +1,4 @@
-use bitcoin::Network;
+use bitcoin::Network as BitcoinNetwork;
 
 use crate::types::{Block, BlockHash};
 use std::fmt;
@@ -187,18 +187,18 @@ fn get_chain_with_tip_reverse<'a, 'b>(
     None
 }
 
-fn get_max_weight(tree: &BlockTree) -> u128 {
+fn get_max_weight(tree: &BlockTree, network: &BitcoinNetwork) -> u128 {
     let mut res: u128 = 0;
     for child in tree.children.iter() {
-        res = std::cmp::max(res, get_max_weight(child));
+        res = std::cmp::max(res, get_max_weight(child, network));
     }
-    res += tree.root.header().difficulty(Network::Bitcoin) as u128;
+    res += tree.root.header().difficulty(network.clone()) as u128;
     res
 }
 
 /// Returns normalized weight of the tree.
-pub fn get_normalized_weight(tree: &BlockTree) -> u128 {
-    get_max_weight(tree) / tree.root.header().difficulty(Network::Bitcoin) as u128
+pub fn get_normalized_weight(tree: &BlockTree, network: &BitcoinNetwork) -> u128 {
+    get_max_weight(tree, network) / tree.root.header().difficulty(network.clone()) as u128
 }
 
 /// Returns the depth of the tree.
