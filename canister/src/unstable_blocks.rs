@@ -171,33 +171,50 @@ pub fn get_chain_with_tip<'a, 'b>(
 // Returns the index of the `anchor`'s stable child if it exists.
 fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     // Compute the depth of all the children.
-    let mut depths: Vec<_> = blocks
+    let depths: Vec<_> = blocks
         .tree
         .children
         .iter()
         .enumerate()
-        .map(|(idx, child)| (blocktree::depth(child), idx))
+        .map(|(idx, child)| (blocktree::get_normalized_weight(child), idx))
         .collect();
 
-    // Sort by depth.
-    depths.sort_by_key(|(depth, _child_idx)| *depth);
+    let mut deepest: Option<(&u128, &usize)> = None;
+    let mut second_deepest: Option<(&u128, &usize)> = None;
 
-    match depths.last() {
+    // Find two deepest blocks
+    for (depth, idx) in depths.iter() {
+        if let Some((deepest_depth, _)) = deepest {
+            if *deepest_depth < *depth {
+                second_deepest = deepest;
+                deepest = Some((depth, idx));
+            } else if let Some((second_deepest_depth, _)) = second_deepest {
+                if *second_deepest_depth < *depth {
+                    second_deepest = Some((depth, idx));
+                }
+            } else {
+                second_deepest = Some((depth, idx));
+            }
+        } else {
+            deepest = Some((depth, idx));
+        }
+    }
+
+    match deepest {
         Some((deepest_depth, child_idx)) => {
             // The deepest child tree must have a depth >= stability_threshold.
-            if *deepest_depth < blocks.stability_threshold {
+            if *deepest_depth < blocks.stability_threshold as u128 {
                 // Need a depth of at least >= stability_threshold
                 return None;
             }
 
             // If there is more than one child, the difference in depth
             // between the deepest child and all the others must be >= stability_threshold.
-            if depths.len() >= 2 {
-                if let Some((second_deepest_depth, _)) = depths.get(depths.len() - 2) {
-                    if deepest_depth - second_deepest_depth < blocks.stability_threshold {
-                        // Difference must be >= stability_threshold
-                        return None;
-                    }
+
+            if let Some((second_deepest_depth, _)) = second_deepest {
+                if *deepest_depth - *second_deepest_depth < blocks.stability_threshold as u128 {
+                    // Difference must be >= stability_threshold
+                    return None;
                 }
             }
 

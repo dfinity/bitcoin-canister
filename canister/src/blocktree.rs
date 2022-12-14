@@ -1,3 +1,5 @@
+use bitcoin::Network;
+
 use crate::types::{Block, BlockHash};
 use std::fmt;
 mod serde;
@@ -185,7 +187,22 @@ fn get_chain_with_tip_reverse<'a, 'b>(
     None
 }
 
+fn get_max_weight(tree: &BlockTree) -> u128 {
+    let mut res: u128 = 0;
+    for child in tree.children.iter() {
+        res = std::cmp::max(res, get_max_weight(child));
+    }
+    res += tree.root.header().difficulty(Network::Bitcoin) as u128;
+    res
+}
+
+/// Returns normalized weight of the tree.
+pub fn get_normalized_weight(tree: &BlockTree) -> u128 {
+    get_max_weight(tree) / tree.root.header().difficulty(Network::Bitcoin) as u128
+}
+
 /// Returns the depth of the tree.
+#[cfg(test)]
 pub fn depth(block_tree: &BlockTree) -> u32 {
     if block_tree.children.is_empty() {
         return 0;
