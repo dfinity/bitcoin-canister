@@ -188,7 +188,7 @@ fn get_chain_with_tip_reverse<'a, 'b>(
 }
 
 fn get_root_difficulty(tree: &BlockTree, network: BitcoinNetwork) -> u128 {
-    std::cmp::max(1, tree.root.header().difficulty(network.clone())) as u128
+    std::cmp::max(1, tree.root.header().difficulty(network)) as u128
 }
 
 fn get_max_weight(tree: &BlockTree, network: BitcoinNetwork) -> u128 {
