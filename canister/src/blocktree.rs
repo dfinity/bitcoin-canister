@@ -187,7 +187,7 @@ fn get_chain_with_tip_reverse<'a, 'b>(
     None
 }
 
-fn get_max_weight(tree: &BlockTree, network: &BitcoinNetwork) -> u128 {
+fn get_max_weight(tree: &BlockTree, network: BitcoinNetwork) -> u128 {
     let mut res: u128 = 0;
     for child in tree.children.iter() {
         res = std::cmp::max(res, get_max_weight(child, network));
@@ -197,8 +197,9 @@ fn get_max_weight(tree: &BlockTree, network: &BitcoinNetwork) -> u128 {
 }
 
 /// Returns normalized weight of the tree.
-pub fn get_normalized_weight(tree: &BlockTree, network: &BitcoinNetwork) -> u128 {
-    get_max_weight(tree, network) / tree.root.header().difficulty(network.clone()) as u128
+pub fn get_normalized_weight(tree: &BlockTree, network: BitcoinNetwork) -> u128 {
+    let root_difficulty = std::cmp::max(1, tree.root.header().difficulty(network)) as u128;
+    get_max_weight(tree, network) / root_difficulty
 }
 
 /// Returns the depth of the tree.
