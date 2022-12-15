@@ -2,8 +2,7 @@ use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader, Network};
 
 use crate::{
     constants::{
-        checkpoints, last_checkpoint, latest_checkpoint_height, max_target, no_pow_retargeting,
-        pow_limit_bits, BLOCKS_IN_ONE_YEAR, DIFFICULTY_ADJUSTMENT_INTERVAL, TEN_MINUTES,
+        max_target, no_pow_retargeting, pow_limit_bits, DIFFICULTY_ADJUSTMENT_INTERVAL, TEN_MINUTES,
     },
     BlockHeight,
 };
@@ -35,8 +34,6 @@ pub enum ValidateHeaderError {
 pub trait HeaderStore {
     /// Retrieves the header from the store.
     fn get_header(&self, hash: &BlockHash) -> Option<(BlockHeader, BlockHeight)>;
-    /// Retrieves the current height of the block chain.
-    fn get_height(&self) -> BlockHeight;
     /// Retrieves the initial hash the store starts from.
     fn get_initial_hash(&self) -> BlockHash;
 }
@@ -48,7 +45,6 @@ pub fn validate_header(
     store: &impl HeaderStore,
     header: &BlockHeader,
 ) -> Result<(), ValidateHeaderError> {
-    let chain_height = store.get_height();
     let (prev_header, prev_height) = match store.get_header(&header.prev_blockhash) {
         Some(result) => result,
         None => {
@@ -56,16 +52,8 @@ pub fn validate_header(
         }
     };
 
-    if !is_header_within_one_year_of_tip(prev_height, chain_height) {
-        return Err(ValidateHeaderError::HeightTooLow);
-    }
-
     if !is_timestamp_valid(store, header) {
         return Err(ValidateHeaderError::HeaderIsOld);
-    }
-
-    if !is_checkpoint_valid(network, prev_height, header, chain_height) {
-        return Err(ValidateHeaderError::DoesNotMatchCheckpoint);
     }
 
     let header_target = header.target();
@@ -88,48 +76,6 @@ pub fn validate_header(
     }
 
     Ok(())
-}
-
-/// Checks if block height is higher than the last checkpoint height.
-/// By beeing beyond the last checkpoint we are sure that we store the correct chain up to the height
-/// of the last checkpoint.  
-pub fn is_beyond_last_checkpoint(network: &Network, height: BlockHeight) -> bool {
-    match last_checkpoint(network) {
-        Some(last) => last <= height,
-        None => true,
-    }
-}
-
-/// This validates the header against the network's checkpoints.
-/// 1. If the next header is at a checkpoint height, the checkpoint is compared to the next header's block hash.
-/// 2. If the header is not the same height, the function then compares the height to the latest checkpoint.
-///    If the next header's height is less than the last checkpoint's height, the header is invalid.
-fn is_checkpoint_valid(
-    network: &Network,
-    prev_height: BlockHeight,
-    header: &BlockHeader,
-    chain_height: BlockHeight,
-) -> bool {
-    let checkpoints = checkpoints(network);
-    let next_height = prev_height.saturating_add(1);
-    if let Some(next_hash) = checkpoints.get(&next_height) {
-        return *next_hash == header.block_hash();
-    }
-
-    let checkpoint_height = latest_checkpoint_height(network, chain_height);
-    next_height > checkpoint_height
-}
-
-/// This validates that the header has a height that is within 1 year of the tip height.
-fn is_header_within_one_year_of_tip(prev_height: BlockHeight, chain_height: BlockHeight) -> bool {
-    // perhaps checked_add would be preferable here, if the next height would cause an overflow,
-    // we should know about it instead of being swallowed.
-    let header_height = prev_height
-        .checked_add(1)
-        .expect("next height causes an overflow");
-
-    let height_one_year_ago = chain_height.saturating_sub(BLOCKS_IN_ONE_YEAR);
-    header_height >= height_one_year_ago
 }
 
 /// Validates if a header's timestamp is valid.
@@ -319,8 +265,7 @@ mod test {
 
     use super::*;
     use crate::constants::test::{
-        MAINNET_HEADER_11109, MAINNET_HEADER_11110, MAINNET_HEADER_11111, MAINNET_HEADER_586656,
-        MAINNET_HEADER_705600, MAINNET_HEADER_705601, MAINNET_HEADER_705602,
+        MAINNET_HEADER_586656, MAINNET_HEADER_705600, MAINNET_HEADER_705601, MAINNET_HEADER_705602,
         TESTNET_HEADER_2132555, TESTNET_HEADER_2132556,
     };
 
@@ -375,10 +320,6 @@ mod test {
             self.headers
                 .get(hash)
                 .map(|stored| (stored.header, stored.height))
-        }
-
-        fn get_height(&self) -> BlockHeight {
-            self.height
         }
 
         fn get_initial_hash(&self) -> BlockHash {
@@ -499,82 +440,6 @@ mod test {
     }
 
     #[test]
-    fn test_is_header_valid_checkpoint_valid_at_height() {
-        let network = Network::Bitcoin;
-        let header_11110 = deserialize_header(MAINNET_HEADER_11110);
-        let mut header_11111 = deserialize_header(MAINNET_HEADER_11111);
-        let store = SimpleHeaderStore::new(header_11110, 11110);
-        let (_, prev_height) = store.get_header(&header_11111.prev_blockhash).unwrap();
-
-        assert!(is_checkpoint_valid(
-            &network,
-            prev_height,
-            &header_11111,
-            store.get_height()
-        ));
-
-        // Change time to slightly modify the block hash to make it invalid for the
-        // checkpoint.
-        header_11111.time -= 1;
-
-        let result = validate_header(&network, &store, &header_11111);
-        assert!(matches!(
-            result,
-            Err(ValidateHeaderError::DoesNotMatchCheckpoint)
-        ));
-    }
-
-    #[test]
-    fn test_is_header_valid_checkpoint_valid_detect_fork_around_11111() {
-        let network = Network::Bitcoin;
-        let header_11109 = deserialize_header(MAINNET_HEADER_11109);
-        let header_11110 = deserialize_header(MAINNET_HEADER_11110);
-        let header_11111 = deserialize_header(MAINNET_HEADER_11111);
-        // Make a header for height 11110 that would cause a fork.
-        let mut bad_header_11110 = header_11110;
-        bad_header_11110.time -= 1;
-
-        let mut store = SimpleHeaderStore::new(header_11109, 11109);
-        store.add(header_11110);
-
-        let (_, prev_height) = store.get_header(&header_11111.prev_blockhash).unwrap();
-
-        assert!(is_checkpoint_valid(
-            &network,
-            prev_height,
-            &header_11111,
-            store.get_height()
-        ));
-
-        store.add(header_11111);
-
-        // This should return false as bad_header_11110 is a fork.
-        let (_, prev_height) = store.get_header(&header_11111.prev_blockhash).unwrap();
-        assert!(!is_checkpoint_valid(
-            &network,
-            prev_height,
-            &bad_header_11110,
-            store.get_height()
-        ));
-    }
-
-    #[test]
-    fn test_is_header_valid_checkpoint_valid_detect_fork_around_705600() {
-        let network = Network::Bitcoin;
-        let header_705600 = deserialize_header(MAINNET_HEADER_705600);
-        let header_705601 = deserialize_header(MAINNET_HEADER_705601);
-        let store = SimpleHeaderStore::new(header_705600, 705_600);
-        let (_, prev_height) = store.get_header(&header_705601.prev_blockhash).unwrap();
-
-        assert!(is_checkpoint_valid(
-            &network,
-            prev_height,
-            &header_705601,
-            store.get_height()
-        ));
-    }
-
-    #[test]
     fn test_is_header_valid_invalid_header_target() {
         let header_705600 = deserialize_header(MAINNET_HEADER_705600);
         let mut header = deserialize_header(MAINNET_HEADER_705601);
@@ -610,43 +475,5 @@ mod test {
             result,
             Err(ValidateHeaderError::TargetDifficultyAboveMax)
         ));
-    }
-
-    #[test]
-    fn test_is_header_within_one_year_of_tip_next_height_is_above_the_minimum() {
-        assert!(
-            is_header_within_one_year_of_tip(700_000, 650_000),
-            "next height is above the one year minimum"
-        );
-        assert!(
-            is_header_within_one_year_of_tip(700_000, 750_000),
-            "next height is within the one year range"
-        );
-        assert!(
-            !is_header_within_one_year_of_tip(700_000, 800_000),
-            "next height is below the one year minimum"
-        );
-    }
-
-    #[test]
-    #[should_panic(expected = "next height causes an overflow")]
-    fn test_is_header_within_one_year_of_tip_should_panic_as_next_height_is_too_high() {
-        is_header_within_one_year_of_tip(BlockHeight::MAX, 0);
-    }
-
-    #[test]
-    fn test_is_header_within_one_year_of_tip_chain_height_is_less_than_one_year() {
-        assert!(
-            is_header_within_one_year_of_tip(1, 0),
-            "chain height is less than one year"
-        );
-        assert!(
-            is_header_within_one_year_of_tip(1, BLOCKS_IN_ONE_YEAR + 2),
-            "chain height difference is exactly one year"
-        );
-        assert!(
-            !is_header_within_one_year_of_tip(1, BLOCKS_IN_ONE_YEAR + 3),
-            "chain height difference is one year + 1 block"
-        );
     }
 }
