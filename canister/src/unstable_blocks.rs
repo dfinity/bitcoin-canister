@@ -178,9 +178,9 @@ pub fn get_chain_with_tip<'a, 'b>(
 
 // Returns the index of the `anchor`'s stable child if it exists.
 fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
-    // Compute the depth of all the children.
+    // Compute the normalized weight of all the children.
     let network = blocks.network;
-    let mut depths: Vec<_> = blocks
+    let mut weights: Vec<_> = blocks
         .tree
         .children
         .iter()
@@ -188,22 +188,22 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .map(|(idx, child)| (blocktree::get_normalized_weight(child, network), idx))
         .collect();
 
-    // Sort by depth.
-    depths.sort_by_key(|(depth, _child_idx)| *depth);
+    // Sort by weight.
+    weights.sort_by_key(|(weight, _child_idx)| *weight);
 
-    match depths.last() {
-        Some((deepest_depth, child_idx)) => {
-            // The deepest child tree must have a depth >= stability_threshold.
-            if *deepest_depth < blocks.stability_threshold as u128 {
+    match weights.last() {
+        Some((biggest_weight, child_idx)) => {
+            // The child tree with the biggest weight must have a weight >= stability_threshold.
+            if *biggest_weight < blocks.stability_threshold as u128 {
                 // Need a depth of at least >= stability_threshold
                 return None;
             }
 
-            // If there is more than one child, the difference in depth
-            // between the deepest child and all the others must be >= stability_threshold.
-            if depths.len() >= 2 {
-                if let Some((second_deepest_depth, _)) = depths.get(depths.len() - 2) {
-                    if deepest_depth - second_deepest_depth < blocks.stability_threshold as u128 {
+            // If there is more than one child, the difference in weight
+            // between the child with the biggest weight and all the others must be >= stability_threshold.
+            if weights.len() >= 2 {
+                if let Some((second_biggest_weight, _)) = weights.get(weights.len() - 2) {
+                    if biggest_weight - second_biggest_weight < blocks.stability_threshold as u128 {
                         // Difference must be >= stability_threshold
                         return None;
                     }
