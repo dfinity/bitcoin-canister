@@ -456,11 +456,12 @@ mod test {
         initial_balance: Satoshi,
         number_of_blocks: u32,
     ) -> Vec<Block> {
-        let mut blocks = generate_blocks(initial_balance, number_of_blocks);
-        for i in 0..blocks.len() {
-            blocks[i] = blocks[i].clone().with_mock_dificulty(1);
+        let blocks = generate_blocks(initial_balance, number_of_blocks);
+        let mut res = vec![];
+        for block in blocks.into_iter() {
+            res.push(block.with_mock_dificulty(1));
         }
-        blocks
+        res
     }
 
     #[test]
