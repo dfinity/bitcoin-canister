@@ -267,7 +267,47 @@ mod test {
     }
 
     #[test]
-    fn forks_same_difficulty() {
+    fn single_chain_various_dfficulties() {
+        let block_0 = BlockBuilder::genesis().build().with_mock_dificulty(5);
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .build()
+            .with_mock_dificulty(20);
+        let block_2 = BlockBuilder::with_prev_header(block_1.header())
+            .build()
+            .with_mock_dificulty(10);
+        let block_3 = BlockBuilder::with_prev_header(block_2.header())
+            .build()
+            .with_mock_dificulty(110);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest =
+            UnstableBlocks::new(&utxos, 6, block_0.clone(), BitcoinNetwork::from(network));
+
+        push(&mut forest, &utxos, block_1.clone()).unwrap();
+        push(&mut forest, &utxos, block_2).unwrap();
+        assert_eq!(peek(&forest), None);
+        assert_eq!(pop(&mut forest), None);
+
+        push(&mut forest, &utxos, block_3).unwrap();
+        // Block 0 (the anchor) now has one stable child (Block 1).
+        // Block 0 should be returned when calling `pop`.
+        assert_eq!(peek(&forest), Some(&block_0));
+        assert_eq!(pop(&mut forest), Some(block_0));
+
+        // Block 1 (the anchor) now has one stable child (Block 2).
+        // Block 1 should be returned when calling `pop`.
+        assert_eq!(peek(&forest), Some(&block_1));
+        assert_eq!(pop(&mut forest), Some(block_1));
+
+        // Block 2 is now the anchor. It doesn't have stable
+        // children yet, so calling `pop` should return `None`.
+        assert_eq!(peek(&forest), None);
+        assert_eq!(pop(&mut forest), None);
+    }
+
+    #[test]
+    fn forks_same_difficulties() {
         let genesis_block = BlockBuilder::genesis().build().with_mock_dificulty(1);
         let block = BlockBuilder::with_prev_header(genesis_block.header())
             .build()
@@ -314,7 +354,7 @@ mod test {
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
 
-        //fork2 is still 2-stable, hencc we can get a stable child.
+        //fork2 is still 2-stable, hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&forked_block));
         assert_eq!(pop(&mut forest), Some(forked_block));
         assert_eq!(forest.tree.root, block_1);
