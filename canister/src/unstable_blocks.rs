@@ -201,7 +201,6 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 
             // If there is more than one child, the difference in depth
             // between the deepest child and all the others must be >= stability_threshold.
-
             if depths.len() >= 2 {
                 if let Some((second_deepest_depth, _)) = depths.get(depths.len() - 2) {
                     if deepest_depth - second_deepest_depth < blocks.stability_threshold as u128 {
@@ -236,15 +235,19 @@ mod test {
     }
 
     #[test]
-    fn single_chain() {
-        let block_0 = BlockBuilder::genesis().build();
-        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
-        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+    fn single_chain_same_dfficulties() {
+        let block_0 = BlockBuilder::genesis().build().with_mock_dificulty(1);
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .build()
+            .with_mock_dificulty(1);
+        let block_2 = BlockBuilder::with_prev_header(block_1.header())
+            .build()
+            .with_mock_dificulty(1);
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
         let mut forest =
-            UnstableBlocks::new(&utxos, 1, block_0.clone(), BitcoinNetwork::from(network));
+            UnstableBlocks::new(&utxos, 2, block_0.clone(), BitcoinNetwork::from(network));
 
         push(&mut forest, &utxos, block_1).unwrap();
         assert_eq!(peek(&forest), None);
@@ -257,23 +260,27 @@ mod test {
         assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
 
-        // Block 1 is now the anchor. It doesn't have children yet,
-        // so calling `pop` should return `None`.
+        // Block 1 is now the anchor. It doesn't have stable
+        // children yet, so calling `pop` should return `None`.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
 
     #[test]
-    fn forks() {
-        let genesis_block = BlockBuilder::genesis().build();
-        let block = BlockBuilder::with_prev_header(genesis_block.header()).build();
-        let forked_block = BlockBuilder::with_prev_header(genesis_block.header()).build();
+    fn forks_same_difficulty() {
+        let genesis_block = BlockBuilder::genesis().build().with_mock_dificulty(1);
+        let block = BlockBuilder::with_prev_header(genesis_block.header())
+            .build()
+            .with_mock_dificulty(1);
+        let forked_block = BlockBuilder::with_prev_header(genesis_block.header())
+            .build()
+            .with_mock_dificulty(1);
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
         let mut forest = UnstableBlocks::new(
             &utxos,
-            1,
+            2,
             genesis_block.clone(),
             BitcoinNetwork::from(network),
         );
@@ -281,25 +288,38 @@ mod test {
         push(&mut forest, &utxos, block).unwrap();
         push(&mut forest, &utxos, forked_block.clone()).unwrap();
 
-        // Neither forks are 1-stable, so we shouldn't get anything.
+        // Neither forks are 2-stable, so we shouldn't get anything.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork2 by another block.
-        push(
-            &mut forest,
-            &utxos,
-            BlockBuilder::with_prev_header(forked_block.header()).build(),
-        )
-        .unwrap();
+        let block_1 = BlockBuilder::with_prev_header(forked_block.header())
+            .build()
+            .with_mock_dificulty(1);
+        push(&mut forest, &utxos, block_1.clone()).unwrap();
 
-        // Now fork2 should be 1-stable. The anchor should be returned on `pop`
-        // and fork2 becomes the new anchor.
+        //Now fork2 has a normalized weight of 2, while fork1 has normalized
+        //weight of 1, hence we cannot get a stable child.
+        assert_eq!(peek(&forest), None);
+        assert_eq!(pop(&mut forest), None);
+
+        // Extend fork2 by another block.
+        let block_2 = BlockBuilder::with_prev_header(block_1.header())
+            .build()
+            .with_mock_dificulty(1);
+        push(&mut forest, &utxos, block_2).unwrap();
+        //Now fork2 has a normalized weight of 3, while fork1 has normalized
+        //weight of 1, hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
 
-        // No stable children for fork 2
+        //fork2 is still 2-stable, hencc we can get a stable child.
+        assert_eq!(peek(&forest), Some(&forked_block));
+        assert_eq!(pop(&mut forest), Some(forked_block));
+        assert_eq!(forest.tree.root, block_1);
+
+        // No stable children for fork2.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
