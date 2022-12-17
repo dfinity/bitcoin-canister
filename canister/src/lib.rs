@@ -15,6 +15,7 @@ mod tests;
 pub mod types;
 pub mod unstable_blocks;
 mod utxo_set;
+mod validation;
 
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},

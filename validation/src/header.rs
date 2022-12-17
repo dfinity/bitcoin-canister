@@ -13,8 +13,6 @@ pub enum ValidateHeaderError {
     /// Used when the timestamp in the header is lower than
     /// the median of timestamps of past 11 headers.
     HeaderIsOld,
-    /// Used when the header doesn't match with a checkpoint.
-    DoesNotMatchCheckpoint,
     /// Used when the PoW in the header is invalid as per the target mentioned
     /// in the header.
     InvalidPoWForHeaderTarget,
@@ -24,8 +22,6 @@ pub enum ValidateHeaderError {
     /// Used when the target in the header is greater than the max possible
     /// value.
     TargetDifficultyAboveMax,
-    /// The next height is less than the tip height - 52_596 (one year worth of blocks).
-    HeightTooLow,
     /// Used when the predecessor of the input header is not found in the
     /// HeaderStore.
     PrevHeaderNotFound,
