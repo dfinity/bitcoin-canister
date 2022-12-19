@@ -32,10 +32,21 @@ pub enum ValidateHeaderError {
 }
 
 pub trait HeaderStore {
-    /// Retrieves the header from the store.
-    fn get_header(&self, hash: &BlockHash) -> Option<(BlockHeader, BlockHeight)>;
-    /// Retrieves the initial hash the store starts from.
-    fn get_initial_hash(&self) -> BlockHash;
+    /// Returns the header with the given block hash.
+    fn get_with_block_hash(&self, hash: &BlockHash) -> Option<BlockHeader>;
+
+    /// Returns the header at the given height.
+    fn get_with_height(&self, height: u32) -> Option<BlockHeader>;
+
+    /// Returns the height of the tip that the new header will extend.
+    fn height(&self) -> u32;
+
+    /// Returns the initial hash the store starts from.
+    fn get_initial_hash(&self) -> BlockHash {
+        self.get_with_height(0)
+            .expect("genesis block header not found")
+            .block_hash()
+    }
 }
 
 /// Validates a header. If a failure occurs, a
@@ -45,7 +56,8 @@ pub fn validate_header(
     store: &impl HeaderStore,
     header: &BlockHeader,
 ) -> Result<(), ValidateHeaderError> {
-    let (prev_header, prev_height) = match store.get_header(&header.prev_blockhash) {
+    let prev_height = store.height();
+    let prev_header = match store.get_with_block_hash(&header.prev_blockhash) {
         Some(result) => result,
         None => {
             return Err(ValidateHeaderError::PrevHeaderNotFound);
@@ -86,7 +98,7 @@ fn is_timestamp_valid(store: &impl HeaderStore, header: &BlockHeader) -> bool {
     let mut current_header = *header;
     let initial_hash = store.get_initial_hash();
     for _ in 0..11 {
-        if let Some((prev_header, _)) = store.get_header(&current_header.prev_blockhash) {
+        if let Some(prev_header) = store.get_with_block_hash(&current_header.prev_blockhash) {
             times.push(prev_header.time);
             if current_header.prev_blockhash == initial_hash {
                 break;
@@ -182,11 +194,10 @@ fn find_next_difficulty_in_chain(
                 }
 
                 // Traverse to the previous header
-                let header_info = store
-                    .get_header(&current_header.prev_blockhash)
+                current_header = store
+                    .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
-                current_header = header_info.0;
-                current_height = header_info.1;
+                current_height -= 1;
                 current_hash = current_header.prev_blockhash;
             }
             pow_limit_bits
@@ -208,19 +219,21 @@ fn compute_next_difficulty(
     // returned Regtest network doesn't adjust PoW difficult levels. For
     // regtest, simply return the previous difficulty target
 
-    if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 || no_pow_retargeting(network) {
+    let height = prev_height + 1;
+    if height % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 || no_pow_retargeting(network) {
         return prev_header.bits;
     }
 
-    // Computing the last header with height multiple of 2016
-    let mut current_header = *prev_header;
-    for _i in 0..(DIFFICULTY_ADJUSTMENT_INTERVAL - 1) {
-        if let Some((header, _)) = store.get_header(&current_header.prev_blockhash) {
-            current_header = header;
-        }
-    }
-    // last_adjustment_header is the last header with height multiple of 2016
-    let last_adjustment_header = current_header;
+    // Computing the `last_adjustment_header`.
+    // `last_adjustment_header` is the last header with height multiple of 2016
+    let last_adjustment_height = if height < DIFFICULTY_ADJUSTMENT_INTERVAL {
+        0
+    } else {
+        height - DIFFICULTY_ADJUSTMENT_INTERVAL
+    };
+    let last_adjustment_header = store
+        .get_with_height(last_adjustment_height)
+        .expect("Last adjustment header must exist");
     let last_adjustment_time = last_adjustment_header.time;
 
     // Computing the time interval between the last adjustment header time and
@@ -278,12 +291,14 @@ mod test {
     struct SimpleHeaderStore {
         headers: HashMap<BlockHash, StoredHeader>,
         height: BlockHeight,
+        tip_hash: BlockHash,
         initial_hash: BlockHash,
     }
 
     impl SimpleHeaderStore {
         fn new(initial_header: BlockHeader, height: BlockHeight) -> Self {
             let initial_hash = initial_header.block_hash();
+            let tip_hash = initial_header.block_hash();
             let mut headers = HashMap::new();
             headers.insert(
                 initial_hash,
@@ -296,6 +311,7 @@ mod test {
             Self {
                 headers,
                 height,
+                tip_hash,
                 initial_hash,
             }
         }
@@ -312,14 +328,26 @@ mod test {
 
             self.height = stored_header.height;
             self.headers.insert(header.block_hash(), stored_header);
+            self.tip_hash = header.block_hash();
         }
     }
 
     impl HeaderStore for SimpleHeaderStore {
-        fn get_header(&self, hash: &BlockHash) -> Option<(BlockHeader, BlockHeight)> {
-            self.headers
-                .get(hash)
-                .map(|stored| (stored.header, stored.height))
+        fn get_with_block_hash(&self, hash: &BlockHash) -> Option<BlockHeader> {
+            self.headers.get(hash).map(|stored| stored.header)
+        }
+
+        fn get_with_height(&self, height: u32) -> Option<BlockHeader> {
+            let blocks_to_traverse = self.height - height;
+            let mut header = self.headers.get(&self.tip_hash).unwrap().header;
+            for _ in 0..blocks_to_traverse {
+                header = self.headers.get(&header.prev_blockhash).unwrap().header;
+            }
+            Some(header)
+        }
+
+        fn height(&self) -> u32 {
+            self.height
         }
 
         fn get_initial_hash(&self) -> BlockHash {
