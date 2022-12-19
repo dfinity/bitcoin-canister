@@ -38,7 +38,6 @@ pub trait HeaderStore {
     /// Returns the header at the given height.
     fn get_with_height(&self, height: u32) -> Option<BlockHeader>;
 
-
     /// Returns the height of the tip that the new header will extend.
     fn height(&self) -> u32;
 
