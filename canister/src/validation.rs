@@ -47,11 +47,87 @@ impl<'a> HeaderStore for ValidationContext<'a> {
 
     fn get_with_height(&self, height: u32) -> Option<BlockHeader> {
         if height < self.state.utxos.next_height() {
+            // The height requested is for a stable block.
+            // Retrieve the block header from the stable block headers.
             self.state.stable_block_headers.get_with_height(height)
         } else if height <= self.height() {
+            // The height requested is for an unstable block.
+            // Retrieve the block header from the chain.
             Some(*self.chain[(height - self.state.utxos.next_height()) as usize].header())
         } else {
+            // The height requested is higher than the tip.
             None
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{
+        state::{ingest_stable_blocks_into_utxoset, insert_block},
+        test_utils::build_chain,
+        types::Network,
+    };
+    use proptest::prelude::*;
+    use std::str::FromStr;
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn validation_context(
+            stability_threshold in 1..150u32,
+            num_blocks in 1..250u32,
+        ) {
+            let num_transactions_in_block = 1;
+            let network = Network::Regtest;
+            let blocks = build_chain(network, num_blocks, num_transactions_in_block);
+
+            let mut state = State::new(stability_threshold, network, blocks[0].clone());
+
+            // Insert all the blocks except the last block.
+            for block in blocks[1..blocks.len() - 1].iter() {
+                insert_block(&mut state, block.clone()).unwrap();
+                ingest_stable_blocks_into_utxoset(&mut state);
+            }
+
+            // Try validating the last block header (which wasn't inserted above).
+            let validation_context =
+                ValidationContext::new(&state, blocks[blocks.len() - 1].header()).unwrap();
+
+            // Assert the height is correct.
+            assert_eq!(validation_context.height(), blocks.len() as u32 - 2);
+
+            // Assert that getting a header with a given height is correct.
+            for height in 0..num_blocks - 1 {
+                assert_eq!(
+                    validation_context.get_with_height(height),
+                    Some(*blocks[height as usize].header())
+                );
+            }
+            assert_eq!(validation_context.get_with_height(num_blocks - 1), None);
+
+            // Assert that getting a header with a given block hash is correct.
+            for height in 0..num_blocks - 1 {
+                assert_eq!(
+                    validation_context.get_with_block_hash(
+                        &bitcoin::BlockHash::from_str(
+                            &blocks[height as usize].block_hash().to_string()
+                        )
+                        .unwrap()
+                    ),
+                    Some(*blocks[height as usize].header())
+                );
+            }
+            assert_eq!(
+                validation_context.get_with_block_hash(
+                    &bitcoin::BlockHash::from_str(
+                        &blocks[(num_blocks - 1) as usize].block_hash().to_string()
+                    )
+                    .unwrap()
+                ),
+                None
+            );
         }
     }
 }
