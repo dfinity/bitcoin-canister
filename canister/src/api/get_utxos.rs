@@ -913,50 +913,49 @@ mod test {
 
     #[test]
     fn get_utxos_does_not_include_other_addresses() {
-        for network in [Network::Mainnet, Network::Testnet, Network::Regtest].iter() {
-            // Generate addresses.
-            let address_1 = random_p2pkh_address(*network);
+        let network = Network::Regtest;
+        // Generate addresses.
+        let address_1 = random_p2pkh_address(network);
 
-            let address_2 = random_p2pkh_address(*network);
+        let address_2 = random_p2pkh_address(network);
 
-            // Create a genesis block where 1000 satoshis are given to the address_1, followed
-            // by a block where address_1 gives 1000 satoshis to address_2.
-            let coinbase_tx = TransactionBuilder::coinbase()
-                .with_output(&address_1, 1000)
-                .build();
-            let block_0 = BlockBuilder::genesis()
-                .with_transaction(coinbase_tx.clone())
-                .build();
-            let tx = TransactionBuilder::new()
-                .with_input(crate::types::OutPoint::new(coinbase_tx.txid(), 0))
-                .with_output(&address_2, 1000)
-                .build();
-            let block_1 = BlockBuilder::with_prev_header(block_0.header())
-                .with_transaction(tx.clone())
-                .build();
+        // Create a genesis block where 1000 satoshis are given to the address_1, followed
+        // by a block where address_1 gives 1000 satoshis to address_2.
+        let coinbase_tx = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .build();
+        let block_0 = BlockBuilder::genesis()
+            .with_transaction(coinbase_tx.clone())
+            .build();
+        let tx = TransactionBuilder::new()
+            .with_input(crate::types::OutPoint::new(coinbase_tx.txid(), 0))
+            .with_output(&address_2, 1000)
+            .build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .with_transaction(tx)
+            .build();
 
-            let mut state = State::new(2, *network, block_0);
-            state::insert_block(&mut state, block_1.clone()).unwrap();
+        let mut state = State::new(2, network, block_0);
+        state::insert_block(&mut state, block_1.clone()).unwrap();
 
-            // Address 1 should have no UTXOs at zero confirmations.
-            assert_eq!(
-                get_utxos_internal(
-                    &state,
-                    &address_1.to_string(),
-                    0,
-                    None,
-                    MAX_UTXOS_PER_RESPONSE
-                )
-                .unwrap()
-                .0,
-                GetUtxosResponse {
-                    utxos: vec![],
-                    tip_block_hash: block_1.block_hash().to_vec(),
-                    tip_height: 1,
-                    next_page: None,
-                }
-            );
-        }
+        // Address 1 should have no UTXOs at zero confirmations.
+        assert_eq!(
+            get_utxos_internal(
+                &state,
+                &address_1.to_string(),
+                0,
+                None,
+                MAX_UTXOS_PER_RESPONSE
+            )
+            .unwrap()
+            .0,
+            GetUtxosResponse {
+                utxos: vec![],
+                tip_block_hash: block_1.block_hash().to_vec(),
+                tip_height: 1,
+                next_page: None,
+            }
+        );
     }
 
     #[test]
@@ -1046,11 +1045,6 @@ mod test {
     proptest! {
         #[test]
         fn get_utxos_with_pagination_is_consistent_with_no_pagination(
-            network in prop_oneof![
-                Just(Network::Mainnet),
-                Just(Network::Testnet),
-                Just(Network::Regtest),
-            ],
             num_transactions in 1..20u64,
             num_blocks in 1..10u64,
             utxo_limit in prop_oneof![
@@ -1060,6 +1054,8 @@ mod test {
                 Just(100),
             ],
         ) {
+            let network = Network::Regtest;
+
             // Generate an address.
             let address = random_p2pkh_address(network);
 

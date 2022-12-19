@@ -94,7 +94,7 @@ pub fn push(
 ) -> Result<(), BlockDoesNotExtendTree> {
     let (parent_block_tree, depth) =
         blocktree::find_mut(&mut blocks.tree, &block.header().prev_blockhash.into())
-            .ok_or_else(|| BlockDoesNotExtendTree(block.clone()))?;
+            .ok_or_else(|| BlockDoesNotExtendTree(block.block_hash()))?;
 
     let height = utxos.next_height() + depth + 1;
 

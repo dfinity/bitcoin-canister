@@ -112,7 +112,7 @@ pub fn extend(block_tree: &mut BlockTree, block: Block) -> Result<(), BlockDoesN
             block_subtree.children.push(BlockTree::new(block));
             Ok(())
         }
-        None => Err(BlockDoesNotExtendTree(block)),
+        None => Err(BlockDoesNotExtendTree(block.block_hash())),
     }
 }
 
@@ -245,7 +245,7 @@ fn contains(block_tree: &BlockTree, block: &Block) -> bool {
 /// An error thrown when trying to add a block that isn't a successor
 /// of any block in the tree.
 #[derive(Debug)]
-pub struct BlockDoesNotExtendTree(pub Block);
+pub struct BlockDoesNotExtendTree(pub BlockHash);
 
 #[cfg(test)]
 mod test {

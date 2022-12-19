@@ -1213,6 +1213,7 @@ dependencies = [
  "hex",
  "ic-btc-test-utils",
  "ic-btc-types",
+ "ic-btc-validation",
  "ic-cdk 0.6.7",
  "ic-cdk-macros 0.6.7",
  "ic-stable-structures",
