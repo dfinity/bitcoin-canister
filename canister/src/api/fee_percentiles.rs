@@ -392,42 +392,6 @@ mod test {
         });
     }
 
-    /*#[test]
-    fn get_current_fee_percentiles_big_input() {
-        let number_of_blocks = 1_000;
-        let initial_balance = 500_500; // number_of_blocks * (number_of_blocks + 1) / 2
-        let blocks = generate_blocks(initial_balance, number_of_blocks);
-        let stability_threshold = blocks.len() as u128;
-        init_state(blocks, 20);
-
-        with_state_mut(|state| {
-            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
-
-            let number_of_transactions = 5;
-            let fees = get_fees_per_byte(
-                main_chain.clone(),
-                &state.unstable_blocks,
-                number_of_transactions,
-            );
-            let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
-
-            // Initial transactions' fees [0, 1, 2, 3, ...] satoshi, with 119 bytes of transaction size
-            // transfer into [0, 8, 16, 25, ...] millisatoshi per byte fees in chronological order.
-            assert_eq!(fees.len(), number_of_transactions as usize);
-            // Fees are in a reversed order, in millisatoshi per byte units.
-            // Eg. the fee of 999 satoshi for transaction of 119 bytes converts to
-            // 1000 * 999 / 119 = 8394 millisatosi/bite.
-            assert_eq!(fees, vec![8394, 8386, 8378, 8369, 8361]);
-
-            assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
-            assert_eq!(percentiles[0..21], [8361; 21]);
-            assert_eq!(percentiles[21..41], [8369; 20]);
-            assert_eq!(percentiles[41..61], [8378; 20]);
-            assert_eq!(percentiles[61..81], [8386; 20]);
-            assert_eq!(percentiles[81..101], [8394; 20]);
-        });
-    }*/
-
     #[test]
     fn get_current_fee_percentiles_no_transactions() {
         let number_of_blocks = 0;
