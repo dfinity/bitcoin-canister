@@ -23,7 +23,8 @@ go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce6
 ```
 BITCOIN_DIR=/path/to/bitcoin-22.0/
 HEIGHT=<height of the state you want to compute>
-STABILITY_THRESHOLD=30
+STABILITY_THRESHOLD=<desired stability threshold>
+NETWORK=<mainnet or testnet>
 ```
 
 ## 3. Download the Bitcoin state
@@ -31,13 +32,13 @@ STABILITY_THRESHOLD=30
 Run `1_download_state.sh`, which downloads the bitcoin state. This can several hours.
 
 ```
-./1_download_state.sh $BITCOIN_DIR $HEIGHT
+./1_download_state.sh $BITCOIN_DIR $HEIGHT $NETWORK
 ```
 
 Once it's done, run the following:
 
 ```
-./check_chaintip.sh $BITCOIN_DIR
+./check_chaintip.sh $BITCOIN_DIR $NETWORK
 ```
 
 Make sure that the output of the above command specifies that you have a chain that has the status "active", and has a height of at least `$HEIGHT - 10`. For example, if you set the `$HEIGHT` to 10010 in the earlier steps, the height of the chain should be >= 10000. It should look something like this:
@@ -53,16 +54,16 @@ Make sure that the output of the above command specifies that you have a chain t
 ]
 ```
 
-If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh` for a minute or two, which downloads more Bitcoin blocks, and try again.
+If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh $BITCOIN_DIR $NETWORK` for a minute or two, which downloads more Bitcoin blocks, and try again.
 
 ## 4. Compute the Bitcoin Canister's State
 
 ```
-./2_compute_unstable_blocks.sh $BITCOIN_DIR $HEIGHT
-./3_compute_block_headers.sh $BITCOIN_DIR $HEIGHT
-./4_compute_utxo_dump.sh
+./2_compute_unstable_blocks.sh $BITCOIN_DIR $HEIGHT $NETWORK
+./3_compute_block_headers.sh $BITCOIN_DIR $HEIGHT $NETWORK
+./4_compute_utxo_dump.sh $NETWORK
 ./5_shuffle_utxo_dump.sh
-./6_compute_canister_state.sh $HEIGHT $STABILITY_THRESHOLD
+./6_compute_canister_state.sh $HEIGHT $STABILITY_THRESHOLD $NETWORK
 ```
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
