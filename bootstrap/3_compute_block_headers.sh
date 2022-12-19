@@ -6,10 +6,16 @@ set -euo pipefail
 BITCOIN_D=$1/bin/bitcoind
 BITCOIN_CLI=$1/bin/bitcoin-cli
 HEIGHT=$2
+NETWORK=$3
 STABLE_HEIGHT=$((HEIGHT-12))
 
 # Kill all background processes on exit.
 trap "kill 0" EXIT
+
+if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
+    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
+    false
+fi
 
 CONF_FILE=$(mktemp)
 cat <<- "EOF" > "$CONF_FILE"
@@ -23,6 +29,11 @@ rpcuser=ic-btc-integration
 rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
 rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
 EOF
+
+# Configure bitcoin.conf to connect to the testnet network if needed.
+if [[ "$NETWORK" == "testnet" ]]; then
+    echo "chain=test" >> "$CONF_FILE"
+fi
 
 # Delete any previously computed block headers file.
 rm -f block_headers

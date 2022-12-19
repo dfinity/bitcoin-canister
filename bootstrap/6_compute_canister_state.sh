@@ -12,20 +12,26 @@ BLOCK_HEADERS_FILE=block_headers
 HEIGHT=$1
 ANCHOR_HEIGHT=$((HEIGHT-11))
 STABILITY_THRESHOLD=$2
+NETWORK=$3
+
+if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
+    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
+    false
+fi
 
 mkdir $CANISTER_STATE_DIR
 
 echo "Computing balances..."
 cargo run --release --bin build-balances -- \
-   --output $CANISTER_STATE_DIR/balances --network mainnet --utxos-dump-path $UTXO_FILE
+   --output $CANISTER_STATE_DIR/balances --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Computing address UTXOs..."
 cargo run --release --bin build-address-utxos -- \
-   --output $CANISTER_STATE_DIR/address_utxos --network mainnet --utxos-dump-path $UTXO_FILE
+   --output $CANISTER_STATE_DIR/address_utxos --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Computing UTXOs..."
 cargo run --release --bin build-utxos -- \
-   --output $CANISTER_STATE_DIR --network mainnet --utxos-dump-path $UTXO_FILE
+   --output $CANISTER_STATE_DIR --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Combining the state into $CANISTER_STATE_FILE"
 cargo run --release --bin combine-state -- \
@@ -36,7 +42,7 @@ pushd main-state-builder
 cargo run --release -- \
    --canister-state "../$CANISTER_STATE_FILE" \
    --canister-state-dir "../$CANISTER_STATE_DIR" \
-   --network mainnet \
+   --network "$NETWORK" \
    --stability-threshold "$STABILITY_THRESHOLD" \
    --anchor-height "$ANCHOR_HEIGHT" \
    --unstable-blocks "../$UNSTABLE_BLOCKS_FILE" \
