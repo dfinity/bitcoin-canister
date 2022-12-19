@@ -40,6 +40,8 @@ impl<'a> HeaderStore for ValidationContext<'a> {
     }
 
     fn height(&self) -> u32 {
+        // The `next_height` method returns the height of the UTXOs + 1, so we
+        // subtract 1 to account for that.
         self.state.utxos.next_height() + self.chain.len() as u32 - 1
     }
 
@@ -51,12 +53,5 @@ impl<'a> HeaderStore for ValidationContext<'a> {
         } else {
             None
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn x() {
     }
 }
