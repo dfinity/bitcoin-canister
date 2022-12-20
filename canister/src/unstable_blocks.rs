@@ -229,7 +229,7 @@ mod test {
     }
 
     #[test]
-    fn single_chain_same_dfficulties() {
+    fn single_chain_same_difficulties() {
         let block_0 = BlockBuilder::genesis().build().with_mock_dificulty(1);
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .build()
@@ -259,7 +259,7 @@ mod test {
     }
 
     #[test]
-    fn single_chain_various_dfficulties() {
+    fn single_chain_various_difficulties() {
         let block_0 = BlockBuilder::genesis().build().with_mock_dificulty(20);
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .build()
@@ -312,7 +312,7 @@ mod test {
         push(&mut forest, &utxos, block).unwrap();
         push(&mut forest, &utxos, forked_block.clone()).unwrap();
 
-        // Neither forks are 2-stable, so we shouldn't get anything.
+        // None of the forks are 2-stable, so we shouldn't get anything.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
@@ -342,6 +342,68 @@ mod test {
         assert_eq!(peek(&forest), Some(&forked_block));
         assert_eq!(pop(&mut forest), Some(forked_block));
         assert_eq!(forest.tree.root, block_1);
+
+        // No stable children for fork2.
+        assert_eq!(peek(&forest), None);
+        assert_eq!(pop(&mut forest), None);
+    }
+
+    #[test]
+    fn forks_various_difficulties() {
+        let genesis_block = BlockBuilder::genesis().build().with_mock_dificulty(5);
+        let fork1_block = BlockBuilder::with_prev_header(genesis_block.header())
+            .build()
+            .with_mock_dificulty(10);
+        let fork2_block = BlockBuilder::with_prev_header(genesis_block.header())
+            .build()
+            .with_mock_dificulty(5);
+
+        let utxos = UtxoSet::new(Network::Mainnet);
+        let mut forest = UnstableBlocks::new(&utxos, 3, genesis_block.clone());
+
+        push(&mut forest, &utxos, fork1_block.clone()).unwrap();
+        push(&mut forest, &utxos, fork2_block.clone()).unwrap();
+
+        // None of the forks are stable, so we shouldn't get anything.
+        assert_eq!(peek(&forest), None);
+        assert_eq!(pop(&mut forest), None);
+
+        // Extend fork1 by another block.
+        let block_1 = BlockBuilder::with_prev_header(fork1_block.header())
+            .build()
+            .with_mock_dificulty(1);
+        push(&mut forest, &utxos, block_1.clone()).unwrap();
+
+        // Extend fork2 by another block.
+        let block_2 = BlockBuilder::with_prev_header(fork2_block.header())
+            .build()
+            .with_mock_dificulty(25);
+        push(&mut forest, &utxos, block_2.clone()).unwrap();
+
+        // Now, fork2 is stable, hence we can get a stable child,
+        // and fork2_block, should be a new anchor.
+        assert_eq!(peek(&forest), Some(&genesis_block));
+        assert_eq!(pop(&mut forest), Some(genesis_block));
+        assert_eq!(forest.tree.root, fork2_block);
+
+        // fork2 should still be stable, hence we can get a stable child.
+        assert_eq!(peek(&forest), Some(&fork2_block));
+        assert_eq!(pop(&mut forest), Some(fork2_block));
+
+        // No stable children for fork2.
+        assert_eq!(peek(&forest), None);
+        assert_eq!(pop(&mut forest), None);
+
+        // Extend fork2 by another block.
+        let block_3 = BlockBuilder::with_prev_header(block_2.header())
+            .build()
+            .with_mock_dificulty(75);
+        push(&mut forest, &utxos, block_3.clone()).unwrap();
+
+        // Now, we can get a stable child.
+        assert_eq!(peek(&forest), Some(&block_2));
+        assert_eq!(pop(&mut forest), Some(block_2));
+        assert_eq!(forest.tree.root, block_3);
 
         // No stable children for fork2.
         assert_eq!(peek(&forest), None);
