@@ -14,6 +14,7 @@ candid = "0.8.1"
 ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
 hex = "0.4.3"
 ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f167994de24c8ccf7ee37a4d8ac67" }
+ic-btc-validation = { path = "../validation" }
 ic-cdk = "0.6.1"
 ic-cdk-macros = "0.6.1"
 ic-stable-structures = "0.3.0"
@@ -22,7 +23,7 @@ serde = "1.0.132"
 serde_bytes = "0.11"
 
 [[bin]]
-name = "canister"
+name = "bitcoin-canister"
 path = "src/main.rs"
 
 [dev-dependencies]

@@ -1,16 +1,17 @@
 use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
-    blocktree::BlockDoesNotExtendTree,
     metrics::Metrics,
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
+    validation::ValidationContext,
     UtxoSet,
 };
 use ic_btc_types::{Height, MillisatoshiPerByte};
+use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 
@@ -90,8 +91,17 @@ impl State {
 
 /// Inserts a block into the state.
 /// Returns an error if the block doesn't extend any known block in the state.
-pub fn insert_block(state: &mut State, block: Block) -> Result<(), BlockDoesNotExtendTree> {
+pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
+    validate_header(
+        &state.network().into(),
+        &ValidationContext::new(state, block.header())
+            .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
+        block.header(),
+    )?;
+
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
+        .expect("Inserting a block with a validated header must succeed.");
+    Ok(())
 }
 
 /// Pops any blocks in `UnstableBlocks` that are considered stable and ingests them to the UTXO set.
@@ -246,14 +256,10 @@ mod test {
         #[test]
         fn serialize_deserialize_state(
             stability_threshold in 1..150u32,
-            network in prop_oneof![
-                Just(Network::Mainnet),
-                Just(Network::Testnet),
-                Just(Network::Regtest),
-            ],
             num_blocks in 1..250u32,
             num_transactions_in_block in 1..100u32,
         ) {
+            let network = Network::Regtest;
             let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());

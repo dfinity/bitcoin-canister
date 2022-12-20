@@ -1,7 +1,7 @@
 # Use this with
 #
 # docker build -t canisters .
-# docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm > ic-btc-canister.wasm
+# docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
 # docker run --rm --entrypoint cat canisters /uploader-canister.wasm > uploader-canister.wasm
 
 # The docker image. To update, run `docker pull ubuntu` locally, and update the
@@ -35,12 +35,12 @@ ENV PATH=/cargo/bin:$PATH
 COPY . .
 
 # Build bitcoin canister
-RUN scripts/build-canister.sh ic-btc-canister
-RUN cp target/wasm32-unknown-unknown/release/canister.wasm ic-btc-canister.wasm
+RUN scripts/build-canister.sh bitcoin-canister
+RUN cp target/wasm32-unknown-unknown/release/bitcoin-canister.wasm ic-btc-canister.wasm
 RUN gzip -n -f ic-btc-canister.wasm
 RUN sha256sum ic-btc-canister.wasm.gz
 
 # Build uploader canister
-RUN scripts/build-canister.sh uploader
+RUN scripts/build-canister.sh uploader-canister
 RUN cp target/wasm32-unknown-unknown/release/uploader-canister.wasm uploader-canister.wasm
 RUN sha256sum uploader-canister.wasm
