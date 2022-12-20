@@ -210,9 +210,11 @@ mod test {
 
     #[test]
     fn spending_multiple_inputs() {
+        let network = Network::Mainnet;
+
         // Create some BTC addresses.
-        let address_1 = random_p2pkh_address(Network::Mainnet);
-        let address_2 = random_p2pkh_address(Network::Mainnet);
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
 
         // Create a genesis block where 2000 satoshis are given to address 1
         // in two different outputs.

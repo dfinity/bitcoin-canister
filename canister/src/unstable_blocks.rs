@@ -189,7 +189,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     match depths.last() {
         Some((deepest_depth, child_idx)) => {
             // The deepest child tree must have a depth >= normalized_stability_threshold.
-            if *deepest_depth < normalized_stability_threshold as u128 {
+            if *deepest_depth < normalized_stability_threshold {
                 // Need a depth of at least >= normalized_stability_threshold.
                 return None;
             }
@@ -198,8 +198,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
             // between the deepest child and all the others must be >= normalized_stability_threshold.
             if depths.len() >= 2 {
                 if let Some((second_deepest_depth, _)) = depths.get(depths.len() - 2) {
-                    if deepest_depth - second_deepest_depth < normalized_stability_threshold as u128
-                    {
+                    if deepest_depth - second_deepest_depth < normalized_stability_threshold {
                         // Difference must be >= normalized_stability_threshold.
                         return None;
                     }
