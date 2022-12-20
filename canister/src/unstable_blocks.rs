@@ -257,24 +257,22 @@ mod test {
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
-    /*
+
     #[test]
     fn single_chain_various_dfficulties() {
-        let block_0 = BlockBuilder::genesis().build().with_mock_dificulty(5);
+        let block_0 = BlockBuilder::genesis().build().with_mock_dificulty(20);
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
             .build()
-            .with_mock_dificulty(20);
+            .with_mock_dificulty(15);
         let block_2 = BlockBuilder::with_prev_header(block_1.header())
             .build()
-            .with_mock_dificulty(10);
+            .with_mock_dificulty(20);
         let block_3 = BlockBuilder::with_prev_header(block_2.header())
             .build()
             .with_mock_dificulty(110);
 
-        let network = Network::Mainnet;
-        let utxos = UtxoSet::new(network);
-        let mut forest =
-            UnstableBlocks::new(&utxos, 6, block_0.clone(), BitcoinNetwork::from(network));
+        let utxos = UtxoSet::new(Network::Mainnet);
+        let mut forest = UnstableBlocks::new(&utxos, 7, block_0.clone());
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
@@ -296,7 +294,7 @@ mod test {
         // children yet, so calling `pop` should return `None`.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
-    }*/
+    }
 
     #[test]
     fn forks_same_difficulties() {
@@ -324,8 +322,8 @@ mod test {
             .with_mock_dificulty(1);
         push(&mut forest, &utxos, block_1.clone()).unwrap();
 
-        //Now fork2 has a normalized weight of 2, while fork1 has normalized
-        //weight of 1, hence we cannot get a stable child.
+        //Now, fork2 has a depth of 2, while fork1 has a depth of 1,
+        //hence we cannot get a stable child.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
@@ -334,8 +332,8 @@ mod test {
             .build()
             .with_mock_dificulty(1);
         push(&mut forest, &utxos, block_2).unwrap();
-        //Now fork2 has a normalized weight of 3, while fork1 has normalized
-        //weight of 1, hence we can get a stable child.
+        //Now, fork2 has a depth of 3, while fork1 has a depth of 1,
+        //hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
