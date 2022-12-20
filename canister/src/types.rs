@@ -123,13 +123,13 @@ impl Block {
         &self.transactions
     }
 
-    pub fn difficulty(&self, network: BitcoinNetwork) -> u64 {
+    pub fn difficulty(&self) -> u64 {
         #[cfg(test)]
         if let Some(difficulty) = self.mock_difficulty {
             return difficulty;
         }
 
-        self.header().difficulty(network)
+        self.header().difficulty(BitcoinNetwork::Bitcoin)
     }
     #[cfg(test)]
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {

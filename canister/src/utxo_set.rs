@@ -549,7 +549,6 @@ mod test {
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
-    use bitcoin::Network as BitcoinNetwork;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
 
@@ -640,12 +639,7 @@ mod test {
             .build();
         ingest_tx(&mut utxo, &coinbase_tx);
 
-        let unstable_blocks = UnstableBlocks::new(
-            &utxo,
-            2,
-            crate::genesis_block(network),
-            BitcoinNetwork::from(network),
-        );
+        let unstable_blocks = UnstableBlocks::new(&utxo, 2, crate::genesis_block(network));
 
         let expected = vec![Utxo {
             outpoint: OutPoint {

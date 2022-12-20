@@ -1,5 +1,3 @@
-use bitcoin::Network as BitcoinNetwork;
-
 use crate::types::{Block, BlockHash};
 use std::fmt;
 mod serde;
@@ -188,12 +186,12 @@ fn get_chain_with_tip_reverse<'a, 'b>(
 }
 
 // Returns depth based on the difficulty.
-pub fn difficulty_based_depth(tree: &BlockTree, network: BitcoinNetwork) -> u128 {
+pub fn difficulty_based_depth(tree: &BlockTree) -> u128 {
     let mut res: u128 = 0;
     for child in tree.children.iter() {
-        res = std::cmp::max(res, difficulty_based_depth(child, network));
+        res = std::cmp::max(res, difficulty_based_depth(child));
     }
-    res += tree.root.difficulty(network) as u128;
+    res += tree.root.difficulty() as u128;
     res
 }
 

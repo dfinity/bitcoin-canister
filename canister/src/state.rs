@@ -10,7 +10,6 @@ use crate::{
     unstable_blocks::{self, UnstableBlocks},
     UtxoSet,
 };
-use bitcoin::Network as BitcoinNetwork;
 use ic_btc_types::{Height, MillisatoshiPerByte};
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
@@ -59,12 +58,7 @@ impl State {
     /// to be final and are never removed.
     pub fn new(stability_threshold: u32, network: Network, genesis_block: Block) -> Self {
         let utxos = UtxoSet::new(network);
-        let unstable_blocks = UnstableBlocks::new(
-            &utxos,
-            stability_threshold,
-            genesis_block,
-            BitcoinNetwork::from(network),
-        );
+        let unstable_blocks = UnstableBlocks::new(&utxos, stability_threshold, genesis_block);
 
         Self {
             utxos,
