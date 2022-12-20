@@ -23,7 +23,7 @@ cd ..
 
 # If we're building the bitcoin canister, then shrink it.
 # We don't shrink other canisters as installing ic-wasm in CI can take quite some time.
-if [[ "$CANISTER" == "bitcoin-canister" ]]; then
+if [[ "$CANISTER" == "bitcoin-canister" || "$CANISTER" == "uploader-canister" ]]; then
   cargo install ic-wasm --version 0.2.0 --root ./target
   STATUS=$?
   if [[ "$STATUS" -eq "0" ]]; then
