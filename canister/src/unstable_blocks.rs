@@ -372,7 +372,7 @@ mod test {
         let block_1 = BlockBuilder::with_prev_header(fork1_block.header())
             .build()
             .with_mock_dificulty(1);
-        push(&mut forest, &utxos, block_1.clone()).unwrap();
+        push(&mut forest, &utxos, block_1).unwrap();
 
         // Extend fork2 by another block.
         let block_2 = BlockBuilder::with_prev_header(fork2_block.header())
