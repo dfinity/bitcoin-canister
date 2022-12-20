@@ -144,7 +144,11 @@ pub fn post_upgrade() {
     memory.read(4, &mut state_bytes);
 
     // Deserialize and set the state.
-    let state = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+    let mut state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+
+    // Set the stability threshold to 40.
+    state.unstable_blocks.set_stability_threshold(40);
+
     set_state(state);
 }
 
