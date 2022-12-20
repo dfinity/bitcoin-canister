@@ -94,7 +94,7 @@ pub struct Block {
     block: BitcoinBlock,
     transactions: Vec<Transaction>,
     #[cfg(test)]
-    mock_dificulty: Option<u64>,
+    mock_difficulty: Option<u64>,
 }
 
 impl Block {
@@ -107,7 +107,7 @@ impl Block {
                 .collect(),
             block,
             #[cfg(test)]
-            mock_dificulty: None,
+            mock_difficulty: None,
         }
     }
 
@@ -123,20 +123,14 @@ impl Block {
         &self.transactions
     }
 
-    #[cfg(not(test))]
-    pub fn get_difficulty(&self, network: BitcoinNetwork) -> u64 {
+    pub fn difficulty(&self, network: BitcoinNetwork) -> u64 {
+        #[cfg(test)]
+        if let Some(difficulty) = self.mock_difficulty {
+            return difficulty;
+        }
+
         self.header().difficulty(network)
     }
-
-    #[cfg(test)]
-    pub fn get_difficulty(&self, network: BitcoinNetwork) -> u64 {
-        if let Some(difficulty) = self.mock_dificulty {
-            difficulty
-        } else {
-            self.header().difficulty(network)
-        }
-    }
-
     #[cfg(test)]
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
@@ -145,7 +139,7 @@ impl Block {
 
     #[cfg(test)]
     pub fn with_mock_dificulty(mut self, mock_difficulty: u64) -> Self {
-        self.mock_dificulty = Some(mock_difficulty);
+        self.mock_difficulty = Some(mock_difficulty);
         self
     }
 }
