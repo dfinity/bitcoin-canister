@@ -314,7 +314,7 @@ mod test {
         push(&mut forest, &utxos, block).unwrap();
         push(&mut forest, &utxos, forked_block.clone()).unwrap();
 
-        // None of the forks are 2-stable, so we shouldn't get anything.
+        // None of the forks are stable, so we shouldn't get anything.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
@@ -324,7 +324,7 @@ mod test {
             .with_mock_difficulty(1);
         push(&mut forest, &utxos, block_1.clone()).unwrap();
 
-        //Now, fork2 has a depth of 2, while fork1 has a depth of 1,
+        //Now, fork2 has a difficulty_based_depth of 2, while fork1 has a difficulty_based_depth of 1,
         //hence we cannot get a stable child.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
@@ -334,13 +334,13 @@ mod test {
             .build()
             .with_mock_difficulty(1);
         push(&mut forest, &utxos, block_2).unwrap();
-        //Now, fork2 has a depth of 3, while fork1 has a depth of 1,
+        //Now, fork2 has a difficulty_based_depth of 3, while fork1 has a difficulty_based_depth of 1,
         //hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
 
-        //fork2 is still 2-stable, hence we can get a stable child.
+        //fork2 is still stable, hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&forked_block));
         assert_eq!(pop(&mut forest), Some(forked_block));
         assert_eq!(forest.tree.root, block_1);
@@ -352,7 +352,7 @@ mod test {
 
     #[test]
     fn forks_various_difficulties() {
-        let genesis_block = BlockBuilder::genesis().build().with_mock_difficulty(5);
+        let genesis_block = BlockBuilder::genesis().build().with_mock_difficulty(4);
         let fork1_block = BlockBuilder::with_prev_header(genesis_block.header())
             .build()
             .with_mock_difficulty(10);
@@ -366,7 +366,9 @@ mod test {
         push(&mut forest, &utxos, fork1_block.clone()).unwrap();
         push(&mut forest, &utxos, fork2_block.clone()).unwrap();
 
-        // None of the forks are stable, so we shouldn't get anything.
+        // None of the forks are stable, because fork1 has difficulty_based_depth of 10,
+        // while fork2 has difficulty_based_depth 5, while normalized_stability_threshold
+        // is 3 * 4 = 12. Hence, we shouldn't get anything.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
@@ -382,17 +384,24 @@ mod test {
             .with_mock_difficulty(25);
         push(&mut forest, &utxos, block_2.clone()).unwrap();
 
-        // Now, fork2 is stable, hence we can get a stable child,
-        // and fork2_block, should be a new anchor.
+        // Now, fork2 is stable becase its difficulty_based_depth is
+        // 5 + 25 = 30 > normalized_stability_threshold, and fork1,
+        // the only sibling of fork2, has difficulty_based_depth
+        // 10 + 1 = 11, satisfying sencond condition
+        // 30 - 11 > normalized_stability_threshold. So we can get a
+        // stable child, and fork2_block should be a new anchor.
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, fork2_block);
 
-        // fork2 should still be stable, hence we can get a stable child.
+        // fork2_block should have a stable child block_2, because
+        // its difficulty_based_depth is 25,
+        // normalized_stability_threshold is 3 * 5 = 15,
+        // and it does not have any siblings.
         assert_eq!(peek(&forest), Some(&fork2_block));
         assert_eq!(pop(&mut forest), Some(fork2_block));
 
-        // No stable children for fork2.
+        // No stable child for block_2, because it does not have any children.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
@@ -402,12 +411,15 @@ mod test {
             .with_mock_difficulty(75);
         push(&mut forest, &utxos, block_3.clone()).unwrap();
 
-        // Now, we can get a stable child.
+        // Now block_2 has a stable child block_3, because its
+        // difficulty_based_depth is 75, and
+        // normalized_stability_threshold is 3 * 25 = 75,
+        // hence difficulty_based_depth >= normalized_stability_threshold.
         assert_eq!(peek(&forest), Some(&block_2));
         assert_eq!(pop(&mut forest), Some(block_2));
         assert_eq!(forest.tree.root, block_3);
 
-        // No stable children for fork2.
+        // No stable child for block_3, because it does not have any children.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
     }
