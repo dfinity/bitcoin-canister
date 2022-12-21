@@ -999,7 +999,7 @@ fn target_difficulty() {
         16307
     );
 
-    // Block 768362.
+    // Mainnet block 768362.
     // Data pulled from https://www.blockchain.com/explorer/blocks/btc/768362
     assert_eq!(
         Block::target_difficulty(
@@ -1009,7 +1009,7 @@ fn target_difficulty() {
         35364065900457
     );
 
-    // Block 700000.
+    // Mainnet block 700000.
     // Data pulled from https://www.blockchain.com/explorer/blocks/btc/700000
     assert_eq!(
         Block::target_difficulty(
@@ -1017,6 +1017,26 @@ fn target_difficulty() {
             bitcoin::BlockHeader::u256_from_compact_target(386877668)
         ),
         18415156832118
+    );
+
+    // Testnet block 2412153.
+    // Data pulled from https://www.blockchain.com/explorer/blocks/btc-testnet/2412153
+    assert_eq!(
+        Block::target_difficulty(
+            Network::Testnet,
+            bitcoin::BlockHeader::u256_from_compact_target(422681968)
+        ),
+        86564599
+    );
+
+    // Testnet block 1500000.
+    // Data pulled from https://www.blockchain.com/explorer/blocks/btc-testnet/1500000
+    assert_eq!(
+        Block::target_difficulty(
+            Network::Testnet,
+            bitcoin::BlockHeader::u256_from_compact_target(457142912)
+        ),
+        1032
     );
 
     // Regtest blocks by the BlockBuilder should have a difficulty of 1.
