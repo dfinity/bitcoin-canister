@@ -26,7 +26,7 @@ impl UnstableBlocks {
         utxos: &UtxoSet,
         stability_threshold: u32,
         anchor: Block,
-        network: Option<Network>,
+        network: Option<Network>, // Optional just for the upgrade, will be refactored after.
     ) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
@@ -69,6 +69,12 @@ impl UnstableBlocks {
 
     fn get_network(&self) -> Option<Network> {
         self.network
+    }
+
+    //temporary method will be removed after an upgrade
+    pub fn with_network(mut self, network: Network) -> UnstableBlocks {
+        self.network = Some(network);
+        self
     }
 }
 
