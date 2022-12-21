@@ -280,17 +280,19 @@ mod test {
         assert_eq!(pop(&mut forest), None);
 
         push(&mut forest, &utxos, block_3).unwrap();
-        // Block 0 (the anchor) now has one stable child (Block 1).
-        // Block 0 should be returned when calling `pop`.
+        // block_0 (the anchor) now has stable child block_1. Because block_1's
+        // difficulty_based_depth is 15 + 20 + 110 = 145 is greater than
+        // normalized_stability_threshold is 20 * 7 = 140 and it does not have
+        // any siblings. Hence, block_0 should be returned when calling `pop`.
         assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
 
-        // Block 1 (the anchor) now has one stable child (Block 2).
-        // Block 1 should be returned when calling `pop`.
+        // block_1 (the anchor) now has one stable child (block_2).
+        // block_1 should be returned when calling `pop`.
         assert_eq!(peek(&forest), Some(&block_1));
         assert_eq!(pop(&mut forest), Some(block_1));
 
-        // Block 2 is now the anchor. It doesn't have stable
+        // block_2 is now the anchor. It doesn't have stable
         // children yet, so calling `pop` should return `None`.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);

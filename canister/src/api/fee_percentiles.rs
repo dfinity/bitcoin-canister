@@ -415,24 +415,14 @@ mod test {
         assert_eq!(percentiles.len(), 0);
     }
 
-    #[cfg(test)]
-    fn generate_blocks_with_difficulty_one(
-        initial_balance: Satoshi,
-        number_of_blocks: u32,
-    ) -> Vec<Block> {
-        let blocks = generate_blocks(initial_balance, number_of_blocks);
-        let mut res = vec![];
-        for block in blocks.into_iter() {
-            res.push(block.with_mock_difficulty(1));
-        }
-        res
-    }
-
     #[test]
     fn get_current_fee_percentiles_from_utxos() {
         let number_of_blocks = 5;
         let number_of_transactions = 10_000;
-        let blocks = generate_blocks_with_difficulty_one(10_000, number_of_blocks);
+        let blocks = generate_blocks(10_000, number_of_blocks)
+            .into_iter()
+            .map(|b| b.with_mock_difficulty(1))
+            .collect();
         let stability_threshold = 2;
         init_state(blocks, stability_threshold);
 
@@ -463,7 +453,10 @@ mod test {
     #[test]
     fn get_current_fee_percentiles_caches_results() {
         let number_of_blocks = 5;
-        let blocks = generate_blocks_with_difficulty_one(10_000, number_of_blocks);
+        let blocks = generate_blocks(10_000, number_of_blocks)
+            .into_iter()
+            .map(|b| b.with_mock_difficulty(1))
+            .collect();
         let stability_threshold = 2;
         init_state(blocks, stability_threshold);
 

@@ -251,7 +251,6 @@ mod test {
     fn tree_single_block() {
         let block_tree = BlockTree::new(BlockBuilder::genesis().build());
 
-        // assert_eq!(depth(&block_tree), 0);
         assert_eq!(
             blockchains(&block_tree),
             vec![BlockChain {
