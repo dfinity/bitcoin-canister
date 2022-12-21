@@ -1,7 +1,7 @@
 use crate::state::OUTPOINT_SIZE;
 use bitcoin::{
-    Address as BitcoinAddress, Block as BitcoinBlock, Network as BitcoinNetwork,
-    OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
+    util::uint::Uint256, Address as BitcoinAddress, Block as BitcoinBlock,
+    Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
 use ic_btc_types::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
@@ -123,6 +123,16 @@ impl Block {
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
         self.block.consensus_encode(buffer)
+    }
+
+    // Computes the difficulty given a block's target.
+    // The definition here corresponds to what is referred as "bdiff" in
+    // https://en.bitcoin.it/wiki/Difficulty
+    //
+    // NOTE: This is dead code temporarily and will be used in an upcoming PR.
+    #[allow(dead_code)]
+    fn compute_difficulty(network: Network, block_target: Uint256) -> u64 {
+        (ic_btc_validation::max_target(&network.into()) / block_target).low_u64()
     }
 }
 
@@ -975,5 +985,49 @@ fn address_handles_script_edge_case() {
     assert_eq!(
         Address::from_script(&script, Network::Testnet),
         Err(InvalidAddress)
+    );
+}
+
+#[test]
+fn compute_difficulty() {
+    // Example found in https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
+    assert_eq!(
+        Block::compute_difficulty(
+            Network::Mainnet,
+            bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
+        ),
+        16307
+    );
+
+    // Block 768362.
+    // Data pulled from https://www.blockchain.com/explorer/blocks/btc/768362
+    assert_eq!(
+        Block::compute_difficulty(
+            Network::Mainnet,
+            bitcoin::BlockHeader::u256_from_compact_target(386397584)
+        ),
+        35364065900457
+    );
+
+    // Block 700000.
+    // Data pulled from https://www.blockchain.com/explorer/blocks/btc/700000
+    assert_eq!(
+        Block::compute_difficulty(
+            Network::Mainnet,
+            bitcoin::BlockHeader::u256_from_compact_target(386877668)
+        ),
+        18415156832118
+    );
+
+    // Regtest blocks by the BlockBuilder should have a difficulty of 1.
+    assert_eq!(
+        Block::compute_difficulty(
+            Network::Regtest,
+            crate::test_utils::BlockBuilder::genesis()
+                .build()
+                .header()
+                .target()
+        ),
+        1
     );
 }
