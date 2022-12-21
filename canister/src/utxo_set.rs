@@ -638,7 +638,8 @@ mod test {
             .build();
         ingest_tx(&mut utxo, &coinbase_tx);
 
-        let unstable_blocks = UnstableBlocks::new(&utxo, 2, crate::genesis_block(network));
+        let unstable_blocks =
+            UnstableBlocks::new(&utxo, 2, crate::genesis_block(network), Some(network));
 
         let expected = vec![Utxo {
             outpoint: OutPoint {
