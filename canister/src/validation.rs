@@ -89,7 +89,7 @@ mod test {
             let mut blocks = vec![];
 
             for block in blocks_start.into_iter(){
-                blocks.push(block.with_mock_dificulty(1));
+                blocks.push(block.with_mock_difficulty(1));
             }
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());

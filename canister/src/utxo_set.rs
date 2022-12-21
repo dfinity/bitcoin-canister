@@ -627,7 +627,6 @@ mod test {
         spending(Network::Regtest);
     }
 
-    #[cfg(test)]
     fn spending(network: Network) {
         let address_1 = random_p2pkh_address(network);
         let address_2 = random_p2pkh_address(network);

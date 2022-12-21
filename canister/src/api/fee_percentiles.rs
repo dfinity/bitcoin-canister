@@ -423,7 +423,7 @@ mod test {
         let blocks = generate_blocks(initial_balance, number_of_blocks);
         let mut res = vec![];
         for block in blocks.into_iter() {
-            res.push(block.with_mock_dificulty(1));
+            res.push(block.with_mock_difficulty(1));
         }
         res
     }

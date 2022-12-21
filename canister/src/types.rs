@@ -129,6 +129,8 @@ impl Block {
             return difficulty;
         }
 
+        // We are hardcoding network argument because bitcoin::BlockHeader::difficulty(network)
+        // only accepts it as an argument but never uses its value.
         self.header().difficulty(BitcoinNetwork::Bitcoin)
     }
     #[cfg(test)]
@@ -138,7 +140,7 @@ impl Block {
     }
 
     #[cfg(test)]
-    pub fn with_mock_dificulty(mut self, mock_difficulty: u64) -> Self {
+    pub fn with_mock_difficulty(mut self, mock_difficulty: u64) -> Self {
         self.mock_difficulty = Some(mock_difficulty);
         self
     }
