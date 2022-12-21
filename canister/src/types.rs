@@ -131,8 +131,8 @@ impl Block {
     //
     // NOTE: This is dead code temporarily and will be used in an upcoming PR.
     #[allow(dead_code)]
-    fn compute_difficulty(network: Network, block_target: Uint256) -> u64 {
-        (ic_btc_validation::max_target(&network.into()) / block_target).low_u64()
+    fn target_difficulty(network: Network, target: Uint256) -> u64 {
+        (ic_btc_validation::max_target(&network.into()) / target).low_u64()
     }
 }
 
@@ -989,10 +989,10 @@ fn address_handles_script_edge_case() {
 }
 
 #[test]
-fn compute_difficulty() {
+fn target_difficulty() {
     // Example found in https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
     assert_eq!(
-        Block::compute_difficulty(
+        Block::target_difficulty(
             Network::Mainnet,
             bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
         ),
@@ -1002,7 +1002,7 @@ fn compute_difficulty() {
     // Block 768362.
     // Data pulled from https://www.blockchain.com/explorer/blocks/btc/768362
     assert_eq!(
-        Block::compute_difficulty(
+        Block::target_difficulty(
             Network::Mainnet,
             bitcoin::BlockHeader::u256_from_compact_target(386397584)
         ),
@@ -1012,7 +1012,7 @@ fn compute_difficulty() {
     // Block 700000.
     // Data pulled from https://www.blockchain.com/explorer/blocks/btc/700000
     assert_eq!(
-        Block::compute_difficulty(
+        Block::target_difficulty(
             Network::Mainnet,
             bitcoin::BlockHeader::u256_from_compact_target(386877668)
         ),
@@ -1021,7 +1021,7 @@ fn compute_difficulty() {
 
     // Regtest blocks by the BlockBuilder should have a difficulty of 1.
     assert_eq!(
-        Block::compute_difficulty(
+        Block::target_difficulty(
             Network::Regtest,
             crate::test_utils::BlockBuilder::genesis()
                 .build()
