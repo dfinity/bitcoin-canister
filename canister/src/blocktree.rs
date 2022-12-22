@@ -367,7 +367,7 @@ mod test {
     }
 
     #[test]
-    fn test_difficulty_based_depth_root_with_childs() {
+    fn test_difficulty_based_depth_root_with_children() {
         let genesis_block = BlockBuilder::genesis().build().with_mock_difficulty(5);
         let genesis_block_header = *genesis_block.header();
         let mut block_tree = BlockTree::new(genesis_block);
