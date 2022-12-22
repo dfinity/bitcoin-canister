@@ -358,4 +358,32 @@ mod test {
             blocks = vec![blocks[0].clone()];
         }
     }
+
+    #[test]
+    fn test_difficulty_based_depth_single_block() {
+        let block_tree = BlockTree::new(BlockBuilder::genesis().build().with_mock_difficulty(5));
+
+        assert_eq!(difficulty_based_depth(&block_tree, Network::Mainnet), 5);
+    }
+
+    #[test]
+    fn test_difficulty_based_depth_root_with_childs() {
+        let genesis_block = BlockBuilder::genesis().build().with_mock_difficulty(5);
+        let genesis_block_header = *genesis_block.header();
+        let mut block_tree = BlockTree::new(genesis_block);
+
+        for i in 1..11 {
+            extend(
+                &mut block_tree,
+                BlockBuilder::with_prev_header(&genesis_block_header)
+                    .build()
+                    .with_mock_difficulty(i),
+            )
+            .unwrap();
+        }
+
+        // The maximum sum of block difficulties from the root to a leaf is the sum
+        // of the root and child with the greatest difficulty which is 5 + 10 = 15.
+        assert_eq!(difficulty_based_depth(&block_tree, Network::Mainnet), 15);
+    }
 }
