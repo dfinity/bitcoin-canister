@@ -26,7 +26,7 @@ impl UnstableBlocks {
         utxos: &UtxoSet,
         stability_threshold: u32,
         anchor: Block,
-        network: Option<Network>, // Optional just for the upgrade, will be refactored after. EXC-1310
+        network: Option<Network>, // TODO(EXC-1310): Optional just for the upgrade, will be refactored after.
     ) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
