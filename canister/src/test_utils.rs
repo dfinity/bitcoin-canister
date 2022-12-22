@@ -139,6 +139,12 @@ impl BlockBuilder {
     pub fn build(self) -> Block {
         Block::new(self.builder.build())
     }
+
+    pub fn build_with_mock_difficulty(self, mock_difficulty: u64) -> Block {
+        let mut block = self.build();
+        block.mock_difficulty = Some(mock_difficulty);
+        block
+    }
 }
 
 /// A wrapper around `ic_btc_test_utils::TransactionBuilder` that returns

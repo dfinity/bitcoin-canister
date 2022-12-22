@@ -419,10 +419,7 @@ mod test {
     fn get_current_fee_percentiles_from_utxos() {
         let number_of_blocks = 5;
         let number_of_transactions = 10_000;
-        let blocks = generate_blocks(10_000, number_of_blocks)
-            .into_iter()
-            .map(|b| b.with_mock_difficulty(1))
-            .collect();
+        let blocks = generate_blocks(10_000, number_of_blocks);
         let stability_threshold = 2;
         init_state(blocks, stability_threshold);
 
@@ -453,10 +450,7 @@ mod test {
     #[test]
     fn get_current_fee_percentiles_caches_results() {
         let number_of_blocks = 5;
-        let blocks = generate_blocks(10_000, number_of_blocks)
-            .into_iter()
-            .map(|b| b.with_mock_difficulty(1))
-            .collect();
+        let blocks = generate_blocks(10_000, number_of_blocks);
         let stability_threshold = 2;
         init_state(blocks, stability_threshold);
 

@@ -276,16 +276,13 @@ mod test {
 
     #[test]
     fn single_chain_various_difficulties() {
-        let block_0 = BlockBuilder::genesis().build().with_mock_difficulty(20);
-        let block_1 = BlockBuilder::with_prev_header(block_0.header())
-            .build()
-            .with_mock_difficulty(15);
-        let block_2 = BlockBuilder::with_prev_header(block_1.header())
-            .build()
-            .with_mock_difficulty(20);
-        let block_3 = BlockBuilder::with_prev_header(block_2.header())
-            .build()
-            .with_mock_difficulty(110);
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(20);
+        let block_1 =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(15);
+        let block_2 =
+            BlockBuilder::with_prev_header(block_1.header()).build_with_mock_difficulty(20);
+        let block_3 =
+            BlockBuilder::with_prev_header(block_2.header()).build_with_mock_difficulty(110);
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
@@ -367,13 +364,11 @@ mod test {
 
     #[test]
     fn forks_various_difficulties() {
-        let genesis_block = BlockBuilder::genesis().build().with_mock_difficulty(4);
-        let fork1_block = BlockBuilder::with_prev_header(genesis_block.header())
-            .build()
-            .with_mock_difficulty(10);
-        let fork2_block = BlockBuilder::with_prev_header(genesis_block.header())
-            .build()
-            .with_mock_difficulty(5);
+        let genesis_block = BlockBuilder::genesis().build_with_mock_difficulty(4);
+        let fork1_block =
+            BlockBuilder::with_prev_header(genesis_block.header()).build_with_mock_difficulty(10);
+        let fork2_block =
+            BlockBuilder::with_prev_header(genesis_block.header()).build_with_mock_difficulty(5);
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
@@ -398,15 +393,13 @@ mod test {
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork1 by another block.
-        let block_1 = BlockBuilder::with_prev_header(fork1_block.header())
-            .build()
-            .with_mock_difficulty(1);
+        let block_1 =
+            BlockBuilder::with_prev_header(fork1_block.header()).build_with_mock_difficulty(1);
         push(&mut forest, &utxos, block_1).unwrap();
 
         // Extend fork2 by another block.
-        let block_2 = BlockBuilder::with_prev_header(fork2_block.header())
-            .build()
-            .with_mock_difficulty(25);
+        let block_2 =
+            BlockBuilder::with_prev_header(fork2_block.header()).build_with_mock_difficulty(25);
         push(&mut forest, &utxos, block_2.clone()).unwrap();
 
         // Now, fork2 is stable becase its difficulty_based_depth is
@@ -445,9 +438,8 @@ mod test {
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork2 by another block.
-        let block_3 = BlockBuilder::with_prev_header(block_2.header())
-            .build()
-            .with_mock_difficulty(75);
+        let block_3 =
+            BlockBuilder::with_prev_header(block_2.header()).build_with_mock_difficulty(75);
         push(&mut forest, &utxos, block_3.clone()).unwrap();
 
         // Now block_2 has a stable child block_3, because its

@@ -94,7 +94,7 @@ pub struct Block {
     block: BitcoinBlock,
     transactions: Vec<Transaction>,
     #[cfg(test)]
-    mock_difficulty: Option<u64>,
+    pub mock_difficulty: Option<u64>,
 }
 
 impl Block {
@@ -142,12 +142,6 @@ impl Block {
     // https://en.bitcoin.it/wiki/Difficulty
     fn target_difficulty(network: Network, target: Uint256) -> u64 {
         (ic_btc_validation::max_target(&network.into()) / target).low_u64()
-    }
-
-    #[cfg(test)]
-    pub fn with_mock_difficulty(mut self, mock_difficulty: u64) -> Self {
-        self.mock_difficulty = Some(mock_difficulty);
-        self
     }
 }
 
