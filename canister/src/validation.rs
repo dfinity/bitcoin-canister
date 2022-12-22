@@ -81,7 +81,7 @@ mod test {
         ) {
             let num_transactions_in_block = 1;
             let network = Network::Regtest;
-            let blocks: Vec<_> = build_chain(network, num_blocks, num_transactions_in_block);
+            let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
 
