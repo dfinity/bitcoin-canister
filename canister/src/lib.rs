@@ -150,7 +150,7 @@ pub fn post_upgrade() {
     // to be removed after upgrade
     let network = state.network();
 
-    state.unstable_blocks = state.unstable_blocks.with_network(network);
+    state.unstable_blocks = state.unstable_blocks.with_network(network); //EXC-1310
 
     set_state(state);
 }
