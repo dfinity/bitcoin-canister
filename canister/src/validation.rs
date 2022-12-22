@@ -76,16 +76,12 @@ mod test {
         #![proptest_config(ProptestConfig::with_cases(10))]
         #[test]
         fn validation_context(
-            stability_threshold_start in 1..150u32,
+            stability_threshold in 1..150u32,
             num_blocks in 1..250u32,
         ) {
             let num_transactions_in_block = 1;
             let network = Network::Regtest;
-
-            let stability_threshold = stability_threshold_start + 1;
-
-            let blocks: Vec<_> = build_chain(network, num_blocks, num_transactions_in_block)
-              .into_iter().map(|b| b.with_mock_difficulty(1)).collect();
+            let blocks: Vec<_> = build_chain(network, num_blocks, num_transactions_in_block);
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
 

@@ -188,7 +188,7 @@ pub fn get_chain_with_tip<'a, 'b>(
 // Returns the index of the `anchor`'s stable child if it exists.
 fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     // Compute the difficulty based depth of all the children.
-    let network = self.get_network().expect("Network should be defined.");
+    let network = blocks.get_network().expect("Network should be defined."); // TODO(EXC-1310)
 
     let mut depths: Vec<_> = blocks
         .tree
