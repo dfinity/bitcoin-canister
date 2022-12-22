@@ -205,7 +205,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     // Sort by depth.
     depths.sort_by_key(|(depth, _child_idx)| *depth);
 
-    let root_difficulty = std::cmp::max(1, blocks.tree.root.difficulty(network)) as u128;
+    let root_difficulty = blocks.tree.root.difficulty(network) as u128;
 
     let normalized_stability_threshold = root_difficulty * blocks.stability_threshold as u128;
 

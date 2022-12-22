@@ -129,7 +129,7 @@ impl Block {
             return difficulty;
         }
 
-        self.header().difficulty(network.into())
+        Self::target_difficulty(network, self.header().target())
     }
     #[cfg(test)]
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
@@ -140,9 +140,6 @@ impl Block {
     // Computes the difficulty given a block's target.
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
-    //
-    // NOTE: This is dead code temporarily and will be used in an upcoming PR.
-    #[allow(dead_code)]
     fn target_difficulty(network: Network, target: Uint256) -> u64 {
         (ic_btc_validation::max_target(&network.into()) / target).low_u64()
     }
