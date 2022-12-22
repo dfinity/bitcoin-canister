@@ -21,20 +21,16 @@ cargo build --bin "$CANISTER" --target "$TARGET" --release
 # Navigate to root directory.
 cd ..
 
-# If we're building the bitcoin canister, then shrink it.
-# We don't shrink other canisters as installing ic-wasm in CI can take quite some time.
-if [[ "$CANISTER" == "bitcoin-canister" ]]; then
-  cargo install ic-wasm --version 0.2.0 --root ./target
-  STATUS=$?
-  if [[ "$STATUS" -eq "0" ]]; then
-      ./target/bin/ic-wasm \
-      "./target/$TARGET/release/$CANISTER.wasm" \
-      -o "./target/$TARGET/release/$CANISTER.wasm" shrink
-    true
-  else
-    echo Could not install ic-wasm
-    false
-  fi
+cargo install ic-wasm --version 0.2.0 --root ./target
+STATUS=$?
+if [[ "$STATUS" -eq "0" ]]; then
+    ./target/bin/ic-wasm \
+    "./target/$TARGET/release/$CANISTER.wasm" \
+    -o "./target/$TARGET/release/$CANISTER.wasm" shrink
+  true
+else
+  echo Could not install ic-wasm
+  false
 fi
 
 popd
