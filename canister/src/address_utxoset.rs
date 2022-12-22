@@ -127,7 +127,7 @@ mod test {
         // Create some BTC addresses.
         let address_1 = random_p2pkh_address(network);
 
-        let utxo_set = UtxoSet::new(Network::Mainnet);
+        let utxo_set = UtxoSet::new(network);
 
         // Create a genesis block where 1000 satoshis are given to address 1.
         let coinbase_tx = TransactionBuilder::coinbase()

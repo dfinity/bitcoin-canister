@@ -18,7 +18,7 @@ pub struct UnstableBlocks {
     stability_threshold: u32,
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
-    network: Option<Network>,
+    network: Option<Network>, // EXC-1310
 }
 
 impl UnstableBlocks {
@@ -26,7 +26,7 @@ impl UnstableBlocks {
         utxos: &UtxoSet,
         stability_threshold: u32,
         anchor: Block,
-        network: Option<Network>, // Optional just for the upgrade, will be refactored after.
+        network: Option<Network>, // Optional just for the upgrade, will be refactored after. EXC-1310
     ) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
@@ -71,7 +71,7 @@ impl UnstableBlocks {
         self.network
     }
 
-    //temporary method will be removed after an upgrade
+    // temporary method will be removed after an upgrade. EXC-1310
     pub fn with_network(mut self, network: Network) -> UnstableBlocks {
         self.network = Some(network);
         self
@@ -191,7 +191,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     let network = if let Some(network) = blocks.get_network() {
         network
     } else {
-        panic!("Network should be defined.")
+        panic!("Network should be defined.") // EXC-1310
     };
 
     let mut depths: Vec<_> = blocks
