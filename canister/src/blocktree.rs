@@ -1,4 +1,4 @@
-use crate::types::{Block, BlockHash};
+use crate::types::{Block, BlockHash, Network};
 use std::fmt;
 mod serde;
 
@@ -185,19 +185,14 @@ fn get_chain_with_tip_reverse<'a, 'b>(
     None
 }
 
-/// Returns the depth of the tree.
-pub fn depth(block_tree: &BlockTree) -> u32 {
-    if block_tree.children.is_empty() {
-        return 0;
+// Returns the maximum sum of block difficulties from the root to a leaf inclusive.
+pub fn difficulty_based_depth(tree: &BlockTree, network: Network) -> u128 {
+    let mut res: u128 = 0;
+    for child in tree.children.iter() {
+        res = std::cmp::max(res, difficulty_based_depth(child, network));
     }
-
-    let mut max_child_depth = 0;
-
-    for child in block_tree.children.iter() {
-        max_child_depth = std::cmp::max(1 + depth(child), max_child_depth);
-    }
-
-    max_child_depth
+    res += tree.root.difficulty(network) as u128;
+    res
 }
 
 // Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
@@ -256,7 +251,6 @@ mod test {
     fn tree_single_block() {
         let block_tree = BlockTree::new(BlockBuilder::genesis().build());
 
-        assert_eq!(depth(&block_tree), 0);
         assert_eq!(
             blockchains(&block_tree),
             vec![BlockChain {
@@ -283,7 +277,7 @@ mod test {
             assert_eq!(blockchains(&block_tree).len(), i);
         }
 
-        assert_eq!(depth(&block_tree), 1);
+        assert_eq!(block_tree.children.len(), 4);
     }
 
     #[test]
@@ -363,5 +357,31 @@ mod test {
 
             blocks = vec![blocks[0].clone()];
         }
+    }
+
+    #[test]
+    fn test_difficulty_based_depth_single_block() {
+        let block_tree = BlockTree::new(BlockBuilder::genesis().build_with_mock_difficulty(5));
+
+        assert_eq!(difficulty_based_depth(&block_tree, Network::Mainnet), 5);
+    }
+
+    #[test]
+    fn test_difficulty_based_depth_root_with_children() {
+        let genesis_block = BlockBuilder::genesis().build_with_mock_difficulty(5);
+        let genesis_block_header = *genesis_block.header();
+        let mut block_tree = BlockTree::new(genesis_block);
+
+        for i in 1..11 {
+            extend(
+                &mut block_tree,
+                BlockBuilder::with_prev_header(&genesis_block_header).build_with_mock_difficulty(i),
+            )
+            .unwrap();
+        }
+
+        // The maximum sum of block difficulties from the root to a leaf is the sum
+        // of the root and child with the greatest difficulty which is 5 + 10 = 15.
+        assert_eq!(difficulty_based_depth(&block_tree, Network::Mainnet), 15);
     }
 }
