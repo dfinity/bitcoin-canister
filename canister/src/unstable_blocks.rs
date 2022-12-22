@@ -71,7 +71,7 @@ impl UnstableBlocks {
         self.network
     }
 
-    // temporary method will be removed after an upgrade. EXC-1310
+    // TODO(EXC-1310): temporary method will be removed after an upgrade.
     pub fn with_network(mut self, network: Network) -> UnstableBlocks {
         self.network = Some(network);
         self
