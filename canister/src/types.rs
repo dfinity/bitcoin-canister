@@ -996,7 +996,7 @@ fn target_difficulty() {
             Network::Mainnet,
             bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
         ),
-        16307
+        16_307
     );
 
     // Mainnet block 768362.
@@ -1006,7 +1006,7 @@ fn target_difficulty() {
             Network::Mainnet,
             bitcoin::BlockHeader::u256_from_compact_target(386397584)
         ),
-        35364065900457
+        35_364_065_900_457
     );
 
     // Mainnet block 700000.
@@ -1016,7 +1016,7 @@ fn target_difficulty() {
             Network::Mainnet,
             bitcoin::BlockHeader::u256_from_compact_target(386877668)
         ),
-        18415156832118
+        18_415_156_832_118
     );
 
     // Testnet block 2412153.
@@ -1026,7 +1026,7 @@ fn target_difficulty() {
             Network::Testnet,
             bitcoin::BlockHeader::u256_from_compact_target(422681968)
         ),
-        86564599
+        86_564_599
     );
 
     // Testnet block 1500000.
@@ -1036,7 +1036,7 @@ fn target_difficulty() {
             Network::Testnet,
             bitcoin::BlockHeader::u256_from_compact_target(457142912)
         ),
-        1032
+        1_032
     );
 
     // Regtest blocks by the BlockBuilder should have a difficulty of 1.
