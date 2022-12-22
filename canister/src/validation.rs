@@ -77,7 +77,7 @@ mod test {
         #[test]
         fn validation_context(
             stability_threshold in 1..150u32,
-            num_blocks in 1..250u32,
+            num_blocks in 2..250u32,
         ) {
             let num_transactions_in_block = 1;
             let network = Network::Regtest;
