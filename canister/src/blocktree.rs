@@ -185,7 +185,7 @@ fn get_chain_with_tip_reverse<'a, 'b>(
     None
 }
 
-// Returns depth based on the difficulty.
+// Returns the maximum sum of block difficulties from the root to a leaf inclusive.
 pub fn difficulty_based_depth(tree: &BlockTree, network: Network) -> u128 {
     let mut res: u128 = 0;
     for child in tree.children.iter() {
