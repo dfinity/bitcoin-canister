@@ -59,7 +59,8 @@ impl State {
     /// to be final and are never removed.
     pub fn new(stability_threshold: u32, network: Network, genesis_block: Block) -> Self {
         let utxos = UtxoSet::new(network);
-        let unstable_blocks = UnstableBlocks::new(&utxos, stability_threshold, genesis_block);
+        let unstable_blocks =
+            UnstableBlocks::new(&utxos, stability_threshold, genesis_block, Some(network));
 
         Self {
             utxos,
