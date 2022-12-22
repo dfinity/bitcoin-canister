@@ -250,14 +250,10 @@ mod test {
 
     #[test]
     fn single_chain_same_difficulties() {
-        let block_0 = BlockBuilder::genesis().build().with_mock_difficulty(1);
-        let block_1 = BlockBuilder::with_prev_header(block_0.header())
-            .build()
-            .with_mock_difficulty(1);
-        let block_2 = BlockBuilder::with_prev_header(block_1.header())
-            .build()
-            .with_mock_difficulty(1);
-        let network = Network::Mainnet;
+        let block_0 = BlockBuilder::genesis().build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
         let mut forest = UnstableBlocks::new(&utxos, 2, block_0.clone(), Some(network));
 
@@ -321,15 +317,11 @@ mod test {
 
     #[test]
     fn forks_same_difficulties() {
-        let genesis_block = BlockBuilder::genesis().build().with_mock_difficulty(1);
-        let block = BlockBuilder::with_prev_header(genesis_block.header())
-            .build()
-            .with_mock_difficulty(1);
-        let forked_block = BlockBuilder::with_prev_header(genesis_block.header())
-            .build()
-            .with_mock_difficulty(1);
+        let genesis_block = BlockBuilder::genesis().build();
+        let block = BlockBuilder::with_prev_header(genesis_block.header()).build();
+        let forked_block = BlockBuilder::with_prev_header(genesis_block.header()).build();
 
-        let network = Network::Mainnet;
+        let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
         let mut forest = UnstableBlocks::new(&utxos, 2, genesis_block.clone(), Some(network));
 
@@ -341,9 +333,7 @@ mod test {
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork2 by another block.
-        let block_1 = BlockBuilder::with_prev_header(forked_block.header())
-            .build()
-            .with_mock_difficulty(1);
+        let block_1 = BlockBuilder::with_prev_header(forked_block.header()).build();
         push(&mut forest, &utxos, block_1.clone()).unwrap();
 
         //Now, fork2 has a difficulty_based_depth of 2, while fork1 has a difficulty_based_depth of 1,
@@ -352,9 +342,7 @@ mod test {
         assert_eq!(pop(&mut forest), None);
 
         // Extend fork2 by another block.
-        let block_2 = BlockBuilder::with_prev_header(block_1.header())
-            .build()
-            .with_mock_difficulty(1);
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
         push(&mut forest, &utxos, block_2).unwrap();
         //Now, fork2 has a difficulty_based_depth of 3, while fork1 has a difficulty_based_depth of 1,
         //hence we can get a stable child.
