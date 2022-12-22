@@ -301,6 +301,11 @@ mod test {
         // difficulty_based_depth is 15 + 20 + 110 = 145 is greater than
         // normalized_stability_threshold is 20 * 7 = 140 and it does not have
         // any siblings. Hence, block_0 should be returned when calling `pop`.
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
+            145
+        );
+
         assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest), Some(block_0));
 
@@ -380,6 +385,15 @@ mod test {
         // None of the forks are stable, because fork1 has difficulty_based_depth of 10,
         // while fork2 has difficulty_based_depth 5, while normalized_stability_threshold
         // is 3 * 4 = 12. Hence, we shouldn't get anything.
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
+            10
+        );
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[1], network),
+            5
+        );
+
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest), None);
 
@@ -401,6 +415,15 @@ mod test {
         // 10 + 1 = 11, satisfying sencond condition
         // 30 - 11 > normalized_stability_threshold. So we can get a
         // stable child, and fork2_block should be a new anchor.
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
+            11
+        );
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[1], network),
+            30
+        );
+
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest), Some(genesis_block));
         assert_eq!(forest.tree.root, fork2_block);
@@ -409,6 +432,11 @@ mod test {
         // its difficulty_based_depth is 25,
         // normalized_stability_threshold is 3 * 5 = 15,
         // and it does not have any siblings.
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
+            25
+        );
+
         assert_eq!(peek(&forest), Some(&fork2_block));
         assert_eq!(pop(&mut forest), Some(fork2_block));
 
@@ -426,6 +454,11 @@ mod test {
         // difficulty_based_depth is 75, and
         // normalized_stability_threshold is 3 * 25 = 75,
         // hence difficulty_based_depth >= normalized_stability_threshold.
+        assert_eq!(
+            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
+            75
+        );
+
         assert_eq!(peek(&forest), Some(&block_2));
         assert_eq!(pop(&mut forest), Some(block_2));
         assert_eq!(forest.tree.root, block_3);
