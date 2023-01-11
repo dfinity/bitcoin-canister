@@ -40,7 +40,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
  syncing = variant { enabled }; 
  api_access = variant { enabled }
 })"
-
+sleep 10
 dfx canister stop bitcoin
 
 # Move to the current branch
@@ -66,6 +66,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 })"
 
 dfx canister start bitcoin
+sleep 10
 dfx canister stop bitcoin
 
 echo "SUCCESS"
