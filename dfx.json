@@ -7,6 +7,11 @@
       "wasm": "target/wasm32-unknown-unknown/release/bitcoin-canister.wasm",
       "build": "./scripts/build-canister.sh bitcoin-canister"
     },
+    "bitcoin-release": {
+      "type": "custom",
+      "candid": "./canister/candid.did",
+      "wasm": "newest_release.wasm"
+    },
     "e2e-scenario-1": {
       "type": "custom",
       "candid": "./e2e-tests/scenario-1/candid.did",
@@ -47,4 +52,3 @@
   },
   "version": 1
 }
-
