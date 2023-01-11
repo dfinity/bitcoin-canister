@@ -63,6 +63,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
  api_access = variant { enabled }
 })"
 
+dfx canister start bitcoin
 dfx canister stop bitcoin
 
 echo "SUCCESS"
