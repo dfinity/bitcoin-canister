@@ -39,7 +39,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
  api_access = variant { enabled }
 })"
 
-dfx canister stop --all
+dfx canister stop bitcoin
 
 # Move to the current branch
 git checkout "${CURRENT_BRANCH}"
