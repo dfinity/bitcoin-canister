@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eexuo pipefail
 
-# Run dfx stop if we run into errors.
+# Run dfx stop if we run into errors and remove newest release wasm.
 trap "dfx stop & rm newest_release.wasm" EXIT SIGINT
 
 # Get newest release download url
