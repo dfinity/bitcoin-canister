@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -Eexuo pipefail
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
 # Run dfx stop if we run into errors.
 trap "dfx stop & rm newest_release.wasm" EXIT SIGINT
 
