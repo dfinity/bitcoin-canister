@@ -7,6 +7,8 @@ source "${SCRIPT_DIR}/utils.sh"
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT
 
+git status
+
 # Get current branch
 CURRENT_BRANCH="$(git branch --show-current)"
 
