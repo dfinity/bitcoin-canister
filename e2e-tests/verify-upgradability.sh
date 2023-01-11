@@ -2,28 +2,24 @@
 set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-source "${SCRIPT_DIR}/utils.sh"
 
 # Run dfx stop if we run into errors.
-trap "dfx stop" EXIT SIGINT
+trap "dfx stop & rm newest_release.wasm" EXIT SIGINT
 
-git status
+# Get newest release download url
+NEWEST_RELEASE="$(curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | grep "browser_download_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g')"
 
-# Get current branch
-CURRENT_BRANCH="$(git branch --show-current)"
+# Get newest release
+wget -O newest_release.wasm.gz "${NEWEST_RELEASE}"
 
-# Get newest release tag
-NEWEST_RELEASE_TAG="$(curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | grep "tag_name" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g' )"
-
-# Go the the newest release
-git checkout tags/"${NEWEST_RELEASE_TAG}"
+gunzip newest_release.wasm.gz
 
 dfx start --background --clean
 
 dfx deploy --no-wallet e2e-scenario-3
 
 # Deploy newest release
-dfx deploy --no-wallet bitcoin --argument "(record { 
+dfx deploy --no-wallet bitcoin-release --argument "(record { 
  stability_threshold = 2;
  network = variant { regtest };
  blocks_source = principal \"$(dfx canister id e2e-scenario-3)\";
@@ -40,11 +36,12 @@ dfx deploy --no-wallet bitcoin --argument "(record {
  syncing = variant { enabled }; 
  api_access = variant { enabled }
 })"
-sleep 10
-dfx canister stop bitcoin
 
-# Move to the current branch
-git checkout "${CURRENT_BRANCH}"
+dfx canister stop bitcoin-release
+
+# replace from bitcoin-release to bitcoin in .dfx/local/canister_ids.json
+# hence, the upgraded canister has the same CanisteID 
+sed -i 's/bitcoin-release/bitcoin/' .dfx/local/canister_ids.json 
 
 # Deploy upgraded canister
 dfx deploy --no-wallet bitcoin --argument "(record { 
@@ -66,7 +63,5 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 })"
 
 dfx canister start bitcoin
-sleep 10
-dfx canister stop bitcoin
 
 echo "SUCCESS"
