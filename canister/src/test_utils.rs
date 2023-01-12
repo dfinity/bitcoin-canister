@@ -191,3 +191,46 @@ impl TransactionBuilder {
         Transaction::new(self.builder.build())
     }
 }
+
+pub struct BlockChainBuilder {
+    num_blocks: u32,
+    prev_block_header: Option<BlockHeader>,
+}
+
+impl BlockChainBuilder {
+    pub fn new(num_blocks: u32) -> Self {
+        Self {
+            num_blocks,
+            prev_block_header: None,
+        }
+    }
+
+    pub fn fork(prev_block: &Block, num_blocks: u32) -> Self {
+        Self {
+            num_blocks,
+            prev_block_header: Some(*prev_block.header()),
+        }
+    }
+
+    pub fn build(self) -> Vec<Block> {
+        let mut blocks = Vec::with_capacity(self.num_blocks as usize);
+
+        match self.prev_block_header {
+            None => {
+                blocks.push(genesis_block(Network::Regtest));
+            }
+            Some(prev_block_header) => {
+                let block = BlockBuilder::with_prev_header(&prev_block_header).build();
+                blocks.push(block);
+            }
+        };
+
+        for i in 1..self.num_blocks as usize {
+            let block = BlockBuilder::with_prev_header(blocks[i - 1].header()).build();
+            blocks.push(block);
+        }
+
+        blocks
+    }
+}
+
