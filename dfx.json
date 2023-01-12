@@ -10,7 +10,7 @@
     "bitcoin-release": {
       "type": "custom",
       "candid": "./canister/candid.did",
-      "wasm": "newest_release.wasm"
+      "wasm": "newest_release.wasm.gz"
     },
     "e2e-scenario-1": {
       "type": "custom",

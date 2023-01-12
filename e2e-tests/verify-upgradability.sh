@@ -2,17 +2,14 @@
 set -Eexuo pipefail
 
 # Run dfx stop if we run into errors and remove newest release wasm.
-trap "dfx stop & rm newest_release.wasm" EXIT SIGINT
+trap "dfx stop & rm newest_release.wasm.gz" EXIT SIGINT
 
 # Get newest release download url
 NEWEST_RELEASE="$(curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | grep "browser_download_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g')"
 MANAGEMENT_CANISTER="aaaaa-aa"
 
-
 # Get newest release
 wget -O newest_release.wasm.gz "${NEWEST_RELEASE}"
-
-gunzip newest_release.wasm.gz
 
 dfx start --background --clean
 
