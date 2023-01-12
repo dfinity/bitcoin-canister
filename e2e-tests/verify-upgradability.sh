@@ -4,6 +4,11 @@ set -Eexuo pipefail
 # Run dfx stop if we run into errors and remove newest release wasm.
 trap "dfx stop & rm newest_release.wasm.gz" EXIT SIGINT
 
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PARENT_DIR="$(dirname "$SCRIPT_DIR")"
+
+pushd "$PARENT_DIR"
+
 # Get newest release download url
 NEWEST_RELEASE="$(curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | grep "browser_download_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g')"
 MANAGEMENT_CANISTER="aaaaa-aa"

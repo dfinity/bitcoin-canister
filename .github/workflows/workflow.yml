@@ -254,7 +254,7 @@ jobs:
           bash e2e-tests/verify-upgradability.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "verify-upgradability"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "verify-upgradability"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
