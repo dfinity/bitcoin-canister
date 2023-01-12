@@ -38,7 +38,7 @@ dfx deploy --no-wallet bitcoin-release --argument "(record {
 dfx canister stop bitcoin-release
 
 # replace from bitcoin-release to bitcoin in .dfx/local/canister_ids.json
-# hence, the upgraded canister has the same CanisteID 
+# hence, the upgraded canister has the same canister ID 
 sed -i 's/bitcoin-release/bitcoin/' ./.dfx/local/canister_ids.json 
 
 # Deploy upgraded canister
