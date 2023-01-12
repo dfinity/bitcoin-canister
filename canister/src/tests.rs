@@ -24,6 +24,7 @@ use ic_cdk::api::call::RejectionCode;
 use std::fs::File;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
+mod confirmation_counts;
 
 async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     let mut chain: Vec<Block> = vec![];
