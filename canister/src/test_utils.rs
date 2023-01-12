@@ -233,4 +233,3 @@ impl BlockChainBuilder {
         blocks
     }
 }
-
