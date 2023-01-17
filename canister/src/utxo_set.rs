@@ -402,22 +402,19 @@ impl UtxoSet {
         let tx_out: TxOut = (&output).into();
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
-            self.address_utxos
-                .insert(
-                    AddressUtxo {
-                        address: address.clone(),
-                        height: self.next_height,
-                        outpoint: outpoint.clone(),
-                    },
-                    (),
-                )
-                .expect("insertion must succeed");
+            self.address_utxos.insert(
+                AddressUtxo {
+                    address: address.clone(),
+                    height: self.next_height,
+                    outpoint: outpoint.clone(),
+                },
+                (),
+            );
 
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value)
-                .expect("insertion must succeed");
+                .insert(address.clone(), address_balance + output.value);
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }

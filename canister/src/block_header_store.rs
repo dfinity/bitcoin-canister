@@ -55,13 +55,9 @@ impl BlockHeaderStore {
 
     /// Inserts a block's header and hash into the store.
     pub fn insert(&mut self, block_hash: BlockHash, header_blob: BlockHeaderBlob, height: Height) {
-        self.block_headers
-            .insert(block_hash.clone(), header_blob)
-            .expect("block header insertion must succeed");
+        self.block_headers.insert(block_hash.clone(), header_blob);
 
-        self.block_heights
-            .insert(height, block_hash)
-            .expect("block height insertion must succeed");
+        self.block_heights.insert(height, block_hash);
     }
 
     pub fn get_with_block_hash(&self, block_hash: &BlockHash) -> Option<BlockHeader> {
