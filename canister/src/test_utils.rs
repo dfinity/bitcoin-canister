@@ -9,7 +9,7 @@ use bitcoin::{
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_stable_structures::{Memory, StableBTreeMap, Storable, BoundedStorable};
+use ic_stable_structures::{Memory, StableBTreeMap, BoundedStorable};
 use std::str::FromStr;
 
 /// Generates a random P2PKH address.

@@ -3,13 +3,13 @@ use crate::{
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
-        Address, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing, Storable, Transaction,
-        TxOut, Txid, Utxo,
+        Address, AddressRange, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing,
+        Transaction, TxOut, Txid, Utxo,
     },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
-use ic_stable_structures::{StableBTreeMap, Storable as _};
+use ic_stable_structures::{StableBTreeMap};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
@@ -216,23 +216,11 @@ impl UtxoSet {
             None => (BTreeSet::new(), BTreeSet::new()),
         };
 
-        /*let address_utxo = AddressUtxo {
-            address: address.clone(),
-            height: utxo.height.unwrap_or(0),
-            outpoint: utxo.
-        };*/
-
         // Retrieve all address's outpoints from the stable set, removing any outpoints
         // that were added by the ingesting block.
         let stable_outpoints = self
             .address_utxos
-            .range(address..address)
-            /*.range(
-                address.to_bytes().to_vec(),
-                offset
-                    .as_ref()
-                    .map(|u| (u.height, u.outpoint.clone()).to_bytes()),
-            )*/
+            .range(AddressRange::new(address, offset))
             .map(|(address_utxo, _)| address_utxo.outpoint)
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
 
@@ -725,26 +713,24 @@ mod test {
 
         // Insert some entries into the map with different heights in some random order.
         for height in [17u32, 0, 31, 4, 2].iter() {
-            utxo.address_utxos
-                .insert(
-                    AddressUtxo {
-                        address: address.clone(),
-                        height: *height,
-                        outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
-                    },
-                    (),
-                )
-                .unwrap();
+            utxo.address_utxos.insert(
+                AddressUtxo {
+                    address: address.clone(),
+                    height: *height,
+                    outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
+                },
+                (),
+            );
         }
 
         // Verify that the entries returned are sorted in descending height.
-        /*assert_eq!(
+        assert_eq!(
             utxo.address_utxos
-                .range(address.to_bytes().to_vec(), None)
+                .range(AddressRange::new(&address, &None))
                 .map(|(address_utxo, _)| { address_utxo.height })
                 .collect::<Vec<_>>(),
             vec![31, 17, 4, 2, 0]
-        );*/
+        );
     }
 
     #[test]

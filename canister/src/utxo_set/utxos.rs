@@ -8,7 +8,6 @@ use ic_btc_types::Height;
 use ic_stable_structures::{btreemap, Memory as MemoryTrait};
 use ic_stable_structures::{storable::Blob, StableBTreeMap, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 

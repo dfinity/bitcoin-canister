@@ -433,11 +433,33 @@ impl BoundedStorable for Address {
     const IS_FIXED_SIZE: bool = false;
 }
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct AddressUtxo {
     pub address: Address,
     pub height: Height,
     pub outpoint: OutPoint,
+}
+
+impl PartialOrd for AddressUtxo {
+    fn partial_cmp(&self, rhs: &Self) -> Option<Ordering> {
+        let address_ord = self.address.partial_cmp(&rhs.address);
+        if address_ord != Some(Ordering::Equal) {
+            return address_ord;
+        }
+
+        let height_ord = rhs.height.partial_cmp(&self.height);
+        if height_ord != Some(Ordering::Equal) {
+            return height_ord;
+        }
+
+        self.outpoint.partial_cmp(&rhs.outpoint)
+    }
+}
+
+impl Ord for AddressUtxo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(&other).unwrap()
+    }
 }
 
 impl StableStructuresStorable for AddressUtxo {
@@ -472,25 +494,46 @@ impl BoundedStorable for AddressUtxo {
     const IS_FIXED_SIZE: bool = false;
 }
 
-impl RangeBounds<AddressUtxo> for AddressUtxo {
-    fn start_bound(&self) -> Bound<&AddressUtxo> {
-        todo!();
-        //Bound::Included(self)
-    }
+pub struct AddressRange {
+    start_bound: AddressUtxo,
+    end_bound: AddressUtxo,
+}
 
-    fn end_bound(&self) -> Bound<&AddressUtxo> {
-        todo!();
+impl AddressRange {
+    pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
+        let start_bound = match utxo {
+            Some(utxo) => AddressUtxo {
+                address: address.clone(),
+                height: utxo.height.clone(),
+                outpoint: utxo.outpoint.clone(),
+            },
+            None => AddressUtxo {
+                address: address.clone(),
+                height: u32::MAX,
+                outpoint: OutPoint::new(Txid::from(vec![]), 0),
+            },
+        };
+
+        let end_bound = AddressUtxo {
+            address: address.clone(),
+            height: 0,
+            outpoint: OutPoint::new(Txid::from(vec![255; 32]), u32::MAX),
+        };
+
+        Self {
+            start_bound,
+            end_bound,
+        }
     }
 }
 
-impl RangeBounds<AddressUtxo> for std::ops::Range<&Address> {
+impl RangeBounds<AddressUtxo> for AddressRange {
     fn start_bound(&self) -> Bound<&AddressUtxo> {
-        todo!();
-        //Bound::Included(self)
+        Bound::Included(&self.start_bound)
     }
 
     fn end_bound(&self) -> Bound<&AddressUtxo> {
-        todo!();
+        Bound::Included(&self.end_bound)
     }
 }
 
