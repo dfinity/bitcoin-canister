@@ -14,12 +14,12 @@ pub struct BlockHeaderStore {
     /// A map of a block hash to its corresponding raw block header.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_block_headers")]
-    pub block_headers: StableBTreeMap<Memory, BlockHash, BlockHeaderBlob>,
+    pub block_headers: StableBTreeMap<BlockHash, BlockHeaderBlob, Memory>,
 
     /// A map of a block height to its corresponding block hash.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_block_heights")]
-    pub block_heights: StableBTreeMap<Memory, Height, BlockHash>,
+    pub block_heights: StableBTreeMap<Height, BlockHash, Memory>,
 }
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
@@ -85,10 +85,10 @@ fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {
         .expect("block header decoding must succeed")
 }
 
-fn init_block_headers() -> StableBTreeMap<Memory, BlockHash, BlockHeaderBlob> {
+fn init_block_headers() -> StableBTreeMap<BlockHash, BlockHeaderBlob, Memory> {
     StableBTreeMap::init(crate::memory::get_block_headers_memory())
 }
 
-fn init_block_heights() -> StableBTreeMap<Memory, u32, BlockHash> {
+fn init_block_heights() -> StableBTreeMap<u32, BlockHash, Memory> {
     StableBTreeMap::init(crate::memory::get_block_heights_memory())
 }

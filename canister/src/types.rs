@@ -12,8 +12,8 @@ use ic_cdk::export::{candid::CandidType, Principal};
 use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
-use std::{cmp::Ordering, convert::TryInto, str::FromStr};
+use std::ops::RangeBounds;
+use std::{borrow::Cow, cell::RefCell, cmp::Ordering, convert::TryInto, ops::Bound, str::FromStr};
 
 // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
 // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
@@ -339,7 +339,7 @@ impl Page {
         let outpoint_bytes = bytes.split_off(outpoint_offset);
         let height_bytes = bytes.split_off(height_offset);
 
-        let tip_block_hash = BlockHash::from_bytes(bytes);
+        let tip_block_hash = BlockHash::from_bytes(Cow::Owned(bytes));
 
         // The height is parsed from bytes that are given by the user, so ensure
         // that any errors are handled gracefully instead of using
@@ -355,7 +355,7 @@ impl Page {
         Ok(Page {
             tip_block_hash,
             height,
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         })
     }
 }
@@ -368,17 +368,17 @@ pub trait Storable {
 }
 
 impl StableStructuresStorable for OutPoint {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<[u8]> {
         let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
         // An outpoint is always exactly 36 bytes.
         assert_eq!(v.len(), OUTPOINT_SIZE as usize);
 
-        std::borrow::Cow::Owned(v)
+        Cow::Owned(v)
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
         assert_eq!(bytes.len(), 36);
         OutPoint {
             txid: Txid::from(bytes[..32].to_vec()),
@@ -388,9 +388,8 @@ impl StableStructuresStorable for OutPoint {
 }
 
 impl BoundedStorable for OutPoint {
-    fn max_size() -> u32 {
-        OUTPOINT_SIZE
-    }
+    const MAX_SIZE: u32 = OUTPOINT_SIZE;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl Storable for (TxOut, Height) {
@@ -408,7 +407,7 @@ impl Storable for (TxOut, Height) {
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
         let height = <Height as Storable>::from_bytes(bytes.split_off(bytes.len() - 4));
         let script_pubkey = bytes.split_off(8);
-        let value = u64::from_bytes(bytes);
+        let value = u64::from_bytes(Cow::Owned(bytes));
         (
             TxOut {
                 value,
@@ -420,22 +419,21 @@ impl Storable for (TxOut, Height) {
 }
 
 impl StableStructuresStorable for Address {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        std::borrow::Cow::Borrowed(self.0.as_bytes())
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.0.as_bytes())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Address(String::from_utf8(bytes).expect("Loading address cannot fail."))
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Address(String::from_utf8(bytes.to_vec()).expect("Loading address cannot fail."))
     }
 }
 
 impl BoundedStorable for Address {
-    fn max_size() -> u32 {
-        MAX_ADDRESS_LENGTH
-    }
+    const MAX_SIZE: u32 = MAX_ADDRESS_LENGTH;
+    const IS_FIXED_SIZE: bool = false;
 }
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
+#[derive(PartialEq, Eq, Ord, PartialOrd, Debug, Clone)]
 pub struct AddressUtxo {
     pub address: Address,
     pub height: Height,
@@ -443,7 +441,7 @@ pub struct AddressUtxo {
 }
 
 impl StableStructuresStorable for AddressUtxo {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<[u8]> {
         let bytes = vec![
             Address::to_bytes(&self.address).to_vec(),
             Storable::to_bytes(&self.height),
@@ -453,24 +451,46 @@ impl StableStructuresStorable for AddressUtxo {
         .flatten()
         .collect();
 
-        std::borrow::Cow::Owned(bytes)
+        Cow::Owned(bytes)
     }
 
-    fn from_bytes(mut bytes: Vec<u8>) -> Self {
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        let mut bytes = bytes.to_vec();
         let outpoint_bytes = bytes.split_off(bytes.len() - OUTPOINT_SIZE as usize);
         let height_bytes = bytes.split_off(bytes.len() - 4);
 
         Self {
-            address: Address::from_bytes(bytes),
+            address: Address::from_bytes(Cow::Owned(bytes)),
             height: <Height as Storable>::from_bytes(height_bytes),
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         }
     }
 }
 
 impl BoundedStorable for AddressUtxo {
-    fn max_size() -> u32 {
-        Address::max_size() + 4 /* height bytes */ + OutPoint::max_size()
+    const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+impl RangeBounds<AddressUtxo> for AddressUtxo {
+    fn start_bound(&self) -> Bound<&AddressUtxo> {
+        todo!();
+        //Bound::Included(self)
+    }
+
+    fn end_bound(&self) -> Bound<&AddressUtxo> {
+        todo!();
+    }
+}
+
+impl RangeBounds<AddressUtxo> for std::ops::Range<&Address> {
+    fn start_bound(&self) -> Bound<&AddressUtxo> {
+        todo!();
+        //Bound::Included(self)
+    }
+
+    fn end_bound(&self) -> Bound<&AddressUtxo> {
+        todo!();
     }
 }
 
@@ -510,7 +530,7 @@ impl Storable for (Height, OutPoint) {
 
         (
             <Height as Storable>::from_bytes(bytes),
-            OutPoint::from_bytes(outpoint_bytes),
+            OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         )
     }
 }
@@ -523,19 +543,18 @@ pub type BlockBlob = Vec<u8>;
 pub struct BlockHeaderBlob(Vec<u8>);
 
 impl StableStructuresStorable for BlockHeaderBlob {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<[u8]> {
         self.0.to_bytes()
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self::from(bytes)
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self::from(bytes.to_vec())
     }
 }
 
 impl BoundedStorable for BlockHeaderBlob {
-    fn max_size() -> u32 {
-        BLOCK_HEADER_LENGTH
-    }
+    const MAX_SIZE: u32 = BLOCK_HEADER_LENGTH;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl BlockHeaderBlob {
@@ -548,9 +567,9 @@ impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::max_size(),
+            Self::MAX_SIZE,
             "BlockHeader must {} bytes",
-            Self::max_size()
+            Self::MAX_SIZE
         );
         Self(bytes)
     }
@@ -563,19 +582,18 @@ impl From<Vec<u8>> for BlockHeaderBlob {
 pub struct BlockHash(Vec<u8>);
 
 impl StableStructuresStorable for BlockHash {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<[u8]> {
         self.0.to_bytes()
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self::from(bytes)
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self::from(bytes.to_vec())
     }
 }
 
 impl BoundedStorable for BlockHash {
-    fn max_size() -> u32 {
-        32
-    }
+    const MAX_SIZE: u32 = 32;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl BlockHash {
@@ -588,9 +606,9 @@ impl From<Vec<u8>> for BlockHash {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::max_size(),
+            Self::MAX_SIZE,
             "BlockHash must {} bytes",
-            Self::max_size()
+            Self::MAX_SIZE
         );
         Self(bytes)
     }

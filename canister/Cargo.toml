@@ -17,7 +17,7 @@ ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f16799
 ic-btc-validation = { path = "../validation" }
 ic-cdk = "0.6.1"
 ic-cdk-macros = "0.6.1"
-ic-stable-structures = "0.3.0"
+ic-stable-structures = { path = "../../stable-structures" }
 lazy_static = "1.4.0"
 serde = "1.0.132"
 serde_bytes = "0.11"
