@@ -39,7 +39,7 @@ thread_local! {
     // Responses are returned in the order provided.
     static GET_SUCCESSORS_RESPONSES: RefCell<Vec<GetSuccessorsReply>> = RefCell::new(Vec::default());
 
-    static GET_SUCCESSORS_RESPONSES_INDEX: RefCell<usize> = RefCell::new(0);
+    pub static GET_SUCCESSORS_RESPONSES_INDEX: RefCell<usize> = RefCell::new(0);
 
     static PERFORMANCE_COUNTER: RefCell<u64> = RefCell::new(0);
 
