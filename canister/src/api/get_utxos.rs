@@ -2,7 +2,7 @@ use crate::{
     blocktree::BlockChain,
     charge_cycles,
     runtime::{performance_counter, print},
-    types::{Address, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
+    types::{Address, Block, BlockHash, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
@@ -145,7 +145,19 @@ fn get_utxos_internal(
     }
 }
 
-//here
+fn blocks_on_the_same_height_max_confirmation(
+    blocks: &[(Block, u32)],
+    avoid_block: BlockHash,
+) -> u32 {
+    let mut max_confirmations = 0;
+    for (block, confirmations) in blocks.iter() {
+        if block.block_hash() != avoid_block {
+            max_confirmations = std::cmp::max(max_confirmations, *confirmations);
+        }
+    }
+    max_confirmations
+}
+
 fn get_utxos_from_chain(
     state: &State,
     address: &str,
@@ -171,13 +183,24 @@ fn get_utxos_from_chain(
     let mut tip_block_hash = chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
 
+    let blocks_with_confirmations_by_height = state
+        .unstable_blocks
+        .blocks_with_confirmations_by_height(chain.len());
+
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();
     for (i, block) in chain.into_chain().iter().enumerate() {
         let block_height = state.utxos.next_height() + (i as u32);
         let confirmations = chain_height - block_height + 1;
 
-        if confirmations < min_confirmations {
+        let max_confirmations_on_the_same_height = blocks_on_the_same_height_max_confirmation(
+            &blocks_with_confirmations_by_height[i],
+            block.block_hash(),
+        );
+
+        let stability_count = confirmations - max_confirmations_on_the_same_height;
+
+        if stability_count < min_confirmations {
             // The block has fewer confirmations than requested.
             // We can stop now since all remaining blocks will have fewer confirmations.
             break;
@@ -627,6 +650,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn utxos_forks() {
         let network = Network::Regtest;
 

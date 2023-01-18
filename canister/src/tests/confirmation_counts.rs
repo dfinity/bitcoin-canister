@@ -60,7 +60,6 @@ proptest! {
     // such that the fork is always shorted the main chain's tip.
     #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
-    #[ignore] // TODO(EXC-1319): Enable this test.
     fn single_fork(
         chain_len in 8..10u32,
         fork_idx in 0..7usize,
@@ -115,7 +114,6 @@ proptest! {
 }
 
 #[async_std::test]
-#[ignore] // TODO(EXC-1319): Enable this test.
 async fn multiple_forks() {
     crate::init(crate::Config {
         stability_threshold: 10,

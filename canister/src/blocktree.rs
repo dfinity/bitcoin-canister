@@ -88,6 +88,25 @@ impl BlockTree {
             children: vec![],
         }
     }
+
+    /// Returns all blocks in the tree with the number of confirmations
+    /// separated by heights.
+    pub fn blocks_with_depth_by_height(
+        &self,
+        blocks_with_depth_by_height: &mut Vec<Vec<(Block, u32)>>,
+        height: u32,
+    ) -> u32 {
+        let mut depth: u32 = 0;
+        for child in self.children.iter() {
+            depth = std::cmp::max(
+                depth,
+                child.blocks_with_depth_by_height(blocks_with_depth_by_height, height + 1),
+            );
+        }
+        depth += 1;
+        blocks_with_depth_by_height[height as usize].push((self.root.clone(), depth));
+        depth
+    }
 }
 
 /// Extends the tree with the given block.
