@@ -89,7 +89,7 @@ impl BlockTree {
         }
     }
 
-    /// Returns all blocks in the tree with the number of confirmations
+    /// Returns all blocks in the tree with their depths
     /// separated by heights.
     pub fn blocks_with_depth_by_height(
         &self,
