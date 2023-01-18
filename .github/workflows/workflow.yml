@@ -221,7 +221,7 @@ jobs:
         run: |
           bash e2e-tests/scenario-3.sh
   
-  verify-upgradability:
+  upgradability:
     runs-on: ubuntu-20.04
     needs: cargo-build
 
@@ -249,12 +249,12 @@ jobs:
           dfx cache install
           echo "$HOME/bin" >> $GITHUB_PATH
 
-      - name: Run verify upgradability test
+      - name: Run upgradability test
         run: |
-          bash e2e-tests/verify-upgradability.sh
+          bash e2e-tests/upgradability.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "verify-upgradability"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "upgradability"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
