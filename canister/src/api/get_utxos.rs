@@ -146,7 +146,7 @@ fn get_utxos_internal(
 }
 
 fn max_confirmations_count(
-    blocks_with_confirmations: &[(Block, u32)],
+    blocks_with_confirmations: &[(&Block, u32)],
     avoid_block: BlockHash,
 ) -> u32 {
     let mut max_confirmations = 0;
