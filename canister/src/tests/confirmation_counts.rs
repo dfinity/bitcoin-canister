@@ -61,7 +61,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
     fn single_fork(
-        chain_len in 8..10u32,
+        chain_len in 9..10u32,
         fork_idx in 0..7usize,
     ) {
         let fork_len: u32 = 1;

@@ -75,10 +75,10 @@ impl UnstableBlocks {
     /// separated by heights.
     pub fn blocks_with_confirmations_by_height(
         &self,
-        longest_chain: usize,
+        track_until_height: usize,
     ) -> Vec<Vec<(Block, u32)>> {
         let mut blocks_with_confirmations_by_height: Vec<Vec<(Block, u32)>> =
-            vec![vec![]; longest_chain];
+            vec![vec![]; track_until_height];
         self.tree
             .blocks_with_depth_by_height(&mut blocks_with_confirmations_by_height, 0);
         blocks_with_confirmations_by_height

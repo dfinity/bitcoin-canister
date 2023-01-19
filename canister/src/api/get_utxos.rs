@@ -145,12 +145,12 @@ fn get_utxos_internal(
     }
 }
 
-fn blocks_on_the_same_height_max_confirmation(
-    blocks: &[(Block, u32)],
+fn max_confirmations_count(
+    blocks_with_confirmations: &[(Block, u32)],
     avoid_block: BlockHash,
 ) -> u32 {
     let mut max_confirmations = 0;
-    for (block, confirmations) in blocks.iter() {
+    for (block, confirmations) in blocks_with_confirmations.iter() {
         if block.block_hash() != avoid_block {
             max_confirmations = std::cmp::max(max_confirmations, *confirmations);
         }
@@ -193,16 +193,14 @@ fn get_utxos_from_chain(
         let block_height = state.utxos.next_height() + (i as u32);
         let confirmations = chain_height - block_height + 1;
 
-        let max_confirmations_on_the_same_height = blocks_on_the_same_height_max_confirmation(
-            &blocks_with_confirmations_by_height[i],
-            block.block_hash(),
-        );
+        let max_confirmations_on_the_same_height =
+            max_confirmations_count(&blocks_with_confirmations_by_height[i], block.block_hash());
 
         let stability_count = confirmations - max_confirmations_on_the_same_height;
 
         if stability_count < min_confirmations {
-            // The block has fewer confirmations than requested.
-            // We can stop now since all remaining blocks will have fewer confirmations.
+            // The block has the lower stability count than requested.
+            // We can stop now since all remaining blocks will have lower stability count.
             break;
         }
 

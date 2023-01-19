@@ -94,7 +94,7 @@ impl BlockTree {
     pub fn blocks_with_depth_by_height(
         &self,
         blocks_with_depth_by_height: &mut Vec<Vec<(Block, u32)>>,
-        height: u32,
+        height: usize,
     ) -> u32 {
         let mut depth: u32 = 0;
         for child in self.children.iter() {
@@ -104,7 +104,9 @@ impl BlockTree {
             );
         }
         depth += 1;
-        blocks_with_depth_by_height[height as usize].push((self.root.clone(), depth));
+        if height < blocks_with_depth_by_height.len() {
+            blocks_with_depth_by_height[height].push((self.root.clone(), depth));
+        }
         depth
     }
 }
