@@ -1307,7 +1307,9 @@ dependencies = [
 
 [[package]]
 name = "ic-stable-structures"
-version = "0.3.0"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3651c56bc615fdf7de4b52ad34de94da393b8b0032488834a4801a40fd7bc940"
 
 [[package]]
 name = "ic-types"

@@ -1,6 +1,6 @@
-Ingest Block 0: BlockIngestionStats { num_rounds: 1, ins_total: 36610, ins_remove_inputs: 1368, ins_insert_outputs: 33053, ins_txids: 788, ins_insert_utxos: 31158 }
-Ingest Block 1: BlockIngestionStats { num_rounds: 2, ins_total: 5237618420, ins_remove_inputs: 13681368, ins_insert_outputs: 5217673519, ins_txids: 8170886, ins_insert_utxos: 5198432200 }
-Ingest Block 2: BlockIngestionStats { num_rounds: 2, ins_total: 5809157217, ins_remove_inputs: 13681368, ins_insert_outputs: 5789212316, ins_txids: 8170886, ins_insert_utxos: 5769970997 }
-Ingest Block 3: BlockIngestionStats { num_rounds: 2, ins_total: 6067593952, ins_remove_inputs: 13681368, ins_insert_outputs: 6047649051, ins_txids: 8170886, ins_insert_utxos: 6028407732 }
-GetBalanceRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", min_confirmations: None }: Stats { ins_total: 26383066, ins_apply_unstable_blocks: 25931001 }
-GetUtxosRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", filter: None }: Stats { ins_total: 75359648, ins_apply_unstable_blocks: 69965170, ins_build_utxos_vec: 4747480 }
+Ingest Block 0: BlockIngestionStats { num_rounds: 1, ins_total: 38700, ins_remove_inputs: 1326, ins_insert_outputs: 35173, ins_txids: 788, ins_insert_utxos: 33278 }
+Ingest Block 1: BlockIngestionStats { num_rounds: 2, ins_total: 7321755907, ins_remove_inputs: 13261326, ins_insert_outputs: 7302231024, ins_txids: 8170886, ins_insert_utxos: 7282989705 }
+Ingest Block 2: BlockIngestionStats { num_rounds: 3, ins_total: 8035078727, ins_remove_inputs: 13262652, ins_insert_outputs: 8015550536, ins_txids: 8171329, ins_insert_utxos: 7996308341 }
+Ingest Block 3: BlockIngestionStats { num_rounds: 3, ins_total: 8331612867, ins_remove_inputs: 13262652, ins_insert_outputs: 8312084676, ins_txids: 8171329, ins_insert_utxos: 8292842481 }
+GetBalanceRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", min_confirmations: None }: Stats { ins_total: 26387384, ins_apply_unstable_blocks: 25931001 }
+GetUtxosRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", filter: None }: Stats { ins_total: 75455440, ins_apply_unstable_blocks: 69968620, ins_build_utxos_vec: 4836293 }

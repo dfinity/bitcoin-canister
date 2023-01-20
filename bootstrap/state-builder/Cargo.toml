@@ -28,7 +28,7 @@ clap = { version = "4.0.11", features = ["derive"] }
 hex = "0.4.3"
 ic-btc-canister = { path = "../../canister", features = [] }
 ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f167994de24c8ccf7ee37a4d8ac67" }
-ic-stable-structures = { path = "../../../stable-structures" }
+ic-stable-structures = "0.4.0"
 integer-encoding = "3.0.4"
 rand = "0.8.5"
 rand_chacha = "0.3.1"

@@ -33,4 +33,6 @@ else
   false
 fi
 
+gzip -n -f "./target/$TARGET/release/$CANISTER.wasm"
+
 popd
