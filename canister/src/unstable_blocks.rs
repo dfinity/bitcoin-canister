@@ -78,7 +78,7 @@ impl UnstableBlocks {
         track_until_height: usize,
     ) -> Vec<Vec<(&Block, u32)>> {
         self.tree
-            .blocks_with_depths_separated_by_height(track_until_height)
+            .blocks_with_depths_separated_by_heights(track_until_height)
     }
 
     // TODO(EXC-1310): temporary method will be removed after an upgrade.

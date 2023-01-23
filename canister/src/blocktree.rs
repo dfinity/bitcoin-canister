@@ -91,7 +91,7 @@ impl BlockTree {
 
     /// Returns all blocks in the tree with their depths
     /// separated by heights.
-    pub fn blocks_with_depths_separated_by_height(
+    pub fn blocks_with_depths_separated_by_heights(
         &self,
         track_until_height: usize,
     ) -> Vec<Vec<(&Block, u32)>> {

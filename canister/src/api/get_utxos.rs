@@ -181,7 +181,6 @@ fn get_utxos_from_chain(
     }
 
     let mut address_utxos = state.get_utxos(address);
-    //let chain_height = state.utxos.next_height() + (chain.len() as u32) - 1;
 
     let mut tip_block_hash = chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
