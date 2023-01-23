@@ -471,4 +471,62 @@ mod test {
             assert_eq!(expected_depth, actual_depth);
         }
     }
+
+    #[test]
+    fn test_blocks_with_depths_separated_by_heights_fork() {
+        let genesis_block = BlockBuilder::genesis().build();
+        let mut block_tree = BlockTree::new(genesis_block.clone());
+
+        let fork_1 = BlockBuilder::with_prev_header(genesis_block.header()).build();
+        extend(&mut block_tree, fork_1.clone()).unwrap();
+
+        let fork_2 = BlockBuilder::with_prev_header(genesis_block.header()).build();
+        extend(&mut block_tree, fork_2.clone()).unwrap();
+
+        let fork_2_extend = BlockBuilder::with_prev_header(fork_2.header()).build();
+        extend(&mut block_tree, fork_2_extend.clone()).unwrap();
+
+        let blocks_with_depths_separated_by_heights =
+            block_tree.blocks_with_depths_separated_by_heights(3);
+
+        // blocks_with_depths_separated_by_heights should have 3 heights.
+        assert_eq!(blocks_with_depths_separated_by_heights.len(), 3);
+
+        // On height 0, blocks_with_depths_separated_by_heights should have only one block.
+        assert_eq!(blocks_with_depths_separated_by_heights[0].len(), 1);
+
+        let (height_0_block, height_0_depth) = blocks_with_depths_separated_by_heights[0][0];
+        assert_eq!(height_0_block.block_hash(), genesis_block.block_hash());
+        assert_eq!(height_0_depth, 3);
+
+        // On height 1, blocks_with_depths_separated_by_heights should have two blocks, fork_1 and fork_2.
+        assert_eq!(blocks_with_depths_separated_by_heights[1].len(), 2);
+
+        let (first_block_height_1, _) = blocks_with_depths_separated_by_heights[1][0];
+        let (second_block_height_1, _) = blocks_with_depths_separated_by_heights[1][1];
+
+        // Check that blocks are different.
+        assert_ne!(
+            first_block_height_1.block_hash(),
+            second_block_height_1.block_hash()
+        );
+
+        for (block, depth) in blocks_with_depths_separated_by_heights[1].iter() {
+            if block.block_hash() == fork_1.block_hash() {
+                assert_eq!(*depth, 1);
+            } else if block.block_hash() == fork_2.block_hash() {
+                assert_eq!(*depth, 2);
+            } else {
+                panic!("Unexpected block.");
+            }
+        }
+
+        // On height 2, blocks_with_depths_separated_by_heights should have only one block.
+        assert_eq!(blocks_with_depths_separated_by_heights[2].len(), 1);
+
+        let (height_2_block, height_2_depth) = blocks_with_depths_separated_by_heights[2][0];
+
+        assert_eq!(height_2_block.block_hash(), fork_2_extend.block_hash());
+        assert_eq!(height_2_depth, 1);
+    }
 }
