@@ -91,7 +91,17 @@ impl BlockTree {
 
     /// Returns all blocks in the tree with their depths
     /// separated by heights.
-    pub fn blocks_with_depth_by_height<'a>(
+    pub fn blocks_with_depths_separated_by_height(
+        &self,
+        track_until_height: usize,
+    ) -> Vec<Vec<(&Block, u32)>> {
+        let mut blocks_with_confirmations_by_height: Vec<Vec<(&Block, u32)>> =
+            vec![vec![]; track_until_height];
+        self.blocks_with_depths_by_heights(&mut blocks_with_confirmations_by_height, 0);
+        blocks_with_confirmations_by_height
+    }
+
+    fn blocks_with_depths_by_heights<'a>(
         &'a self,
         blocks_with_depth_by_height: &mut Vec<Vec<(&'a Block, u32)>>,
         height: usize,
@@ -100,7 +110,7 @@ impl BlockTree {
         for child in self.children.iter() {
             depth = std::cmp::max(
                 depth,
-                child.blocks_with_depth_by_height(blocks_with_depth_by_height, height + 1),
+                child.blocks_with_depths_by_heights(blocks_with_depth_by_height, height + 1),
             );
         }
         depth += 1;

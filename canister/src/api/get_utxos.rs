@@ -145,17 +145,20 @@ fn get_utxos_internal(
     }
 }
 
-fn max_confirmations_count(
-    blocks_with_confirmations: &[(&Block, u32)],
-    avoid_block: BlockHash,
+fn get_stability_count(
+    blocks_with_depths_on_the_same_height: &[(&Block, u32)],
+    target_block: BlockHash,
 ) -> u32 {
-    let mut max_confirmations = 0;
-    for (block, confirmations) in blocks_with_confirmations.iter() {
-        if block.block_hash() != avoid_block {
-            max_confirmations = std::cmp::max(max_confirmations, *confirmations);
+    let mut max_depth_of_the_other_blocks = 0;
+    let mut target_block_depth = 0;
+    for (block, depth) in blocks_with_depths_on_the_same_height.iter() {
+        if block.block_hash() != target_block {
+            max_depth_of_the_other_blocks = std::cmp::max(max_depth_of_the_other_blocks, *depth);
+        } else {
+            target_block_depth = *depth;
         }
     }
-    max_confirmations
+    target_block_depth - max_depth_of_the_other_blocks
 }
 
 fn get_utxos_from_chain(
@@ -178,36 +181,30 @@ fn get_utxos_from_chain(
     }
 
     let mut address_utxos = state.get_utxos(address);
-    let chain_height = state.utxos.next_height() + (chain.len() as u32) - 1;
+    //let chain_height = state.utxos.next_height() + (chain.len() as u32) - 1;
 
     let mut tip_block_hash = chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
 
-    let blocks_with_confirmations_by_height = state
+    let blocks_with_depths_separated_by_height = state
         .unstable_blocks
-        .blocks_with_confirmations_by_height(chain.len());
+        .blocks_with_depths_separated_by_height(chain.len());
 
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();
     for (i, block) in chain.into_chain().iter().enumerate() {
-        let block_height = state.utxos.next_height() + (i as u32);
-        let confirmations = chain_height - block_height + 1;
-
-        let max_confirmations_on_the_same_height =
-            max_confirmations_count(&blocks_with_confirmations_by_height[i], block.block_hash());
-
-        let stability_count = confirmations - max_confirmations_on_the_same_height;
-
-        if stability_count < min_confirmations {
+        if get_stability_count(
+            &blocks_with_depths_separated_by_height[i],
+            block.block_hash(),
+        ) < min_confirmations
+        {
             // The block has the lower stability count than requested.
             // We can stop now since all remaining blocks will have lower stability count.
             break;
         }
-
-        address_utxos.apply_block(block);
-
         tip_block_hash = block.block_hash();
-        tip_block_height = block_height;
+        tip_block_height = state.utxos.next_height() + (i as u32);
+        address_utxos.apply_block(block);
     }
     stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 

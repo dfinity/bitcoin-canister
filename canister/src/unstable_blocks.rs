@@ -71,17 +71,14 @@ impl UnstableBlocks {
         self.network
     }
 
-    /// Returns all blocks in the tree with the number of confirmations
+    /// Returns all blocks in the tree with their respective depths
     /// separated by heights.
-    pub fn blocks_with_confirmations_by_height(
+    pub fn blocks_with_depths_separated_by_height(
         &self,
         track_until_height: usize,
     ) -> Vec<Vec<(&Block, u32)>> {
-        let mut blocks_with_confirmations_by_height: Vec<Vec<(&Block, u32)>> =
-            vec![vec![]; track_until_height];
         self.tree
-            .blocks_with_depth_by_height(&mut blocks_with_confirmations_by_height, 0);
-        blocks_with_confirmations_by_height
+            .blocks_with_depths_separated_by_height(track_until_height)
     }
 
     // TODO(EXC-1310): temporary method will be removed after an upgrade.
