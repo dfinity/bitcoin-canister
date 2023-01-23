@@ -449,7 +449,7 @@ mod test {
 
         for (i, block) in blocks.iter().enumerate() {
             expected_blocks_with_depths_separated_by_heights[i]
-                .push((&block, (chain_len - i) as u32));
+                .push((block, (chain_len - i) as u32));
             extend(&mut block_tree, block.clone()).unwrap();
         }
 
