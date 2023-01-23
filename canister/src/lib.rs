@@ -144,12 +144,7 @@ pub fn post_upgrade() {
     memory.read(4, &mut state_bytes);
 
     // Deserialize and set the state.
-    let mut state: State =
-        ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
-
-    // TODO(EXC-1310): to be removed after upgrade
-    let network = state.network();
-    state.unstable_blocks = state.unstable_blocks.with_network(network);
+    let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
 
     set_state(state);
 }
