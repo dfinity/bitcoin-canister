@@ -644,7 +644,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn utxos_forks() {
         let network = Network::Regtest;
 
