@@ -187,7 +187,7 @@ fn get_utxos_from_chain(
 
     let blocks_with_depths_separated_by_height = state
         .unstable_blocks
-        .blocks_with_depths_separated_by_height(chain.len());
+        .blocks_with_depths_separated_by_height();
 
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();

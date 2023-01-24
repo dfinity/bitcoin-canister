@@ -91,12 +91,8 @@ impl BlockTree {
 
     /// Returns all blocks in the tree with their depths
     /// separated by heights.
-    pub fn blocks_with_depths_separated_by_heights(
-        &self,
-        track_until_height: usize,
-    ) -> Vec<Vec<(&Block, u32)>> {
-        let mut blocks_with_confirmations_by_height: Vec<Vec<(&Block, u32)>> =
-            vec![vec![]; track_until_height];
+    pub fn blocks_with_depths_separated_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
+        let mut blocks_with_confirmations_by_height: Vec<Vec<(&Block, u32)>> = vec![vec![]];
         self.blocks_with_depths_by_heights(&mut blocks_with_confirmations_by_height, 0);
         blocks_with_confirmations_by_height
     }
@@ -114,9 +110,13 @@ impl BlockTree {
             );
         }
         depth += 1;
-        if height < blocks_with_depth_by_height.len() {
-            blocks_with_depth_by_height[height].push((&self.root, depth));
+
+        if height >= blocks_with_depth_by_height.len() {
+            blocks_with_depth_by_height.resize(height + 1, vec![]);
         }
+
+        blocks_with_depth_by_height[height].push((&self.root, depth));
+
         depth
     }
 }
@@ -421,7 +421,7 @@ mod test {
         let genesis_block = BlockBuilder::genesis().build();
         let block_tree = BlockTree::new(genesis_block.clone());
         let blocks_with_depths_separated_by_heights =
-            block_tree.blocks_with_depths_separated_by_heights(1);
+            block_tree.blocks_with_depths_separated_by_heights();
 
         // The number of rows in blocks_with_depths_separated_by_heights should be 1.
         // The row should have only 1 column.
@@ -454,7 +454,7 @@ mod test {
         }
 
         let actual_blocks_with_depths_separated_by_heights =
-            block_tree.blocks_with_depths_separated_by_heights(chain_len);
+            block_tree.blocks_with_depths_separated_by_heights();
 
         assert_eq!(
             chain_len,
@@ -487,7 +487,7 @@ mod test {
         extend(&mut block_tree, fork_2_extend.clone()).unwrap();
 
         let blocks_with_depths_separated_by_heights =
-            block_tree.blocks_with_depths_separated_by_heights(3);
+            block_tree.blocks_with_depths_separated_by_heights();
 
         // blocks_with_depths_separated_by_heights should have 3 heights.
         assert_eq!(blocks_with_depths_separated_by_heights.len(), 3);

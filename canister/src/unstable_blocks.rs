@@ -73,12 +73,8 @@ impl UnstableBlocks {
 
     /// Returns all blocks in the tree with their respective depths
     /// separated by heights.
-    pub fn blocks_with_depths_separated_by_height(
-        &self,
-        track_until_height: usize,
-    ) -> Vec<Vec<(&Block, u32)>> {
-        self.tree
-            .blocks_with_depths_separated_by_heights(track_until_height)
+    pub fn blocks_with_depths_separated_by_height(&self) -> Vec<Vec<(&Block, u32)>> {
+        self.tree.blocks_with_depths_separated_by_heights()
     }
 
     // TODO(EXC-1310): temporary method will be removed after an upgrade.
