@@ -148,7 +148,7 @@ fn get_utxos_internal(
 fn get_stability_count(
     blocks_with_depths_on_the_same_height: &[(&Block, u32)],
     target_block: BlockHash,
-) -> u32 {
+) -> i32 {
     let mut max_depth_of_the_other_blocks = 0;
     let mut target_block_depth = 0;
     for (block, depth) in blocks_with_depths_on_the_same_height.iter() {
@@ -158,7 +158,7 @@ fn get_stability_count(
             target_block_depth = *depth;
         }
     }
-    target_block_depth - max_depth_of_the_other_blocks
+    target_block_depth as i32 - max_depth_of_the_other_blocks as i32
 }
 
 fn get_utxos_from_chain(
@@ -195,7 +195,7 @@ fn get_utxos_from_chain(
         if get_stability_count(
             &blocks_with_depths_separated_by_height[i],
             block.block_hash(),
-        ) < min_confirmations
+        ) < min_confirmations as i32
         {
             // The block has the lower stability count than requested.
             // We can stop now since all remaining blocks will have lower stability count.
@@ -1209,5 +1209,41 @@ mod test {
 
         // Base fee + instructions are charged for.
         assert_eq!(runtime::get_cycles_balance(), 10 + 1000);
+    }
+
+    #[test]
+    fn test_get_stability_count_single_block_on_height() {
+        let block = BlockBuilder::genesis().build();
+        let blocks_with_confirmations: Vec<(&Block, u32)> = vec![(&block, 1)];
+        // Stability count should be 1.
+        assert_eq!(
+            get_stability_count(&blocks_with_confirmations, block.block_hash()),
+            1
+        );
+    }
+
+    #[test]
+    fn test_get_stability_count_multiple_blocks_on_height() {
+        let block1 = BlockBuilder::genesis().build();
+        let block2 = BlockBuilder::genesis().build();
+        let block3 = BlockBuilder::genesis().build();
+
+        let blocks_with_confirmations: Vec<(&Block, u32)> =
+            vec![(&block1, 5), (&block2, 7), (&block3, 3)];
+        // The stability_count of block1 should be 5 - 7 = -2.
+        assert_eq!(
+            get_stability_count(&blocks_with_confirmations, block1.block_hash()),
+            -2
+        );
+        // The stability_count of block2 should be 7 - 5 = 2.
+        assert_eq!(
+            get_stability_count(&blocks_with_confirmations, block2.block_hash()),
+            2
+        );
+        // The stability_count of block3 should be 3 - 7 = -4.
+        assert_eq!(
+            get_stability_count(&blocks_with_confirmations, block3.block_hash()),
+            -4
+        );
     }
 }
