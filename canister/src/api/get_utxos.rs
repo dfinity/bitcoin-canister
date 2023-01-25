@@ -145,6 +145,17 @@ fn get_utxos_internal(
     }
 }
 
+// Returns the stability count of the given `target_block`.
+//
+// The stability count of a block is defined as the largest 𝜹 so that the block is 𝜹-stable.
+// A block b is 𝜹-stable if the following conditions hold:
+//   * d(b) ≥ 𝜹
+//   * ∀ b’ ∈ B \ {b}, h(b’) = h(b): d(b) - d(b’) ≥ 𝜹
+//
+// It follows from the above definition that the stability count is:
+// ```
+//    d(b) - max(d(b') ∀ b' ∈ B)
+// ```
 fn get_stability_count(
     blocks_with_depths_on_the_same_height: &[(&Block, u32)],
     target_block: BlockHash,
