@@ -276,7 +276,7 @@ pub struct BlockDoesNotExtendTree(pub BlockHash);
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::BlockBuilder;
+    use crate::test_utils::{BlockBuilder, BlockChainBuilder};
 
     #[test]
     fn tree_single_block() {
@@ -435,18 +435,15 @@ mod test {
 
     #[test]
     fn test_blocks_with_depths_by_heights_chain() {
-        let mut blocks = vec![BlockBuilder::genesis().build()];
-        let chain_len = 10;
-        for i in 1..chain_len {
-            blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
-        }
+        let chain_len: usize = 10;
+        let chain = BlockChainBuilder::new(chain_len as u32).build();
 
-        let mut block_tree = BlockTree::new(blocks[0].clone());
+        let mut block_tree = BlockTree::new(chain[0].clone());
 
         let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
             vec![vec![]; chain_len];
 
-        for (i, block) in blocks.iter().enumerate() {
+        for (i, block) in chain.iter().enumerate() {
             expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
             extend(&mut block_tree, block.clone()).unwrap();
         }
