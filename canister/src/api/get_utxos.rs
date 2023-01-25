@@ -196,17 +196,13 @@ fn get_utxos_from_chain(
     let mut tip_block_hash = chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
 
-    let blocks_with_depths_separated_by_height = state
-        .unstable_blocks
-        .blocks_with_depths_separated_by_height();
+    let blocks_with_depths_by_heights = state.unstable_blocks.blocks_with_depths_by_heights();
 
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();
     for (i, block) in chain.into_chain().iter().enumerate() {
-        if get_stability_count(
-            &blocks_with_depths_separated_by_height[i],
-            block.block_hash(),
-        ) < min_confirmations as i32
+        if get_stability_count(&blocks_with_depths_by_heights[i], block.block_hash())
+            < min_confirmations as i32
         {
             // The block has a lower stability count than requested.
             // We can stop now since all remaining blocks will have a lower stability count.

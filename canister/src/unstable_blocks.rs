@@ -68,8 +68,8 @@ impl UnstableBlocks {
 
     /// Returns all blocks in the tree with their respective depths
     /// separated by heights.
-    pub fn blocks_with_depths_separated_by_height(&self) -> Vec<Vec<(&Block, u32)>> {
-        self.tree.blocks_with_depths_separated_by_heights()
+    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
+        self.tree.blocks_with_depths_by_heights()
     }
 }
 

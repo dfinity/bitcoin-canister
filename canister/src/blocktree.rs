@@ -91,13 +91,13 @@ impl BlockTree {
 
     /// Returns all blocks in the tree with their depths
     /// separated by heights.
-    pub fn blocks_with_depths_separated_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
+    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
         let mut blocks_with_confirmations_by_height: Vec<Vec<(&Block, u32)>> = vec![vec![]];
-        self.blocks_with_depths_by_heights(&mut blocks_with_confirmations_by_height, 0);
+        self.blocks_with_depths_by_heights_helper(&mut blocks_with_confirmations_by_height, 0);
         blocks_with_confirmations_by_height
     }
 
-    fn blocks_with_depths_by_heights<'a>(
+    fn blocks_with_depths_by_heights_helper<'a>(
         &'a self,
         blocks_with_depth_by_height: &mut Vec<Vec<(&'a Block, u32)>>,
         height: usize,
@@ -106,7 +106,7 @@ impl BlockTree {
         for child in self.children.iter() {
             depth = std::cmp::max(
                 depth,
-                child.blocks_with_depths_by_heights(blocks_with_depth_by_height, height + 1),
+                child.blocks_with_depths_by_heights_helper(blocks_with_depth_by_height, height + 1),
             );
         }
         depth += 1;
@@ -417,25 +417,24 @@ mod test {
     }
 
     #[test]
-    fn test_blocks_with_depths_separated_by_heights_only_root() {
+    fn test_blocks_with_depths_by_heights_only_root() {
         let genesis_block = BlockBuilder::genesis().build();
         let block_tree = BlockTree::new(genesis_block.clone());
-        let blocks_with_depths_separated_by_heights =
-            block_tree.blocks_with_depths_separated_by_heights();
+        let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
 
-        // The number of rows in blocks_with_depths_separated_by_heights should be 1.
+        // The number of rows in blocks_with_depths_by_heights should be 1.
         // The row should have only 1 column.
-        assert_eq!(blocks_with_depths_separated_by_heights.len(), 1);
-        assert_eq!(blocks_with_depths_separated_by_heights[0].len(), 1);
+        assert_eq!(blocks_with_depths_by_heights.len(), 1);
+        assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
 
-        let (block, depth) = blocks_with_depths_separated_by_heights[0][0];
+        let (block, depth) = blocks_with_depths_by_heights[0][0];
         // Depth of the genesis block should be 1.
         assert_eq!(block.block_hash(), genesis_block.block_hash());
         assert_eq!(depth, 1);
     }
 
     #[test]
-    fn test_blocks_with_depths_separated_by_heights_chain() {
+    fn test_blocks_with_depths_by_heights_chain() {
         let mut blocks = vec![BlockBuilder::genesis().build()];
         let chain_len = 10;
         for i in 1..chain_len {
@@ -444,36 +443,30 @@ mod test {
 
         let mut block_tree = BlockTree::new(blocks[0].clone());
 
-        let mut expected_blocks_with_depths_separated_by_heights: Vec<Vec<(&Block, u32)>> =
+        let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
             vec![vec![]; chain_len];
 
         for (i, block) in blocks.iter().enumerate() {
-            expected_blocks_with_depths_separated_by_heights[i]
-                .push((block, (chain_len - i) as u32));
+            expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
             extend(&mut block_tree, block.clone()).unwrap();
         }
 
-        let actual_blocks_with_depths_separated_by_heights =
-            block_tree.blocks_with_depths_separated_by_heights();
+        let actual_blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
 
-        assert_eq!(
-            chain_len,
-            actual_blocks_with_depths_separated_by_heights.len()
-        );
+        assert_eq!(chain_len, actual_blocks_with_depths_by_heights.len());
 
         for i in 0..chain_len {
-            // On each height, actual_blocks_with_depths_separated_by_heights should have only 1 block.
-            assert_eq!(actual_blocks_with_depths_separated_by_heights[i].len(), 1);
-            let (expected_block, expected_depth) =
-                expected_blocks_with_depths_separated_by_heights[i][0];
-            let (acutal_block, actual_depth) = actual_blocks_with_depths_separated_by_heights[i][0];
+            // On each height, actual_blocks_with_depths_by_heights should have only 1 block.
+            assert_eq!(actual_blocks_with_depths_by_heights[i].len(), 1);
+            let (expected_block, expected_depth) = expected_blocks_with_depths_by_heights[i][0];
+            let (acutal_block, actual_depth) = actual_blocks_with_depths_by_heights[i][0];
             assert_eq!(expected_block.block_hash(), acutal_block.block_hash());
             assert_eq!(expected_depth, actual_depth);
         }
     }
 
     #[test]
-    fn test_blocks_with_depths_separated_by_heights_fork() {
+    fn test_blocks_with_depths_by_heights_fork() {
         let genesis_block = BlockBuilder::genesis().build();
         let mut block_tree = BlockTree::new(genesis_block.clone());
 
@@ -486,24 +479,23 @@ mod test {
         let fork_2_extend = BlockBuilder::with_prev_header(fork_2.header()).build();
         extend(&mut block_tree, fork_2_extend.clone()).unwrap();
 
-        let blocks_with_depths_separated_by_heights =
-            block_tree.blocks_with_depths_separated_by_heights();
+        let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
 
-        // blocks_with_depths_separated_by_heights should have 3 heights.
-        assert_eq!(blocks_with_depths_separated_by_heights.len(), 3);
+        // blocks_with_depths_by_heights should have 3 heights.
+        assert_eq!(blocks_with_depths_by_heights.len(), 3);
 
-        // On height 0, blocks_with_depths_separated_by_heights should have only one block.
-        assert_eq!(blocks_with_depths_separated_by_heights[0].len(), 1);
+        // On height 0, blocks_with_depths_by_heights should have only one block.
+        assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
 
-        let (height_0_block, height_0_depth) = blocks_with_depths_separated_by_heights[0][0];
+        let (height_0_block, height_0_depth) = blocks_with_depths_by_heights[0][0];
         assert_eq!(height_0_block.block_hash(), genesis_block.block_hash());
         assert_eq!(height_0_depth, 3);
 
-        // On height 1, blocks_with_depths_separated_by_heights should have two blocks, fork_1 and fork_2.
-        assert_eq!(blocks_with_depths_separated_by_heights[1].len(), 2);
+        // On height 1, blocks_with_depths_by_heights should have two blocks, fork_1 and fork_2.
+        assert_eq!(blocks_with_depths_by_heights[1].len(), 2);
 
-        let (first_block_height_1, _) = blocks_with_depths_separated_by_heights[1][0];
-        let (second_block_height_1, _) = blocks_with_depths_separated_by_heights[1][1];
+        let (first_block_height_1, _) = blocks_with_depths_by_heights[1][0];
+        let (second_block_height_1, _) = blocks_with_depths_by_heights[1][1];
 
         // Check that blocks are different.
         assert_ne!(
@@ -511,7 +503,7 @@ mod test {
             second_block_height_1.block_hash()
         );
 
-        for (block, depth) in blocks_with_depths_separated_by_heights[1].iter() {
+        for (block, depth) in blocks_with_depths_by_heights[1].iter() {
             if block.block_hash() == fork_1.block_hash() {
                 assert_eq!(*depth, 1);
             } else if block.block_hash() == fork_2.block_hash() {
@@ -521,10 +513,10 @@ mod test {
             }
         }
 
-        // On height 2, blocks_with_depths_separated_by_heights should have only one block.
-        assert_eq!(blocks_with_depths_separated_by_heights[2].len(), 1);
+        // On height 2, blocks_with_depths_by_heights should have only one block.
+        assert_eq!(blocks_with_depths_by_heights[2].len(), 1);
 
-        let (height_2_block, height_2_depth) = blocks_with_depths_separated_by_heights[2][0];
+        let (height_2_block, height_2_depth) = blocks_with_depths_by_heights[2][0];
 
         assert_eq!(height_2_block.block_hash(), fork_2_extend.block_hash());
         assert_eq!(height_2_depth, 1);
