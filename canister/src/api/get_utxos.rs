@@ -197,8 +197,8 @@ fn get_utxos_from_chain(
             block.block_hash(),
         ) < min_confirmations as i32
         {
-            // The block has the lower stability count than requested.
-            // We can stop now since all remaining blocks will have lower stability count.
+            // The block has a lower stability count than requested.
+            // We can stop now since all remaining blocks will have a lower stability count.
             break;
         }
         tip_block_hash = block.block_hash();
