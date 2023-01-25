@@ -464,17 +464,14 @@ mod test {
 
     #[test]
     fn test_blocks_with_depths_by_heights_fork() {
-        let genesis_block = BlockBuilder::genesis().build();
-        let mut block_tree = BlockTree::new(genesis_block.clone());
+        let chain = BlockChainBuilder::new(2).build();
+        // Create a fork from the genesis block with length 2.
+        let fork = BlockChainBuilder::fork(&chain[0], 2).build();
 
-        let fork_1 = BlockBuilder::with_prev_header(genesis_block.header()).build();
-        extend(&mut block_tree, fork_1.clone()).unwrap();
-
-        let fork_2 = BlockBuilder::with_prev_header(genesis_block.header()).build();
-        extend(&mut block_tree, fork_2.clone()).unwrap();
-
-        let fork_2_extend = BlockBuilder::with_prev_header(fork_2.header()).build();
-        extend(&mut block_tree, fork_2_extend.clone()).unwrap();
+        let mut block_tree = BlockTree::new(chain[0].clone());
+        extend(&mut block_tree, chain[1].clone()).unwrap();
+        extend(&mut block_tree, fork[0].clone()).unwrap();
+        extend(&mut block_tree, fork[1].clone()).unwrap();
 
         let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
 
@@ -485,10 +482,10 @@ mod test {
         assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
 
         let (height_0_block, height_0_depth) = blocks_with_depths_by_heights[0][0];
-        assert_eq!(height_0_block.block_hash(), genesis_block.block_hash());
+        assert_eq!(height_0_block.block_hash(), chain[0].block_hash());
         assert_eq!(height_0_depth, 3);
 
-        // On height 1, blocks_with_depths_by_heights should have two blocks, fork_1 and fork_2.
+        // On height 1, blocks_with_depths_by_heights should have two blocks.
         assert_eq!(blocks_with_depths_by_heights[1].len(), 2);
 
         let (first_block_height_1, _) = blocks_with_depths_by_heights[1][0];
@@ -501,9 +498,9 @@ mod test {
         );
 
         for (block, depth) in blocks_with_depths_by_heights[1].iter() {
-            if block.block_hash() == fork_1.block_hash() {
+            if block.block_hash() == chain[1].block_hash() {
                 assert_eq!(*depth, 1);
-            } else if block.block_hash() == fork_2.block_hash() {
+            } else if block.block_hash() == fork[0].block_hash() {
                 assert_eq!(*depth, 2);
             } else {
                 panic!("Unexpected block.");
@@ -515,7 +512,7 @@ mod test {
 
         let (height_2_block, height_2_depth) = blocks_with_depths_by_heights[2][0];
 
-        assert_eq!(height_2_block.block_hash(), fork_2_extend.block_hash());
+        assert_eq!(height_2_block.block_hash(), fork[1].block_hash());
         assert_eq!(height_2_depth, 1);
     }
 }
