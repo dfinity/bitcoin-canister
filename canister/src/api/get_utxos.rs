@@ -1221,10 +1221,10 @@ mod test {
     #[test]
     fn test_get_stability_count_single_block_on_height() {
         let block = BlockBuilder::genesis().build();
-        let blocks_with_confirmations: Vec<(&Block, u32)> = vec![(&block, 1)];
+        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block, 1)];
         // Stability count should be 1.
         assert_eq!(
-            get_stability_count(&blocks_with_confirmations, block.block_hash()),
+            get_stability_count(&blocks_with_depths, block.block_hash()),
             1
         );
     }
@@ -1235,21 +1235,20 @@ mod test {
         let block2 = BlockBuilder::genesis().build();
         let block3 = BlockBuilder::genesis().build();
 
-        let blocks_with_confirmations: Vec<(&Block, u32)> =
-            vec![(&block1, 5), (&block2, 7), (&block3, 3)];
+        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block1, 5), (&block2, 7), (&block3, 3)];
         // The stability_count of block1 should be 5 - 7 = -2.
         assert_eq!(
-            get_stability_count(&blocks_with_confirmations, block1.block_hash()),
+            get_stability_count(&blocks_with_depths, block1.block_hash()),
             -2
         );
         // The stability_count of block2 should be 7 - 5 = 2.
         assert_eq!(
-            get_stability_count(&blocks_with_confirmations, block2.block_hash()),
+            get_stability_count(&blocks_with_depths, block2.block_hash()),
             2
         );
         // The stability_count of block3 should be 3 - 7 = -4.
         assert_eq!(
-            get_stability_count(&blocks_with_confirmations, block3.block_hash()),
+            get_stability_count(&blocks_with_depths, block3.block_hash()),
             -4
         );
     }

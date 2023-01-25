@@ -92,9 +92,9 @@ impl BlockTree {
     /// Returns all blocks in the tree with their depths
     /// separated by heights.
     pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
-        let mut blocks_with_confirmations_by_height: Vec<Vec<(&Block, u32)>> = vec![vec![]];
-        self.blocks_with_depths_by_heights_helper(&mut blocks_with_confirmations_by_height, 0);
-        blocks_with_confirmations_by_height
+        let mut blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> = vec![vec![]];
+        self.blocks_with_depths_by_heights_helper(&mut blocks_with_depths_by_heights, 0);
+        blocks_with_depths_by_heights
     }
 
     fn blocks_with_depths_by_heights_helper<'a>(
