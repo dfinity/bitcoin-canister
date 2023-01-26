@@ -38,7 +38,7 @@ struct Stats {
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
 
-    let (res, stats) = with_state(|state| {
+    let response = with_state(|state| {
         match &request.filter {
             None => {
                 // No filter is specified. Return all UTXOs for the address.
@@ -62,8 +62,16 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
                 MAX_UTXOS_PER_RESPONSE,
             ),
         }
-    })
-    .expect("get_utxos failed");
+    });
+    //.expect("get_utxos failed");
+
+    let (res, stats) = match response {
+        Ok(res) => res,
+        Err(e) => {
+            ic_cdk::api::call::reject(e.to_string().as_str());
+            panic!("get_utxos failed");
+        }
+    };
 
     // Observe metrics
     with_state_mut(|s| {
