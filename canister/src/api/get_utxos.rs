@@ -154,7 +154,8 @@ fn get_utxos_internal(
 //
 // It follows from the above definition that the stability count is:
 // ```
-//    d(b) - max(d(b') ∀ b' ∈ B)
+//    D(b) := {b' ∈ B \ {b} | h(b') = h(b)}
+//    stability_count(b) = d(b) if |D(b)| = 0 and d(b) - max_{b' ∈ D(b)} d(b') otherwise.
 // ```
 fn get_stability_count(
     blocks_with_depths_on_the_same_height: &[(&Block, u32)],
