@@ -10,7 +10,7 @@ FROM ubuntu@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3
 
 # NOTE: if this version is updated, then the version in rust-toolchain.toml
 # should be updated as well.
-ARG rust_version=1.62.1
+ARG rust_version=1.66.1
 
 ENV TZ=UTC
 
