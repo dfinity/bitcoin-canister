@@ -2,7 +2,7 @@ use crate::{
     blocktree::BlockChain,
     charge_cycles,
     runtime::{performance_counter, print},
-    types::{Address, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
+    types::{Address, Block, BlockHash, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
 use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
@@ -145,6 +145,34 @@ fn get_utxos_internal(
     }
 }
 
+// Returns the stability count of the given `target_block`.
+//
+// The stability count of a block is defined as the largest 𝜹 so that the block is 𝜹-stable.
+// A block b is 𝜹-stable if the following conditions hold:
+//   * d(b) ≥ 𝜹
+//   * ∀ b’ ∈ B \ {b}, h(b’) = h(b): d(b) - d(b’) ≥ 𝜹
+//
+// It follows from the above definition that the stability count is:
+// ```
+//    D(b) := {b' ∈ B \ {b} | h(b') = h(b)}
+//    stability_count(b) = d(b) if |D(b)| = 0 and d(b) - max_{b' ∈ D(b)} d(b') otherwise.
+// ```
+fn get_stability_count(
+    blocks_with_depths_on_the_same_height: &[(&Block, u32)],
+    target_block: BlockHash,
+) -> i32 {
+    let mut max_depth_of_the_other_blocks = 0;
+    let mut target_block_depth = 0;
+    for (block, depth) in blocks_with_depths_on_the_same_height.iter() {
+        if block.block_hash() != target_block {
+            max_depth_of_the_other_blocks = std::cmp::max(max_depth_of_the_other_blocks, *depth);
+        } else {
+            target_block_depth = *depth;
+        }
+    }
+    target_block_depth as i32 - max_depth_of_the_other_blocks as i32
+}
+
 fn get_utxos_from_chain(
     state: &State,
     address: &str,
@@ -165,27 +193,25 @@ fn get_utxos_from_chain(
     }
 
     let mut address_utxos = state.get_utxos(address);
-    let chain_height = state.utxos.next_height() + (chain.len() as u32) - 1;
 
     let mut tip_block_hash = chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
 
+    let blocks_with_depths_by_heights = state.unstable_blocks.blocks_with_depths_by_heights();
+
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();
     for (i, block) in chain.into_chain().iter().enumerate() {
-        let block_height = state.utxos.next_height() + (i as u32);
-        let confirmations = chain_height - block_height + 1;
-
-        if confirmations < min_confirmations {
-            // The block has fewer confirmations than requested.
-            // We can stop now since all remaining blocks will have fewer confirmations.
+        if get_stability_count(&blocks_with_depths_by_heights[i], block.block_hash())
+            < min_confirmations as i32
+        {
+            // The block has a lower stability count than requested.
+            // We can stop now since all remaining blocks will have a lower stability count.
             break;
         }
-
-        address_utxos.apply_block(block);
-
         tip_block_hash = block.block_hash();
-        tip_block_height = block_height;
+        tip_block_height = state.utxos.next_height() + (i as u32);
+        address_utxos.apply_block(block);
     }
     stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 
@@ -1191,5 +1217,40 @@ mod test {
 
         // Base fee + instructions are charged for.
         assert_eq!(runtime::get_cycles_balance(), 10 + 1000);
+    }
+
+    #[test]
+    fn test_get_stability_count_single_block_on_height() {
+        let block = BlockBuilder::genesis().build();
+        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block, 1)];
+        // Stability count should be 1.
+        assert_eq!(
+            get_stability_count(&blocks_with_depths, block.block_hash()),
+            1
+        );
+    }
+
+    #[test]
+    fn test_get_stability_count_multiple_blocks_on_height() {
+        let block1 = BlockBuilder::genesis().build();
+        let block2 = BlockBuilder::genesis().build();
+        let block3 = BlockBuilder::genesis().build();
+
+        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block1, 5), (&block2, 7), (&block3, 3)];
+        // The stability_count of block1 should be 5 - 7 = -2.
+        assert_eq!(
+            get_stability_count(&blocks_with_depths, block1.block_hash()),
+            -2
+        );
+        // The stability_count of block2 should be 7 - 5 = 2.
+        assert_eq!(
+            get_stability_count(&blocks_with_depths, block2.block_hash()),
+            2
+        );
+        // The stability_count of block3 should be 3 - 7 = -4.
+        assert_eq!(
+            get_stability_count(&blocks_with_depths, block3.block_hash()),
+            -4
+        );
     }
 }
