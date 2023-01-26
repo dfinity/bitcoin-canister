@@ -38,7 +38,7 @@ struct Stats {
 pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
 
-    let (res, stats) = with_state(|state| {
+    let response = with_state(|state| {
         match &request.filter {
             None => {
                 // No filter is specified. Return all UTXOs for the address.
@@ -62,8 +62,16 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
                 MAX_UTXOS_PER_RESPONSE,
             ),
         }
-    })
-    .expect("get_utxos failed");
+    });
+    //.expect("get_utxos failed");
+
+    let (res, stats) = match response {
+        Ok(res) => res,
+        Err(e) => {
+            ic_cdk::api::call::reject(e.to_string().as_str());
+            panic!("get_utxos failed");
+        }
+    };
 
     // Observe metrics
     with_state_mut(|s| {
@@ -1191,5 +1199,39 @@ mod test {
 
         // Base fee + instructions are charged for.
         assert_eq!(runtime::get_cycles_balance(), 10 + 1000);
+    }
+
+    // It cannot be tested in the unit test, since we need
+    // a bitcoin canister, hence e2e is the only solution.
+    #[test]
+    #[ignore]
+    fn charge_cycles_when_incorrect_adress_is_provided() {
+        crate::init(Config {
+            fees: Fees {
+                get_utxos_base: 10,
+                get_utxos_cycles_per_ten_instructions: 10,
+                get_utxos_maximum: 100_000,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        // Set the number of instructions consumed.
+        runtime::set_performance_counter_step(1000);
+        runtime::inc_performance_counter();
+
+        let before = runtime::get_cycles_balance();
+
+        let panics = std::panic::catch_unwind(|| {
+            get_utxos(GetUtxosRequest {
+                address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl3".to_string(),
+                filter: None,
+            })
+        })
+        .is_err();
+
+        assert!(panics);
+
+        assert_ne!(before, runtime::get_cycles_balance());
     }
 }
