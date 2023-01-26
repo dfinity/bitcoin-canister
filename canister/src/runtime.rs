@@ -190,6 +190,8 @@ pub fn msg_cycles_accept(max_amount: u64) -> u64 {
     max_amount
 }
 
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn get_cycles_balance() -> u64 {
     CYCLES_BALANCE.with(|c| *c.borrow())
 }

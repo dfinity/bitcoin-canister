@@ -1,7 +1,4 @@
-use crate::{
-    metrics::InstructionHistogram, runtime::get_cycles_balance, state, types::HttpResponse,
-    with_state,
-};
+use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
 use std::{fmt::Display, io};
@@ -102,7 +99,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
 
         w.encode_gauge(
             "cycles_balance",
-            get_cycles_balance() as f64,
+            ic_cdk::api::canister_balance() as f64,
             "The cycles balance of the canister.",
         )?;
 
