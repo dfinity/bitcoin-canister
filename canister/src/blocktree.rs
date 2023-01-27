@@ -88,6 +88,37 @@ impl BlockTree {
             children: vec![],
         }
     }
+
+    /// Returns all blocks in the tree with their depths
+    /// separated by heights.
+    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
+        let mut blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> = vec![vec![]];
+        self.blocks_with_depths_by_heights_helper(&mut blocks_with_depths_by_heights, 0);
+        blocks_with_depths_by_heights
+    }
+
+    fn blocks_with_depths_by_heights_helper<'a>(
+        &'a self,
+        blocks_with_depth_by_height: &mut Vec<Vec<(&'a Block, u32)>>,
+        height: usize,
+    ) -> u32 {
+        let mut depth: u32 = 0;
+        for child in self.children.iter() {
+            depth = std::cmp::max(
+                depth,
+                child.blocks_with_depths_by_heights_helper(blocks_with_depth_by_height, height + 1),
+            );
+        }
+        depth += 1;
+
+        if height >= blocks_with_depth_by_height.len() {
+            blocks_with_depth_by_height.resize(height + 1, vec![]);
+        }
+
+        blocks_with_depth_by_height[height].push((&self.root, depth));
+
+        depth
+    }
 }
 
 /// Extends the tree with the given block.
@@ -245,7 +276,7 @@ pub struct BlockDoesNotExtendTree(pub BlockHash);
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::BlockBuilder;
+    use crate::test_utils::{BlockBuilder, BlockChainBuilder};
 
     #[test]
     fn tree_single_block() {
@@ -383,5 +414,105 @@ mod test {
         // The maximum sum of block difficulties from the root to a leaf is the sum
         // of the root and child with the greatest difficulty which is 5 + 10 = 15.
         assert_eq!(difficulty_based_depth(&block_tree, Network::Mainnet), 15);
+    }
+
+    #[test]
+    fn test_blocks_with_depths_by_heights_only_root() {
+        let genesis_block = BlockBuilder::genesis().build();
+        let block_tree = BlockTree::new(genesis_block.clone());
+        let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
+
+        // The number of rows in blocks_with_depths_by_heights should be 1.
+        // The row should have only 1 column.
+        assert_eq!(blocks_with_depths_by_heights.len(), 1);
+        assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
+
+        let (block, depth) = blocks_with_depths_by_heights[0][0];
+        // Depth of the genesis block should be 1.
+        assert_eq!(block.block_hash(), genesis_block.block_hash());
+        assert_eq!(depth, 1);
+    }
+
+    #[test]
+    fn test_blocks_with_depths_by_heights_chain() {
+        let chain_len: usize = 10;
+        let chain = BlockChainBuilder::new(chain_len as u32).build();
+
+        let mut block_tree = BlockTree::new(chain[0].clone());
+
+        let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
+            vec![vec![]; chain_len];
+
+        for (i, block) in chain.iter().enumerate() {
+            expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
+            extend(&mut block_tree, block.clone()).unwrap();
+        }
+
+        let actual_blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
+
+        assert_eq!(chain_len, actual_blocks_with_depths_by_heights.len());
+
+        for i in 0..chain_len {
+            // On each height, actual_blocks_with_depths_by_heights should have only 1 block.
+            assert_eq!(actual_blocks_with_depths_by_heights[i].len(), 1);
+            let (expected_block, expected_depth) = expected_blocks_with_depths_by_heights[i][0];
+            let (acutal_block, actual_depth) = actual_blocks_with_depths_by_heights[i][0];
+            assert_eq!(expected_block.block_hash(), acutal_block.block_hash());
+            assert_eq!(expected_depth, actual_depth);
+        }
+    }
+
+    #[test]
+    fn test_blocks_with_depths_by_heights_fork() {
+        let chain = BlockChainBuilder::new(2).build();
+        // Create a fork from the genesis block with length 2.
+        let fork = BlockChainBuilder::fork(&chain[0], 2).build();
+
+        let mut block_tree = BlockTree::new(chain[0].clone());
+        extend(&mut block_tree, chain[1].clone()).unwrap();
+        extend(&mut block_tree, fork[0].clone()).unwrap();
+        extend(&mut block_tree, fork[1].clone()).unwrap();
+
+        let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
+
+        // blocks_with_depths_by_heights should have 3 heights.
+        assert_eq!(blocks_with_depths_by_heights.len(), 3);
+
+        // On height 0, blocks_with_depths_by_heights should have only one block.
+        assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
+
+        let (height_0_block, height_0_depth) = blocks_with_depths_by_heights[0][0];
+        assert_eq!(height_0_block.block_hash(), chain[0].block_hash());
+        assert_eq!(height_0_depth, 3);
+
+        // On height 1, blocks_with_depths_by_heights should have two blocks.
+        assert_eq!(blocks_with_depths_by_heights[1].len(), 2);
+
+        let (first_block_height_1, _) = blocks_with_depths_by_heights[1][0];
+        let (second_block_height_1, _) = blocks_with_depths_by_heights[1][1];
+
+        // Check that blocks are different.
+        assert_ne!(
+            first_block_height_1.block_hash(),
+            second_block_height_1.block_hash()
+        );
+
+        for (block, depth) in blocks_with_depths_by_heights[1].iter() {
+            if block.block_hash() == chain[1].block_hash() {
+                assert_eq!(*depth, 1);
+            } else if block.block_hash() == fork[0].block_hash() {
+                assert_eq!(*depth, 2);
+            } else {
+                panic!("Unexpected block.");
+            }
+        }
+
+        // On height 2, blocks_with_depths_by_heights should have only one block.
+        assert_eq!(blocks_with_depths_by_heights[2].len(), 1);
+
+        let (height_2_block, height_2_depth) = blocks_with_depths_by_heights[2][0];
+
+        assert_eq!(height_2_block.block_hash(), fork[1].block_hash());
+        assert_eq!(height_2_depth, 1);
     }
 }
