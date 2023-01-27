@@ -1,7 +1,7 @@
 use crate::{
     blocktree::BlockChain,
     charge_cycles,
-    runtime::{performance_counter, print},
+    runtime::{performance_counter, print, reject},
     types::{Address, Block, BlockHash, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
@@ -65,13 +65,10 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
     });
     //.expect("get_utxos failed");
 
-    let (res, stats) = match response {
-        Ok(res) => res,
-        Err(e) => {
-            ic_cdk::api::call::reject(e.to_string().as_str());
-            panic!("get_utxos failed");
-        }
-    };
+    let (res, stats) = response.unwrap_or_else(|e| {
+        reject(format!("get_utxos failed: {:?}", e));
+        panic!("");
+    });
 
     // Observe metrics
     with_state_mut(|s| {

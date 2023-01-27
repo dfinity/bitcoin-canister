@@ -195,3 +195,13 @@ pub fn msg_cycles_accept(max_amount: u64) -> u64 {
 pub fn get_cycles_balance() -> u64 {
     CYCLES_BALANCE.with(|c| *c.borrow())
 }
+
+#[cfg(target_arch = "wasm32")]
+pub fn reject(msg: String) {
+    ic_cdk::api::call::reject(msg.as_str());
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn reject(msg: String) {
+    panic!("{}", msg);
+}
