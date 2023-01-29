@@ -65,6 +65,12 @@ impl UnstableBlocks {
     fn get_network(&self) -> Network {
         self.network
     }
+
+    /// Returns all blocks in the tree with their respective depths
+    /// separated by heights.
+    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
+        self.tree.blocks_with_depths_by_heights()
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
