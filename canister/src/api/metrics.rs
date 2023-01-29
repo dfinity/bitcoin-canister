@@ -97,6 +97,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The total number of (valid) requests to the send_transaction endpoint.",
         )?;
 
+        w.encode_gauge(
+            "cycles_balance",
+            ic_cdk::api::canister_balance() as f64,
+            "The cycles balance of the canister.",
+        )?;
+
         Ok(())
     })
 }
