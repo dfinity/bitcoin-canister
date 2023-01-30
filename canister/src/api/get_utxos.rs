@@ -1,7 +1,7 @@
 use crate::{
     blocktree::BlockChain,
     charge_cycles,
-    runtime::{performance_counter, print, reject},
+    runtime::{performance_counter, print},
     types::{Address, Block, BlockHash, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
@@ -35,7 +35,7 @@ struct Stats {
 }
 
 /// Retrieves the UTXOs of the given Bitcoin address.
-pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
+pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
 
     let response = with_state(|state| {
@@ -63,12 +63,8 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
             ),
         }
     });
-    //.expect("get_utxos failed");
 
-    let (res, stats) = response.unwrap_or_else(|e| {
-        reject(format!("get_utxos failed: {:?}", e));
-        panic!("");
-    });
+    let (res, stats) = response?;
 
     // Observe metrics
     with_state_mut(|s| {
@@ -93,7 +89,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
 
     // Print the number of instructions it took to process this request.
     print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
-    res
+    Ok(res)
 }
 
 // Returns the set of UTXOs for a given bitcoin address.
@@ -283,18 +279,19 @@ mod test {
     use proptest::prelude::*;
 
     #[test]
-    #[should_panic(expected = "get_utxos failed: MalformedAddress")]
     fn get_utxos_malformed_address() {
         crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
             ..Default::default()
         });
-
-        get_utxos(GetUtxosRequest {
-            address: String::from("not an address"),
-            filter: None,
-        });
+        assert_eq!(
+            get_utxos(GetUtxosRequest {
+                address: String::from("not an address"),
+                filter: None,
+            }),
+            Err(GetUtxosError::MalformedAddress)
+        );
     }
 
     #[test]
@@ -310,7 +307,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: random_p2pkh_address(network).to_string(),
                 filter: None
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: genesis_block(network).block_hash().to_vec(),
@@ -349,7 +347,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address.to_string(),
                 filter: None
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
@@ -437,7 +436,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: None
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: expected_utxos_address_1,
                 tip_block_hash: blocks.last().unwrap().block_hash().to_vec(),
@@ -450,7 +450,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
                 filter: None
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: expected_utxos_address_2,
                 tip_block_hash: blocks.last().unwrap().block_hash().to_vec(),
@@ -491,7 +492,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address.to_string(),
                 filter: None
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
@@ -552,7 +554,8 @@ mod test {
                 get_utxos(GetUtxosRequest {
                     address: address_2.to_string(),
                     filter: min_confirmations.map(UtxosFilter::MinConfirmations),
-                }),
+                })
+                .unwrap(),
                 GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
@@ -572,7 +575,8 @@ mod test {
                 get_utxos(GetUtxosRequest {
                     address: address_1.to_string(),
                     filter: min_confirmations.map(UtxosFilter::MinConfirmations),
-                }),
+                })
+                .unwrap(),
                 GetUtxosResponse {
                     utxos: vec![],
                     tip_block_hash: block_1.block_hash().to_vec(),
@@ -588,7 +592,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
                 filter: Some(UtxosFilter::MinConfirmations(2))
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_0.block_hash().to_vec(),
@@ -600,7 +605,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: Some(UtxosFilter::MinConfirmations(2))
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
@@ -618,8 +624,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "get_utxos failed: MinConfirmationsTooLarge { given: 2, max: 1 }")]
-    fn panics_on_very_large_confirmations() {
+    fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
         crate::init(Config {
             stability_threshold: 2,
@@ -638,7 +643,8 @@ mod test {
                 get_utxos(GetUtxosRequest {
                     address: address.to_string(),
                     filter
-                }),
+                })
+                .unwrap(),
                 GetUtxosResponse {
                     utxos: vec![],
                     tip_block_hash: genesis_block(network).block_hash().to_vec(),
@@ -649,11 +655,14 @@ mod test {
         }
 
         // The chain only contains the genesis block, so a min_confirmations of 2
-        // should panic, as there aren't that many blocks in the chain.
-        get_utxos(GetUtxosRequest {
-            address: address.to_string(),
-            filter: Some(UtxosFilter::MinConfirmations(2)),
-        });
+        // should return error, as there aren't that many blocks in the chain.
+        assert_eq!(
+            get_utxos(GetUtxosRequest {
+                address: address.to_string(),
+                filter: Some(UtxosFilter::MinConfirmations(2)),
+            }),
+            Err(GetUtxosError::MinConfirmationsTooLarge { given: 2, max: 1 })
+        );
     }
 
     #[test]
@@ -704,7 +713,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             block_0_utxos
         );
 
@@ -726,7 +736,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
@@ -746,7 +757,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_1.block_hash().to_vec(),
@@ -775,7 +787,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_0.block_hash().to_vec(),
@@ -787,7 +800,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_3.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_0.block_hash().to_vec(),
@@ -799,7 +813,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             block_0_utxos
         );
 
@@ -822,7 +837,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_2_prime.block_hash().to_vec(),
@@ -834,7 +850,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_2_prime.block_hash().to_vec(),
@@ -846,7 +863,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_3.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: block_2_prime.block_hash().to_vec(),
@@ -859,7 +877,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_4.to_string(),
                 filter: None,
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
@@ -877,7 +896,6 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "get_utxos failed: MinConfirmationsTooLarge { given: 3, max: 2 }")]
     fn get_utxos_min_confirmations_greater_than_chain_height() {
         let network = Network::Regtest;
         let address_1 = random_p2pkh_address(network);
@@ -905,7 +923,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: Some(UtxosFilter::MinConfirmations(1)),
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
@@ -926,7 +945,8 @@ mod test {
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
                 filter: Some(UtxosFilter::MinConfirmations(2)),
-            }),
+            })
+            .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
                 tip_block_hash: genesis_block(network).block_hash().to_vec(),
@@ -935,11 +955,14 @@ mod test {
             }
         );
 
-        // min confirmations is too large. Should panic.
-        get_utxos(GetUtxosRequest {
-            address: address_1.to_string(),
-            filter: Some(UtxosFilter::MinConfirmations(3)),
-        });
+        // min confirmations is too large. Should return error.
+        assert_eq!(
+            get_utxos(GetUtxosRequest {
+                address: address_1.to_string(),
+                filter: Some(UtxosFilter::MinConfirmations(3)),
+            }),
+            Err(GetUtxosError::MinConfirmationsTooLarge { given: 3, max: 2 })
+        );
     }
 
     #[test]
@@ -1170,7 +1193,8 @@ mod test {
         get_utxos(GetUtxosRequest {
             address: random_p2pkh_address(Network::Regtest).to_string(),
             filter: None,
-        });
+        })
+        .unwrap();
 
         assert_eq!(runtime::get_cycles_balance(), 10);
     }
@@ -1193,7 +1217,8 @@ mod test {
         get_utxos(GetUtxosRequest {
             address: random_p2pkh_address(Network::Regtest).to_string(),
             filter: None,
-        });
+        })
+        .unwrap();
 
         // Charging is capped to the maximum fee.
         assert_eq!(runtime::get_cycles_balance(), 100);
@@ -1218,7 +1243,8 @@ mod test {
         get_utxos(GetUtxosRequest {
             address: random_p2pkh_address(Network::Regtest).to_string(),
             filter: None,
-        });
+        })
+        .unwrap();
 
         // Base fee + instructions are charged for.
         assert_eq!(runtime::get_cycles_balance(), 10 + 1000);

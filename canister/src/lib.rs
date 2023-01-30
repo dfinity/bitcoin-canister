@@ -26,8 +26,8 @@ pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
 use ic_btc_types::{
-    GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
-    MillisatoshiPerByte, Satoshi,
+    GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
+    GetUtxosResponse, MillisatoshiPerByte, Satoshi,
 };
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
@@ -100,7 +100,7 @@ pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
     api::get_balance(request.into())
 }
 
-pub fn get_utxos(request: GetUtxosRequest) -> GetUtxosResponse {
+pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_api_access();
     verify_network(request.network.into());
     api::get_utxos(request.into())
@@ -307,7 +307,8 @@ mod test {
             address: String::from(""),
             network: NetworkInRequest::Testnet,
             filter: None,
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -365,7 +366,8 @@ mod test {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
             filter: None,
-        });
+        })
+        .unwrap();
     }
 
     #[test]

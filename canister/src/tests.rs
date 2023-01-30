@@ -171,7 +171,8 @@ async fn mainnet_100k_blocks() {
         get_utxos(GetUtxosRequest {
             address: "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh".to_string(),
             filter: None
-        }),
+        })
+        .unwrap(),
         GetUtxosResponse {
             utxos: vec![Utxo {
                 outpoint: OutPoint {
@@ -210,7 +211,8 @@ async fn mainnet_100k_blocks() {
         get_utxos(GetUtxosRequest {
             address: "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK".to_string(),
             filter: None
-        }),
+        })
+        .unwrap(),
         GetUtxosResponse {
             utxos: vec![Utxo {
                 outpoint: OutPoint {
@@ -268,7 +270,8 @@ async fn mainnet_100k_blocks() {
         get_utxos(GetUtxosRequest {
             address: "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro".to_string(),
             filter: Some(UtxosFilter::MinConfirmations(6))
-        }),
+        })
+        .unwrap(),
         GetUtxosResponse {
             utxos: vec![Utxo {
                 outpoint: OutPoint {
