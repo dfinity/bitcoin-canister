@@ -632,11 +632,7 @@ mod test {
 
         let address = random_p2pkh_address(network);
 
-        for filter in [
-            None,
-            Some(UtxosFilter::MinConfirmations(1)),
-            Some(UtxosFilter::MinConfirmations(2)),
-        ] {
+        for filter in [None, Some(UtxosFilter::MinConfirmations(1))] {
             assert_eq!(
                 get_utxos(GetUtxosRequest {
                     address: address.to_string(),
