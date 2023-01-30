@@ -38,7 +38,7 @@ struct Stats {
 pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
 
-    let response = with_state(|state| {
+    let (res, stats) = with_state(|state| {
         match &request.filter {
             None => {
                 // No filter is specified. Return all UTXOs for the address.
@@ -62,9 +62,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosE
                 MAX_UTXOS_PER_RESPONSE,
             ),
         }
-    });
-
-    let (res, stats) = response?;
+    })?;
 
     // Observe metrics
     with_state_mut(|s| {
