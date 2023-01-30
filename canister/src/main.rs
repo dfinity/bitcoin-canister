@@ -1,7 +1,7 @@
 use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, SetConfigRequest};
 use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, MillisatoshiPerByte,
-    Satoshi, SendTransactionRequest,
+    SendTransactionRequest,
 };
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
 
@@ -25,9 +25,12 @@ async fn heartbeat() {
     ic_btc_canister::heartbeat().await
 }
 
-#[update]
-pub fn bitcoin_get_balance(request: GetBalanceRequest) -> Satoshi {
-    ic_btc_canister::get_balance(request)
+#[update(manual_reply = true)]
+pub fn bitcoin_get_balance(request: GetBalanceRequest) {
+    match ic_btc_canister::get_balance(request) {
+        Ok(response) => ic_cdk::api::call::reply((response,)),
+        Err(e) => ic_cdk::api::call::reject(format!("get_utxos failed: {:?}", e).as_str()),
+    }
 }
 
 #[update(manual_reply = true)]

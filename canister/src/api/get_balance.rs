@@ -18,11 +18,11 @@ struct Stats {
 }
 
 /// Retrieves the balance of the given Bitcoin address.
-pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     verify_has_enough_cycles(with_state(|s| s.fees.get_balance_maximum));
     charge_cycles(with_state(|s| s.fees.get_balance));
 
-    get_balance_internal(request).expect("get_balance failed")
+    get_balance_internal(request)
 }
 
 fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
@@ -108,18 +108,20 @@ mod test {
     };
 
     #[test]
-    #[should_panic(expected = "get_balance failed: MalformedAddress")]
-    fn panics_on_malformed_address() {
+    fn error_on_malformed_address() {
         crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
             ..Default::default()
         });
 
-        get_balance(GetBalanceRequest {
-            address: String::from("not an address"),
-            min_confirmations: None,
-        });
+        assert_eq!(
+            get_balance(GetBalanceRequest {
+                address: String::from("not an address"),
+                min_confirmations: None,
+            }),
+            Err(GetBalanceError::MalformedAddress)
+        );
     }
 
     #[test]
@@ -151,7 +153,8 @@ mod test {
                 get_balance(GetBalanceRequest {
                     address: address.to_string(),
                     min_confirmations: *min_confirmations
-                }),
+                })
+                .unwrap(),
                 1000
             );
         }
@@ -161,14 +164,14 @@ mod test {
             get_balance(GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: Some(2)
-            }),
+            })
+            .unwrap(),
             0
         );
     }
 
     #[test]
-    #[should_panic(expected = "get_balance failed: MinConfirmationsTooLarge { given: 2, max: 1 }")]
-    fn panics_on_very_large_confirmations() {
+    fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
         crate::init(Config {
             stability_threshold: 2,
@@ -183,17 +186,21 @@ mod test {
                 get_balance(GetBalanceRequest {
                     address: address.to_string(),
                     min_confirmations
-                }),
+                })
+                .unwrap(),
                 0
             );
         }
 
         // The chain only contains the genesis block, so a min_confirmations of 2
-        // should panic, as there aren't that many blocks in the chain.
-        get_balance(GetBalanceRequest {
-            address: address.to_string(),
-            min_confirmations: Some(2),
-        });
+        // should return error, as there aren't that many blocks in the chain.
+        assert_eq!(
+            get_balance(GetBalanceRequest {
+                address: address.to_string(),
+                min_confirmations: Some(2),
+            }),
+            Err(GetBalanceError::MinConfirmationsTooLarge { given: 2, max: 1 })
+        );
     }
 
     #[test]
@@ -241,7 +248,8 @@ mod test {
                 get_balance(GetBalanceRequest {
                     address: address_2.to_string(),
                     min_confirmations: *min_confirmations
-                }),
+                })
+                .unwrap(),
                 1000
             );
 
@@ -249,7 +257,8 @@ mod test {
                 get_balance(GetBalanceRequest {
                     address: address_1.to_string(),
                     min_confirmations: *min_confirmations
-                }),
+                })
+                .unwrap(),
                 0
             );
         }
@@ -260,14 +269,16 @@ mod test {
             get_balance(GetBalanceRequest {
                 address: address_2.to_string(),
                 min_confirmations: Some(2)
-            }),
+            })
+            .unwrap(),
             0
         );
         assert_eq!(
             get_balance(GetBalanceRequest {
                 address: address_1.to_string(),
                 min_confirmations: Some(2)
-            }),
+            })
+            .unwrap(),
             1000
         );
     }
@@ -285,7 +296,8 @@ mod test {
         get_balance(GetBalanceRequest {
             address: random_p2pkh_address(Network::Regtest).to_string(),
             min_confirmations: None,
-        });
+        })
+        .unwrap();
 
         assert_eq!(crate::runtime::get_cycles_balance(), 10);
     }

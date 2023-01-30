@@ -163,7 +163,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1PgZsaGjvssNCqHHisshLoCFeUjxPhutTh".to_string(),
             min_confirmations: None
-        }),
+        })
+        .unwrap(),
         4000000
     );
 
@@ -203,7 +204,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "12tGGuawKdkw5NeDEzS3UANhCRa1XggBbK".to_string(),
             min_confirmations: None
-        }),
+        })
+        .unwrap(),
         500000000
     );
 
@@ -244,7 +246,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro".to_string(),
             min_confirmations: None
-        }),
+        })
+        .unwrap(),
         0
     );
 
@@ -253,7 +256,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro".to_string(),
             min_confirmations: Some(10)
-        }),
+        })
+        .unwrap(),
         48_0000_0000
     );
 
@@ -262,7 +266,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro".to_string(),
             min_confirmations: Some(6)
-        }),
+        })
+        .unwrap(),
         48_0000_0000
     );
 
@@ -302,7 +307,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1K791w8Y1CXwyG3zAf9EzpoZvpYH8Z2Rro".to_string(),
             min_confirmations: Some(5)
-        }),
+        })
+        .unwrap(),
         0
     );
 
@@ -311,7 +317,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr".to_string(),
             min_confirmations: Some(5),
-        }),
+        })
+        .unwrap(),
         3_4500_0000
     );
 
@@ -319,7 +326,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr".to_string(),
             min_confirmations: Some(5)
-        }),
+        })
+        .unwrap(),
         44_5500_0000
     );
 
@@ -328,7 +336,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "1NhzJ8bsdmGK39vSJtdQw3R2HyNtUmGxcr".to_string(),
             min_confirmations: Some(6),
-        }),
+        })
+        .unwrap(),
         0
     );
 
@@ -336,7 +345,8 @@ async fn mainnet_100k_blocks() {
         get_balance(GetBalanceRequest {
             address: "13U77vKQcTjpZ7gww4K8Nreq2ffGBQKxmr".to_string(),
             min_confirmations: Some(6),
-        }),
+        })
+        .unwrap(),
         0
     );
 
@@ -501,7 +511,8 @@ async fn time_slices_large_block_with_multiple_transactions() {
         get_balance(crate::types::GetBalanceRequest {
             address: address_1.to_string(),
             min_confirmations: None
-        }),
+        })
+        .unwrap(),
         2000
     );
 
@@ -509,7 +520,8 @@ async fn time_slices_large_block_with_multiple_transactions() {
         get_balance(crate::types::GetBalanceRequest {
             address: address_2.to_string(),
             min_confirmations: None
-        }),
+        })
+        .unwrap(),
         2000
     );
 }

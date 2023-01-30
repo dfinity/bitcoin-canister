@@ -26,8 +26,8 @@ pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
 use ic_btc_types::{
-    GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
-    GetUtxosResponse, MillisatoshiPerByte, Satoshi,
+    GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosError,
+    GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Satoshi,
 };
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
@@ -94,7 +94,7 @@ pub fn get_current_fee_percentiles(
     api::get_current_fee_percentiles()
 }
 
-pub fn get_balance(request: GetBalanceRequest) -> Satoshi {
+pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     verify_api_access();
     verify_network(request.network.into());
     api::get_balance(request.into())
@@ -282,7 +282,7 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
-    fn get_balance_correct_network() {
+    fn get_balance_incorrect_network() {
         init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
@@ -292,7 +292,8 @@ mod test {
             address: String::from(""),
             network: NetworkInRequest::Testnet,
             min_confirmations: None,
-        });
+        })
+        .unwrap();
     }
 
     #[test]
@@ -350,7 +351,8 @@ mod test {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
             min_confirmations: None,
-        });
+        })
+        .unwrap();
     }
 
     #[test]
