@@ -41,13 +41,12 @@ pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
     };
 }
 
-#[update]
+#[update(manual_reply = true)]
 async fn bitcoin_send_transaction(request: SendTransactionRequest) {
-    ic_btc_canister::send_transaction(request).await
-    /*Option<Err<String>> option = None;
-    if let Some(e) = option {
-
-    }*/
+    match ic_btc_canister::send_transaction(request).await {
+        Ok(_) => ic_cdk::api::call::reply(()),
+        Err(e) => ic_cdk::api::call::reject(format!("send_transaction failed: {}", e).as_str()),
+    }
 }
 
 #[update]

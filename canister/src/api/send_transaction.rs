@@ -5,7 +5,7 @@ use crate::{
 use bitcoin::{consensus::Decodable, Transaction};
 use ic_btc_types::SendTransactionRequest;
 
-pub async fn send_transaction(request: SendTransactionRequest) {
+pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), String> {
     verify_api_access();
     verify_network(request.network.into());
 
@@ -16,7 +16,7 @@ pub async fn send_transaction(request: SendTransactionRequest) {
 
     // Decode the transaction as a sanity check that it's valid.
     let tx = Transaction::consensus_decode(request.transaction.as_slice())
-        .expect("Cannot decode transaction");
+        .map_err(|e| format!("Cannot decode transaction {:?}", e))?;
 
     runtime::print(&format!("[send_transaction] Tx ID: {}", tx.txid()));
 
@@ -34,7 +34,12 @@ pub async fn send_transaction(request: SendTransactionRequest) {
         },
     )
     .await
-    .expect("Sending transaction bitcoin network must succeed");
+    .map_err(|(code, msg)| {
+        format!(
+            "Sending transaction bitcoin network must succeed, Rejection code: {:?}, {}",
+            code, msg
+        )
+    })
 }
 
 #[cfg(test)]
@@ -81,7 +86,8 @@ mod test {
             network: NetworkInRequest::Mainnet,
             transaction,
         })
-        .await;
+        .await
+        .unwrap();
 
         assert_eq!(
             crate::runtime::get_cycles_balance(),
@@ -93,8 +99,7 @@ mod test {
     }
 
     #[async_std::test]
-    #[should_panic(expected = "Cannot decode transaction")]
-    async fn invalid_tx_panics() {
+    async fn invalid_tx_error() {
         crate::init(Config {
             fees: Fees {
                 send_transaction_base: 13,
@@ -105,11 +110,15 @@ mod test {
             ..Default::default()
         });
 
-        send_transaction(SendTransactionRequest {
+        match send_transaction(SendTransactionRequest {
             network: NetworkInRequest::Mainnet,
             transaction: vec![1, 2, 3], // Invalid transaction
         })
-        .await;
+        .await
+        {
+            Err(e) => assert!(e.starts_with("Cannot decode transaction")),
+            _ => panic!("Should not succeed!"),
+        }
     }
 
     #[async_std::test]
@@ -130,6 +139,7 @@ mod test {
             network: NetworkInRequest::Mainnet,
             transaction: vec![1, 2, 3], // Invalid transaction
         })
-        .await;
+        .await
+        .unwrap();
     }
 }
