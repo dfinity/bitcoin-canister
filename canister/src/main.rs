@@ -29,7 +29,7 @@ async fn heartbeat() {
 pub fn bitcoin_get_balance(request: GetBalanceRequest) {
     match ic_btc_canister::get_balance(request) {
         Ok(response) => ic_cdk::api::call::reply((response,)),
-        Err(e) => ic_cdk::api::call::reject(format!("get_utxos failed: {:?}", e).as_str()),
+        Err(e) => ic_cdk::api::call::reject(format!("get_balance failed: {:?}", e).as_str()),
     }
 }
 
@@ -44,6 +44,10 @@ pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
 #[update]
 async fn bitcoin_send_transaction(request: SendTransactionRequest) {
     ic_btc_canister::send_transaction(request).await
+    /*Option<Err<String>> option = None;
+    if let Some(e) = option {
+
+    }*/
 }
 
 #[update]
