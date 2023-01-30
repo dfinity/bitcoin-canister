@@ -35,12 +35,11 @@ ENV PATH=/cargo/bin:$PATH
 COPY . .
 
 # Build bitcoin canister
-RUN scripts/build-canister.sh bitcoin-canister
-RUN cp target/wasm32-unknown-unknown/release/bitcoin-canister.wasm ic-btc-canister.wasm
-RUN gzip -n -f ic-btc-canister.wasm
+RUN scripts/build-canister.sh ic-btc-canister
+RUN cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz
 RUN sha256sum ic-btc-canister.wasm.gz
 
 # Build uploader canister
 RUN scripts/build-canister.sh uploader-canister
-RUN cp target/wasm32-unknown-unknown/release/uploader-canister.wasm uploader-canister.wasm
-RUN sha256sum uploader-canister.wasm
+RUN cp target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz uploader-canister.wasm.gz
+RUN sha256sum uploader-canister.wasm.gz
