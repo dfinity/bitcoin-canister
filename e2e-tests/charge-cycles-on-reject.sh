@@ -43,7 +43,7 @@ check_charging()
 
   # Send invalid transaction.
   set +e
-  SEND_TX_OUTPUT=$(dfx canister  --wallet=${WALLET} call --with-cycles 624000000000 bitcoin ${METHOD} "${RECORD}" 2>&1);
+  SEND_TX_OUTPUT=$(dfx canister  --wallet="${WALLET}" call --with-cycles 624000000000 bitcoin "${METHOD}" "${RECORD}" 2>&1);
   set -e
 
 
@@ -68,6 +68,8 @@ METHOD="bitcoin_send_transaction"
 RECORD="(record { network = variant { regtest }; transaction = ${TX_BYTES}})"
 EXPECTED="Cannot decode transaction"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
+#Do not forgot to test "Sending transaction bitcoin network must succeed, Rejection code"
+
 
 #test bitcoin_get_balance
 METHOD="bitcoin_get_balance"
@@ -92,5 +94,9 @@ check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 #RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${TX_BYTES}} })"
 #EXPECTED="MalformedPage"
 #check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+
+
+#UnknownTipBlockHash
 
 echo "SUCCESS"
