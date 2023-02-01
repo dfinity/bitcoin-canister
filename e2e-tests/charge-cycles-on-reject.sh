@@ -68,8 +68,6 @@ METHOD="bitcoin_send_transaction"
 RECORD="(record { network = variant { regtest }; transaction = ${TX_BYTES}})"
 EXPECTED="Cannot decode transaction"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
-#Do not forgot to test "Sending transaction bitcoin network must succeed, Rejection code"
-
 
 #test bitcoin_get_balance
 METHOD="bitcoin_get_balance"
@@ -91,13 +89,14 @@ RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; ne
 EXPECTED="MinConfirmationsTooLarge"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 
-BAD_PAGE="blob \"12341234789789\""
-RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${BAD_PAGE}} })"
+SHORT_PAGE="blob \"12341234789789\""
+RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${SHORT_PAGE}} })"
 EXPECTED="MalformedPage"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 
-
-
-#UnknownTipBlockHash
+BAD_TIP="blob \"123412347897123412347897123412347897123412347897123412347897123412347897\""
+RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${BAD_TIP}} })"
+EXPECTED="UnknownTipBlockHash"
+check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 
 echo "SUCCESS"
