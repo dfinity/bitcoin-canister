@@ -34,11 +34,9 @@ dfx deploy bitcoin --argument "(record {
 
 dfx wallet balance --precise
 
-dfx wallet authorize $(dfx canister id bitcoin)
-
 # Send transaction valid transaction
 TX_BYTES="blob \"\\00\\00\\00\\00\\00\\01\\00\\00\\00\\00\\00\\00\""
-dfx canister --wallet=$(dfx identity get-wallet) call --with-cycles 624000000000 bitcoin bitcoin_send_transaction "(record {
+dfx canister --wallet="$(dfx identity get-wallet)" call --with-cycles 624000000000 bitcoin bitcoin_send_transaction "(record {
   network = variant { regtest };
   transaction = ${TX_BYTES}
 })"
@@ -55,7 +53,7 @@ BEFORE_SEND_TRANSACTION=$(dfx wallet balance --precise)
 # Send invalid transaction.
 set +e
 TX_BYTES="blob \"12341234789789\""
-SEND_TX_OUTPUT=$(dfx canister  --wallet=$(dfx identity get-wallet) call --with-cycles 624000000000 bitcoin bitcoin_send_transaction "(record {
+SEND_TX_OUTPUT=$(dfx canister  --wallet="$(dfx identity get-wallet)" call --with-cycles 624000000000 bitcoin bitcoin_send_transaction "(record {
   network = variant { regtest };
   transaction = ${TX_BYTES}
 })" 2>&1);
@@ -71,9 +69,37 @@ fi
 AFTER_SEND_TRANSACTION=$(dfx wallet balance --precise)
 
 # Should charge cycles.
-if [[ $BEFORE_SEND_TRANSACTION = $AFTER_SEND_TRANSACTION ]]; then
+if [[ $BEFORE_SEND_TRANSACTION = "$AFTER_SEND_TRANSACTION" ]]; then
   echo "FAIL"
   exit 1
 fi
 
 echo "SUCCESS"
+
+check_charging()
+{
+  CALL=$1
+  EXPECTED=$2
+
+  BEFORE_SEND_TRANSACTION=$(dfx wallet balance --precise)
+
+  # Send invalid transaction.
+  set +e
+  SEND_TX_OUTPUT=$(dfx canister  --wallet="$(dfx identity get-wallet)" call --with-cycles 624000000000 bitcoin "$CALL" 2>&1);
+  set -e
+
+
+  # Should reject.
+  if [[ $SEND_TX_OUTPUT != *"$EXPECTED"* ]]; then
+    echo "FAIL"
+    exit 1
+  fi
+
+  AFTER_SEND_TRANSACTION=$(dfx wallet balance --precise)
+
+  # Should charge cycles.
+  if [[ $BEFORE_SEND_TRANSACTION = "$AFTER_SEND_TRANSACTION" ]]; then
+    echo "FAIL"
+    exit 1
+  fi
+}
