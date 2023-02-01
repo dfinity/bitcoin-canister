@@ -19,78 +19,36 @@ dfx deploy bitcoin --argument "(record {
   blocks_source = principal \"$(dfx canister id e2e-scenario-3)\";
   syncing = variant { enabled };
   fees = record {
-    get_utxos_base = 0;
-    get_utxos_cycles_per_ten_instructions = 0;
-    get_utxos_maximum = 0;
-    get_balance = 0;
-    get_balance_maximum = 0;
-    get_current_fee_percentiles = 0;
-    get_current_fee_percentiles_maximum = 0;
+    get_utxos_base = 500000000000;
+    get_utxos_cycles_per_ten_instructions = 500000000000;
+    get_utxos_maximum = 500000000000;
+    get_balance = 500000000000;
+    get_balance_maximum = 500000000000;
+    get_current_fee_percentiles = 500000000000;
+    get_current_fee_percentiles_maximum = 500000000000;
     send_transaction_base = 500000000000;
     send_transaction_per_byte = 2000000000;
   };
   api_access = variant { enabled }
 })"
 
-dfx wallet balance --precise
-
-# Send transaction valid transaction
-TX_BYTES="blob \"\\00\\00\\00\\00\\00\\01\\00\\00\\00\\00\\00\\00\""
-dfx canister --wallet="$(dfx identity get-wallet)" call --with-cycles 624000000000 bitcoin bitcoin_send_transaction "(record {
-  network = variant { regtest };
-  transaction = ${TX_BYTES}
-})"
-
-# Verify the transaction was sent.
-TX_BYTES_RECEIVED=$(dfx canister call e2e-scenario-3 get_last_transaction --query)
-if ! [[ $TX_BYTES_RECEIVED = "($TX_BYTES)" ]]; then
-  echo "FAIL"
-  exit 1
-fi
-
-BEFORE_SEND_TRANSACTION=$(dfx wallet balance --precise)
-
-# Send invalid transaction.
-set +e
-TX_BYTES="blob \"12341234789789\""
-SEND_TX_OUTPUT=$(dfx canister  --wallet="$(dfx identity get-wallet)" call --with-cycles 624000000000 bitcoin bitcoin_send_transaction "(record {
-  network = variant { regtest };
-  transaction = ${TX_BYTES}
-})" 2>&1);
-set -e
-
-
-# Should reject.
-if [[ $SEND_TX_OUTPUT != *"Cannot decode transaction"* ]]; then
-  echo "FAIL"
-  exit 1
-fi
-
-AFTER_SEND_TRANSACTION=$(dfx wallet balance --precise)
-
-# Should charge cycles.
-if [[ $BEFORE_SEND_TRANSACTION = "$AFTER_SEND_TRANSACTION" ]]; then
-  echo "FAIL"
-  exit 1
-fi
-
-echo "SUCCESS"
-
 check_charging()
 {
-  CALL=$1
-  EXPECTED=$2
+  WALLET=$1
+  METHOD=$2
+  RECORD=$3
+  EXPECTED=$4
 
   BEFORE_SEND_TRANSACTION=$(dfx wallet balance --precise)
 
   # Send invalid transaction.
   set +e
-  SEND_TX_OUTPUT=$(dfx canister  --wallet="$(dfx identity get-wallet)" call --with-cycles 624000000000 bitcoin "$CALL" 2>&1);
+  SEND_TX_OUTPUT=$(dfx canister  --wallet=${WALLET} call --with-cycles 624000000000 bitcoin ${METHOD} "${RECORD}" 2>&1);
   set -e
 
 
   # Should reject.
-  if [[ $SEND_TX_OUTPUT != *"$EXPECTED"* ]]; then
+  if [[ $SEND_TX_OUTPUT != *"${EXPECTED}"* ]]; then
     echo "FAIL"
     exit 1
   fi
@@ -103,3 +61,37 @@ check_charging()
     exit 1
   fi
 }
+
+WALLET="$(dfx identity get-wallet)"
+TX_BYTES="blob \"12341234789789\""
+METHOD="bitcoin_send_transaction"
+RECORD="(record { network = variant { regtest }; transaction = ${TX_BYTES}})"
+EXPECTED="Cannot decode transaction"
+check_charging "${WALLET}" "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+METHOD="bitcoin_get_balance"
+RECORD="(record { address = \"Bad address\"; network = variant { regtest } })"
+EXPECTED="MalformedAddress"
+check_charging "${WALLET}" "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+METHOD="bitcoin_get_balance"
+RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; min_confirmations = opt 10 })"
+EXPECTED="MinConfirmationsTooLarge"
+check_charging "${WALLET}" "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+METHOD="bitcoin_get_utxos"
+RECORD="(record { address = \"Bad address\"; network = variant { regtest } })"
+EXPECTED="MalformedAddress"
+check_charging "${WALLET}" "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+METHOD="bitcoin_get_utxos"
+RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {min_confirmations = 10} })"
+EXPECTED="MinConfirmationsTooLarge"
+check_charging "${WALLET}" "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+#METHOD="bitcoin_get_utxos"
+#RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${TX_BYTES}} })"
+#EXPECTED="MalformedPage"
+#check_charging "${WALLET}" "${METHOD}" "${RECORD}" "${EXPECTED}"
+
+echo "SUCCESS"
