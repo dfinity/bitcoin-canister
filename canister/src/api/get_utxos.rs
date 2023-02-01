@@ -113,6 +113,15 @@ fn get_utxos_internal(
         // A page was provided in the request, so we should use it as a basis
         // to compute the next chunk of UTXOs to be returned.
         Some(page) => {
+            if page.len() != 72 {
+                return Err(GetUtxosError::MalformedPage {
+                    err: format!(
+                        "Could not parse page, page size {}, expected size {}.",
+                        page.len(),
+                        72
+                    ),
+                });
+            }
             let Page {
                 tip_block_hash,
                 height,

@@ -91,9 +91,10 @@ RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; ne
 EXPECTED="MinConfirmationsTooLarge"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 
-#RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${TX_BYTES}} })"
-#EXPECTED="MalformedPage"
-#check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
+BAD_PAGE="blob \"12341234789789\""
+RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${BAD_PAGE}} })"
+EXPECTED="MalformedPage"
+check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 
 
 
