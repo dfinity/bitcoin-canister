@@ -3,9 +3,9 @@ use crate::{
     verify_network, with_state, with_state_mut,
 };
 use bitcoin::{consensus::Decodable, Transaction};
-use ic_btc_types::SendTransactionRequest;
+use ic_btc_types::{SendTransactionError, SendTransactionRequest};
 
-pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), String> {
+pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), SendTransactionError> {
     verify_api_access();
     verify_network(request.network.into());
 
@@ -16,7 +16,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Str
 
     // Decode the transaction as a sanity check that it's valid.
     let tx = Transaction::consensus_decode(request.transaction.as_slice())
-        .map_err(|e| format!("Cannot decode transaction {:?}", e))?;
+        .map_err(|_| SendTransactionError::MalformedTransaction)?;
 
     runtime::print(&format!("[send_transaction] Tx ID: {}", tx.txid()));
 
@@ -106,15 +106,12 @@ mod test {
             ..Default::default()
         });
 
-        match send_transaction(SendTransactionRequest {
+        let result = send_transaction(SendTransactionRequest {
             network: NetworkInRequest::Mainnet,
             transaction: vec![1, 2, 3], // Invalid transaction
         })
-        .await
-        {
-            Err(e) => assert!(e.starts_with("Cannot decode transaction")),
-            _ => panic!("Should not succeed!"),
-        }
+        .await;
+        assert!(result == Err(SendTransactionError::MalformedTransaction));
     }
 
     #[async_std::test]

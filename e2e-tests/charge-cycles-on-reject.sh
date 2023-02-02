@@ -66,7 +66,7 @@ check_charging()
 TX_BYTES="blob \"12341234789789\""
 METHOD="bitcoin_send_transaction"
 RECORD="(record { network = variant { regtest }; transaction = ${TX_BYTES}})"
-EXPECTED="Cannot decode transaction"
+EXPECTED="MalformedTransaction"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}"
 
 #test bitcoin_get_balance

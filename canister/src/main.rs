@@ -45,7 +45,7 @@ pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
 async fn bitcoin_send_transaction(request: SendTransactionRequest) {
     match ic_btc_canister::send_transaction(request).await {
         Ok(_) => ic_cdk::api::call::reply(()),
-        Err(e) => ic_cdk::api::call::reject(format!("send_transaction failed: {}", e).as_str()),
+        Err(e) => ic_cdk::api::call::reject(format!("send_transaction failed: {:?}", e).as_str()),
     }
 }
 
