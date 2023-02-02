@@ -153,9 +153,8 @@ mod test {
                 get_balance(GetBalanceRequest {
                     address: address.to_string(),
                     min_confirmations: *min_confirmations
-                })
-                .unwrap(),
-                1000
+                }),
+                Ok(1000)
             );
         }
 
