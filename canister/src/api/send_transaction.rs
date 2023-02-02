@@ -34,12 +34,8 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Str
         },
     )
     .await
-    .map_err(|(code, msg)| {
-        format!(
-            "Sending transaction bitcoin network must succeed, Rejection code: {:?}, {}",
-            code, msg
-        )
-    })
+    .expect("Sending transaction bitcoin network must succeed");
+    Ok(())
 }
 
 #[cfg(test)]
