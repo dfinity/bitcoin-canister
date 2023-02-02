@@ -958,7 +958,7 @@ mod test {
             }
         );
 
-        // min confirmations is too large. Should return error.
+        // min confirmations is too large. Should return an error.
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),
