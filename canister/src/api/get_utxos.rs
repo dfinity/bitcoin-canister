@@ -658,7 +658,7 @@ mod test {
         }
 
         // The chain only contains the genesis block, so a min_confirmations of 2
-        // should return error, as there aren't that many blocks in the chain.
+        // should return an error, as there aren't that many blocks in the chain.
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: address.to_string(),
@@ -958,7 +958,7 @@ mod test {
             }
         );
 
-        // min confirmations is too large. Should return error.
+        // min confirmations is too large. Should return an error.
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: address_1.to_string(),

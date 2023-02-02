@@ -153,9 +153,8 @@ mod test {
                 get_balance(GetBalanceRequest {
                     address: address.to_string(),
                     min_confirmations: *min_confirmations
-                })
-                .unwrap(),
-                1000
+                }),
+                Ok(1000)
             );
         }
 
@@ -193,7 +192,7 @@ mod test {
         }
 
         // The chain only contains the genesis block, so a min_confirmations of 2
-        // should return error, as there aren't that many blocks in the chain.
+        // should return an error, as there aren't that many blocks in the chain.
         assert_eq!(
             get_balance(GetBalanceRequest {
                 address: address.to_string(),

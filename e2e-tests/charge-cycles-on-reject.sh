@@ -17,7 +17,7 @@ dfx deploy bitcoin --argument "(record {
   stability_threshold = 2;
   network = variant { regtest };
   blocks_source = principal \"$(dfx canister id e2e-scenario-3)\";
-  syncing = variant { enabled };
+  syncing = variant { disabled };
   fees = record {
     get_utxos_base = 5000000000;
     get_utxos_cycles_per_ten_instructions = 500000000;
