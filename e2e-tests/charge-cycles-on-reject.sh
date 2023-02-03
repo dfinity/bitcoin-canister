@@ -9,10 +9,10 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-# Deploy the canister that returns the blocks for harge-cycles-on-reject.
+# Deploy the canister that returns the blocks for charge-cycles-on-reject.
 dfx deploy e2e-scenario-3
 
-# Deploy the bitcoin canister, setting the blocks_source to be the source above.
+# Deploy the bitcoin canister.
 dfx deploy bitcoin --argument "(record {
   stability_threshold = 2;
   network = variant { regtest };
