@@ -44,7 +44,7 @@ check_charging()
 
   # Send invalid transaction.
   set +e
-  SEND_TX_OUTPUT=$(dfx canister  --wallet="${WALLET}" call --with-cycles $EXPECTED_FEE bitcoin "${METHOD}" "${RECORD}" 2>&1);
+  SEND_TX_OUTPUT=$(dfx canister  --wallet="${WALLET}" call --with-cycles "${EXPECTED_FEE}" bitcoin "${METHOD}" "${RECORD}" 2>&1);
   set -e
 
 
@@ -56,10 +56,10 @@ check_charging()
 
   AFTER_SEND_TRANSACTION=$(dfx wallet balance --precise | tr -d -c 0-9)
 
-  FEE=`expr $BEFORE_SEND_TRANSACTION - $AFTER_SEND_TRANSACTION`
+  FEE=$(expr $BEFORE_SEND_TRANSACTION - $AFTER_SEND_TRANSACTION)
 
   # Should charge cycles.
-  if [[ $FEE != $EXPECTED_FEE ]]; then
+  if [[ $FEE != "$EXPECTED_FEE" ]]; then
     echo "FAIL"
     exit 1
   fi
