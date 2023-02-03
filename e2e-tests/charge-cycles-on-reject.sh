@@ -56,9 +56,9 @@ check_charging()
 
   AFTER_SEND_TRANSACTION=$(dfx wallet balance --precise | tr -d -c 0-9)
 
-  FEE=$(expr $BEFORE_SEND_TRANSACTION - $AFTER_SEND_TRANSACTION)
+  FEE=$(("${BEFORE_SEND_TRANSACTION}" - "${AFTER_SEND_TRANSACTION}"))
 
-  # Should charge cycles.
+  # Should charge EXPECTED_FEE cycles.
   if [[ $FEE != "$EXPECTED_FEE" ]]; then
     echo "FAIL"
     exit 1
