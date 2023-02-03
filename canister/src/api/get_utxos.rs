@@ -38,6 +38,9 @@ struct Stats {
 pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
 
+    // Charge the base fee.
+    charge_cycles(with_state(|s| s.fees.get_utxos_base));
+
     let (res, stats) = with_state(|state| {
         match &request.filter {
             None => {
@@ -75,12 +78,11 @@ pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosE
             .observe(stats.ins_build_utxos_vec);
     });
 
-    // Charge the fee.
+    // Charge the fee based on the number of the instructions.
     with_state(|s| {
         let fee = std::cmp::min(
-            s.fees.get_utxos_base
-                + (stats.ins_total / 10) as u128 * s.fees.get_utxos_cycles_per_ten_instructions,
-            s.fees.get_utxos_maximum,
+            (stats.ins_total / 10) as u128 * s.fees.get_utxos_cycles_per_ten_instructions,
+            s.fees.get_utxos_maximum - s.fees.get_utxos_base,
         );
         charge_cycles(fee);
     });
