@@ -44,7 +44,7 @@ check_charging()
 
   # Send invalid transaction.
   set +e
-  SEND_TX_OUTPUT=$(dfx canister  --wallet="${WALLET}" call --with-cycles 15 bitcoin "${METHOD}" "${RECORD}" 2>&1);
+  SEND_TX_OUTPUT=$(dfx canister  --wallet="${WALLET}" call --with-cycles $EXPECTED_FEE bitcoin "${METHOD}" "${RECORD}" 2>&1);
   set -e
 
 
