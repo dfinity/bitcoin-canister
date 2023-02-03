@@ -83,6 +83,7 @@ pub fn init(config: Config) {
 
     with_state_mut(|s| s.blocks_source = config.blocks_source);
     with_state_mut(|s| s.api_access = config.api_access);
+    with_state_mut(|s| s.syncing_state.syncing = config.syncing);
     with_state_mut(|s| s.fees = config.fees);
 }
 
@@ -379,6 +380,27 @@ mod test {
         });
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
             network: NetworkInRequest::Mainnet,
+        });
+    }
+
+    #[test]
+    fn init_sets_syncing_flag() {
+        init(Config {
+            syncing: Flag::Disabled,
+            ..Default::default()
+        });
+
+        with_state(|s| {
+            assert!(s.syncing_state.syncing == Flag::Disabled);
+        });
+
+        init(Config {
+            syncing: Flag::Enabled,
+            ..Default::default()
+        });
+
+        with_state(|s| {
+            assert!(s.syncing_state.syncing == Flag::Enabled);
         });
     }
 }
