@@ -9,7 +9,6 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-.
 # Deploy the canister that will be used as an internal endpoint to send the transaction 
 # to the Bitcoin network when calling bitcoin_send_transaction.
 dfx deploy e2e-scenario-3
