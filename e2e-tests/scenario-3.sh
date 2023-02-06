@@ -56,7 +56,7 @@ SEND_TX_OUTPUT=$(dfx canister call bitcoin bitcoin_send_transaction "(record {
 set -e
 
 # Should result in a panic.
-if [[ $SEND_TX_OUTPUT != *"Cannot decode transaction"* ]]; then
+if [[ $SEND_TX_OUTPUT != *"MalformedTransaction"* ]]; then
   echo "FAIL"
   exit 1
 fi

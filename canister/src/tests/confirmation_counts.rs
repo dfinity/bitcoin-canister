@@ -35,7 +35,7 @@ proptest! {
         let res = get_utxos(GetUtxosRequest {
             address: ADDRESS.to_string(),
             filter: None,
-        });
+        }).unwrap();
 
         assert_eq!(res.tip_height, chain_len - 1);
         assert_eq!(res.tip_block_hash, chain[chain_len as usize - 1].block_hash().to_vec());
@@ -44,7 +44,7 @@ proptest! {
             let res = get_utxos(GetUtxosRequest {
                 address: ADDRESS.to_string(),
                 filter: Some(UtxosFilter::MinConfirmations(i)),
-            });
+            }).unwrap();
 
             let block_depth = chain_len - i;
             assert_eq!(res.tip_height, block_depth);
@@ -85,7 +85,7 @@ proptest! {
         let res = get_utxos(GetUtxosRequest {
             address: ADDRESS.to_string(),
             filter: None,
-        });
+        }).unwrap();
 
         assert_eq!(res.tip_height, chain_len - 1);
         assert_eq!(res.tip_block_hash, chain[chain_len as usize - 1].block_hash().to_vec());
@@ -94,7 +94,7 @@ proptest! {
             let res = get_utxos(GetUtxosRequest {
                 address: ADDRESS.to_string(),
                 filter: Some(UtxosFilter::MinConfirmations(i)),
-            });
+            }).unwrap();
 
             let block_depth = chain_len - i;
 
@@ -132,7 +132,8 @@ async fn multiple_forks() {
     let res = get_utxos(GetUtxosRequest {
         address: ADDRESS.to_string(),
         filter: None,
-    });
+    })
+    .unwrap();
 
     assert_eq!(res.tip_height, 6);
     assert_eq!(res.tip_block_hash, a[6].block_hash().to_vec());
@@ -141,7 +142,8 @@ async fn multiple_forks() {
     let res = get_utxos(GetUtxosRequest {
         address: ADDRESS.to_string(),
         filter: Some(UtxosFilter::MinConfirmations(2)),
-    });
+    })
+    .unwrap();
 
     assert_eq!(res.tip_height, 3);
     assert_eq!(res.tip_block_hash, a[3].block_hash().to_vec());
