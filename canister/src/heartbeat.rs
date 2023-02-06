@@ -510,7 +510,8 @@ mod test {
                 crate::api::get_balance(crate::types::GetBalanceRequest {
                     address: address_1.to_string(),
                     min_confirmations: None
-                }),
+                })
+                .unwrap(),
                 0
             );
 
@@ -518,7 +519,8 @@ mod test {
                 crate::api::get_balance(crate::types::GetBalanceRequest {
                     address: address_2.to_string(),
                     min_confirmations: None
-                }),
+                })
+                .unwrap(),
                 tx_cardinality as u64 * 1000
             );
         }
@@ -539,7 +541,8 @@ mod test {
             crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address_1.to_string(),
                 min_confirmations: None
-            }),
+            })
+            .unwrap(),
             0
         );
 
@@ -547,7 +550,8 @@ mod test {
             crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address_2.to_string(),
                 min_confirmations: None
-            }),
+            })
+            .unwrap(),
             tx_cardinality as u64 * 1000
         );
     }
@@ -603,7 +607,8 @@ mod test {
             crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: None
-            }),
+            })
+            .unwrap(),
             0
         );
 
@@ -615,7 +620,8 @@ mod test {
             crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: None
-            }),
+            })
+            .unwrap(),
             1000
         );
     }

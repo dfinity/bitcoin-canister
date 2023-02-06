@@ -23,6 +23,9 @@ const MAX_ADDRESS_LENGTH: u32 = 90;
 // https://developer.bitcoin.org/reference/block_chain.html#block-headers
 const BLOCK_HEADER_LENGTH: u32 = 80;
 
+// The expected length in bytes of the page.
+const EXPECTED_PAGE_LENGTH: usize = 72;
+
 /// The payload used to initialize the canister.
 #[derive(CandidType, Deserialize)]
 pub struct Config {
@@ -332,6 +335,14 @@ impl Page {
     }
 
     pub fn from_bytes(mut bytes: Vec<u8>) -> Result<Self, String> {
+        if bytes.len() != EXPECTED_PAGE_LENGTH {
+            return Err(format!(
+                "Could not parse the page, the length is {}, but the expected length is {}.",
+                bytes.len(),
+                EXPECTED_PAGE_LENGTH
+            ));
+        }
+
         // The first 32 bytes represent the encoded `BlockHash`, the next 4 the
         // `Height` and the remaining the encoded `OutPoint`.
         let height_offset = 32;
