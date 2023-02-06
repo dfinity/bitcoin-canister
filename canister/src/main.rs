@@ -3,8 +3,8 @@ use ic_btc_types::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, MillisatoshiPerByte,
     SendTransactionRequest,
 };
+use ic_cdk::api::call::{reject, reply};
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
-
 #[init]
 fn init(config: Config) {
     ic_btc_canister::init(config);
@@ -28,24 +28,24 @@ async fn heartbeat() {
 #[update(manual_reply = true)]
 pub fn bitcoin_get_balance(request: GetBalanceRequest) {
     match ic_btc_canister::get_balance(request) {
-        Ok(response) => ic_cdk::api::call::reply((response,)),
-        Err(e) => ic_cdk::api::call::reject(format!("get_balance failed: {:?}", e).as_str()),
+        Ok(response) => reply((response,)),
+        Err(e) => reject(format!("get_balance failed: {:?}", e).as_str()),
     }
 }
 
 #[update(manual_reply = true)]
 pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
     match ic_btc_canister::get_utxos(request) {
-        Ok(response) => ic_cdk::api::call::reply((response,)),
-        Err(e) => ic_cdk::api::call::reject(format!("get_utxos failed: {:?}", e).as_str()),
+        Ok(response) => reply((response,)),
+        Err(e) => reject(format!("get_utxos failed: {:?}", e).as_str()),
     };
 }
 
 #[update(manual_reply = true)]
 async fn bitcoin_send_transaction(request: SendTransactionRequest) {
     match ic_btc_canister::send_transaction(request).await {
-        Ok(_) => ic_cdk::api::call::reply(()),
-        Err(e) => ic_cdk::api::call::reject(format!("send_transaction failed: {:?}", e).as_str()),
+        Ok(_) => reply(()),
+        Err(e) => reject(format!("send_transaction failed: {:?}", e).as_str()),
     }
 }
 
