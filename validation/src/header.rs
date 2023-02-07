@@ -86,10 +86,38 @@ pub fn validate_header(
     Ok(())
 }
 
+#[cfg(target_arch = "wasm32")]
+fn get_current_time_in_secs() -> u64 {
+    // to get seconds from nanoseconds
+    ic_cdk::api::time() / 1_000_000_000
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn get_current_time_in_secs() -> u64 {
+    use std::time::SystemTime;
+
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+fn block_timestamp_less_than_2h_from_current_time(block_time_secs: u64) -> bool {
+    let current_time_secs = get_current_time_in_secs();
+    assert!(block_time_secs <= current_time_secs);
+    let time_diff_secs = current_time_secs - block_time_secs;
+    let time_diff_hours = time_diff_secs / 3_600;
+    time_diff_hours < 2
+}
+
 /// Validates if a header's timestamp is valid.
 /// Bitcoin Protocol Rules wiki https://en.bitcoin.it/wiki/Protocol_rules says,
 /// "Reject if timestamp is the median time of the last 11 blocks or before"
+/// "Reject if the timestamp of the block is < 2 hours from the current time"
 fn is_timestamp_valid(store: &impl HeaderStore, header: &BlockHeader) -> bool {
+    if !block_timestamp_less_than_2h_from_current_time(header.time as u64) {
+        return false;
+    }
     let mut times = vec![];
     let mut current_header = *header;
     let initial_hash = store.get_initial_hash();
@@ -267,7 +295,7 @@ fn compute_next_difficulty(
 #[cfg(test)]
 mod test {
 
-    use std::{collections::HashMap, path::PathBuf, str::FromStr};
+    use std::{collections::HashMap, path::PathBuf, str::FromStr, time::SystemTime};
 
     use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode};
     use csv::Reader;
@@ -416,6 +444,45 @@ mod test {
             );
             store.add(*header);
         }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_block_timestamp_less_than_2h_from_current_time_in_future() {
+        let curr_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        block_timestamp_less_than_2h_from_current_time(curr_time + 10);
+    }
+
+    #[test]
+    fn test_block_timestamp_less_than_2h_from_current_time() {
+        // Time is represented as the number of seconds after 01.01.1970 00:00.
+        // Hence, if block time is 10 seconds after that time,
+        // 'block_timestamp_less_than_2h_from_current_time' should return false.
+        assert!(!block_timestamp_less_than_2h_from_current_time(10));
+
+        let curr_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        let one_hour = 3_600;
+
+        assert!(block_timestamp_less_than_2h_from_current_time(curr_time));
+
+        assert!(block_timestamp_less_than_2h_from_current_time(
+            curr_time - one_hour
+        ));
+
+        assert!(block_timestamp_less_than_2h_from_current_time(
+            curr_time - (2 * one_hour - 5)
+        ));
+
+        assert!(!block_timestamp_less_than_2h_from_current_time(
+            curr_time - (2 * one_hour + 1)
+        ));
     }
 
     #[test]
