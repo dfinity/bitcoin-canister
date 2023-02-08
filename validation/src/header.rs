@@ -109,7 +109,8 @@ fn block_timestamp_less_than_2h_from_current_time(block_time_secs: u64) -> bool 
         return true;
     }
     let time_diff_secs = block_time_secs - current_time_secs;
-    let time_diff_hours = time_diff_secs / 3_600;
+    let number_of_seconds_in_one_hour = 60 * 60;
+    let time_diff_hours = time_diff_secs / number_of_seconds_in_one_hour;
     time_diff_hours < 2
 }
 
