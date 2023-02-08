@@ -13,6 +13,9 @@ pub enum ValidateHeaderError {
     /// Used when the timestamp in the header is lower than
     /// the median of timestamps of past 11 headers.
     HeaderIsOld,
+    /// Used when the timestamp in the header is more than 2 hours
+    /// from the current time.
+    HeaderIsMoreThan2HFromCurrentTime,
     /// Used when the PoW in the header is invalid as per the target mentioned
     /// in the header.
     InvalidPoWForHeaderTarget,
@@ -60,9 +63,7 @@ pub fn validate_header(
         }
     };
 
-    if !is_timestamp_valid(store, header) {
-        return Err(ValidateHeaderError::HeaderIsOld);
-    }
+    is_timestamp_valid(store, header)?;
 
     let header_target = header.target();
     if header_target > max_target(network) {
@@ -116,9 +117,12 @@ fn block_timestamp_less_than_2h_from_current_time(block_time_secs: u64) -> bool 
 /// Bitcoin Protocol Rules wiki https://en.bitcoin.it/wiki/Protocol_rules says,
 /// "Reject if timestamp is the median time of the last 11 blocks or before"
 /// "Reject if the timestamp of the block is < 2 hours from the current time"
-fn is_timestamp_valid(store: &impl HeaderStore, header: &BlockHeader) -> bool {
+fn is_timestamp_valid(
+    store: &impl HeaderStore,
+    header: &BlockHeader,
+) -> Result<(), ValidateHeaderError> {
     if !block_timestamp_less_than_2h_from_current_time(header.time as u64) {
-        return false;
+        return Err(ValidateHeaderError::HeaderIsMoreThan2HFromCurrentTime);
     }
     let mut times = vec![];
     let mut current_header = *header;
@@ -135,7 +139,11 @@ fn is_timestamp_valid(store: &impl HeaderStore, header: &BlockHeader) -> bool {
 
     times.sort_unstable();
     let median = times[times.len() / 2];
-    header.time > median
+    if header.time <= median {
+        return Err(ValidateHeaderError::HeaderIsOld);
+    }
+
+    Ok(())
 }
 
 /// Gets the next target by doing the following:
@@ -473,13 +481,13 @@ mod test {
         ));
 
         assert!(block_timestamp_less_than_2h_from_current_time(
-            curr_time + (2 * one_hour - 5)
+            curr_time + 2 * one_hour - 5
         ));
 
         // 'block_timestamp_less_than_2h_from_current_time' should return false
         // because the time is more than 2 hours from the current time.
         assert!(!block_timestamp_less_than_2h_from_current_time(
-            curr_time + (2 * one_hour + 1)
+            curr_time + 2 * one_hour + 10
         ));
     }
 
@@ -506,14 +514,40 @@ mod test {
             bits: 0x170e0408,
             nonce: 0xb48e8b0a,
         };
-        assert!(is_timestamp_valid(&store, &header));
+        assert!(matches!(is_timestamp_valid(&store, &header), Ok(())));
 
         // Monday, October 18, 2021 20:26:40
         header.time = 1634588800;
-        assert!(!is_timestamp_valid(&store, &header));
+        assert!(matches!(
+            is_timestamp_valid(&store, &header),
+            Err(ValidateHeaderError::HeaderIsOld)
+        ));
 
         let result = validate_header(&Network::Bitcoin, &store, &header);
         assert!(matches!(result, Err(ValidateHeaderError::HeaderIsOld)));
+
+        let curr_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as u32;
+
+        let one_hour = 60 * 60;
+
+        header.time = curr_time - one_hour;
+
+        assert!(matches!(is_timestamp_valid(&store, &header), Ok(())));
+
+        header.time = curr_time + 2 * one_hour + 10;
+        assert!(matches!(
+            is_timestamp_valid(&store, &header),
+            Err(ValidateHeaderError::HeaderIsMoreThan2HFromCurrentTime)
+        ));
+
+        let result = validate_header(&Network::Bitcoin, &store, &header);
+        assert!(matches!(
+            result,
+            Err(ValidateHeaderError::HeaderIsMoreThan2HFromCurrentTime)
+        ));
     }
 
     #[test]
