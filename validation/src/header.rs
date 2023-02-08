@@ -104,8 +104,10 @@ fn get_current_time_in_secs() -> u64 {
 
 fn block_timestamp_less_than_2h_from_current_time(block_time_secs: u64) -> bool {
     let current_time_secs = get_current_time_in_secs();
-    assert!(block_time_secs <= current_time_secs);
-    let time_diff_secs = current_time_secs - block_time_secs;
+    if block_time_secs <= current_time_secs {
+        return true;
+    }
+    let time_diff_secs = block_time_secs - current_time_secs;
     let time_diff_hours = time_diff_secs / 3_600;
     time_diff_hours < 2
 }
@@ -447,41 +449,37 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn test_block_timestamp_less_than_2h_from_current_time_in_future() {
-        let curr_time = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        block_timestamp_less_than_2h_from_current_time(curr_time + 10);
-    }
-
-    #[test]
     fn test_block_timestamp_less_than_2h_from_current_time() {
         // Time is represented as the number of seconds after 01.01.1970 00:00.
         // Hence, if block time is 10 seconds after that time,
-        // 'block_timestamp_less_than_2h_from_current_time' should return false.
-        assert!(!block_timestamp_less_than_2h_from_current_time(10));
+        // 'block_timestamp_less_than_2h_from_current_time' should return true.
+        assert!(block_timestamp_less_than_2h_from_current_time(10));
 
         let curr_time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
-        let one_hour = 3_600;
-
-        assert!(block_timestamp_less_than_2h_from_current_time(curr_time));
+        let one_hour = 60 * 60;
 
         assert!(block_timestamp_less_than_2h_from_current_time(
             curr_time - one_hour
         ));
 
+        assert!(block_timestamp_less_than_2h_from_current_time(curr_time));
+
         assert!(block_timestamp_less_than_2h_from_current_time(
-            curr_time - (2 * one_hour - 5)
+            curr_time + one_hour
         ));
 
+        assert!(block_timestamp_less_than_2h_from_current_time(
+            curr_time + (2 * one_hour - 5)
+        ));
+
+        // 'block_timestamp_less_than_2h_from_current_time' should return false
+        // because the time is more than 2 hours from the current time.
         assert!(!block_timestamp_less_than_2h_from_current_time(
-            curr_time - (2 * one_hour + 1)
+            curr_time + (2 * one_hour + 1)
         ));
     }
 
