@@ -6,6 +6,7 @@ use crate::{
         Address, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing, Storable, Transaction,
         TxOut, Txid, Utxo,
     },
+    with_state_mut,
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
@@ -124,7 +125,13 @@ impl UtxoSet {
                 &mut utxos_delta,
                 &mut stats,
             ) {
-                stats.ins_total += performance_counter() - ins_start;
+                let instructions_used = performance_counter() - ins_start;
+
+                stats.ins_total += instructions_used;
+
+                with_state_mut(|s| {
+                    s.metrics.total_block_ingestion_instruction_count += instructions_used;
+                });
 
                 // Getting close to the the instructions limit. Pause execution.
                 self.ingesting_block = Some(IngestingBlock {
@@ -144,7 +151,14 @@ impl UtxoSet {
             next_output_idx = 0;
         }
 
-        stats.ins_total += performance_counter() - ins_start;
+        let instructions_used = performance_counter() - ins_start;
+
+        stats.ins_total += instructions_used;
+
+        with_state_mut(|s| {
+            s.metrics.total_block_ingestion_instruction_count += instructions_used;
+        });
+
         print(&format!(
             "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
             self.next_height, stats

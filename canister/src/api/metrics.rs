@@ -98,6 +98,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
 
         w.encode_gauge(
+            "total_block_ingestion_instruction_count",
+            state.metrics.total_block_ingestion_instruction_count as f64,
+            "The total number of instructions spent ingesting new Bitcoin blocks",
+        )?;
+
+        w.encode_gauge(
             "cycles_balance",
             ic_cdk::api::canister_balance() as f64,
             "The cycles balance of the canister.",

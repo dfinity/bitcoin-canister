@@ -18,6 +18,9 @@ pub struct Metrics {
 
     /// The total number of (valid) requests sent to `send_transaction`.
     pub send_transaction_count: u64,
+
+    // The total number of instructions spent ingesting new Bitcoin blocks.
+    pub total_block_ingestion_instruction_count: u64,
 }
 
 impl Default for Metrics {
@@ -51,6 +54,8 @@ impl Default for Metrics {
             ),
 
             send_transaction_count: 0,
+
+            total_block_ingestion_instruction_count: 0,
         }
     }
 }
