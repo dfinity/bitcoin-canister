@@ -488,13 +488,16 @@ mod test {
 
         // 'timestamp_is_less_than_2h_in_future' should return false
         // because the time is more than 2 hours from the current time.
-        assert!(matches!(
+        assert_eq!(
             timestamp_is_less_than_2h_in_future(
                 MOCK_CURRENT_TIME + 2 * ONE_HOUR + 10,
                 MOCK_CURRENT_TIME
             ),
-            Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
-        ));
+            Err(ValidateHeaderError::HeaderIsTooFarInFuture {
+                block_time: MOCK_CURRENT_TIME + 2 * ONE_HOUR + 10,
+                max_allowed_time: MOCK_CURRENT_TIME + 2 * ONE_HOUR
+            })
+        );
     }
 
     #[test]
