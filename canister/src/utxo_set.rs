@@ -559,6 +559,7 @@ fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::runtime;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{
         address_utxoset::AddressUtxoSet,
@@ -619,9 +620,13 @@ mod test {
                     lock_time: 0,
                 }))
                 .build();
-
+            runtime::set_performance_counter_step(1000);
             match utxo.ingest_block(block.clone()) {
-                Slicing::Done((hash, _)) => assert_eq!(hash, block.block_hash()),
+                Slicing::Done((hash, instructions)) => {
+                    assert_eq!(hash, block.block_hash());
+                    // Cost of inserting one output (1000)
+                    assert_eq!(instructions.instructions_used, 1000);
+                }
                 _ => panic!("Unexpected result."),
             }
             assert!(utxo.utxos.is_empty());
@@ -853,9 +858,13 @@ mod test {
             .with_transaction(tx_1)
             .with_transaction(tx_2)
             .build();
-
+        runtime::set_performance_counter_step(1000);
         match utxo_set.ingest_block(block.clone()) {
-            Slicing::Done((hash, _)) => assert_eq!(hash, block.block_hash()),
+            Slicing::Done((hash, instructions)) => {
+                assert_eq!(hash, block.block_hash());
+                // 2 * remove inputs (1000) + 3 * insert outputs (1000) = 5000
+                assert_eq!(instructions.instructions_used, 5000);
+            }
             _ => panic!("Unexpected result."),
         }
         assert_eq!(utxo_set.get_balance(&address_1), 0);
@@ -934,10 +943,14 @@ mod test {
                 .with_transaction(tx_2.clone())
                 .build();
 
-
+            runtime::set_performance_counter_step(1000);
             // Ingest block 0 without any time-slicing.
             match utxo_set.ingest_block(block_0.clone()){
-                Slicing::Done((hash, _)) => assert_eq!(hash, block_0.block_hash()),
+                Slicing::Done((hash, instructions)) => {
+                    assert_eq!(hash, block_0.block_hash());
+                    // tx_cardinality * cost of inserting output (1000)
+                    assert_eq!(instructions.instructions_used, 1000 * tx_cardinality);
+                }
                 _ => panic!("Unexpected result.")
             }
 
