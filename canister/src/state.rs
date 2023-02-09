@@ -2,6 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
+    runtime::time,
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
@@ -90,22 +91,6 @@ impl State {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-fn get_current_time_in_secs() -> u64 {
-    // to get seconds from nanoseconds
-    ic_cdk::api::time() / 1_000_000_000
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn get_current_time_in_secs() -> u64 {
-    use std::time::SystemTime;
-
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-}
-
 /// Inserts a block into the state.
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
@@ -114,7 +99,7 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
         &ValidationContext::new(state, block.header())
             .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
         block.header(),
-        get_current_time_in_secs(),
+        time(),
     )?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
