@@ -15,7 +15,10 @@ pub enum ValidateHeaderError {
     HeaderIsOld,
     /// Used when the timestamp in the header is more than 2 hours
     /// from the current time.
-    HeaderIsMoreThan2HFromCurrentTime,
+    HeaderIsTooFarInFuture {
+        block_time: u64,
+        max_allowed_time: u64,
+    },
     /// Used when the PoW in the header is invalid as per the target mentioned
     /// in the header.
     InvalidPoWForHeaderTarget,
@@ -88,14 +91,21 @@ pub fn validate_header(
     Ok(())
 }
 
-fn block_timestamp_less_than_2h_from_current_time(block_time_secs: u64, current_time: u64) -> bool {
-    if block_time_secs <= current_time {
-        return true;
-    }
-    let time_diff_secs = block_time_secs - current_time;
+fn block_timestamp_less_than_2h_from_current_time(
+    block_time: u64,
+    current_time: u64,
+) -> Result<(), ValidateHeaderError> {
     let number_of_seconds_in_one_hour = 60 * 60;
-    let time_diff_hours = time_diff_secs / number_of_seconds_in_one_hour;
-    time_diff_hours < 2
+    let max_allowed_time = current_time + 2 * number_of_seconds_in_one_hour;
+
+    if block_time > max_allowed_time {
+        return Err(ValidateHeaderError::HeaderIsTooFarInFuture {
+            block_time,
+            max_allowed_time,
+        });
+    }
+
+    Ok(())
 }
 
 /// Validates if a header's timestamp is valid.
@@ -107,9 +117,7 @@ fn is_timestamp_valid(
     header: &BlockHeader,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
-    if !block_timestamp_less_than_2h_from_current_time(header.time as u64, current_time) {
-        return Err(ValidateHeaderError::HeaderIsMoreThan2HFromCurrentTime);
-    }
+    block_timestamp_less_than_2h_from_current_time(header.time as u64, current_time)?;
     let mut times = vec![];
     let mut current_header = *header;
     let initial_hash = store.get_initial_hash();
@@ -455,36 +463,34 @@ mod test {
 
         let curr_time = MOCK_CURRENT_TIME;
 
-        assert!(block_timestamp_less_than_2h_from_current_time(
-            10, curr_time
-        ));
+        assert!(block_timestamp_less_than_2h_from_current_time(10, curr_time).is_ok());
 
         let one_hour = 60 * 60;
 
-        assert!(block_timestamp_less_than_2h_from_current_time(
-            curr_time - one_hour,
-            curr_time
-        ));
+        assert!(
+            block_timestamp_less_than_2h_from_current_time(curr_time - one_hour, curr_time).is_ok()
+        );
 
-        assert!(block_timestamp_less_than_2h_from_current_time(
-            curr_time, curr_time
-        ));
+        assert!(block_timestamp_less_than_2h_from_current_time(curr_time, curr_time).is_ok());
 
-        assert!(block_timestamp_less_than_2h_from_current_time(
-            curr_time + one_hour,
-            curr_time
-        ));
+        assert!(
+            block_timestamp_less_than_2h_from_current_time(curr_time + one_hour, curr_time).is_ok()
+        );
 
         assert!(block_timestamp_less_than_2h_from_current_time(
             curr_time + 2 * one_hour - 5,
             curr_time
-        ));
+        )
+        .is_ok());
 
         // 'block_timestamp_less_than_2h_from_current_time' should return false
         // because the time is more than 2 hours from the current time.
-        assert!(!block_timestamp_less_than_2h_from_current_time(
-            curr_time + 2 * one_hour + 10,
-            curr_time
+        assert!(matches!(
+            block_timestamp_less_than_2h_from_current_time(
+                curr_time + 2 * one_hour + 10,
+                curr_time
+            ),
+            Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
         ));
     }
 
@@ -511,10 +517,7 @@ mod test {
             bits: 0x170e0408,
             nonce: 0xb48e8b0a,
         };
-        assert!(matches!(
-            is_timestamp_valid(&store, &header, MOCK_CURRENT_TIME),
-            Ok(())
-        ));
+        assert!(is_timestamp_valid(&store, &header, MOCK_CURRENT_TIME).is_ok());
 
         // Monday, October 18, 2021 20:26:40
         header.time = 1634588800;
@@ -532,21 +535,18 @@ mod test {
 
         header.time = (curr_time - one_hour) as u32;
 
-        assert!(matches!(
-            is_timestamp_valid(&store, &header, curr_time),
-            Ok(())
-        ));
+        assert!(is_timestamp_valid(&store, &header, curr_time).is_ok());
 
         header.time = (curr_time + 2 * one_hour + 10) as u32;
         assert!(matches!(
             is_timestamp_valid(&store, &header, curr_time),
-            Err(ValidateHeaderError::HeaderIsMoreThan2HFromCurrentTime)
+            Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
         ));
 
         let result = validate_header(&Network::Bitcoin, &store, &header, curr_time);
         assert!(matches!(
             result,
-            Err(ValidateHeaderError::HeaderIsMoreThan2HFromCurrentTime)
+            Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
         ));
     }
 
