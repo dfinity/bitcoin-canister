@@ -8,7 +8,7 @@ use crate::{
 };
 
 /// An error thrown when trying to validate a header.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ValidateHeaderError {
     /// Used when the timestamp in the header is lower than
     /// the median of timestamps of past 11 headers.
@@ -538,16 +538,22 @@ mod test {
         assert!(is_timestamp_valid(&store, &header, curr_time).is_ok());
 
         header.time = (curr_time + 2 * one_hour + 10) as u32;
-        assert!(matches!(
+        assert_eq!(
             is_timestamp_valid(&store, &header, curr_time),
-            Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
-        ));
+            Err(ValidateHeaderError::HeaderIsTooFarInFuture {
+                block_time: header.time as u64,
+                max_allowed_time: curr_time + 2 * one_hour
+            })
+        );
 
         let result = validate_header(&Network::Bitcoin, &store, &header, curr_time);
-        assert!(matches!(
+        assert_eq!(
             result,
-            Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
-        ));
+            Err(ValidateHeaderError::HeaderIsTooFarInFuture {
+                block_time: header.time as u64,
+                max_allowed_time: curr_time + 2 * one_hour,
+            })
+        );
     }
 
     #[test]
