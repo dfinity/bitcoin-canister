@@ -256,7 +256,7 @@ pub struct FeePercentilesCache {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::build_chain;
+    use crate::{runtime::set_performance_counter_step, test_utils::build_chain};
     use proptest::prelude::*;
 
     proptest! {
@@ -271,12 +271,22 @@ mod test {
             let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
-
+            set_performance_counter_step(1000);
+            let ins_before = state.metrics.total_block_ingestion_instruction_count;
             for block in blocks[1..].iter() {
                 insert_block(&mut state, block.clone()).unwrap();
                 ingest_stable_blocks_into_utxoset(&mut state);
             }
+            let ins_after = state.metrics.total_block_ingestion_instruction_count;
 
+            assert_eq!(ins_after - ins_before, if num_blocks > stability_threshold{
+                // total number of instructions should be
+                // number of ingested blocks * num_transactions_in_block * cost of transaction (1000) + 1000 for genesis block
+                 (num_blocks - stability_threshold - 1) as u64 * num_transactions_in_block as u64 * 1000 + 1000
+            }else{
+                // no block as ingested, hence the number of instruction should be 0
+                0
+            });
             let mut bytes = vec![];
             ciborium::ser::into_writer(&state, &mut bytes).unwrap();
             let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();

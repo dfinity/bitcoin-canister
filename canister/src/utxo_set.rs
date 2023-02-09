@@ -862,7 +862,7 @@ mod test {
         match utxo_set.ingest_block(block.clone()) {
             Slicing::Done((hash, instructions)) => {
                 assert_eq!(hash, block.block_hash());
-                // 2 * remove inputs (1000) + 3 * insert outputs (1000) = 5000
+                // 2 * cost of removing input (1000) + 3 * cost of inserting output (1000) = 5000
                 assert_eq!(instructions.instructions_used, 5000);
             }
             _ => panic!("Unexpected result."),
