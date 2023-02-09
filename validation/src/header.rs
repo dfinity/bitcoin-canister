@@ -91,7 +91,7 @@ pub fn validate_header(
     Ok(())
 }
 
-fn block_timestamp_less_than_2h_from_current_time(
+fn timestamp_is_less_than_2h_in_future(
     block_time: u64,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
@@ -117,7 +117,7 @@ fn is_timestamp_valid(
     header: &BlockHeader,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
-    block_timestamp_less_than_2h_from_current_time(header.time as u64, current_time)?;
+    timestamp_is_less_than_2h_in_future(header.time as u64, current_time)?;
     let mut times = vec![];
     let mut current_header = *header;
     let initial_hash = store.get_initial_hash();
@@ -456,40 +456,31 @@ mod test {
     }
 
     #[test]
-    fn test_block_timestamp_less_than_2h_from_current_time() {
+    fn test_timestamp_is_less_than_2h_in_future() {
         // Time is represented as the number of seconds after 01.01.1970 00:00.
         // Hence, if block time is 10 seconds after that time,
-        // 'block_timestamp_less_than_2h_from_current_time' should return true.
+        // 'timestamp_is_less_than_2h_in_future' should return true.
 
         let curr_time = MOCK_CURRENT_TIME;
 
-        assert!(block_timestamp_less_than_2h_from_current_time(10, curr_time).is_ok());
+        assert!(timestamp_is_less_than_2h_in_future(10, curr_time).is_ok());
 
         let one_hour = 60 * 60;
 
+        assert!(timestamp_is_less_than_2h_in_future(curr_time - one_hour, curr_time).is_ok());
+
+        assert!(timestamp_is_less_than_2h_in_future(curr_time, curr_time).is_ok());
+
+        assert!(timestamp_is_less_than_2h_in_future(curr_time + one_hour, curr_time).is_ok());
+
         assert!(
-            block_timestamp_less_than_2h_from_current_time(curr_time - one_hour, curr_time).is_ok()
+            timestamp_is_less_than_2h_in_future(curr_time + 2 * one_hour - 5, curr_time).is_ok()
         );
 
-        assert!(block_timestamp_less_than_2h_from_current_time(curr_time, curr_time).is_ok());
-
-        assert!(
-            block_timestamp_less_than_2h_from_current_time(curr_time + one_hour, curr_time).is_ok()
-        );
-
-        assert!(block_timestamp_less_than_2h_from_current_time(
-            curr_time + 2 * one_hour - 5,
-            curr_time
-        )
-        .is_ok());
-
-        // 'block_timestamp_less_than_2h_from_current_time' should return false
+        // 'timestamp_is_less_than_2h_in_future' should return false
         // because the time is more than 2 hours from the current time.
         assert!(matches!(
-            block_timestamp_less_than_2h_from_current_time(
-                curr_time + 2 * one_hour + 10,
-                curr_time
-            ),
+            timestamp_is_less_than_2h_in_future(curr_time + 2 * one_hour + 10, curr_time),
             Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
         ));
     }
