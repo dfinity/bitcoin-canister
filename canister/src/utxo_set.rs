@@ -6,7 +6,6 @@ use crate::{
         Address, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing, Storable, Transaction,
         TxOut, Txid, Utxo,
     },
-    with_state_mut,
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_types::{Height, Satoshi};
@@ -59,6 +58,12 @@ pub struct UtxoSet {
     pub ingesting_block: Option<IngestingBlock>,
 }
 
+#[derive(PartialEq)]
+pub struct IngestionInstructionsCount {
+    // The number of instructions used to ingest block.
+    pub instructions_used: u64,
+}
+
 impl UtxoSet {
     pub fn new(network: Network) -> Self {
         Self {
@@ -80,7 +85,10 @@ impl UtxoSet {
     /// Returns `Slicing::Done` if ingestion is complete, or `Slicing::Paused` if ingestion hasn't
     /// fully completed due to instruction limits. In the latter case, one or more calls to
     /// `ingest_block_continue` are necessary to finish the block ingestion.
-    pub fn ingest_block(&mut self, block: Block) -> Slicing<(), BlockHash> {
+    pub fn ingest_block(
+        &mut self,
+        block: Block,
+    ) -> Slicing<(), (BlockHash, IngestionInstructionsCount)> {
         assert!(
             self.ingesting_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
@@ -98,10 +106,13 @@ impl UtxoSet {
     /// Continue ingesting a block.
     /// Returns:
     ///   * `None` if there was no block to continue ingesting.
-    ///   * `Slicing::Done(block_hash)` if the partially ingested block is now fully ingested,
-    ///      where `block_hash` is the hash of the ingested block.
+    ///   * `Slicing::Done(block_hash, ingestion_instructions_count)` if the partially ingested
+    ///      block is now fully ingested, where `block_hash` is the hash of the ingested block,
+    ///      and ingestion_instructions_count is the total number of instructions used to ingest block.
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
-    pub fn ingest_block_continue(&mut self) -> Option<Slicing<(), BlockHash>> {
+    pub fn ingest_block_continue(
+        &mut self,
+    ) -> Option<Slicing<(), (BlockHash, IngestionInstructionsCount)>> {
         let ins_start = performance_counter();
 
         let IngestingBlock {
@@ -125,13 +136,7 @@ impl UtxoSet {
                 &mut utxos_delta,
                 &mut stats,
             ) {
-                let instructions_used = performance_counter() - ins_start;
-
-                stats.ins_total += instructions_used;
-
-                with_state_mut(|s| {
-                    s.metrics.total_block_ingestion_instruction_count += instructions_used;
-                });
+                stats.ins_total += performance_counter() - ins_start;
 
                 // Getting close to the the instructions limit. Pause execution.
                 self.ingesting_block = Some(IngestingBlock {
@@ -151,13 +156,7 @@ impl UtxoSet {
             next_output_idx = 0;
         }
 
-        let instructions_used = performance_counter() - ins_start;
-
-        stats.ins_total += instructions_used;
-
-        with_state_mut(|s| {
-            s.metrics.total_block_ingestion_instruction_count += instructions_used;
-        });
+        stats.ins_total += performance_counter() - ins_start;
 
         print(&format!(
             "[INSTRUCTION COUNT] Ingest Block {}: {:?}",
@@ -166,7 +165,12 @@ impl UtxoSet {
 
         // Block ingestion complete.
         self.next_height += 1;
-        Some(Slicing::Done(block.block_hash()))
+        Some(Slicing::Done((
+            block.block_hash(),
+            IngestionInstructionsCount {
+                instructions_used: stats.ins_total,
+            },
+        )))
     }
 
     /// Returns the balance of the given address.
@@ -617,10 +621,10 @@ mod test {
                 }))
                 .build();
 
-            assert_eq!(
-                utxo.ingest_block(block.clone()),
-                Slicing::Done(block.block_hash())
-            );
+            match utxo.ingest_block(block.clone()) {
+                Slicing::Done((hash, _)) => assert_eq!(hash, block.block_hash()),
+                _ => panic!("Unexpected result."),
+            }
             assert!(utxo.utxos.is_empty());
             assert!(utxo.address_utxos.is_empty());
         }
@@ -851,10 +855,10 @@ mod test {
             .with_transaction(tx_2)
             .build();
 
-        assert_eq!(
-            utxo_set.ingest_block(block.clone()),
-            Slicing::Done(block.block_hash())
-        );
+        match utxo_set.ingest_block(block.clone()) {
+            Slicing::Done((hash, _)) => assert_eq!(hash, block.block_hash()),
+            _ => panic!("Unexpected result."),
+        }
         assert_eq!(utxo_set.get_balance(&address_1), 0);
         assert_eq!(utxo_set.get_balance(&address_2), 1_000);
     }
@@ -933,10 +937,10 @@ mod test {
 
 
             // Ingest block 0 without any time-slicing.
-            assert_eq!(
-                utxo_set.ingest_block(block_0.clone()),
-                Slicing::Done(block_0.block_hash())
-            );
+            match utxo_set.ingest_block(block_0.clone()){
+                Slicing::Done((hash, _)) => assert_eq!(hash, block_0.block_hash()),
+                _ => panic!("Unexpected result.")
+            }
 
             // Update predicate to time-slice block 1 based on the ingestion rate.
             utxo_set.should_time_slice = ingestion_rate_predicate(ingestion_rate);

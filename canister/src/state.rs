@@ -132,7 +132,10 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     match state.utxos.ingest_block_continue() {
         None => {}
         Some(Slicing::Paused(())) => return has_state_changed(state),
-        Some(Slicing::Done(ingested_block_hash)) => pop_block(state, ingested_block_hash),
+        Some(Slicing::Done((ingested_block_hash, instructions))) => {
+            state.metrics.total_block_ingestion_instruction_count += instructions.instructions_used;
+            pop_block(state, ingested_block_hash)
+        }
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
@@ -144,7 +147,11 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
         match state.utxos.ingest_block(new_stable_block.clone()) {
             Slicing::Paused(()) => return has_state_changed(state),
-            Slicing::Done(ingested_block_hash) => pop_block(state, ingested_block_hash),
+            Slicing::Done((ingested_block_hash, instructions)) => {
+                state.metrics.total_block_ingestion_instruction_count +=
+                    instructions.instructions_used;
+                pop_block(state, ingested_block_hash)
+            }
         }
     }
 
