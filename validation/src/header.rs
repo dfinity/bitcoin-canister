@@ -33,6 +33,8 @@ pub enum ValidateHeaderError {
     PrevHeaderNotFound,
 }
 
+const ONE_HOUR: u64 = 3_600;
+
 pub trait HeaderStore {
     /// Returns the header with the given block hash.
     fn get_with_block_hash(&self, hash: &BlockHash) -> Option<BlockHeader>;
@@ -95,8 +97,7 @@ fn timestamp_is_less_than_2h_in_future(
     block_time: u64,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
-    let number_of_seconds_in_one_hour = 60 * 60;
-    let max_allowed_time = current_time + 2 * number_of_seconds_in_one_hour;
+    let max_allowed_time = current_time + 2 * ONE_HOUR;
 
     if block_time > max_allowed_time {
         return Err(ValidateHeaderError::HeaderIsTooFarInFuture {
@@ -307,8 +308,10 @@ mod test {
     use super::*;
     use crate::constants::test::{
         MAINNET_HEADER_586656, MAINNET_HEADER_705600, MAINNET_HEADER_705601, MAINNET_HEADER_705602,
-        MOCK_CURRENT_TIME, TESTNET_HEADER_2132555, TESTNET_HEADER_2132556,
+        TESTNET_HEADER_2132555, TESTNET_HEADER_2132556,
     };
+
+    const MOCK_CURRENT_TIME: u64 = 2_634_590_600;
 
     #[derive(Clone)]
     struct StoredHeader {
@@ -461,26 +464,35 @@ mod test {
         // Hence, if block time is 10 seconds after that time,
         // 'timestamp_is_less_than_2h_in_future' should return true.
 
-        let curr_time = MOCK_CURRENT_TIME;
+        assert!(timestamp_is_less_than_2h_in_future(10, MOCK_CURRENT_TIME).is_ok());
 
-        assert!(timestamp_is_less_than_2h_in_future(10, curr_time).is_ok());
+        assert!(timestamp_is_less_than_2h_in_future(
+            MOCK_CURRENT_TIME - ONE_HOUR,
+            MOCK_CURRENT_TIME
+        )
+        .is_ok());
 
-        let one_hour = 60 * 60;
+        assert!(timestamp_is_less_than_2h_in_future(MOCK_CURRENT_TIME, MOCK_CURRENT_TIME).is_ok());
 
-        assert!(timestamp_is_less_than_2h_in_future(curr_time - one_hour, curr_time).is_ok());
+        assert!(timestamp_is_less_than_2h_in_future(
+            MOCK_CURRENT_TIME + ONE_HOUR,
+            MOCK_CURRENT_TIME
+        )
+        .is_ok());
 
-        assert!(timestamp_is_less_than_2h_in_future(curr_time, curr_time).is_ok());
-
-        assert!(timestamp_is_less_than_2h_in_future(curr_time + one_hour, curr_time).is_ok());
-
-        assert!(
-            timestamp_is_less_than_2h_in_future(curr_time + 2 * one_hour - 5, curr_time).is_ok()
-        );
+        assert!(timestamp_is_less_than_2h_in_future(
+            MOCK_CURRENT_TIME + 2 * ONE_HOUR - 5,
+            MOCK_CURRENT_TIME
+        )
+        .is_ok());
 
         // 'timestamp_is_less_than_2h_in_future' should return false
         // because the time is more than 2 hours from the current time.
         assert!(matches!(
-            timestamp_is_less_than_2h_in_future(curr_time + 2 * one_hour + 10, curr_time),
+            timestamp_is_less_than_2h_in_future(
+                MOCK_CURRENT_TIME + 2 * ONE_HOUR + 10,
+                MOCK_CURRENT_TIME
+            ),
             Err(ValidateHeaderError::HeaderIsTooFarInFuture { .. })
         ));
     }
@@ -520,29 +532,25 @@ mod test {
         let result = validate_header(&Network::Bitcoin, &store, &header, MOCK_CURRENT_TIME);
         assert!(matches!(result, Err(ValidateHeaderError::HeaderIsOld)));
 
-        let curr_time = MOCK_CURRENT_TIME;
+        header.time = (MOCK_CURRENT_TIME - ONE_HOUR) as u32;
 
-        let one_hour = 60 * 60;
+        assert!(is_timestamp_valid(&store, &header, MOCK_CURRENT_TIME).is_ok());
 
-        header.time = (curr_time - one_hour) as u32;
-
-        assert!(is_timestamp_valid(&store, &header, curr_time).is_ok());
-
-        header.time = (curr_time + 2 * one_hour + 10) as u32;
+        header.time = (MOCK_CURRENT_TIME + 2 * ONE_HOUR + 10) as u32;
         assert_eq!(
-            is_timestamp_valid(&store, &header, curr_time),
+            is_timestamp_valid(&store, &header, MOCK_CURRENT_TIME),
             Err(ValidateHeaderError::HeaderIsTooFarInFuture {
                 block_time: header.time as u64,
-                max_allowed_time: curr_time + 2 * one_hour
+                max_allowed_time: MOCK_CURRENT_TIME + 2 * ONE_HOUR
             })
         );
 
-        let result = validate_header(&Network::Bitcoin, &store, &header, curr_time);
+        let result = validate_header(&Network::Bitcoin, &store, &header, MOCK_CURRENT_TIME);
         assert_eq!(
             result,
             Err(ValidateHeaderError::HeaderIsTooFarInFuture {
                 block_time: header.time as u64,
-                max_allowed_time: curr_time + 2 * one_hour,
+                max_allowed_time: MOCK_CURRENT_TIME + 2 * ONE_HOUR,
             })
         );
     }
