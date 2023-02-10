@@ -132,8 +132,11 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     match state.utxos.ingest_block_continue() {
         None => {}
         Some(Slicing::Paused(())) => return has_state_changed(state),
-        Some(Slicing::Done((ingested_block_hash, instructions))) => {
-            state.metrics.total_block_ingestion_instruction_count += instructions.instructions_used;
+        Some(Slicing::Done((ingested_block_hash, stats))) => {
+            state
+                .metrics
+                .ingest_block_instruction_count
+                .observe(&stats.get_labels_and_values());
             pop_block(state, ingested_block_hash)
         }
     }
@@ -147,9 +150,12 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
         match state.utxos.ingest_block(new_stable_block.clone()) {
             Slicing::Paused(()) => return has_state_changed(state),
-            Slicing::Done((ingested_block_hash, instructions)) => {
-                state.metrics.total_block_ingestion_instruction_count +=
-                    instructions.instructions_used;
+            Slicing::Done((ingested_block_hash, stats)) => {
+                state
+                    .metrics
+                    .ingest_block_instruction_count
+                    .observe(&stats.get_labels_and_values());
+
                 pop_block(state, ingested_block_hash)
             }
         }
@@ -272,12 +278,12 @@ mod test {
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
             set_performance_counter_step(1000);
-            let ins_before = state.metrics.total_block_ingestion_instruction_count;
+            let ins_before = *state.metrics.ingest_block_instruction_count.get_value_with_label(String::from("ins_total"));
             for block in blocks[1..].iter() {
                 insert_block(&mut state, block.clone()).unwrap();
                 ingest_stable_blocks_into_utxoset(&mut state);
             }
-            let ins_after = state.metrics.total_block_ingestion_instruction_count;
+            let ins_after = *state.metrics.ingest_block_instruction_count.get_value_with_label(String::from("ins_total"));
 
             assert_eq!(ins_after - ins_before, if num_blocks > stability_threshold{
                 // total number of instructions should be

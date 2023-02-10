@@ -1,4 +1,9 @@
-use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
+use crate::{
+    metrics::{InstructionHistogram, LabeledCounter},
+    state,
+    types::HttpResponse,
+    with_state,
+};
 use ic_cdk::api::time;
 use serde_bytes::ByteBuf;
 use std::{fmt::Display, io};
@@ -97,11 +102,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The total number of (valid) requests to the send_transaction endpoint.",
         )?;
 
-        w.encode_gauge(
-            "total_block_ingestion_instruction_count",
-            state.metrics.total_block_ingestion_instruction_count as f64,
-            "The total number of instructions spent ingesting new Bitcoin blocks",
-        )?;
+        w.encode_labeled_counter(&state.metrics.ingest_block_instruction_count)?;
 
         w.encode_gauge(
             "cycles_balance",
@@ -214,6 +215,80 @@ impl<W: io::Write> MetricsEncoder<W> {
     /// Encodes an `InstructionHistogram`.
     pub fn encode_instruction_histogram(&mut self, h: &InstructionHistogram) -> io::Result<()> {
         self.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
+    }
+
+    pub fn encode_labeled_counter(&mut self, c: &LabeledCounter) -> io::Result<()> {
+        for (k, v) in &c.values_by_labels {
+            self.encode_value_with_labels(c.name.as_str(), &[("type", k)], *v)?;
+        }
+        Ok(())
+    }
+
+    fn encode_labels(labels: &[(&str, &str)]) -> String {
+        let mut buf = String::new();
+        for (i, (k, v)) in labels.iter().enumerate() {
+            validate_prometheus_name(k);
+            if i > 0 {
+                buf.push(',')
+            }
+            buf.push_str(k);
+            buf.push('=');
+            buf.push('"');
+            for c in v.chars() {
+                match c {
+                    '\\' => {
+                        buf.push('\\');
+                        buf.push('\\');
+                    }
+                    '\n' => {
+                        buf.push('\\');
+                        buf.push('n');
+                    }
+                    '"' => {
+                        buf.push('\\');
+                        buf.push('"');
+                    }
+                    _ => buf.push(c),
+                }
+            }
+            buf.push('"');
+        }
+        buf
+    }
+
+    fn encode_value_with_labels(
+        &mut self,
+        name: &str,
+        label_values: &[(&str, &str)],
+        value: u64,
+    ) -> io::Result<()> {
+        writeln!(
+            self.writer,
+            "{}{{{}}} {} {}",
+            name,
+            Self::encode_labels(label_values),
+            value,
+            self.now_millis
+        )
+    }
+}
+
+/// Panics if the specified string is not a valid Prometheus metric/label name.
+/// See https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels.
+fn validate_prometheus_name(name: &str) {
+    if name.is_empty() {
+        panic!("Empty names are not allowed");
+    }
+    let bytes = name.as_bytes();
+    if (!bytes[0].is_ascii_alphabetic() && bytes[0] != b'_')
+        || !bytes[1..]
+            .iter()
+            .all(|c| c.is_ascii_alphanumeric() || *c == b'_')
+    {
+        panic!(
+            "Name '{}' does not match pattern [a-zA-Z_][a-zA-Z0-9_]",
+            name
+        );
     }
 }
 

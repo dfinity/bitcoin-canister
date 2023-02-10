@@ -85,10 +85,7 @@ impl UtxoSet {
     /// Returns `Slicing::Done` if ingestion is complete, or `Slicing::Paused` if ingestion hasn't
     /// fully completed due to instruction limits. In the latter case, one or more calls to
     /// `ingest_block_continue` are necessary to finish the block ingestion.
-    pub fn ingest_block(
-        &mut self,
-        block: Block,
-    ) -> Slicing<(), (BlockHash, IngestionInstructionsCount)> {
+    pub fn ingest_block(&mut self, block: Block) -> Slicing<(), (BlockHash, BlockIngestionStats)> {
         assert!(
             self.ingesting_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
@@ -112,7 +109,7 @@ impl UtxoSet {
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
     pub fn ingest_block_continue(
         &mut self,
-    ) -> Option<Slicing<(), (BlockHash, IngestionInstructionsCount)>> {
+    ) -> Option<Slicing<(), (BlockHash, BlockIngestionStats)>> {
         let ins_start = performance_counter();
 
         let IngestingBlock {
@@ -164,12 +161,7 @@ impl UtxoSet {
 
         // Block ingestion complete.
         self.next_height += 1;
-        Some(Slicing::Done((
-            block.block_hash(),
-            IngestionInstructionsCount {
-                instructions_used: stats.ins_total,
-            },
-        )))
+        Some(Slicing::Done((block.block_hash(), stats)))
     }
 
     /// Returns the balance of the given address.
@@ -509,7 +501,7 @@ impl IngestingBlock {
 
 // Various profiling stats for tracking the performance of block ingestion.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
-struct BlockIngestionStats {
+pub struct BlockIngestionStats {
     // The number of rounds it took to ingest the block.
     num_rounds: u32,
 
@@ -527,6 +519,28 @@ struct BlockIngestionStats {
 
     // The number of instructions used to insert new utxos.
     ins_insert_utxos: u64,
+}
+
+impl BlockIngestionStats {
+    pub fn get_all_labels() -> Vec<String> {
+        vec![
+            String::from("ins_total"),
+            String::from("ins_remove_inputs"),
+            String::from("ins_insert_outputs"),
+            String::from("ins_txids"),
+            String::from("ins_insert_utxos"),
+        ]
+    }
+
+    pub fn get_labels_and_values(&self) -> Vec<(String, u64)> {
+        vec![
+            (String::from("ins_total"), self.ins_total),
+            (String::from("ins_remove_inputs"), self.ins_remove_inputs),
+            (String::from("ins_insert_outputs"), self.ins_insert_outputs),
+            (String::from("ins_txids"), self.ins_txids),
+            (String::from("ins_insert_utxos"), self.ins_insert_utxos),
+        ]
+    }
 }
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
@@ -622,10 +636,10 @@ mod test {
                 .build();
             runtime::set_performance_counter_step(1000);
             match utxo.ingest_block(block.clone()) {
-                Slicing::Done((hash, instructions)) => {
+                Slicing::Done((hash, stats)) => {
                     assert_eq!(hash, block.block_hash());
                     // Cost of inserting one output (1000)
-                    assert_eq!(instructions.instructions_used, 1000);
+                    assert_eq!(stats.ins_total, 1000);
                 }
                 _ => panic!("Unexpected result."),
             }
@@ -860,10 +874,10 @@ mod test {
             .build();
         runtime::set_performance_counter_step(1000);
         match utxo_set.ingest_block(block.clone()) {
-            Slicing::Done((hash, instructions)) => {
+            Slicing::Done((hash, stats)) => {
                 assert_eq!(hash, block.block_hash());
                 // 2 * cost of removing input (1000) + 3 * cost of inserting output (1000) = 5000
-                assert_eq!(instructions.instructions_used, 5000);
+                assert_eq!(stats.ins_total, 5000);
             }
             _ => panic!("Unexpected result."),
         }
@@ -946,10 +960,10 @@ mod test {
             runtime::set_performance_counter_step(1000);
             // Ingest block 0 without any time-slicing.
             match utxo_set.ingest_block(block_0.clone()){
-                Slicing::Done((hash, instructions)) => {
+                Slicing::Done((hash, stats)) => {
                     assert_eq!(hash, block_0.block_hash());
                     // tx_cardinality * cost of inserting output (1000)
-                    assert_eq!(instructions.instructions_used, 1000 * tx_cardinality);
+                    assert_eq!(stats.ins_total, 1000 * tx_cardinality);
                 }
                 _ => panic!("Unexpected result.")
             }
