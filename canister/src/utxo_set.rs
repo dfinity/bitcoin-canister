@@ -99,7 +99,7 @@ impl UtxoSet {
     ///   * `None` if there was no block to continue ingesting.
     ///   * `Slicing::Done(block_hash, ingestion_instructions_count)` if the partially ingested
     ///      block is now fully ingested, where `block_hash` is the hash of the ingested block,
-    ///      and ingestion_instructions_count is the total number of instructions used to ingest block.
+    ///      and ingestion_instructions_count is the number of instructions used to ingest block.
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
     pub fn ingest_block_continue(
         &mut self,
