@@ -91,8 +91,8 @@ impl LabeledCounter {
         }
     }
 
-    pub fn get_value_with_label(&self, label: String) -> &u64 {
-        self.values_by_labels.get(&label).unwrap()
+    pub fn get_value_with_label(&self, label: &str) -> &u64 {
+        self.values_by_labels.get(label).unwrap()
     }
 
     pub fn observe(&mut self, values_with_labels: &[(String, u64)]) {
