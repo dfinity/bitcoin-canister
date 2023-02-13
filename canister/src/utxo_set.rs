@@ -58,12 +58,6 @@ pub struct UtxoSet {
     pub ingesting_block: Option<IngestingBlock>,
 }
 
-#[derive(PartialEq)]
-pub struct IngestionInstructionsCount {
-    // The number of instructions used to ingest block.
-    pub instructions_used: u64,
-}
-
 impl UtxoSet {
     pub fn new(network: Network) -> Self {
         Self {
