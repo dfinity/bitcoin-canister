@@ -640,6 +640,10 @@ mod test {
                     assert_eq!(hash, block.block_hash());
                     // Cost of inserting one output (1000)
                     assert_eq!(stats.ins_total, 1000);
+                    assert_eq!(stats.ins_insert_outputs, 1000);
+                    assert_eq!(stats.ins_insert_utxos, 0);
+                    assert_eq!(stats.ins_remove_inputs, 0);
+                    assert_eq!(stats.ins_txids, 0);
                 }
                 _ => panic!("Unexpected result."),
             }
@@ -878,6 +882,10 @@ mod test {
                 assert_eq!(hash, block.block_hash());
                 // 2 * cost of removing input (1000) + 3 * cost of inserting output (1000) = 5000
                 assert_eq!(stats.ins_total, 5000);
+                assert_eq!(stats.ins_remove_inputs, 2000);
+                assert_eq!(stats.ins_insert_outputs, 3000);
+                assert_eq!(stats.ins_insert_utxos, 0);
+                assert_eq!(stats.ins_txids, 0);
             }
             _ => panic!("Unexpected result."),
         }
@@ -964,6 +972,10 @@ mod test {
                     assert_eq!(hash, block_0.block_hash());
                     // tx_cardinality * cost of inserting output (1000)
                     assert_eq!(stats.ins_total, 1000 * tx_cardinality);
+                    assert_eq!(stats.ins_remove_inputs, 0);
+                    assert_eq!(stats.ins_insert_outputs, 1000 * tx_cardinality);
+                    assert_eq!(stats.ins_insert_utxos, 0);
+                    assert_eq!(stats.ins_txids, 0);
                 }
                 _ => panic!("Unexpected result.")
             }
