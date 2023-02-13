@@ -24,7 +24,7 @@ pub struct Metrics {
     pub send_transaction_count: u64,
 
     // The number of instructions spent ingesting new Bitcoin blocks by type.
-    pub ingest_block_instruction_count: LabeledCounter,
+    pub ingest_block_instructions_count: LabeledCounter,
 }
 
 impl Default for Metrics {
@@ -59,8 +59,8 @@ impl Default for Metrics {
 
             send_transaction_count: 0,
 
-            ingest_block_instruction_count: LabeledCounter::new(
-                "ingest_block_instruction_count",
+            ingest_block_instructions_count: LabeledCounter::new(
+                "ingest_block_instructions_count",
                 "The number of instructions spent ingesting new Bitcoin blocks by type.",
                 BlockIngestionStats::get_all_labels(),
             ),

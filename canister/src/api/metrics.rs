@@ -102,7 +102,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The total number of (valid) requests to the send_transaction endpoint.",
         )?;
 
-        w.encode_labeled_counter(&state.metrics.ingest_block_instruction_count)?;
+        w.encode_labeled_counter(&state.metrics.ingest_block_instructions_count)?;
 
         w.encode_gauge(
             "cycles_balance",
@@ -217,6 +217,7 @@ impl<W: io::Write> MetricsEncoder<W> {
         self.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
     }
 
+    /// Encodes a `LabeledCounter`.
     pub fn encode_labeled_counter(&mut self, c: &LabeledCounter) -> io::Result<()> {
         for (k, v) in &c.values_by_labels {
             self.encode_value_with_labels(c.name.as_str(), &[("type", k)], *v)?;
