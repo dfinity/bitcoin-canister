@@ -2,6 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
+    runtime::time,
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
@@ -98,6 +99,7 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
         &ValidationContext::new(state, block.header())
             .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
         block.header(),
+        time(),
     )?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
