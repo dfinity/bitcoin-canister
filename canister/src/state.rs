@@ -277,15 +277,21 @@ mod test {
             let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
+
             set_performance_counter_step(1000);
-            let ins_before = *state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_total"));
+
+            let ins_total_before = *state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_total"));
+            let ins_insert_outputs_before = *state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_insert_outputs"));
+
             for block in blocks[1..].iter() {
                 insert_block(&mut state, block.clone()).unwrap();
                 ingest_stable_blocks_into_utxoset(&mut state);
             }
-            let ins_after = *state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_total"));
 
-            assert_eq!(ins_after - ins_before, if num_blocks > stability_threshold{
+            let ins_total_after = *state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_total"));
+            let ins_insert_outputs_after = *state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_insert_outputs"));
+
+            assert_eq!(ins_total_after - ins_total_before, if num_blocks > stability_threshold{
                 // total number of instructions should be
                 // number of ingested blocks * num_transactions_in_block * cost of transaction (1000) + 1000 for genesis block
                  (num_blocks - stability_threshold - 1) as u64 * num_transactions_in_block as u64 * 1000 + 1000
@@ -293,6 +299,14 @@ mod test {
                 // no block as ingested, hence the number of instruction should be 0
                 0
             });
+
+            // We have only output transactions, hence 'ins_insert_outputs' should be equal to 'ins_total'.
+            assert_eq!(ins_total_after - ins_total_before, ins_insert_outputs_after - ins_insert_outputs_before);
+            // While all others should be 0.
+            assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_remove_inputs")), 0);
+            assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_txids")), 0);
+            assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label(String::from("ins_insert_utxos")), 0);
+
             let mut bytes = vec![];
             ciborium::ser::into_writer(&state, &mut bytes).unwrap();
             let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
