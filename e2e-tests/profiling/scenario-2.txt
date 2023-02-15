@@ -3,4 +3,4 @@ Ingest Block 1: BlockIngestionStats { num_rounds: 2, ins_total: 5159888410, ins_
 Ingest Block 2: BlockIngestionStats { num_rounds: 2, ins_total: 5721465221, ins_remove_inputs: 13711371, ins_insert_outputs: 5700170053, ins_txids: 8170886, ins_insert_utxos: 5680928734 }
 Ingest Block 3: BlockIngestionStats { num_rounds: 2, ins_total: 5975187759, ins_remove_inputs: 13711371, ins_insert_outputs: 5953892591, ins_txids: 8170886, ins_insert_utxos: 5934651272 }
 GetBalanceRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", min_confirmations: None }: Stats { ins_total: 26386111, ins_apply_unstable_blocks: 25930989 }
-GetUtxosRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", filter: None }: Stats { ins_total: 75354705, ins_apply_unstable_blocks: 69983301, ins_build_utxos_vec: 4729757 }
+GetUtxosRequest { address: "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8", filter: None }: Stats { ins_total: 75380519, ins_apply_unstable_blocks: 69998254, ins_build_utxos_vec: 4739342 }
