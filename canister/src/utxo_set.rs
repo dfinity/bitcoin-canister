@@ -628,19 +628,17 @@ mod test {
                     lock_time: 0,
                 }))
                 .build();
-            runtime::set_performance_counter_step(1000);
-            match utxo.ingest_block(block.clone()) {
-                Slicing::Done((hash, stats)) => {
-                    assert_eq!(hash, block.block_hash());
-                    // Cost of inserting one output (1000)
-                    assert_eq!(stats.ins_total, 1000);
-                    assert_eq!(stats.ins_insert_outputs, 1000);
-                    assert_eq!(stats.ins_insert_utxos, 0);
-                    assert_eq!(stats.ins_remove_inputs, 0);
-                    assert_eq!(stats.ins_txids, 0);
-                }
-                _ => panic!("Unexpected result."),
-            }
+
+            assert_eq!(
+                utxo.ingest_block(block.clone()),
+                Slicing::Done((
+                    block.block_hash(),
+                    BlockIngestionStats {
+                        num_rounds: 1,
+                        ..Default::default()
+                    }
+                ))
+            );
             assert!(utxo.utxos.is_empty());
             assert!(utxo.address_utxos.is_empty());
         }
@@ -870,10 +868,52 @@ mod test {
             .with_transaction(tx_1)
             .with_transaction(tx_2)
             .build();
+        assert_eq!(
+            utxo_set.ingest_block(block.clone()),
+            Slicing::Done((
+                block.block_hash(),
+                BlockIngestionStats {
+                    num_rounds: 1,
+                    ..Default::default()
+                }
+            ))
+        );
+        assert_eq!(utxo_set.get_balance(&address_1), 0);
+        assert_eq!(utxo_set.get_balance(&address_2), 1_000);
+    }
+
+    #[test]
+    fn ingest_block_test_block_ingestion_stats() {
+        let network = Network::Testnet;
+        let mut utxo_set = UtxoSet::new(network);
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+        let tx_1 = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .with_output(&address_1, 0) // an input with zero value
+            .build();
+        // Consume the first input in tx 1
+        let tx_2 = TransactionBuilder::new()
+            // Consume the positive UTXO
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 0,
+            })
+            // then consume the zero UTXO
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 1,
+            })
+            .with_output(&address_2, 1000)
+            .build();
+        let block = BlockBuilder::genesis()
+            .with_transaction(tx_1)
+            .with_transaction(tx_2)
+            .build();
+
         runtime::set_performance_counter_step(1000);
         match utxo_set.ingest_block(block.clone()) {
-            Slicing::Done((hash, stats)) => {
-                assert_eq!(hash, block.block_hash());
+            Slicing::Done((_, stats)) => {
                 // 2 * cost of removing input (1000) + 3 * cost of inserting output (1000) = 5000
                 assert_eq!(stats.ins_total, 5000);
                 assert_eq!(stats.ins_remove_inputs, 2000);
@@ -883,8 +923,6 @@ mod test {
             }
             _ => panic!("Unexpected result."),
         }
-        assert_eq!(utxo_set.get_balance(&address_1), 0);
-        assert_eq!(utxo_set.get_balance(&address_2), 1_000);
     }
 
     proptest! {
@@ -959,20 +997,17 @@ mod test {
                 .with_transaction(tx_2.clone())
                 .build();
 
-            runtime::set_performance_counter_step(1000);
             // Ingest block 0 without any time-slicing.
-            match utxo_set.ingest_block(block_0.clone()){
-                Slicing::Done((hash, stats)) => {
-                    assert_eq!(hash, block_0.block_hash());
-                    // tx_cardinality * cost of inserting output (1000)
-                    assert_eq!(stats.ins_total, 1000 * tx_cardinality);
-                    assert_eq!(stats.ins_remove_inputs, 0);
-                    assert_eq!(stats.ins_insert_outputs, 1000 * tx_cardinality);
-                    assert_eq!(stats.ins_insert_utxos, 0);
-                    assert_eq!(stats.ins_txids, 0);
-                }
-                _ => panic!("Unexpected result.")
-            }
+            assert_eq!(
+                utxo_set.ingest_block(block_0.clone()),
+                Slicing::Done((
+                    block_0.block_hash(),
+                    BlockIngestionStats {
+                        num_rounds: 1,
+                        ..Default::default()
+                    }
+                ))
+            );
 
             // Update predicate to time-slice block 1 based on the ingestion rate.
             utxo_set.should_time_slice = ingestion_rate_predicate(ingestion_rate);
