@@ -912,7 +912,7 @@ mod test {
             .build();
 
         runtime::set_performance_counter_step(1000);
-        match utxo_set.ingest_block(block.clone()) {
+        match utxo_set.ingest_block(block) {
             Slicing::Done((_, stats)) => {
                 // 2 * cost of removing input (1000) + 3 * cost of inserting output (1000) = 5000
                 assert_eq!(stats.ins_total, 5000);
