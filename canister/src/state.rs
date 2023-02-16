@@ -280,6 +280,33 @@ mod test {
 
             let mut state = State::new(stability_threshold, network, blocks[0].clone());
 
+            for block in blocks[1..].iter() {
+                insert_block(&mut state, block.clone()).unwrap();
+                ingest_stable_blocks_into_utxoset(&mut state);
+            }
+
+            let mut bytes = vec![];
+            ciborium::ser::into_writer(&state, &mut bytes).unwrap();
+            let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
+
+            // Verify the new state is the same as the old state.
+            assert!(state == new_state);
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(2))]
+        #[test]
+        fn test_ingest_block_instructions_count(
+            stability_threshold in 1..150u32,
+            num_blocks in 1..250u32,
+            num_transactions_in_block in 1..100u32,
+        ) {
+            let network = Network::Regtest;
+            let blocks = build_chain(network, num_blocks, num_transactions_in_block);
+
+            let mut state = State::new(stability_threshold, network, blocks[0].clone());
+
             set_performance_counter_step(1000);
 
             let ins_total_before = *state.metrics.ingest_block_instructions_count.get_value_with_label("ins_total");
@@ -308,13 +335,6 @@ mod test {
             assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label("ins_remove_inputs"), 0);
             assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label("ins_txids"), 0);
             assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label("ins_insert_utxos"), 0);
-
-            let mut bytes = vec![];
-            ciborium::ser::into_writer(&state, &mut bytes).unwrap();
-            let new_state: State = ciborium::de::from_reader(&bytes[..]).unwrap();
-
-            // Verify the new state is the same as the old state.
-            assert!(state == new_state);
         }
     }
 }
