@@ -519,8 +519,14 @@ impl BlockIngestionStats {
     pub fn get_labels_and_values(&self) -> Vec<((&str, &str), u64)> {
         vec![
             (("instruction_count", "total"), self.ins_total),
-            (("instruction_count", "remove_inputs"), self.ins_remove_inputs),
-            (("instruction_count", "insert_outputs"), self.ins_insert_outputs),
+            (
+                ("instruction_count", "remove_inputs"),
+                self.ins_remove_inputs,
+            ),
+            (
+                ("instruction_count", "insert_outputs"),
+                self.ins_insert_outputs,
+            ),
             (("instruction_count", "txids"), self.ins_txids),
             (("instruction_count", "insert_utxos"), self.ins_insert_utxos),
         ]
