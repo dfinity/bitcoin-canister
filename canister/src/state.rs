@@ -257,7 +257,7 @@ pub struct FeePercentilesCache {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{runtime::set_performance_counter_step, test_utils::build_chain};
+    use crate::test_utils::build_chain;
     use proptest::prelude::*;
 
     proptest! {
