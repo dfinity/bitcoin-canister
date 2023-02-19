@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 use crate::utxo_set::BlockIngestionStats;
@@ -23,8 +21,8 @@ pub struct Metrics {
     /// The total number of (valid) requests sent to `send_transaction`.
     pub send_transaction_count: u64,
 
-    // The number of instructions spent ingesting new Bitcoin blocks by type.
-    pub ingest_block_instructions_count: LabeledCounter,
+    /// The stats of the most recent block ingestion.
+    pub block_ingestion_stats: BlockIngestionStats,
 }
 
 impl Default for Metrics {
@@ -59,45 +57,7 @@ impl Default for Metrics {
 
             send_transaction_count: 0,
 
-            ingest_block_instructions_count: LabeledCounter::new(
-                "ingest_block_instructions_count",
-                "The number of instructions spent ingesting new Bitcoin blocks by type.",
-                BlockIngestionStats::get_all_labels(),
-            ),
-        }
-    }
-}
-
-/// A counter with labels for observing instruction counts.
-#[derive(Serialize, Deserialize, PartialEq)]
-pub struct LabeledCounter {
-    pub name: String,
-    pub values_by_labels: HashMap<String, u64>,
-    pub help: String,
-}
-
-impl LabeledCounter {
-    pub fn new<S: Into<String>>(name: S, help: S, all_labels: Vec<String>) -> Self {
-        Self {
-            name: name.into(),
-            help: help.into(),
-            values_by_labels: {
-                let mut map = HashMap::new();
-                for ty in all_labels {
-                    map.insert(ty, 0u64);
-                }
-                map
-            },
-        }
-    }
-
-    pub fn get_value_with_label(&self, label: &str) -> &u64 {
-        self.values_by_labels.get(label).unwrap()
-    }
-
-    pub fn observe(&mut self, values_with_labels: &[(String, u64)]) {
-        for (label, val) in values_with_labels.iter() {
-            *self.values_by_labels.get_mut(label).unwrap() += *val;
+            block_ingestion_stats: BlockIngestionStats::default(),
         }
     }
 }

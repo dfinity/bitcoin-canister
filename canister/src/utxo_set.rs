@@ -516,23 +516,13 @@ pub struct BlockIngestionStats {
 }
 
 impl BlockIngestionStats {
-    pub fn get_all_labels() -> Vec<String> {
+    pub fn get_labels_and_values(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            String::from("ins_total"),
-            String::from("ins_remove_inputs"),
-            String::from("ins_insert_outputs"),
-            String::from("ins_txids"),
-            String::from("ins_insert_utxos"),
-        ]
-    }
-
-    pub fn get_labels_and_values(&self) -> Vec<(String, u64)> {
-        vec![
-            (String::from("ins_total"), self.ins_total),
-            (String::from("ins_remove_inputs"), self.ins_remove_inputs),
-            (String::from("ins_insert_outputs"), self.ins_insert_outputs),
-            (String::from("ins_txids"), self.ins_txids),
-            (String::from("ins_insert_utxos"), self.ins_insert_utxos),
+            (("instruction_count", "total"), self.ins_total),
+            (("instruction_count", "remove_inputs"), self.ins_remove_inputs),
+            (("instruction_count", "insert_outputs"), self.ins_insert_outputs),
+            (("instruction_count", "txids"), self.ins_txids),
+            (("instruction_count", "insert_utxos"), self.ins_insert_utxos),
         ]
     }
 }

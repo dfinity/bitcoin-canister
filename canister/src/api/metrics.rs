@@ -1,18 +1,14 @@
-use crate::{
-    metrics::{InstructionHistogram, LabeledCounter},
-    state,
-    types::HttpResponse,
-    with_state,
-};
+use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
 use ic_cdk::api::time;
+use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
-use std::{fmt::Display, io};
+use std::io;
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
 pub fn get_metrics() -> HttpResponse {
     let now = time();
-    let mut writer = MetricsEncoder::new(vec![], now / 1_000_000);
+    let mut writer = MetricsEncoder::new(vec![], (now / 1_000_000) as i64);
     match encode_metrics(&mut writer) {
         Ok(()) => {
             let body = writer.into_inner();
@@ -74,27 +70,27 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         // Errors
         w.encode_counter(
             "num_get_successors_rejects",
-            state.syncing_state.num_get_successors_rejects,
+            state.syncing_state.num_get_successors_rejects as f64,
             "The number of rejects received when calling GetSuccessors.",
         )?;
         w.encode_counter(
             "num_block_deserialize_errors",
-            state.syncing_state.num_block_deserialize_errors,
+            state.syncing_state.num_block_deserialize_errors as f64,
             "The number of errors occurred when deserializing blocks.",
         )?;
         w.encode_counter(
             "num_insert_block_errors",
-            state.syncing_state.num_insert_block_errors,
+            state.syncing_state.num_insert_block_errors as f64,
             "The number of errors occurred when inserting a block.",
         )?;
 
         // Profiling
-        w.encode_instruction_histogram(&state.metrics.get_utxos_total)?;
-        w.encode_instruction_histogram(&state.metrics.get_utxos_apply_unstable_blocks)?;
-        w.encode_instruction_histogram(&state.metrics.get_utxos_build_utxos_vec)?;
-        w.encode_instruction_histogram(&state.metrics.get_balance_total)?;
-        w.encode_instruction_histogram(&state.metrics.get_balance_apply_unstable_blocks)?;
-        w.encode_instruction_histogram(&state.metrics.get_current_fee_percentiles_total)?;
+        encode_instruction_histogram(w, &state.metrics.get_utxos_total)?;
+        encode_instruction_histogram(w, &state.metrics.get_utxos_apply_unstable_blocks)?;
+        encode_instruction_histogram(w, &state.metrics.get_utxos_build_utxos_vec)?;
+        encode_instruction_histogram(w, &state.metrics.get_balance_total)?;
+        encode_instruction_histogram(w, &state.metrics.get_balance_apply_unstable_blocks)?;
+        encode_instruction_histogram(w, &state.metrics.get_current_fee_percentiles_total)?;
 
         w.encode_gauge(
             "send_transaction_count",
@@ -102,195 +98,43 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The total number of (valid) requests to the send_transaction endpoint.",
         )?;
 
-        w.encode_labeled_counter(&state.metrics.ingest_block_instructions_count)?;
-
         w.encode_gauge(
             "cycles_balance",
             ic_cdk::api::canister_balance() as f64,
             "The cycles balance of the canister.",
         )?;
 
+        encode_labeled_gauge(
+            w,
+            "block_ingestion_stats",
+            "The stats of the most recent block ingestion.",
+            &state.metrics.block_ingestion_stats.get_labels_and_values(),
+        )?;
+
         Ok(())
     })
 }
 
-// `MetricsEncoder` provides methods to encode metrics in a text format
-// that can be understood by Prometheus.
-//
-// Metrics are encoded with the block time included, to allow Prometheus
-// to discard out-of-order samples collected from replicas that are behind.
-//
-// See [Exposition Formats][1] for an informal specification of the text format.
-//
-// [1]: https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md
-struct MetricsEncoder<W: io::Write> {
-    writer: W,
-    now_millis: u64,
+fn encode_instruction_histogram(
+    metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
+    h: &InstructionHistogram,
+) -> io::Result<()> {
+    metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
 }
 
-impl<W: io::Write> MetricsEncoder<W> {
-    /// Constructs a new encoder dumping metrics with the given timestamp into
-    /// the specified writer.
-    fn new(writer: W, now_millis: u64) -> Self {
-        Self { writer, now_millis }
+fn encode_labeled_gauge(
+    metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
+    name: &str,
+    help: &str,
+    labels_and_values: &[((&str, &str), u64)],
+) -> io::Result<()> {
+    let mut gauge = metrics_encoder.gauge_vec(name, help)?;
+
+    for (label, value) in labels_and_values {
+        gauge = gauge.value(&[*label], *value as f64)?;
     }
 
-    /// Returns the internal buffer that was used to record the
-    /// metrics.
-    fn into_inner(self) -> W {
-        self.writer
-    }
-
-    fn encode_header(&mut self, name: &str, help: &str, typ: &str) -> io::Result<()> {
-        writeln!(self.writer, "# HELP {} {}", name, help)?;
-        writeln!(self.writer, "# TYPE {} {}", name, typ)
-    }
-
-    fn encode_single_value<T: Display>(
-        &mut self,
-        typ: &str,
-        name: &str,
-        value: T,
-        help: &str,
-    ) -> io::Result<()> {
-        self.encode_header(name, help, typ)?;
-        writeln!(self.writer, "{} {} {}", name, value, self.now_millis)
-    }
-
-    /// Encodes the metadata and the value of a gauge.
-    fn encode_gauge(&mut self, name: &str, value: f64, help: &str) -> io::Result<()> {
-        self.encode_single_value("gauge", name, value, help)
-    }
-
-    fn encode_counter(&mut self, name: &str, value: u64, help: &str) -> io::Result<()> {
-        self.encode_single_value("counter", name, value, help)
-    }
-
-    /// Encodes the metadata and the value of a histogram.
-    ///
-    /// SUM is the sum of all observed values, before they were put
-    /// into buckets.
-    ///
-    /// BUCKETS is a list (key, value) pairs, where KEY is the bucket
-    /// and VALUE is the number of items *in* this bucket (i.e., it's
-    /// not a cumulative value).
-    pub fn encode_histogram(
-        &mut self,
-        name: &str,
-        buckets: impl Iterator<Item = (f64, f64)>,
-        sum: f64,
-        help: &str,
-    ) -> io::Result<()> {
-        self.encode_header(name, help, "histogram")?;
-        let mut total: f64 = 0.0;
-        let mut saw_infinity = false;
-        for (bucket, v) in buckets {
-            total += v;
-            if bucket == std::f64::INFINITY {
-                saw_infinity = true;
-                writeln!(
-                    self.writer,
-                    "{}_bucket{{le=\"+Inf\"}} {} {}",
-                    name, total, self.now_millis
-                )?;
-            } else {
-                writeln!(
-                    self.writer,
-                    "{}_bucket{{le=\"{}\"}} {} {}",
-                    name, bucket, total, self.now_millis
-                )?;
-            }
-        }
-        if !saw_infinity {
-            writeln!(
-                self.writer,
-                "{}_bucket{{le=\"+Inf\"}} {} {}",
-                name, total, self.now_millis
-            )?;
-        }
-        writeln!(self.writer, "{}_sum {} {}", name, sum, self.now_millis)?;
-        writeln!(self.writer, "{}_count {} {}", name, total, self.now_millis)
-    }
-
-    /// Encodes an `InstructionHistogram`.
-    pub fn encode_instruction_histogram(&mut self, h: &InstructionHistogram) -> io::Result<()> {
-        self.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
-    }
-
-    /// Encodes a `LabeledCounter`.
-    pub fn encode_labeled_counter(&mut self, c: &LabeledCounter) -> io::Result<()> {
-        for (k, v) in &c.values_by_labels {
-            self.encode_value_with_labels(c.name.as_str(), &[("type", k)], *v)?;
-        }
-        Ok(())
-    }
-
-    fn encode_labels(labels: &[(&str, &str)]) -> String {
-        let mut buf = String::new();
-        for (i, (k, v)) in labels.iter().enumerate() {
-            validate_prometheus_name(k);
-            if i > 0 {
-                buf.push(',')
-            }
-            buf.push_str(k);
-            buf.push('=');
-            buf.push('"');
-            for c in v.chars() {
-                match c {
-                    '\\' => {
-                        buf.push('\\');
-                        buf.push('\\');
-                    }
-                    '\n' => {
-                        buf.push('\\');
-                        buf.push('n');
-                    }
-                    '"' => {
-                        buf.push('\\');
-                        buf.push('"');
-                    }
-                    _ => buf.push(c),
-                }
-            }
-            buf.push('"');
-        }
-        buf
-    }
-
-    fn encode_value_with_labels(
-        &mut self,
-        name: &str,
-        label_values: &[(&str, &str)],
-        value: u64,
-    ) -> io::Result<()> {
-        writeln!(
-            self.writer,
-            "{}{{{}}} {} {}",
-            name,
-            Self::encode_labels(label_values),
-            value,
-            self.now_millis
-        )
-    }
-}
-
-/// Panics if the specified string is not a valid Prometheus metric/label name.
-/// See https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels.
-fn validate_prometheus_name(name: &str) {
-    if name.is_empty() {
-        panic!("Empty names are not allowed");
-    }
-    let bytes = name.as_bytes();
-    if (!bytes[0].is_ascii_alphabetic() && bytes[0] != b'_')
-        || !bytes[1..]
-            .iter()
-            .all(|c| c.is_ascii_alphanumeric() || *c == b'_')
-    {
-        panic!(
-            "Name '{}' does not match pattern [a-zA-Z_][a-zA-Z0-9_]",
-            name
-        );
-    }
+    Ok(())
 }
 
 // Returns the size of the heap in pages.

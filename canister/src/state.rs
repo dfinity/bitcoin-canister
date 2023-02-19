@@ -135,10 +135,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         None => {}
         Some(Slicing::Paused(())) => return has_state_changed(state),
         Some(Slicing::Done((ingested_block_hash, stats))) => {
-            state
-                .metrics
-                .ingest_block_instructions_count
-                .observe(&stats.get_labels_and_values());
+            state.metrics.block_ingestion_stats = stats;
             pop_block(state, ingested_block_hash)
         }
     }
@@ -153,11 +150,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         match state.utxos.ingest_block(new_stable_block.clone()) {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done((ingested_block_hash, stats)) => {
-                state
-                    .metrics
-                    .ingest_block_instructions_count
-                    .observe(&stats.get_labels_and_values());
-
+                state.metrics.block_ingestion_stats = stats;
                 pop_block(state, ingested_block_hash)
             }
         }
@@ -291,50 +284,6 @@ mod test {
 
             // Verify the new state is the same as the old state.
             assert!(state == new_state);
-        }
-    }
-
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(2))]
-        #[test]
-        fn test_ingest_block_instructions_count(
-            stability_threshold in 1..150u32,
-            num_blocks in 1..250u32,
-            num_transactions_in_block in 1..100u32,
-        ) {
-            let network = Network::Regtest;
-            let blocks = build_chain(network, num_blocks, num_transactions_in_block);
-
-            let mut state = State::new(stability_threshold, network, blocks[0].clone());
-
-            set_performance_counter_step(1000);
-
-            let ins_total_before = *state.metrics.ingest_block_instructions_count.get_value_with_label("ins_total");
-            let ins_insert_outputs_before = *state.metrics.ingest_block_instructions_count.get_value_with_label("ins_insert_outputs");
-
-            for block in blocks[1..].iter() {
-                insert_block(&mut state, block.clone()).unwrap();
-                ingest_stable_blocks_into_utxoset(&mut state);
-            }
-
-            let ins_total_after = *state.metrics.ingest_block_instructions_count.get_value_with_label("ins_total");
-            let ins_insert_outputs_after = *state.metrics.ingest_block_instructions_count.get_value_with_label("ins_insert_outputs");
-
-            assert_eq!(ins_total_after - ins_total_before, if num_blocks > stability_threshold{
-                // total number of instructions should be
-                // number of ingested blocks * num_transactions_in_block * cost of transaction (1000) + 1000 for genesis block
-                 (num_blocks - stability_threshold - 1) as u64 * num_transactions_in_block as u64 * 1000 + 1000
-            }else{
-                // no block as ingested, hence the number of instruction should be 0
-                0
-            });
-
-            // We have only output transactions, hence 'ins_insert_outputs' should be equal to 'ins_total'.
-            assert_eq!(ins_total_after - ins_total_before, ins_insert_outputs_after - ins_insert_outputs_before);
-            // While all others should be 0.
-            assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label("ins_remove_inputs"), 0);
-            assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label("ins_txids"), 0);
-            assert_eq!(*state.metrics.ingest_block_instructions_count.get_value_with_label("ins_insert_utxos"), 0);
         }
     }
 }
