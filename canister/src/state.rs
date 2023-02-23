@@ -134,7 +134,10 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     match state.utxos.ingest_block_continue() {
         None => {}
         Some(Slicing::Paused(())) => return has_state_changed(state),
-        Some(Slicing::Done(ingested_block_hash)) => pop_block(state, ingested_block_hash),
+        Some(Slicing::Done((ingested_block_hash, stats))) => {
+            state.metrics.block_ingestion_stats = stats;
+            pop_block(state, ingested_block_hash)
+        }
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
@@ -146,7 +149,10 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
         match state.utxos.ingest_block(new_stable_block.clone()) {
             Slicing::Paused(()) => return has_state_changed(state),
-            Slicing::Done(ingested_block_hash) => pop_block(state, ingested_block_hash),
+            Slicing::Done((ingested_block_hash, stats)) => {
+                state.metrics.block_ingestion_stats = stats;
+                pop_block(state, ingested_block_hash)
+            }
         }
     }
 
@@ -279,5 +285,50 @@ mod test {
             // Verify the new state is the same as the old state.
             assert!(state == new_state);
         }
+    }
+
+    #[test]
+    fn block_ingestion_stats_are_updated() {
+        let stability_threshold = 0;
+        let num_blocks = 3;
+        let num_transactions_per_block = 10;
+        let network = Network::Regtest;
+        let blocks = build_chain(network, num_blocks, num_transactions_per_block);
+
+        let mut state = State::new(stability_threshold, network, blocks[0].clone());
+
+        assert_eq!(state.stable_height(), 0);
+        insert_block(&mut state, blocks[1].clone()).unwrap();
+
+        // The genesis block is now stable. Ingest it.
+        let metrics_before = state.metrics.block_ingestion_stats.clone();
+        ingest_stable_blocks_into_utxoset(&mut state);
+        assert_eq!(state.stable_height(), 1);
+
+        // Verify that the stats have been updated.
+        assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
+
+        // Ingest the next block. This time, the performance counter is set so that
+        // the ingestion is time-sliced.
+        crate::runtime::set_performance_counter_step(1_000_000_000);
+
+        insert_block(&mut state, blocks[2].clone()).unwrap();
+        let metrics_before = state.metrics.block_ingestion_stats.clone();
+        let mut num_rounds = 0;
+        while state.stable_height() == 1 {
+            assert_eq!(metrics_before, state.metrics.block_ingestion_stats);
+            ingest_stable_blocks_into_utxoset(&mut state);
+            crate::runtime::performance_counter_reset();
+            num_rounds += 1;
+        }
+
+        // Assert that the block has been ingested.
+        assert_eq!(state.stable_height(), 2);
+
+        // Assert that the block ingestion has been time-sliced.
+        assert!(num_rounds > 1);
+
+        // Assert the stats have been updated.
+        assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
     }
 }
