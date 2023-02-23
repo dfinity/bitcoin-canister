@@ -304,7 +304,7 @@ mod test {
         let metrics_before = state.metrics.block_ingestion_stats.clone();
         ingest_stable_blocks_into_utxoset(&mut state);
         assert_eq!(state.stable_height(), 1);
-        
+
         // Verify that the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
 
