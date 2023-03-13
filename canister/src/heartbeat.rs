@@ -74,7 +74,7 @@ async fn maybe_fetch_blocks() -> bool {
                 return;
             }
         };
-
+        //EXC-980
         match response {
             GetSuccessorsResponse::Complete(response) => {
                 // Received complete response.
@@ -176,6 +176,7 @@ fn maybe_process_response() {
     });
 }
 
+//EXC-980
 // Retrieves a `GetSuccessorsRequest` to send to the adapter.
 fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
     with_state(|state| match &state.syncing_state.response_to_process {

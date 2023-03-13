@@ -1,3 +1,5 @@
+use std::{cmp::max, collections::BTreeMap};
+
 use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
@@ -50,6 +52,68 @@ pub struct State {
     /// Flag to control access to the apis provided by the canister.
     #[serde(default)]
     pub api_access: Flag,
+
+    /// Blocks which headers are received in GetSuccessorsResponse.
+    pub expected_blocks: ExpectedBlocks,
+}
+
+//TODO insert
+//remove
+//test
+
+#[derive(Serialize, Deserialize)]
+struct ExpectedBlocks {
+    pub hash_to_height: BTreeMap<BlockHash, Height>,
+    pub height_to_hash: BTreeMap<Height, BlockHash>,
+}
+
+impl Default for ExpectedBlocks {
+    fn default() -> Self {
+        Self {
+            hash_to_height: BTreeMap::new(),
+            height_to_hash: BTreeMap::new(),
+        }
+    }
+}
+
+pub fn insert_expected_block(state: &mut State, prev_block: &BlockHash, block: &BlockHash) {
+    let height = match state.expected_blocks.hash_to_height.get(prev_block) {
+        Some(prev_height) => *prev_height,
+        None => chain_with_tip_height(state, prev_block),
+    } + 1;
+
+    state.expected_blocks.height_to_hash.insert(height, *block);
+    state.expected_blocks.hash_to_height.insert(*block, height);
+}
+
+pub fn remove_expected_blocks(state: &mut State, block: &BlockHash) {
+    let curr_height = match state.expected_blocks.hash_to_height.get(block) {
+        Some(height) => *height,
+        None => 0,
+    };
+    let remove_until_height = max(curr_height, state.stable_height());
+    let smallest_height = *state
+        .expected_blocks
+        .height_to_hash
+        .iter()
+        .next()
+        .unwrap()
+        .0;
+    for height in smallest_height..remove_until_height + 1 {
+        let hash = state
+            .expected_blocks
+            .height_to_hash
+            .remove(&height)
+            .unwrap();
+        state.expected_blocks.hash_to_height.remove(&hash);
+    }
+}
+
+fn expected_blocks_max_height(state: &State) -> Height {
+    match state.expected_blocks.height_to_hash.iter().next_back() {
+        Some((height, _)) => *height,
+        None => 0,
+    }
 }
 
 impl State {
@@ -88,6 +152,17 @@ impl State {
     /// Returns the UTXO set of a given bitcoin address.
     pub fn get_utxos(&self, address: Address) -> AddressUtxoSet<'_> {
         AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
+    }
+
+    /// Return 'true' if the difference between the maximum height of all block
+    /// headers and the maximum height of all unstable blocks is at most g.
+    /// Otherwise, returns false.
+    pub fn is_fully_synced(&self) -> bool {
+        let main_chain_height = main_chain_height(self);
+        if main_chain_height < max(expected_blocks_max_height(&self), main_chain_height) - 2 {
+            return false;
+        }
+        true
     }
 }
 
@@ -161,6 +236,13 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
 pub fn main_chain_height(state: &State) -> Height {
     unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height()
+        - 1
+}
+
+pub fn chain_with_tip_height(state: &State, tip: &BlockHash) -> Height {
+    unstable_blocks::get_chain_with_tip(&state.unstable_blocks, tip)
+        .map_or(0, |chain| chain.len() as u32)
+        + state.utxos.next_height()
         - 1
 }
 
