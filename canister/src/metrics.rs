@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::utxo_set::BlockIngestionStats;
+
 const M: u64 = 1_000_000;
 const BUCKET_SIZE: u64 = 500 * M;
 const NUM_BUCKETS: u64 = 21;
@@ -18,6 +20,9 @@ pub struct Metrics {
 
     /// The total number of (valid) requests sent to `send_transaction`.
     pub send_transaction_count: u64,
+
+    /// The stats of the most recent block ingestion.
+    pub block_ingestion_stats: BlockIngestionStats,
 }
 
 impl Default for Metrics {
@@ -51,6 +56,8 @@ impl Default for Metrics {
             ),
 
             send_transaction_count: 0,
+
+            block_ingestion_stats: BlockIngestionStats::default(),
         }
     }
 }

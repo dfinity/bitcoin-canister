@@ -79,7 +79,7 @@ impl UtxoSet {
     /// Returns `Slicing::Done` if ingestion is complete, or `Slicing::Paused` if ingestion hasn't
     /// fully completed due to instruction limits. In the latter case, one or more calls to
     /// `ingest_block_continue` are necessary to finish the block ingestion.
-    pub fn ingest_block(&mut self, block: Block) -> Slicing<(), BlockHash> {
+    pub fn ingest_block(&mut self, block: Block) -> Slicing<(), (BlockHash, BlockIngestionStats)> {
         assert!(
             self.ingesting_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
@@ -97,10 +97,13 @@ impl UtxoSet {
     /// Continue ingesting a block.
     /// Returns:
     ///   * `None` if there was no block to continue ingesting.
-    ///   * `Slicing::Done(block_hash)` if the partially ingested block is now fully ingested,
-    ///      where `block_hash` is the hash of the ingested block.
+    ///   * `Slicing::Done(block_hash, ingestion_stats)` if the partially ingested
+    ///      block is now fully ingested, where `block_hash` is the hash of the ingested block,
+    ///      while 'ingestion_stats' is the number of instructions used to ingest block by type.
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
-    pub fn ingest_block_continue(&mut self) -> Option<Slicing<(), BlockHash>> {
+    pub fn ingest_block_continue(
+        &mut self,
+    ) -> Option<Slicing<(), (BlockHash, BlockIngestionStats)>> {
         let ins_start = performance_counter();
 
         let IngestingBlock {
@@ -152,7 +155,7 @@ impl UtxoSet {
 
         // Block ingestion complete.
         self.next_height += 1;
-        Some(Slicing::Done(block.block_hash()))
+        Some(Slicing::Done((block.block_hash(), stats)))
     }
 
     /// Returns the balance of the given address.
@@ -492,7 +495,7 @@ impl IngestingBlock {
 
 // Various profiling stats for tracking the performance of block ingestion.
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq, Default)]
-struct BlockIngestionStats {
+pub struct BlockIngestionStats {
     // The number of rounds it took to ingest the block.
     num_rounds: u32,
 
@@ -510,6 +513,24 @@ struct BlockIngestionStats {
 
     // The number of instructions used to insert new utxos.
     ins_insert_utxos: u64,
+}
+
+impl BlockIngestionStats {
+    pub fn get_labels_and_values(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("instruction_count", "total"), self.ins_total),
+            (
+                ("instruction_count", "remove_inputs"),
+                self.ins_remove_inputs,
+            ),
+            (
+                ("instruction_count", "insert_outputs"),
+                self.ins_insert_outputs,
+            ),
+            (("instruction_count", "txids"), self.ins_txids),
+            (("instruction_count", "insert_utxos"), self.ins_insert_utxos),
+        ]
+    }
 }
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
@@ -542,6 +563,7 @@ fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::runtime;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{
         address_utxoset::AddressUtxoSet,
@@ -605,7 +627,13 @@ mod test {
 
             assert_eq!(
                 utxo.ingest_block(block.clone()),
-                Slicing::Done(block.block_hash())
+                Slicing::Done((
+                    block.block_hash(),
+                    BlockIngestionStats {
+                        num_rounds: 1,
+                        ..Default::default()
+                    }
+                ))
             );
             assert!(utxo.utxos.is_empty());
             assert!(utxo.address_utxos.is_empty());
@@ -836,13 +864,61 @@ mod test {
             .with_transaction(tx_1)
             .with_transaction(tx_2)
             .build();
-
         assert_eq!(
             utxo_set.ingest_block(block.clone()),
-            Slicing::Done(block.block_hash())
+            Slicing::Done((
+                block.block_hash(),
+                BlockIngestionStats {
+                    num_rounds: 1,
+                    ..Default::default()
+                }
+            ))
         );
         assert_eq!(utxo_set.get_balance(&address_1), 0);
         assert_eq!(utxo_set.get_balance(&address_2), 1_000);
+    }
+
+    #[test]
+    fn ingest_block_test_block_ingestion_stats() {
+        let network = Network::Testnet;
+        let mut utxo_set = UtxoSet::new(network);
+        let address_1 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(network);
+        let tx_1 = TransactionBuilder::coinbase()
+            .with_output(&address_1, 1000)
+            .with_output(&address_1, 0) // an input with zero value
+            .build();
+        // Consume the first input in tx 1
+        let tx_2 = TransactionBuilder::new()
+            // Consume the positive UTXO
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 0,
+            })
+            // then consume the zero UTXO
+            .with_input(OutPoint {
+                txid: tx_1.txid(),
+                vout: 1,
+            })
+            .with_output(&address_2, 1000)
+            .build();
+        let block = BlockBuilder::genesis()
+            .with_transaction(tx_1)
+            .with_transaction(tx_2)
+            .build();
+
+        runtime::set_performance_counter_step(1000);
+        match utxo_set.ingest_block(block) {
+            Slicing::Done((_, stats)) => {
+                // 2 * cost of removing input (1000) + 3 * cost of inserting output (1000) = 5000
+                assert_eq!(stats.ins_total, 5000);
+                assert_eq!(stats.ins_remove_inputs, 2000);
+                assert_eq!(stats.ins_insert_outputs, 3000);
+                assert_eq!(stats.ins_insert_utxos, 0);
+                assert_eq!(stats.ins_txids, 0);
+            }
+            _ => panic!("Unexpected result."),
+        }
     }
 
     proptest! {
@@ -917,11 +993,16 @@ mod test {
                 .with_transaction(tx_2.clone())
                 .build();
 
-
             // Ingest block 0 without any time-slicing.
             assert_eq!(
                 utxo_set.ingest_block(block_0.clone()),
-                Slicing::Done(block_0.block_hash())
+                Slicing::Done((
+                    block_0.block_hash(),
+                    BlockIngestionStats {
+                        num_rounds: 1,
+                        ..Default::default()
+                    }
+                ))
             );
 
             // Update predicate to time-slice block 1 based on the ingestion rate.
