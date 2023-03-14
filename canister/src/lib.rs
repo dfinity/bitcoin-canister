@@ -91,22 +91,22 @@ pub fn get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
 ) -> Vec<MillisatoshiPerByte> {
     verify_api_access();
-    verify_fully_synced();
     verify_network(request.network.into());
+    verify_fully_synced();
     api::get_current_fee_percentiles()
 }
 
 pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     verify_api_access();
-    verify_fully_synced();
     verify_network(request.network.into());
+    verify_fully_synced();
     api::get_balance(request.into())
 }
 
 pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_api_access();
-    verify_fully_synced();
     verify_network(request.network.into());
+    verify_fully_synced();
     api::get_utxos(request.into())
 }
 
