@@ -89,12 +89,11 @@ pub fn remove_received_expected_block(state: &mut State, block: &BlockHash) {
 pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
     if let Some((smallest_height, _)) = state.expected_blocks.height_to_hash.iter().next() {
         for height in *smallest_height..state.stable_height() + 1 {
-            let hash = state
-                .expected_blocks
-                .height_to_hash
-                .remove(&height)
-                .unwrap();
-            state.expected_blocks.hash_to_height.remove(&hash);
+            if let Some(hash) = state.expected_blocks.height_to_hash.remove(&height) {
+                state.expected_blocks.hash_to_height.remove(&hash);
+            } else {
+                return;
+            }
         }
     }
 }
