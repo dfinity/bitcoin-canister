@@ -86,26 +86,22 @@ pub fn insert_expected_block(state: &mut State, prev_block: &BlockHash, block: &
     state.expected_blocks.hash_to_height.insert(*block, height);
 }
 
-pub fn remove_expected_blocks(state: &mut State, block: &BlockHash) {
-    let curr_height = match state.expected_blocks.hash_to_height.get(block) {
-        Some(height) => *height,
-        None => 0,
-    };
-    let remove_until_height = max(curr_height, state.stable_height());
-    let smallest_height = *state
-        .expected_blocks
-        .height_to_hash
-        .iter()
-        .next()
-        .unwrap()
-        .0;
-    for height in smallest_height..remove_until_height + 1 {
-        let hash = state
-            .expected_blocks
-            .height_to_hash
-            .remove(&height)
-            .unwrap();
-        state.expected_blocks.hash_to_height.remove(&hash);
+pub fn remove_received_expected_block(state: &mut State, block: &BlockHash) {
+    if let Some(height) = state.expected_blocks.hash_to_height.remove(block) {
+        state.expected_blocks.height_to_hash.remove(&height);
+    }
+}
+
+pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
+    if let Some((smallest_height, _)) = state.expected_blocks.height_to_hash.iter().next() {
+        for height in *smallest_height..state.stable_height() + 1 {
+            let hash = state
+                .expected_blocks
+                .height_to_hash
+                .remove(&height)
+                .unwrap();
+            state.expected_blocks.hash_to_height.remove(&hash);
+        }
     }
 }
 
