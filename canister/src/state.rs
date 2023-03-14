@@ -207,6 +207,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         Some(Slicing::Paused(())) => return has_state_changed(state),
         Some(Slicing::Done((ingested_block_hash, stats))) => {
             state.metrics.block_ingestion_stats = stats;
+            remove_expected_blocks_based_on_stable_height(state);
             pop_block(state, ingested_block_hash)
         }
     }
@@ -222,6 +223,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done((ingested_block_hash, stats)) => {
                 state.metrics.block_ingestion_stats = stats;
+                remove_expected_blocks_based_on_stable_height(state);
                 pop_block(state, ingested_block_hash)
             }
         }
