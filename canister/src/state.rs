@@ -57,11 +57,9 @@ pub struct State {
     pub expected_blocks: ExpectedBlocks,
 }
 
-//TODO insert
-//test
-
 #[derive(Serialize, Deserialize)]
-struct ExpectedBlocks {
+#[cfg_attr(test, derive(PartialEq))]
+pub struct ExpectedBlocks {
     pub hash_to_height: BTreeMap<BlockHash, Height>,
     pub height_to_hash: BTreeMap<Height, BlockHash>,
 }
@@ -81,8 +79,14 @@ pub fn insert_expected_block(state: &mut State, prev_block: &BlockHash, block: &
         None => chain_with_tip_height(state, prev_block),
     } + 1;
 
-    state.expected_blocks.height_to_hash.insert(height, *block);
-    state.expected_blocks.hash_to_height.insert(*block, height);
+    state
+        .expected_blocks
+        .height_to_hash
+        .insert(height, block.clone());
+    state
+        .expected_blocks
+        .hash_to_height
+        .insert(block.clone(), height);
 }
 
 pub fn remove_received_expected_block(state: &mut State, block: &BlockHash) {
@@ -132,6 +136,7 @@ impl State {
             fees: Fees::default(),
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
+            expected_blocks: ExpectedBlocks::default(),
         }
     }
 
