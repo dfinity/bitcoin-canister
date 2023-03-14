@@ -58,7 +58,6 @@ pub struct State {
 }
 
 //TODO insert
-//remove
 //test
 
 #[derive(Serialize, Deserialize)]

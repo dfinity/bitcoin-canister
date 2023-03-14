@@ -1,14 +1,14 @@
 use crate::{
     runtime::{call_get_successors, print},
-    state::{self, ResponseToProcess},
+    state::{self, insert_expected_block, remove_received_expected_block, ResponseToProcess},
     types::{
         Block, BlockHash, Flag, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
 use crate::{with_state, with_state_mut};
-use bitcoin::consensus::Decodable;
 use bitcoin::Block as BitcoinBlock;
+use bitcoin::{consensus::Decodable, BlockHeader};
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -166,6 +166,15 @@ fn maybe_process_response() {
                         state.syncing_state.num_insert_block_errors += 1;
                         return;
                     }
+
+                    remove_received_expected_block(state, &BlockHash::from(block.block_hash()));
+                }
+                for block_header_blob in response.next.iter() {
+                    let block_header = BlockHeader::consensus_decode(block_header_blob.as_slice())
+                        .expect("block header decoding must succeed");
+                    let block_hash = BlockHash::from(block_header.block_hash());
+                    let prev_hash = BlockHash::from(block_header.prev_blockhash);
+                    insert_expected_block(state, &prev_hash, &block_hash);
                 }
             }
             other => {
