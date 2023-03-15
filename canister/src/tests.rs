@@ -627,7 +627,7 @@ async fn test_syncing_with_expected_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    with_state(|s| assert_eq!(s.is_fully_synced(), false));
+    with_state(|s| assert!(!s.is_fully_synced()));
 
     let mut first_expected_block_bytes = vec![];
 
@@ -664,7 +664,7 @@ async fn test_syncing_with_expected_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
-    with_state(|s| assert_eq!(s.is_fully_synced(), true));
+    with_state(|s| assert!(s.is_fully_synced()));
 
     let (expected_blocks, expected_blobs) =
         get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
@@ -698,7 +698,7 @@ async fn test_syncing_with_expected_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
-    with_state(|s| assert_eq!(s.is_fully_synced(), true));
+    with_state(|s| assert!(s.is_fully_synced()));
 
     // We are extending the longes chain of expected blocks.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
@@ -731,5 +731,5 @@ async fn test_syncing_with_expected_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    with_state(|s| assert_eq!(s.is_fully_synced(), false));
+    with_state(|s| assert!(!s.is_fully_synced()));
 }
