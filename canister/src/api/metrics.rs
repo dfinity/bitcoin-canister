@@ -91,6 +91,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         encode_instruction_histogram(w, &state.metrics.get_balance_total)?;
         encode_instruction_histogram(w, &state.metrics.get_balance_apply_unstable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_current_fee_percentiles_total)?;
+        encode_instruction_histogram(w, &state.metrics.block_insertion)?;
 
         w.encode_gauge(
             "send_transaction_count",
@@ -107,7 +108,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         encode_labeled_gauge(
             w,
             "block_ingestion_stats",
-            "The stats of the most recent block ingestion.",
+            "The stats of the most recent block ingested into the stable UTXO set.",
             &state.metrics.block_ingestion_stats.get_labels_and_values(),
         )?;
 
