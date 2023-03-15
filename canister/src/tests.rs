@@ -8,8 +8,8 @@ use crate::{
     },
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
-        BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest, GetSuccessorsCompleteResponse,
-        GetSuccessorsResponse, GetUtxosRequest, Network,
+        Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
+        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     with_state, with_state_mut,
@@ -19,7 +19,7 @@ use bitcoin::{
     consensus::{Decodable, Encodable},
     Txid,
 };
-use bitcoin::{Block, BlockHeader};
+use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
@@ -30,9 +30,9 @@ use std::{collections::HashMap, io::BufReader, path::PathBuf};
 mod confirmation_counts;
 
 async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
-    let mut chain: Vec<Block> = vec![];
+    let mut chain: Vec<BitcoinBlock> = vec![];
 
-    let mut blocks: HashMap<BlockHash, Block> = HashMap::new();
+    let mut blocks: HashMap<BlockHash, BitcoinBlock> = HashMap::new();
 
     let mut blk_file = BufReader::new(
         File::open(PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(blocks_file))
@@ -61,7 +61,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
 
         let _block_size = blk_file.read_u32::<LittleEndian>().unwrap();
 
-        let block = Block::consensus_decode(&mut blk_file).unwrap();
+        let block = BitcoinBlock::consensus_decode(&mut blk_file).unwrap();
 
         blocks.insert(BlockHash::from(block.header.prev_blockhash), block);
     }
@@ -84,7 +84,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
         .into_iter()
         .map(|block| {
             let mut block_bytes = vec![];
-            Block::consensus_encode(&block, &mut block_bytes).unwrap();
+            BitcoinBlock::consensus_encode(&block, &mut block_bytes).unwrap();
             GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
                 GetSuccessorsCompleteResponse {
                     blocks: vec![block_bytes],
@@ -566,7 +566,7 @@ fn get_chain_with_n_block_and_header_blobs(
     }
 
     let mut blob_vec = vec![];
-    for block in block_vec {
+    for block in block_vec.iter() {
         blob_vec.push(get_header_blob(block.header()));
     }
     (block_vec, blob_vec)
@@ -598,7 +598,7 @@ async fn test_syncing_with_expected_blocks_fails() {
         .collect();
 
     let (expected_blocks, expected_blobs) =
-        get_chain_with_n_block_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
+        get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks,

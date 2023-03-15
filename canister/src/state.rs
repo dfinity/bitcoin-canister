@@ -85,7 +85,7 @@ pub fn insert_expected_block(
         .expected_blocks
         .height_to_hash
         .entry(height)
-        .or_insert_with(|| vec![]);
+        .or_insert_with(Vec::new);
 
     if !hash_vec.contains(block_hash) {
         hash_vec.push(block_hash.clone());
@@ -115,7 +115,7 @@ pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
     if let Some((smallest_height, _)) = state.expected_blocks.height_to_hash.iter().next() {
         for height in *smallest_height..state.stable_height() + 1 {
             if let Some(hash_vec) = state.expected_blocks.height_to_hash.remove(&height) {
-                for hash in hash_vec {
+                for hash in hash_vec.iter() {
                     state.expected_blocks.hash_to_height.remove(&hash);
                 }
             } else {
