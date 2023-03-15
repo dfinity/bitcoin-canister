@@ -57,7 +57,7 @@ pub struct State {
     pub expected_blocks: ExpectedBlocks,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct ExpectedBlocks {
     pub hash_to_height: BTreeMap<BlockHash, Height>,
@@ -149,7 +149,7 @@ impl State {
     /// Otherwise, returns false.
     pub fn is_fully_synced(&self) -> bool {
         let main_chain_height = main_chain_height(self);
-        if main_chain_height < max(expected_blocks_max_height(self), main_chain_height) - 2 {
+        if main_chain_height + 2 < max(expected_blocks_max_height(self), main_chain_height) {
             return false;
         }
         true
