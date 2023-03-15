@@ -61,7 +61,7 @@ pub struct State {
 #[cfg_attr(test, derive(PartialEq))]
 pub struct ExpectedBlocks {
     pub hash_to_height: BTreeMap<BlockHash, Height>,
-    pub height_to_hash: BTreeMap<Height, BlockHash>,
+    pub height_to_hash: BTreeMap<Height, Vec<BlockHash>>,
 }
 
 // Inserts the block hash of the block that should be received.
@@ -84,7 +84,10 @@ pub fn insert_expected_block(
     state
         .expected_blocks
         .height_to_hash
-        .insert(height, block_hash.clone());
+        .entry(height)
+        .or_insert_with(|| vec![])
+        .push(block_hash.clone());
+
     state
         .expected_blocks
         .hash_to_height
@@ -94,7 +97,13 @@ pub fn insert_expected_block(
 // Removes the received block from 'expected_blocks'.
 pub fn remove_received_expected_block(state: &mut State, received_block: &BlockHash) {
     if let Some(height) = state.expected_blocks.hash_to_height.remove(received_block) {
-        state.expected_blocks.height_to_hash.remove(&height);
+        let hash_vec = state
+            .expected_blocks
+            .height_to_hash
+            .get_mut(&height)
+            .unwrap();
+        let index = hash_vec.iter().position(|x| *x == *received_block).unwrap();
+        hash_vec.remove(index);
     }
 }
 
@@ -102,8 +111,10 @@ pub fn remove_received_expected_block(state: &mut State, received_block: &BlockH
 pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
     if let Some((smallest_height, _)) = state.expected_blocks.height_to_hash.iter().next() {
         for height in *smallest_height..state.stable_height() + 1 {
-            if let Some(hash) = state.expected_blocks.height_to_hash.remove(&height) {
-                state.expected_blocks.hash_to_height.remove(&hash);
+            if let Some(hash_vec) = state.expected_blocks.height_to_hash.remove(&height) {
+                for hash in hash_vec {
+                    state.expected_blocks.hash_to_height.remove(&hash);
+                }
             } else {
                 return;
             }
