@@ -125,6 +125,7 @@ pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
     }
 }
 
+// Public only for testing purpose.
 pub fn expected_blocks_max_height(state: &State) -> Height {
     if let Some((height, _)) = state.expected_blocks.height_to_hash.iter().next_back() {
         return *height;
