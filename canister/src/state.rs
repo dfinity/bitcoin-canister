@@ -72,7 +72,13 @@ pub fn insert_expected_block(
 ) {
     let height = match state.expected_blocks.hash_to_height.get(prev_block_hash) {
         Some(prev_height) => *prev_height,
-        None => chain_with_tip_height(state, prev_block_hash),
+        None => {
+            if let Ok(depth) = state.unstable_blocks.block_depth(prev_block_hash) {
+                state.stable_height() + depth
+            } else {
+                return;
+            }
+        }
     } + 1;
 
     state
@@ -235,13 +241,6 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
 pub fn main_chain_height(state: &State) -> Height {
     unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height()
-        - 1
-}
-
-pub fn chain_with_tip_height(state: &State, tip: &BlockHash) -> Height {
-    unstable_blocks::get_chain_with_tip(&state.unstable_blocks, tip)
-        .map_or(0, |chain| chain.len() as u32)
-        + state.utxos.next_height()
         - 1
 }
 

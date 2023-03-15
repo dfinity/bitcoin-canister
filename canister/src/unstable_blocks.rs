@@ -71,6 +71,13 @@ impl UnstableBlocks {
     pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
         self.tree.blocks_with_depths_by_heights()
     }
+
+    /// Returns depth in BlockTree of Block with given BlockHash.
+    pub fn block_depth(&mut self, block_hash: &BlockHash) -> Result<u32, BlockDoesNotExtendTree> {
+        let (_, depth) = blocktree::find_mut(&mut self.tree, block_hash)
+            .ok_or_else(|| BlockDoesNotExtendTree(block_hash.clone()))?;
+        Ok(depth)
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
