@@ -118,6 +118,8 @@ fn expected_blocks_max_height(state: &State) -> Height {
     0
 }
 
+const SYNCING_THRESHOLD: u32 = 2;
+
 impl State {
     /// Create a new blockchain.
     ///
@@ -162,7 +164,9 @@ impl State {
     /// Otherwise, returns false.
     pub fn is_fully_synced(&self) -> bool {
         let main_chain_height = main_chain_height(self);
-        if main_chain_height + 2 < max(expected_blocks_max_height(self), main_chain_height) {
+        if main_chain_height + SYNCING_THRESHOLD
+            < max(expected_blocks_max_height(self), main_chain_height)
+        {
             return false;
         }
         true
