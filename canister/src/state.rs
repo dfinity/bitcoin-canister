@@ -53,7 +53,7 @@ pub struct State {
     #[serde(default)]
     pub api_access: Flag,
 
-    /// Blocks which headers are received in GetSuccessorsResponse.
+    /// Blocks that are expected to be received.
     pub expected_blocks: ExpectedBlocks,
 }
 
@@ -64,28 +64,35 @@ pub struct ExpectedBlocks {
     pub height_to_hash: BTreeMap<Height, BlockHash>,
 }
 
-pub fn insert_expected_block(state: &mut State, prev_block: &BlockHash, block: &BlockHash) {
-    let height = match state.expected_blocks.hash_to_height.get(prev_block) {
+// Inserts the block hash of the block that should be received.
+pub fn insert_expected_block(
+    state: &mut State,
+    prev_block_hash: &BlockHash,
+    block_hash: &BlockHash,
+) {
+    let height = match state.expected_blocks.hash_to_height.get(prev_block_hash) {
         Some(prev_height) => *prev_height,
-        None => chain_with_tip_height(state, prev_block),
+        None => chain_with_tip_height(state, prev_block_hash),
     } + 1;
 
     state
         .expected_blocks
         .height_to_hash
-        .insert(height, block.clone());
+        .insert(height, block_hash.clone());
     state
         .expected_blocks
         .hash_to_height
-        .insert(block.clone(), height);
+        .insert(block_hash.clone(), height);
 }
 
-pub fn remove_received_expected_block(state: &mut State, block: &BlockHash) {
-    if let Some(height) = state.expected_blocks.hash_to_height.remove(block) {
+// Removes the received block from 'expected_blocks'.
+pub fn remove_received_expected_block(state: &mut State, received_block: &BlockHash) {
+    if let Some(height) = state.expected_blocks.hash_to_height.remove(received_block) {
         state.expected_blocks.height_to_hash.remove(&height);
     }
 }
 
+// Removes blocks from expected_blocks with height up to current 'stable_height'.
 pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
     if let Some((smallest_height, _)) = state.expected_blocks.height_to_hash.iter().next() {
         for height in *smallest_height..state.stable_height() + 1 {
@@ -99,10 +106,10 @@ pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
 }
 
 fn expected_blocks_max_height(state: &State) -> Height {
-    match state.expected_blocks.height_to_hash.iter().next_back() {
-        Some((height, _)) => *height,
-        None => 0,
+    if let Some((height, _)) = state.expected_blocks.height_to_hash.iter().next_back() {
+        return *height;
     }
+    0
 }
 
 impl State {
