@@ -2,21 +2,24 @@ use crate::{
     api::{get_balance, get_utxos},
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
-    state::main_chain_height,
+    state::{
+        expected_blocks_max_height, ingest_stable_blocks_into_utxoset, main_chain_height,
+        SYNCING_THRESHOLD,
+    },
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
-        BlockBlob, BlockHash, GetBalanceRequest, GetSuccessorsCompleteResponse,
+        BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest, GetSuccessorsCompleteResponse,
         GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    with_state,
+    with_state, with_state_mut,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
-use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
     Txid,
 };
+use bitcoin::{Block, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
@@ -543,4 +546,84 @@ async fn test_rejections_counting() {
     let counter_after = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
     assert_eq!(counter_prior, counter_after - 1);
+}
+
+// Serialize header.
+fn get_header_blob(header: &BlockHeader) -> BlockHeaderBlob {
+    let mut header_buff = vec![];
+    header.consensus_encode(&mut header_buff).unwrap();
+    header_buff.into()
+}
+
+fn get_chain_with_n_block_and_header_blobs(
+    previous_block: &BlockHeader,
+    n: usize,
+) -> (Vec<Block>, Vec<BlockHeaderBlob>) {
+    let first_block = BlockBuilder::with_prev_header(previous_block).build();
+    let mut block_vec = vec![first_block];
+    for i in 1..n {
+        block_vec.push(BlockBuilder::with_prev_header(&block_vec[i - 1].header()).build());
+    }
+
+    let mut blob_vec = vec![];
+    for block in block_vec {
+        blob_vec.push(get_header_blob(block.header()));
+    }
+    (block_vec, blob_vec)
+}
+
+#[async_std::test]
+async fn test_syncing_with_expected_blocks_fails() {
+    let network = Network::Regtest;
+
+    init(Config {
+        stability_threshold: 2,
+        network,
+        ..Default::default()
+    });
+
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+
+    // An additional block so that the previous block is ingested into the stable UTXO set.
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+
+    // Serialize the blocks.
+    let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
+        .iter()
+        .map(|block| {
+            let mut block_bytes = vec![];
+            block.consensus_encode(&mut block_bytes).unwrap();
+            block_bytes
+        })
+        .collect();
+
+    let (expected_blocks, expected_blobs) =
+        get_chain_with_n_block_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks,
+            next: expected_blobs,
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 2);
+
+    assert_eq!(
+        with_state_mut(|mut s| {
+            ingest_stable_blocks_into_utxoset(&mut s);
+            s.stable_height()
+        }),
+        1
+    );
+
+    assert_eq!(with_state(|s| expected_blocks_max_height(s)), 5);
+
+    with_state(|s| assert_eq!(s.is_fully_synced(), false));
 }

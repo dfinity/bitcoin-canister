@@ -81,12 +81,15 @@ pub fn insert_expected_block(
         }
     } + 1;
 
-    state
+    let hash_vec = state
         .expected_blocks
         .height_to_hash
         .entry(height)
-        .or_insert_with(|| vec![])
-        .push(block_hash.clone());
+        .or_insert_with(|| vec![]);
+
+    if !hash_vec.contains(block_hash) {
+        hash_vec.push(block_hash.clone());
+    }
 
     state
         .expected_blocks
@@ -122,14 +125,14 @@ pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
     }
 }
 
-fn expected_blocks_max_height(state: &State) -> Height {
+pub fn expected_blocks_max_height(state: &State) -> Height {
     if let Some((height, _)) = state.expected_blocks.height_to_hash.iter().next_back() {
         return *height;
     }
     0
 }
 
-const SYNCING_THRESHOLD: u32 = 2;
+pub const SYNCING_THRESHOLD: u32 = 2;
 
 impl State {
     /// Create a new blockchain.
