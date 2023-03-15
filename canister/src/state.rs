@@ -116,7 +116,7 @@ pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
         for height in *smallest_height..state.stable_height() + 1 {
             if let Some(hash_vec) = state.expected_blocks.height_to_hash.remove(&height) {
                 for hash in hash_vec.iter() {
-                    state.expected_blocks.hash_to_height.remove(&hash);
+                    state.expected_blocks.hash_to_height.remove(hash);
                 }
             } else {
                 return;
