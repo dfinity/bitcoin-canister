@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::time,
+    runtime::{time, performance_counter},
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Network, Slicing,
@@ -94,6 +94,7 @@ impl State {
 /// Inserts a block into the state.
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
+    let start = performance_counter();
     validate_header(
         &state.network().into(),
         &ValidationContext::new(state, block.header())
@@ -104,6 +105,9 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
         .expect("Inserting a block with a validated header must succeed.");
+
+    let instructions_count = performance_counter() - start;
+    state.metrics.block_insertion.observe(instructions_count);
     Ok(())
 }
 
