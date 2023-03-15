@@ -2,17 +2,14 @@ use crate::{
     api::{get_balance, get_utxos},
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
-    state::{
-        expected_blocks_max_height, ingest_stable_blocks_into_utxoset, main_chain_height,
-        SYNCING_THRESHOLD,
-    },
+    state::{expected_blocks_max_height, main_chain_height, SYNCING_THRESHOLD},
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
         Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
         GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    with_state, with_state_mut,
+    with_state,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::{
@@ -559,10 +556,13 @@ fn get_chain_with_n_block_and_header_blobs(
     previous_block: &BlockHeader,
     n: usize,
 ) -> (Vec<Block>, Vec<BlockHeaderBlob>) {
-    let first_block = BlockBuilder::with_prev_header(previous_block).build();
+    let first_block = BlockBuilder::with_prev_header(previous_block).build_with_mock_difficulty(1);
     let mut block_vec = vec![first_block];
     for i in 1..n {
-        block_vec.push(BlockBuilder::with_prev_header(&block_vec[i - 1].header()).build());
+        block_vec.push(
+            BlockBuilder::with_prev_header(&block_vec[i - 1].header())
+                .build_with_mock_difficulty(1),
+        );
     }
 
     let mut blob_vec = vec![];
@@ -573,7 +573,7 @@ fn get_chain_with_n_block_and_header_blobs(
 }
 
 #[async_std::test]
-async fn test_syncing_with_expected_blocks_fails() {
+async fn test_syncing_with_expected_blocks() {
     let network = Network::Regtest;
 
     init(Config {
@@ -582,10 +582,10 @@ async fn test_syncing_with_expected_blocks_fails() {
         ..Default::default()
     });
 
-    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header())
+        .build_with_mock_difficulty(1);
 
-    // An additional block so that the previous block is ingested into the stable UTXO set.
-    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build_with_mock_difficulty(1);
 
     // Serialize the blocks.
     let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
@@ -599,6 +599,8 @@ async fn test_syncing_with_expected_blocks_fails() {
 
     let (expected_blocks, expected_blobs) =
         get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
+    // We now have a chain of SYNCING_THRESHOLD + 1 expected blocks
+    // extending the unstable block (block_2).
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks,
@@ -612,18 +614,122 @@ async fn test_syncing_with_expected_blocks_fails() {
     // Process response.
     heartbeat().await;
 
+    // Ingest StableBlocks (block_1) into UTXOset.
+    heartbeat().await;
+
     // Assert that the block has been ingested.
     assert_eq!(with_state(main_chain_height), 2);
 
+    assert_eq!(with_state(|s| s.stable_height()), 1);
+
     assert_eq!(
-        with_state_mut(|mut s| {
-            ingest_stable_blocks_into_utxoset(&mut s);
-            s.stable_height()
-        }),
-        1
+        with_state(|s| expected_blocks_max_height(s)),
+        with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    assert_eq!(with_state(|s| expected_blocks_max_height(s)), 5);
+    with_state(|s| assert_eq!(s.is_fully_synced(), false));
+
+    let mut first_expected_block_bytes = vec![];
+
+    expected_blocks[0]
+        .clone()
+        .consensus_encode(&mut first_expected_block_bytes)
+        .unwrap();
+
+    // We now have 2 UnstableBlocks and chain of SYNCING_THRESHOLD expected blocks
+    // extending the last unstable block(first_expected_block).
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks: vec![first_expected_block_bytes],
+            next: vec![],
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Ingest StableBlocks (block_2) into UTXOset.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 3);
+
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+
+    assert_eq!(
+        with_state(|s| expected_blocks_max_height(s)),
+        with_state(main_chain_height) + SYNCING_THRESHOLD
+    );
+
+    with_state(|s| assert_eq!(s.is_fully_synced(), true));
+
+    let (expected_blocks, expected_blobs) =
+        get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
+
+    // We now have 1 UnstableBlocks and chain of SYNCING_THRESHOLD + 2 expected blocks
+    // extending the last stable block (block_1). Hence it is SYNCING_THRESHOLD + 1
+    // longer than main_chain.
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks: vec![],
+            next: expected_blobs,
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Try to ingest StableBlocks into UTXOset.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 3);
+
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+
+    assert_eq!(
+        with_state(|s| expected_blocks_max_height(s)),
+        with_state(main_chain_height) + SYNCING_THRESHOLD
+    );
+
+    with_state(|s| assert_eq!(s.is_fully_synced(), true));
+
+    // We are extending the longes chain of expected blocks.
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks: vec![],
+            next: get_chain_with_n_block_and_header_blobs(
+                expected_blocks.last().unwrap().header(),
+                1,
+            )
+            .1,
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Try to ingest StableBlocks into UTXOset.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 3);
+
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+
+    assert_eq!(
+        with_state(|s| expected_blocks_max_height(s)),
+        with_state(main_chain_height) + SYNCING_THRESHOLD + 1
+    );
 
     with_state(|s| assert_eq!(s.is_fully_synced(), false));
 }
