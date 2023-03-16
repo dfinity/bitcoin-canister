@@ -2,6 +2,7 @@ mod address_utxoset;
 mod api;
 mod block_header_store;
 mod blocktree;
+mod guard;
 mod heartbeat;
 pub mod memory;
 mod metrics;
