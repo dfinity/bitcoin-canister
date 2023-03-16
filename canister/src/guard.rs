@@ -1,6 +1,6 @@
 use crate::with_state_mut;
 
-/// Ensures that there is only one instance of the heartbeat state machine.
+/// Ensures that there is only one request to fetch blocks at any given time.
 // Note: the struct has one private field to ensure that nobody can construct it
 // directly outside of this module.
 #[must_use]
