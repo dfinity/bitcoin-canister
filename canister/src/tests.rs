@@ -560,8 +560,7 @@ fn get_chain_with_n_block_and_header_blobs(
     let mut block_vec = vec![first_block];
     for i in 1..n {
         block_vec.push(
-            BlockBuilder::with_prev_header(&block_vec[i - 1].header())
-                .build_with_mock_difficulty(1),
+            BlockBuilder::with_prev_header(block_vec[i - 1].header()).build_with_mock_difficulty(1),
         );
     }
 
@@ -623,7 +622,7 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 1);
 
     assert_eq!(
-        with_state(|s| expected_blocks_max_height(s)),
+        with_state(expected_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
@@ -660,7 +659,7 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| expected_blocks_max_height(s)),
+        with_state(expected_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
@@ -694,7 +693,7 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| expected_blocks_max_height(s)),
+        with_state(expected_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
@@ -727,7 +726,7 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| expected_blocks_max_height(s)),
+        with_state(expected_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
