@@ -64,6 +64,47 @@ pub struct ExpectedBlocks {
     pub height_to_hash: BTreeMap<Height, Vec<BlockHash>>,
 }
 
+impl ExpectedBlocks {
+    fn insert(&mut self, block_hash: &BlockHash, height: u32) {
+        let hash_vec = self.height_to_hash.entry(height).or_insert_with(Vec::new);
+
+        if !hash_vec.contains(block_hash) {
+            hash_vec.push(block_hash.clone());
+        }
+
+        self.hash_to_height.insert(block_hash.clone(), height);
+    }
+
+    fn remove_block(&mut self, block: &BlockHash) {
+        if let Some(height) = self.hash_to_height.remove(block) {
+            let hash_vec = self.height_to_hash.get_mut(&height).unwrap();
+            let index = hash_vec.iter().position(|x| *x == *block).unwrap();
+            hash_vec.remove(index);
+        }
+    }
+
+    fn remove_until_height(&mut self, until_height: Height) {
+        if let Some((smallest_height, _)) = self.height_to_hash.iter().next() {
+            for height in *smallest_height..until_height + 1 {
+                if let Some(hash_vec) = self.height_to_hash.remove(&height) {
+                    for hash in hash_vec.iter() {
+                        self.hash_to_height.remove(hash);
+                    }
+                } else {
+                    return;
+                }
+            }
+        }
+    }
+
+    fn get_max_height(&self) -> Option<Height> {
+        match self.height_to_hash.iter().next_back() {
+            Some((height, _)) => Some(*height),
+            None => None,
+        }
+    }
+}
+
 // Inserts the block hash of the block that should be received.
 pub fn insert_expected_block(
     state: &mut State,
@@ -80,57 +121,24 @@ pub fn insert_expected_block(
             }
         }
     } + 1;
-
-    let hash_vec = state
-        .expected_blocks
-        .height_to_hash
-        .entry(height)
-        .or_insert_with(Vec::new);
-
-    if !hash_vec.contains(block_hash) {
-        hash_vec.push(block_hash.clone());
-    }
-
-    state
-        .expected_blocks
-        .hash_to_height
-        .insert(block_hash.clone(), height);
+    state.expected_blocks.insert(block_hash, height);
 }
 
 // Removes the received block from 'expected_blocks'.
 pub fn remove_received_expected_block(state: &mut State, received_block: &BlockHash) {
-    if let Some(height) = state.expected_blocks.hash_to_height.remove(received_block) {
-        let hash_vec = state
-            .expected_blocks
-            .height_to_hash
-            .get_mut(&height)
-            .unwrap();
-        let index = hash_vec.iter().position(|x| *x == *received_block).unwrap();
-        hash_vec.remove(index);
-    }
+    state.expected_blocks.remove_block(received_block);
 }
 
 // Removes blocks from expected_blocks with height up to current 'stable_height'.
 pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
-    if let Some((smallest_height, _)) = state.expected_blocks.height_to_hash.iter().next() {
-        for height in *smallest_height..state.stable_height() + 1 {
-            if let Some(hash_vec) = state.expected_blocks.height_to_hash.remove(&height) {
-                for hash in hash_vec.iter() {
-                    state.expected_blocks.hash_to_height.remove(hash);
-                }
-            } else {
-                return;
-            }
-        }
-    }
+    state
+        .expected_blocks
+        .remove_until_height(state.stable_height());
 }
 
 // Public only for testing purpose.
 pub fn expected_blocks_max_height(state: &State) -> Height {
-    if let Some((height, _)) = state.expected_blocks.height_to_hash.iter().next_back() {
-        return *height;
-    }
-    0
+    state.expected_blocks.get_max_height().unwrap_or(0)
 }
 
 pub const SYNCING_THRESHOLD: u32 = 2;
