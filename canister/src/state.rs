@@ -98,10 +98,10 @@ impl ExpectedBlocks {
     }
 
     fn get_max_height(&self) -> Option<Height> {
-        match self.height_to_hash.iter().next_back() {
-            Some((height, _)) => Some(*height),
-            None => None,
-        }
+        self.height_to_hash
+            .iter()
+            .next_back()
+            .map(|(height, _)| *height)
     }
 }
 
