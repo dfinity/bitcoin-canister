@@ -1,6 +1,7 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
+    next_blocks::NextBlocks,
     types::{Address, Block, BlockHash, Network, OutPoint, TxOut},
     UtxoSet,
 };
@@ -19,6 +20,8 @@ pub struct UnstableBlocks {
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
     network: Network,
+    /// Blocks that are expected to be received.
+    next_blocks: NextBlocks,
 }
 
 impl UnstableBlocks {
@@ -34,6 +37,7 @@ impl UnstableBlocks {
             tree: BlockTree::new(anchor.clone()),
             outpoints_cache,
             network,
+            next_blocks: NextBlocks::default(),
         }
     }
 
@@ -77,6 +81,41 @@ impl UnstableBlocks {
         let (_, depth) = blocktree::find_mut(&mut self.tree, block_hash)
             .ok_or_else(|| BlockDoesNotExtendTree(block_hash.clone()))?;
         Ok(depth)
+    }
+
+    // Inserts the block hash of the block that should be received.
+    pub fn insert_next_block(
+        &mut self,
+        prev_block_hash: &BlockHash,
+        block_hash: &BlockHash,
+        stable_height: Height,
+    ) {
+        let height = match self.next_blocks.get_height(prev_block_hash) {
+            Some(prev_height) => *prev_height,
+            None => {
+                if let Ok(depth) = self.block_depth(prev_block_hash) {
+                    stable_height + depth
+                } else {
+                    return;
+                }
+            }
+        } + 1;
+        self.next_blocks.insert(block_hash, height);
+    }
+
+    // Removes the received block from 'next_blocks'.
+    pub fn remove_received_block_from_next_blocks(&mut self, received_block: &BlockHash) {
+        self.next_blocks.remove_block(received_block);
+    }
+
+    // Removes blocks from 'next_blocks' with height up to current 'stable_height'.
+    pub fn remove_next_blocks_based_on_stable_height(&mut self, stable_height: Height) {
+        self.next_blocks.remove_until_height(stable_height);
+    }
+
+    // Public only for testing purpose.
+    pub fn next_blocks_max_height(&self) -> Height {
+        self.next_blocks.get_max_height().unwrap_or(0)
     }
 }
 

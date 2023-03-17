@@ -3,8 +3,7 @@ use ic_btc_types::Height;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-#[derive(Serialize, Deserialize, Default, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq)]
 pub struct NextBlocks {
     hash_to_height: BTreeMap<BlockHash, Height>,
     height_to_hash: BTreeMap<Height, Vec<BlockHash>>,

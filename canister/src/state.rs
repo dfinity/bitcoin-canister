@@ -4,7 +4,6 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    next_blocks::NextBlocks,
     runtime::time,
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
@@ -53,39 +52,32 @@ pub struct State {
     /// Flag to control access to the apis provided by the canister.
     #[serde(default)]
     pub api_access: Flag,
-
-    /// Blocks that are expected to be received.
-    pub next_blocks: NextBlocks,
 }
 
 // Inserts the block hash of the block that should be received.
 pub fn insert_next_block(state: &mut State, prev_block_hash: &BlockHash, block_hash: &BlockHash) {
-    let height = match state.next_blocks.get_height(prev_block_hash) {
-        Some(prev_height) => *prev_height,
-        None => {
-            if let Ok(depth) = state.unstable_blocks.block_depth(prev_block_hash) {
-                state.stable_height() + depth
-            } else {
-                return;
-            }
-        }
-    } + 1;
-    state.next_blocks.insert(block_hash, height);
+    state
+        .unstable_blocks
+        .insert_next_block(prev_block_hash, block_hash, state.stable_height());
 }
 
 // Removes the received block from 'next_blocks'.
 pub fn remove_received_block_from_next_blocks(state: &mut State, received_block: &BlockHash) {
-    state.next_blocks.remove_block(received_block);
+    state
+        .unstable_blocks
+        .remove_received_block_from_next_blocks(received_block);
 }
 
 // Removes blocks from 'next_blocks' with height up to current 'stable_height'.
 pub fn remove_next_blocks_based_on_stable_height(state: &mut State) {
-    state.next_blocks.remove_until_height(state.stable_height());
+    state
+        .unstable_blocks
+        .remove_next_blocks_based_on_stable_height(state.stable_height());
 }
 
 // Public only for testing purpose.
 pub fn next_blocks_max_height(state: &State) -> Height {
-    state.next_blocks.get_max_height().unwrap_or(0)
+    state.unstable_blocks.next_blocks_max_height()
 }
 
 pub const SYNCING_THRESHOLD: u32 = 2;
@@ -111,7 +103,6 @@ impl State {
             fees: Fees::default(),
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
-            next_blocks: NextBlocks::default(),
         }
     }
 
