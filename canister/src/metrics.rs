@@ -21,8 +21,11 @@ pub struct Metrics {
     /// The total number of (valid) requests sent to `send_transaction`.
     pub send_transaction_count: u64,
 
-    /// The stats of the most recent block ingestion.
+    /// The stats of the most recent block ingested into the stable UTXO set.
     pub block_ingestion_stats: BlockIngestionStats,
+
+    /// Instructions needed to insert a block into the pool of unstable blocks.
+    pub block_insertion: InstructionHistogram,
 }
 
 impl Default for Metrics {
@@ -58,6 +61,11 @@ impl Default for Metrics {
             send_transaction_count: 0,
 
             block_ingestion_stats: BlockIngestionStats::default(),
+
+            block_insertion: InstructionHistogram::new(
+                "ins_block_insertion",
+                "Instructions needed to insert a block into the pool of unstable blocks.",
+            ),
         }
     }
 }
