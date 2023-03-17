@@ -6,6 +6,7 @@ mod heartbeat;
 pub mod memory;
 mod metrics;
 mod multi_iter;
+mod next_blocks;
 pub mod runtime;
 pub mod state;
 #[cfg(test)]

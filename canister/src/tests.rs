@@ -2,7 +2,7 @@ use crate::{
     api::{get_balance, get_utxos},
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
-    state::{expected_blocks_max_height, main_chain_height, SYNCING_THRESHOLD},
+    state::{main_chain_height, next_blocks_max_height, SYNCING_THRESHOLD},
     test_utils::{BlockBuilder, TransactionBuilder},
     types::{
         Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
@@ -572,7 +572,7 @@ fn get_chain_with_n_block_and_header_blobs(
 }
 
 #[async_std::test]
-async fn test_syncing_with_expected_blocks() {
+async fn test_syncing_with_next_blocks() {
     let network = Network::Regtest;
 
     init(Config {
@@ -596,14 +596,14 @@ async fn test_syncing_with_expected_blocks() {
         })
         .collect();
 
-    let (expected_blocks, expected_blobs) =
+    let (next_blocks, next_blocks_blobs) =
         get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
-    // We now have a chain of SYNCING_THRESHOLD + 1 expected blocks
+    // We now have a chain of SYNCING_THRESHOLD + 1 next blocks
     // extending the unstable block (block_2).
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks,
-            next: expected_blobs,
+            next: next_blocks_blobs,
         },
     )));
 
@@ -622,24 +622,24 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 1);
 
     assert_eq!(
-        with_state(expected_blocks_max_height),
+        with_state(next_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
     with_state(|s| assert!(!s.is_fully_synced()));
 
-    let mut first_expected_block_bytes = vec![];
+    let mut first_next_block_bytes = vec![];
 
-    expected_blocks[0]
+    next_blocks[0]
         .clone()
-        .consensus_encode(&mut first_expected_block_bytes)
+        .consensus_encode(&mut first_next_block_bytes)
         .unwrap();
 
-    // We now have 2 UnstableBlocks and chain of SYNCING_THRESHOLD expected blocks
-    // extending the last unstable block(first_expected_block).
+    // We now have 2 UnstableBlocks and chain of SYNCING_THRESHOLD next blocks
+    // extending the last unstable block(first_next_block).
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
-            blocks: vec![first_expected_block_bytes],
+            blocks: vec![first_next_block_bytes],
             next: vec![],
         },
     )));
@@ -659,22 +659,22 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(expected_blocks_max_height),
+        with_state(next_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
     with_state(|s| assert!(s.is_fully_synced()));
 
-    let (expected_blocks, expected_blobs) =
+    let (next_blocks, next_blocks_blobs) =
         get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
 
-    // We now have 1 UnstableBlocks and chain of SYNCING_THRESHOLD + 2 expected blocks
+    // We now have 1 UnstableBlocks and chain of SYNCING_THRESHOLD + 2 next blocks
     // extending the last stable block (block_1). Hence it is SYNCING_THRESHOLD + 1
     // longer than main_chain.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks: vec![],
-            next: expected_blobs,
+            next: next_blocks_blobs,
         },
     )));
 
@@ -693,21 +693,18 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(expected_blocks_max_height),
+        with_state(next_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
     with_state(|s| assert!(s.is_fully_synced()));
 
-    // We are extending the longes chain of expected blocks.
+    // We are extending the longes chain of next blocks.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks: vec![],
-            next: get_chain_with_n_block_and_header_blobs(
-                expected_blocks.last().unwrap().header(),
-                1,
-            )
-            .1,
+            next: get_chain_with_n_block_and_header_blobs(next_blocks.last().unwrap().header(), 1)
+                .1,
         },
     )));
 
@@ -726,7 +723,7 @@ async fn test_syncing_with_expected_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(expected_blocks_max_height),
+        with_state(next_blocks_max_height),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 

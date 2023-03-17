@@ -1,9 +1,10 @@
-use std::{cmp::max, collections::BTreeMap};
+use std::cmp::max;
 
 use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
+    next_blocks::NextBlocks,
     runtime::time,
     types::{
         Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
@@ -54,66 +55,12 @@ pub struct State {
     pub api_access: Flag,
 
     /// Blocks that are expected to be received.
-    pub expected_blocks: ExpectedBlocks,
-}
-
-#[derive(Serialize, Deserialize, Default, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct ExpectedBlocks {
-    pub hash_to_height: BTreeMap<BlockHash, Height>,
-    pub height_to_hash: BTreeMap<Height, Vec<BlockHash>>,
-}
-
-impl ExpectedBlocks {
-    fn insert(&mut self, block_hash: &BlockHash, height: u32) {
-        let hash_vec = self.height_to_hash.entry(height).or_insert_with(Vec::new);
-
-        if !hash_vec.contains(block_hash) {
-            hash_vec.push(block_hash.clone());
-        }
-
-        self.hash_to_height.insert(block_hash.clone(), height);
-    }
-
-    fn remove_block(&mut self, block: &BlockHash) {
-        if let Some(height) = self.hash_to_height.remove(block) {
-            let hash_vec = self.height_to_hash.get_mut(&height).unwrap();
-            if hash_vec.len() == 1 {
-                self.height_to_hash.remove(&height);
-            } else {
-                let index = hash_vec.iter().position(|x| *x == *block).unwrap();
-                hash_vec.remove(index);
-            }
-        }
-    }
-
-    fn remove_until_height(&mut self, until_height: Height) {
-        if let Some((smallest_height, _)) = self.height_to_hash.iter().next() {
-            for height in *smallest_height..until_height + 1 {
-                if let Some(hash_vec) = self.height_to_hash.remove(&height) {
-                    for hash in hash_vec.iter() {
-                        self.hash_to_height.remove(hash);
-                    }
-                }
-            }
-        }
-    }
-
-    fn get_max_height(&self) -> Option<Height> {
-        self.height_to_hash
-            .iter()
-            .next_back()
-            .map(|(height, _)| *height)
-    }
+    pub next_blocks: NextBlocks,
 }
 
 // Inserts the block hash of the block that should be received.
-pub fn insert_expected_block(
-    state: &mut State,
-    prev_block_hash: &BlockHash,
-    block_hash: &BlockHash,
-) {
-    let height = match state.expected_blocks.hash_to_height.get(prev_block_hash) {
+pub fn insert_next_block(state: &mut State, prev_block_hash: &BlockHash, block_hash: &BlockHash) {
+    let height = match state.next_blocks.get_height(prev_block_hash) {
         Some(prev_height) => *prev_height,
         None => {
             if let Ok(depth) = state.unstable_blocks.block_depth(prev_block_hash) {
@@ -123,24 +70,22 @@ pub fn insert_expected_block(
             }
         }
     } + 1;
-    state.expected_blocks.insert(block_hash, height);
+    state.next_blocks.insert(block_hash, height);
 }
 
-// Removes the received block from 'expected_blocks'.
-pub fn remove_received_expected_block(state: &mut State, received_block: &BlockHash) {
-    state.expected_blocks.remove_block(received_block);
+// Removes the received block from 'next_blocks'.
+pub fn remove_received_block_from_next_blocks(state: &mut State, received_block: &BlockHash) {
+    state.next_blocks.remove_block(received_block);
 }
 
-// Removes blocks from expected_blocks with height up to current 'stable_height'.
-pub fn remove_expected_blocks_based_on_stable_height(state: &mut State) {
-    state
-        .expected_blocks
-        .remove_until_height(state.stable_height());
+// Removes blocks from 'next_blocks' with height up to current 'stable_height'.
+pub fn remove_next_blocks_based_on_stable_height(state: &mut State) {
+    state.next_blocks.remove_until_height(state.stable_height());
 }
 
 // Public only for testing purpose.
-pub fn expected_blocks_max_height(state: &State) -> Height {
-    state.expected_blocks.get_max_height().unwrap_or(0)
+pub fn next_blocks_max_height(state: &State) -> Height {
+    state.next_blocks.get_max_height().unwrap_or(0)
 }
 
 pub const SYNCING_THRESHOLD: u32 = 2;
@@ -166,7 +111,7 @@ impl State {
             fees: Fees::default(),
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
-            expected_blocks: ExpectedBlocks::default(),
+            next_blocks: NextBlocks::default(),
         }
     }
 
@@ -190,7 +135,7 @@ impl State {
     pub fn is_fully_synced(&self) -> bool {
         let main_chain_height = main_chain_height(self);
         if main_chain_height + SYNCING_THRESHOLD
-            < max(expected_blocks_max_height(self), main_chain_height)
+            < max(next_blocks_max_height(self), main_chain_height)
         {
             return false;
         }
@@ -243,7 +188,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         Some(Slicing::Paused(())) => return has_state_changed(state),
         Some(Slicing::Done((ingested_block_hash, stats))) => {
             state.metrics.block_ingestion_stats = stats;
-            remove_expected_blocks_based_on_stable_height(state);
+            remove_next_blocks_based_on_stable_height(state);
             pop_block(state, ingested_block_hash)
         }
     }
@@ -259,7 +204,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done((ingested_block_hash, stats)) => {
                 state.metrics.block_ingestion_stats = stats;
-                remove_expected_blocks_based_on_stable_height(state);
+                remove_next_blocks_based_on_stable_height(state);
                 pop_block(state, ingested_block_hash)
             }
         }
@@ -367,7 +312,6 @@ pub struct FeePercentilesCache {
 mod test {
     use super::*;
     use crate::test_utils::build_chain;
-    use ic_stable_structures::Storable;
     use proptest::prelude::*;
 
     proptest! {
@@ -440,164 +384,5 @@ mod test {
 
         // Assert the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
-    }
-
-    #[test]
-    fn test_get_max_height() {
-        let mut blocks: ExpectedBlocks = Default::default();
-
-        assert_eq!(blocks.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
-        blocks.insert(&hash1, 5);
-
-        assert_eq!(blocks.get_max_height(), Some(5));
-
-        blocks.insert(&hash2, 7);
-
-        assert_eq!(blocks.get_max_height(), Some(7));
-
-        blocks.remove_block(&hash2);
-
-        assert_eq!(blocks.get_max_height(), Some(5));
-
-        blocks.remove_block(&hash1);
-
-        assert_eq!(blocks.get_max_height(), None);
-    }
-
-    #[test]
-    fn test_insert() {
-        let mut blocks: ExpectedBlocks = Default::default();
-
-        assert_eq!(blocks.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-
-        blocks.insert(&hash1, 5);
-
-        assert_eq!(blocks.get_max_height(), Some(5));
-        assert_eq!(*blocks.hash_to_height.get(&hash1).unwrap(), 5);
-        assert_eq!(*blocks.height_to_hash.get(&5).unwrap(), vec![hash1.clone()]);
-
-        // Check that insertion the same element does not
-        // create a duplicates.
-        blocks.insert(&hash1, 5);
-
-        assert_eq!(blocks.get_max_height(), Some(5));
-        assert_eq!(*blocks.hash_to_height.get(&hash1).unwrap(), 5);
-        assert_eq!(*blocks.height_to_hash.get(&5).unwrap(), vec![hash1.clone()]);
-
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
-
-        blocks.insert(&hash2, 5);
-
-        assert_eq!(blocks.get_max_height(), Some(5));
-        assert_eq!(*blocks.hash_to_height.get(&hash2).unwrap(), 5);
-        assert_eq!(
-            *blocks.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
-        );
-    }
-
-    #[test]
-    fn test_remove_block() {
-        let mut blocks: ExpectedBlocks = Default::default();
-
-        assert_eq!(blocks.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
-        let hash3 = BlockHash::from_bytes(vec![5; 32]);
-
-        blocks.insert(&hash1, 5);
-        blocks.insert(&hash2, 5);
-        blocks.insert(&hash3, 7);
-
-        assert_eq!(
-            *blocks.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
-        );
-        assert_eq!(*blocks.height_to_hash.get(&7).unwrap(), vec![hash3.clone()]);
-        assert_eq!(blocks.height_to_hash.len(), 2);
-        assert_eq!(blocks.hash_to_height.len(), 3);
-        assert_eq!(blocks.get_max_height(), Some(7));
-
-        blocks.remove_block(&hash2);
-
-        assert_eq!(*blocks.height_to_hash.get(&5).unwrap(), vec![hash1.clone()]);
-        assert_eq!(*blocks.height_to_hash.get(&7).unwrap(), vec![hash3.clone()]);
-        assert_eq!(blocks.height_to_hash.len(), 2);
-        assert_eq!(blocks.hash_to_height.len(), 2);
-        assert_eq!(blocks.get_max_height(), Some(7));
-
-        blocks.remove_block(&hash3);
-
-        assert_eq!(*blocks.height_to_hash.get(&5).unwrap(), vec![hash1.clone()]);
-        assert_eq!(blocks.height_to_hash.get(&7), None);
-        assert_eq!(blocks.height_to_hash.len(), 1);
-        assert_eq!(blocks.hash_to_height.len(), 1);
-        assert_eq!(blocks.get_max_height(), Some(5));
-
-        blocks.remove_block(&hash1);
-
-        assert_eq!(blocks.height_to_hash.get(&5), None);
-        assert_eq!(blocks.height_to_hash.len(), 0);
-        assert_eq!(blocks.hash_to_height.len(), 0);
-        assert_eq!(blocks.get_max_height(), None);
-    }
-
-    #[test]
-    fn test_remove_block_until_height() {
-        let mut blocks: ExpectedBlocks = Default::default();
-
-        assert_eq!(blocks.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
-        let hash3 = BlockHash::from_bytes(vec![5; 32]);
-        let hash4 = BlockHash::from_bytes(vec![7; 32]);
-
-        blocks.insert(&hash1, 5);
-        blocks.insert(&hash2, 5);
-        blocks.insert(&hash3, 7);
-        blocks.insert(&hash4, 9);
-
-        assert_eq!(
-            *blocks.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
-        );
-        assert_eq!(*blocks.height_to_hash.get(&7).unwrap(), vec![hash3.clone()]);
-        assert_eq!(*blocks.height_to_hash.get(&9).unwrap(), vec![hash4.clone()]);
-        assert_eq!(blocks.height_to_hash.len(), 3);
-        assert_eq!(blocks.hash_to_height.len(), 4);
-        assert_eq!(blocks.get_max_height(), Some(9));
-
-        // Noting changes.
-        blocks.remove_until_height(2);
-        assert_eq!(
-            *blocks.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
-        );
-        assert_eq!(*blocks.height_to_hash.get(&7).unwrap(), vec![hash3.clone()]);
-        assert_eq!(*blocks.height_to_hash.get(&9).unwrap(), vec![hash4.clone()]);
-        assert_eq!(blocks.height_to_hash.len(), 3);
-        assert_eq!(blocks.hash_to_height.len(), 4);
-        assert_eq!(blocks.get_max_height(), Some(9));
-
-        // All blocks on height 5 are removed.
-        blocks.remove_until_height(6);
-        assert_eq!(blocks.height_to_hash.get(&5), None);
-        assert_eq!(*blocks.height_to_hash.get(&7).unwrap(), vec![hash3.clone()]);
-        assert_eq!(*blocks.height_to_hash.get(&9).unwrap(), vec![hash4.clone()]);
-        assert_eq!(blocks.height_to_hash.len(), 2);
-        assert_eq!(blocks.hash_to_height.len(), 2);
-        assert_eq!(blocks.get_max_height(), Some(9));
-
-        // All blocks are removed.
-        blocks.remove_until_height(9);
-        assert_eq!(blocks.height_to_hash.get(&5), None);
-        assert_eq!(blocks.height_to_hash.get(&7), None);
-        assert_eq!(blocks.height_to_hash.get(&9), None);
-        assert_eq!(blocks.height_to_hash.len(), 0);
-        assert_eq!(blocks.hash_to_height.len(), 0);
-        assert_eq!(blocks.get_max_height(), None);
     }
 }
