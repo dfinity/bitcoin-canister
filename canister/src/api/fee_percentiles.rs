@@ -79,7 +79,9 @@ fn get_fees_per_byte(
             if tx_i >= number_of_transactions {
                 break;
             }
-            tx_i += 1;
+            if !tx.is_coin_base() {
+                tx_i += 1;
+            }
             if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
                 fees.push(fee);
             }
@@ -325,6 +327,40 @@ mod test {
         assert_eq!(percentiles[41..61], [16; 20]);
         assert_eq!(percentiles[61..81], [25; 20]);
         assert_eq!(percentiles[81..101], [33; 20]);
+    }
+
+    #[test]
+    fn coinbase_txs_are_ignored() {
+        let balance = 1000;
+        let fee = 1;
+        let fee_in_millisatoshi = fee * 1000;
+
+        let tx_1 = TransactionBuilder::coinbase()
+            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .build();
+        let tx_2 = TransactionBuilder::new()
+            .with_input(OutPoint::new(tx_1.txid(), 0))
+            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .build();
+
+        let blocks = vec![
+            BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+                .with_transaction(tx_1)
+                .with_transaction(tx_2.clone())
+                .build(),
+        ];
+
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+
+        with_state_mut(|s| {
+            // Get the current fee percentiles for one tx. Coinbase txs are ignored,
+            // so the percentiles should be the fee / byte of the second transaction.
+            assert_eq!(
+                get_current_fee_percentiles_internal(s, 1),
+                vec![fee_in_millisatoshi / tx_2.size() as u64; PERCENTILE_BUCKETS]
+            );
+        });
     }
 
     #[test]
