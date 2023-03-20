@@ -2,14 +2,14 @@ use crate::{
     api::{get_balance, get_utxos},
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
-    state::{main_chain_height, SYNCING_THRESHOLD},
+    state::main_chain_height,
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
     types::{
         Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
         GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    with_state,
+    verify_fully_synced, with_state, SYNCING_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::{
@@ -21,9 +21,9 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
 use ic_cdk::api::call::RejectionCode;
-use std::fs::File;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
+use std::{fs::File, panic::catch_unwind};
 mod confirmation_counts;
 
 async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
@@ -619,7 +619,7 @@ async fn test_syncing_with_next_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    with_state(|s| assert!(!s.is_fully_synced()));
+    assert!(catch_unwind(|| verify_fully_synced()).is_err());
 
     let mut first_next_block_bytes = vec![];
 
@@ -656,7 +656,7 @@ async fn test_syncing_with_next_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
-    with_state(|s| assert!(s.is_fully_synced()));
+    verify_fully_synced();
 
     let (next_blocks, next_blocks_blobs) =
         get_chain_with_n_block_and_header_blobs(&block_2, (SYNCING_THRESHOLD + 1) as usize);
@@ -690,7 +690,7 @@ async fn test_syncing_with_next_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
-    with_state(|s| assert!(s.is_fully_synced()));
+    verify_fully_synced();
 
     // We are extending the longes chain of next blocks.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
@@ -719,5 +719,5 @@ async fn test_syncing_with_next_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    with_state(|s| assert!(!s.is_fully_synced()));
+    assert!(catch_unwind(|| verify_fully_synced()).is_err());
 }

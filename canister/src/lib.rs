@@ -34,8 +34,9 @@ use ic_btc_types::{
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
+use state::main_chain_height;
 use std::convert::TryInto;
+use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
 thread_local! {
@@ -214,11 +215,23 @@ fn verify_api_access() {
     });
 }
 
-/// Verifies that if the difference between the maximum height of all block
-/// headers and the maximum height of all unstable blocks is at most g.
-fn verify_fully_synced() {
+/// Used to determine if the canister is synced based on difference
+/// between the maximum height of all block headers and the
+/// maximum height of all unstable blocks
+pub const SYNCING_THRESHOLD: u32 = 2;
+
+/// Verifies that if the difference between the maximum height
+/// of all block headers and the maximum height of all unstable
+/// blocks is at most the SYNCING_THRESHOLD.
+pub fn verify_fully_synced() {
     with_state(|state| {
-        if !state.is_fully_synced() {
+        let main_chain_height = main_chain_height(state);
+        if main_chain_height + SYNCING_THRESHOLD
+            < max(
+                state.unstable_blocks.next_blocks_max_height().unwrap_or(0),
+                main_chain_height,
+            )
+        {
             panic!("Canister state is not fully synced.");
         }
     });

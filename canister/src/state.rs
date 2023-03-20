@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
@@ -54,8 +52,6 @@ pub struct State {
     pub api_access: Flag,
 }
 
-pub const SYNCING_THRESHOLD: u32 = 2;
-
 impl State {
     /// Create a new blockchain.
     ///
@@ -92,22 +88,6 @@ impl State {
     /// Returns the UTXO set of a given bitcoin address.
     pub fn get_utxos(&self, address: Address) -> AddressUtxoSet<'_> {
         AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
-    }
-
-    /// Returns 'true' if the difference between the maximum height of all block
-    /// headers and the maximum height of all unstable blocks is at most the syncing threshold.
-    /// Otherwise, returns false.
-    pub fn is_fully_synced(&self) -> bool {
-        let main_chain_height = main_chain_height(self);
-        if main_chain_height + SYNCING_THRESHOLD
-            < max(
-                self.unstable_blocks.next_blocks_max_height().unwrap_or(0),
-                main_chain_height,
-            )
-        {
-            return false;
-        }
-        true
     }
 }
 
