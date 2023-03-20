@@ -55,7 +55,7 @@ impl NextBlocks {
 
 #[cfg(test)]
 mod test {
-    use crate::{next_blocks::NextBlocks, types::BlockHash};
+    use crate::{types::BlockHash, unstable_blocks::next_blocks::NextBlocks};
     use ic_stable_structures::Storable;
 
     #[test]

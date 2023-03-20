@@ -1,13 +1,15 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
-    next_blocks::NextBlocks,
     types::{Address, Block, BlockHash, Network, OutPoint, TxOut},
     UtxoSet,
 };
 use ic_btc_types::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
+
+use self::next_blocks::NextBlocks;
+mod next_blocks;
 
 /// A data structure for maintaining all unstable blocks.
 ///
