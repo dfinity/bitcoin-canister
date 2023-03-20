@@ -165,8 +165,22 @@ fn maybe_process_response() {
                     }
                 }
                 for block_header_blob in response.next.iter() {
-                    let block_header = BlockHeader::consensus_decode(block_header_blob.as_slice())
-                        .expect("block header decoding must succeed");
+                    let block_header =
+                        match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
+                            Ok(header) => header,
+                            Err(err) => {
+                                print(&format!(
+                                    "ERROR: Failed decode block header. Err: {:?}",
+                                    err,
+                                ));
+                                break;
+                            }
+                        };
+
+                    let target = block_header.target();
+                    if block_header.validate_pow(&target).is_err() {
+                        break;
+                    }
                     let block_hash = BlockHash::from(block_header.block_hash());
                     let prev_hash = BlockHash::from(block_header.prev_blockhash);
                     state.unstable_blocks.insert_next_block_hash(
