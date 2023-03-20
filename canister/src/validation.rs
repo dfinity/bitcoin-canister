@@ -13,12 +13,10 @@ impl<'a> ValidationContext<'a> {
     pub fn new(state: &'a State, header: &BlockHeader) -> Result<Self, BlockDoesNotExtendTree> {
         // Retrieve the chain that the given header extends.
         // The given header must extend one of the unstable blocks.
-        let chain = unstable_blocks::get_chain_with_tip(
-            &state.unstable_blocks,
-            &header.prev_blockhash.into(),
-        )
-        .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
-        .into_chain();
+        let prev_block_hash = header.prev_blockhash.into();
+        let chain = unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
+            .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
+            .into_chain();
 
         Ok(Self { state, chain })
     }

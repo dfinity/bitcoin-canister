@@ -891,18 +891,13 @@ impl PartialOrd for Utxo {
     }
 }
 
-#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug)]
+#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug, Default)]
 pub enum Flag {
     #[serde(rename = "enabled")]
+    #[default]
     Enabled,
     #[serde(rename = "disabled")]
     Disabled,
-}
-
-impl Default for Flag {
-    fn default() -> Self {
-        Flag::Enabled
-    }
 }
 
 /// A request to update the canister's config.

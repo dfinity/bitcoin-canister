@@ -175,9 +175,9 @@ pub fn blockchains(block_tree: &BlockTree) -> Vec<BlockChain> {
 /// Returns a `BlockChain` starting from the anchor and ending with the `tip`.
 ///
 /// If the `tip` doesn't exist in the tree, `None` is returned.
-pub fn get_chain_with_tip<'a, 'b>(
+pub fn get_chain_with_tip<'a>(
     block_tree: &'a BlockTree,
-    tip: &'b BlockHash,
+    tip: &BlockHash,
 ) -> Option<BlockChain<'a>> {
     // Compute the chain in reverse order, as that's more efficient, and then
     // reverse it to get the answer in the correct order.
@@ -198,9 +198,9 @@ pub fn get_chain_with_tip<'a, 'b>(
 // Do a depth-first search to find the blockchain that ends with the given `tip`.
 // For performance reasons, the list is returned in the reverse order, starting
 // from `tip` and ending with `anchor`.
-fn get_chain_with_tip_reverse<'a, 'b>(
+fn get_chain_with_tip_reverse<'a>(
     block_tree: &'a BlockTree,
-    tip: &'b BlockHash,
+    tip: &BlockHash,
 ) -> Option<Vec<&'a Block>> {
     if block_tree.root.block_hash() == *tip {
         return Some(vec![&block_tree.root]);
@@ -326,7 +326,8 @@ mod test {
 
         for (i, block) in blocks.iter().enumerate() {
             // Fetch the blockchain with the `block` as tip.
-            let chain = get_chain_with_tip(&block_tree, &block.block_hash())
+            let block_hash = block.block_hash();
+            let chain = get_chain_with_tip(&block_tree, &block_hash)
                 .unwrap()
                 .into_chain();
 
@@ -365,7 +366,8 @@ mod test {
 
             for (i, block) in blocks.iter().enumerate() {
                 // Fetch the blockchain with the `block` as tip.
-                let chain = get_chain_with_tip(&block_tree, &block.block_hash())
+                let block_hash = block.block_hash();
+                let chain = get_chain_with_tip(&block_tree, &block_hash)
                     .unwrap()
                     .into_chain();
 
