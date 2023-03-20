@@ -20,7 +20,7 @@ pub struct UnstableBlocks {
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
     network: Network,
-    /// Blocks that are expected to be received.
+    /// The hashes of the blocks that are expected to be received.
     next_blocks: NextBlocks,
 }
 
