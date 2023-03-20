@@ -94,8 +94,8 @@ impl State {
         AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
     }
 
-    /// Return 'true' if the difference between the maximum height of all block
-    /// headers and the maximum height of all unstable blocks is at most g.
+    /// Returns 'true' if the difference between the maximum height of all block
+    /// headers and the maximum height of all unstable blocks is at most the syncing threshold.
     /// Otherwise, returns false.
     pub fn is_fully_synced(&self) -> bool {
         let main_chain_height = main_chain_height(self);
