@@ -173,9 +173,9 @@ pub fn get_blocks(blocks: &UnstableBlocks) -> Vec<&Block> {
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
 ///
 /// If the `tip` doesn't exist in the tree, `None` is returned.
-pub fn get_chain_with_tip<'a, 'b>(
+pub fn get_chain_with_tip<'a>(
     blocks: &'a UnstableBlocks,
-    tip: &'b BlockHash,
+    tip: &BlockHash,
 ) -> Option<BlockChain<'a>> {
     blocktree::get_chain_with_tip(&blocks.tree, tip)
 }
