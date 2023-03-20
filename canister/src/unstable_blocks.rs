@@ -173,6 +173,7 @@ pub fn get_blocks(blocks: &UnstableBlocks) -> Vec<&Block> {
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
 ///
 /// If the `tip` doesn't exist in the tree, `None` is returned.
+#[allow(clippy::needless_lifetimes)]
 pub fn get_chain_with_tip<'a, 'b>(
     blocks: &'a UnstableBlocks,
     tip: &'b BlockHash,

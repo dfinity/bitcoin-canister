@@ -175,6 +175,7 @@ pub fn blockchains(block_tree: &BlockTree) -> Vec<BlockChain> {
 /// Returns a `BlockChain` starting from the anchor and ending with the `tip`.
 ///
 /// If the `tip` doesn't exist in the tree, `None` is returned.
+#[allow(clippy::needless_lifetimes)]
 pub fn get_chain_with_tip<'a, 'b>(
     block_tree: &'a BlockTree,
     tip: &'b BlockHash,
@@ -198,6 +199,7 @@ pub fn get_chain_with_tip<'a, 'b>(
 // Do a depth-first search to find the blockchain that ends with the given `tip`.
 // For performance reasons, the list is returned in the reverse order, starting
 // from `tip` and ending with `anchor`.
+#[allow(clippy::needless_lifetimes)]
 fn get_chain_with_tip_reverse<'a, 'b>(
     block_tree: &'a BlockTree,
     tip: &'b BlockHash,
@@ -326,7 +328,8 @@ mod test {
 
         for (i, block) in blocks.iter().enumerate() {
             // Fetch the blockchain with the `block` as tip.
-            let chain = get_chain_with_tip(&block_tree, &block.block_hash())
+            let block_hash = block.block_hash();
+            let chain = get_chain_with_tip(&block_tree, &block_hash)
                 .unwrap()
                 .into_chain();
 
@@ -365,7 +368,8 @@ mod test {
 
             for (i, block) in blocks.iter().enumerate() {
                 // Fetch the blockchain with the `block` as tip.
-                let chain = get_chain_with_tip(&block_tree, &block.block_hash())
+                let block_hash = block.block_hash();
+                let chain = get_chain_with_tip(&block_tree, &block_hash)
                     .unwrap()
                     .into_chain();
 

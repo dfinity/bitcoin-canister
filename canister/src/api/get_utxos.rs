@@ -242,7 +242,7 @@ fn get_utxos_from_chain(
         .collect();
 
     // If there are remaining UTXOs, then add the pagination offset to the response.
-    let rest = utxos.split_off(utxos.len().min(utxo_limit as usize));
+    let rest = utxos.split_off(utxos.len().min(utxo_limit));
     let next_page = rest.first().map(|next| {
         Page {
             tip_block_hash: tip_block_hash.clone(),
