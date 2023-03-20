@@ -553,16 +553,10 @@ fn get_header_blob(header: &BlockHeader) -> BlockHeaderBlob {
 }
 
 fn get_chain_with_n_block_and_header_blobs(
-    previous_block: &BlockHeader,
+    previous_block: &Block,
     n: usize,
 ) -> (Vec<Block>, Vec<BlockHeaderBlob>) {
-    let first_block = BlockBuilder::with_prev_header(previous_block).build_with_mock_difficulty(1);
-    let mut block_vec = vec![first_block];
-    for i in 1..n {
-        block_vec.push(
-            BlockBuilder::with_prev_header(block_vec[i - 1].header()).build_with_mock_difficulty(1),
-        );
-    }
+    let block_vec = BlockChainBuilder::fork(previous_block, n as u32).build();
 
     let mut blob_vec = vec![];
     for block in block_vec.iter() {
@@ -581,10 +575,9 @@ async fn test_syncing_with_next_blocks() {
         ..Default::default()
     });
 
-    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header())
-        .build_with_mock_difficulty(1);
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
-    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build_with_mock_difficulty(1);
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
 
     // Serialize the blocks.
     let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
@@ -597,7 +590,7 @@ async fn test_syncing_with_next_blocks() {
         .collect();
 
     let (next_blocks, next_blocks_blobs) =
-        get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCING_THRESHOLD + 1) as usize);
     // We now have a chain of SYNCING_THRESHOLD + 1 next blocks
     // extending the unstable block (block_2).
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
@@ -666,7 +659,7 @@ async fn test_syncing_with_next_blocks() {
     with_state(|s| assert!(s.is_fully_synced()));
 
     let (next_blocks, next_blocks_blobs) =
-        get_chain_with_n_block_and_header_blobs(block_2.header(), (SYNCING_THRESHOLD + 1) as usize);
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCING_THRESHOLD + 1) as usize);
 
     // We now have 1 UnstableBlocks and chain of SYNCING_THRESHOLD + 2 next blocks
     // extending the last stable block (block_1). Hence it is SYNCING_THRESHOLD + 1
@@ -703,8 +696,7 @@ async fn test_syncing_with_next_blocks() {
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks: vec![],
-            next: get_chain_with_n_block_and_header_blobs(next_blocks.last().unwrap().header(), 1)
-                .1,
+            next: get_chain_with_n_block_and_header_blobs(next_blocks.last().unwrap(), 1).1,
         },
     )));
 
