@@ -32,12 +32,16 @@ pub async fn heartbeat() {
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
 // Returns true if a call to the `blocks_source` has been made, false otherwise.
 async fn maybe_fetch_blocks() -> bool {
-    if with_state(|s| {
-        s.syncing_state.is_fetching_blocks || s.syncing_state.syncing == Flag::Disabled
-    }) {
-        // Already fetching blocks or syncing is disabled.
+    if with_state(|s| s.syncing_state.syncing == Flag::Disabled) {
+        // Syncing is disabled.
         return false;
     }
+
+    // A guard to verify we aren't already fetching blocks.
+    let _guard = match crate::guard::FetchBlocksGuard::new() {
+        Some(guard) => guard,
+        None => return false,
+    };
 
     // Request additional blocks.
     let maybe_request = maybe_get_successors_request();
@@ -49,11 +53,6 @@ async fn maybe_fetch_blocks() -> bool {
         }
     };
 
-    // A lock to ensure the heartbeat only sends one request at a time.
-    with_state_mut(|s| {
-        s.syncing_state.is_fetching_blocks = true;
-    });
-
     print(&format!("Sending request: {:?}", request));
 
     let response: Result<(GetSuccessorsResponse,), _> =
@@ -61,10 +60,8 @@ async fn maybe_fetch_blocks() -> bool {
 
     print(&format!("Received response: {:?}", response));
 
-    // Release the heartbeat lock and save the response.
+    // Save the response.
     with_state_mut(|s| {
-        s.syncing_state.is_fetching_blocks = false;
-
         let response = match response {
             Ok((response,)) => response,
             Err((code, msg)) => {
