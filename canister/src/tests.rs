@@ -566,7 +566,7 @@ fn get_chain_with_n_block_and_header_blobs(
 }
 
 #[async_std::test]
-async fn test_syncing_with_next_blocks() {
+async fn test_syncing_with_next_block_hashes() {
     let network = Network::Regtest;
 
     init(Config {
@@ -619,7 +619,7 @@ async fn test_syncing_with_next_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    assert!(catch_unwind(|| verify_fully_synced()).is_err());
+    assert!(catch_unwind(verify_fully_synced).is_err());
 
     let mut first_next_block_bytes = vec![];
 
@@ -719,5 +719,5 @@ async fn test_syncing_with_next_blocks() {
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
-    assert!(catch_unwind(|| verify_fully_synced()).is_err());
+    assert!(catch_unwind(verify_fully_synced).is_err());
 }
