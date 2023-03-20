@@ -55,7 +55,7 @@ impl NextBlockHashes {
 
 #[cfg(test)]
 mod test {
-    use crate::{types::BlockHash, unstable_blocks::next_blocks::NextBlockHashes};
+    use crate::{types::BlockHash, unstable_blocks::next_block_hashes::NextBlockHashes};
     use ic_stable_structures::Storable;
 
     #[test]

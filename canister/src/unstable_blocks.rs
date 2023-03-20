@@ -8,8 +8,8 @@ use ic_btc_types::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
-use self::next_blocks::NextBlockHashes;
-mod next_blocks;
+mod next_block_hashes;
+use self::next_block_hashes::NextBlockHashes;
 
 /// A data structure for maintaining all unstable blocks.
 ///
