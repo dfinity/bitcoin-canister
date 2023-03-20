@@ -153,7 +153,7 @@ fn maybe_process_response() {
                         }
                     };
 
-                    if let Err(err) = state::insert_block(state, Block::new(block.clone())) {
+                    if let Err(err) = state::insert_block(state, Block::new(block)) {
                         print(&format!(
                             "ERROR: Failed to insert block. Err: {:?}, Block bytes: {:?}",
                             err, block_bytes,
