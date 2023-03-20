@@ -615,7 +615,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 1);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height().unwrap()),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
@@ -652,7 +652,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height().unwrap()),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
@@ -686,7 +686,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height().unwrap()),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
@@ -715,7 +715,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height().unwrap()),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 

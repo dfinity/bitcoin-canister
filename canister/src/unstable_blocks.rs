@@ -114,8 +114,8 @@ impl UnstableBlocks {
     }
 
     // Public only for testing purpose.
-    pub fn next_blocks_max_height(&self) -> Height {
-        self.next_blocks.get_max_height().unwrap_or(0)
+    pub fn next_blocks_max_height(&self) -> Option<Height> {
+        self.next_blocks.get_max_height()
     }
 }
 

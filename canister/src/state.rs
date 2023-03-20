@@ -101,7 +101,7 @@ impl State {
         let main_chain_height = main_chain_height(self);
         if main_chain_height + SYNCING_THRESHOLD
             < max(
-                self.unstable_blocks.next_blocks_max_height(),
+                self.unstable_blocks.next_blocks_max_height().unwrap_or(0),
                 main_chain_height,
             )
         {
