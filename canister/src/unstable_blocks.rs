@@ -77,7 +77,7 @@ impl UnstableBlocks {
     }
 
     /// Returns depth in BlockTree of Block with given BlockHash.
-    pub fn block_depth(&mut self, block_hash: &BlockHash) -> Result<u32, BlockDoesNotExtendTree> {
+    fn block_depth(&mut self, block_hash: &BlockHash) -> Result<u32, BlockDoesNotExtendTree> {
         let (_, depth) = blocktree::find_mut(&mut self.tree, block_hash)
             .ok_or_else(|| BlockDoesNotExtendTree(block_hash.clone()))?;
         Ok(depth)
