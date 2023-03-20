@@ -103,16 +103,6 @@ impl UnstableBlocks {
         self.next_blocks.insert(block_hash, height);
     }
 
-    // Removes the received block from 'next_blocks'.
-    pub fn remove_received_block_from_next_blocks(&mut self, received_block: &BlockHash) {
-        self.next_blocks.remove_block(received_block);
-    }
-
-    // Removes blocks from 'next_blocks' with height up to current 'stable_height'.
-    pub fn remove_next_blocks_based_on_stable_height(&mut self, stable_height: Height) {
-        self.next_blocks.remove_until_height(stable_height);
-    }
-
     // Public only for testing purpose.
     pub fn next_blocks_max_height(&self) -> Option<Height> {
         self.next_blocks.get_max_height()
@@ -138,7 +128,7 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
             // Remove the outpoints of the old anchor from the cache.
             blocks.outpoints_cache.remove(&old_anchor);
 
-            blocks.remove_next_blocks_based_on_stable_height(stable_height);
+            blocks.next_blocks.remove_until_height(stable_height);
 
             Some(old_anchor)
         }
@@ -171,7 +161,7 @@ pub fn push(
 
     blocktree::extend(parent_block_tree, block)?;
 
-    blocks.remove_received_block_from_next_blocks(&block_hash);
+    blocks.next_blocks.remove_block(&block_hash);
 
     Ok(())
 }
