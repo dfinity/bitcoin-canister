@@ -8,7 +8,7 @@ use ic_btc_types::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
-use self::next_blocks::NextBlocks;
+use self::next_blocks::NextBlockHashes;
 mod next_blocks;
 
 /// A data structure for maintaining all unstable blocks.
@@ -23,7 +23,7 @@ pub struct UnstableBlocks {
     outpoints_cache: OutPointsCache,
     network: Network,
     /// The hashes of the blocks that are expected to be received.
-    next_blocks: NextBlocks,
+    next_block_hashes: NextBlockHashes,
 }
 
 impl UnstableBlocks {
@@ -39,7 +39,7 @@ impl UnstableBlocks {
             tree: BlockTree::new(anchor.clone()),
             outpoints_cache,
             network,
-            next_blocks: NextBlocks::default(),
+            next_block_hashes: NextBlockHashes::default(),
         }
     }
 
@@ -86,13 +86,13 @@ impl UnstableBlocks {
     }
 
     // Inserts the block hash of the block that should be received.
-    pub fn insert_next_block(
+    pub fn insert_next_block_hash(
         &mut self,
         prev_block_hash: &BlockHash,
         block_hash: &BlockHash,
         stable_height: Height,
     ) {
-        let height = match self.next_blocks.get_height(prev_block_hash) {
+        let height = match self.next_block_hashes.get_height(prev_block_hash) {
             Some(prev_height) => *prev_height,
             None => {
                 if let Ok(depth) = self.block_depth(prev_block_hash) {
@@ -102,12 +102,12 @@ impl UnstableBlocks {
                 }
             }
         } + 1;
-        self.next_blocks.insert(block_hash, height);
+        self.next_block_hashes.insert(block_hash, height);
     }
 
     // Public only for testing purpose.
-    pub fn next_blocks_max_height(&self) -> Option<Height> {
-        self.next_blocks.get_max_height()
+    pub fn next_block_hashes_max_height(&self) -> Option<Height> {
+        self.next_block_hashes.get_max_height()
     }
 }
 
@@ -130,7 +130,7 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
             // Remove the outpoints of the old anchor from the cache.
             blocks.outpoints_cache.remove(&old_anchor);
 
-            blocks.next_blocks.remove_until_height(stable_height);
+            blocks.next_block_hashes.remove_until_height(stable_height);
 
             Some(old_anchor)
         }
@@ -163,7 +163,7 @@ pub fn push(
 
     blocktree::extend(parent_block_tree, block)?;
 
-    blocks.next_blocks.remove_block(&block_hash);
+    blocks.next_block_hashes.remove(&block_hash);
 
     Ok(())
 }

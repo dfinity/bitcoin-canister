@@ -169,7 +169,7 @@ fn maybe_process_response() {
                         .expect("block header decoding must succeed");
                     let block_hash = BlockHash::from(block_header.block_hash());
                     let prev_hash = BlockHash::from(block_header.prev_blockhash);
-                    state.unstable_blocks.insert_next_block(
+                    state.unstable_blocks.insert_next_block_hash(
                         &prev_hash,
                         &block_hash,
                         state.stable_height(),

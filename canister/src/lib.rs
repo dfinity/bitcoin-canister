@@ -227,7 +227,10 @@ pub fn verify_fully_synced() {
         let main_chain_height = main_chain_height(state);
         if main_chain_height + SYNCING_THRESHOLD
             < max(
-                state.unstable_blocks.next_blocks_max_height().unwrap_or(0),
+                state
+                    .unstable_blocks
+                    .next_block_hashes_max_height()
+                    .unwrap_or(0),
                 main_chain_height,
             )
         {
