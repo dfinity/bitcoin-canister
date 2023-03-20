@@ -2,8 +2,8 @@ use crate::{
     api::{get_balance, get_utxos},
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
-    state::{main_chain_height, next_blocks_max_height, SYNCING_THRESHOLD},
-    test_utils::{BlockBuilder, TransactionBuilder},
+    state::{main_chain_height, SYNCING_THRESHOLD},
+    test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
     types::{
         Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
         GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
@@ -622,7 +622,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 1);
 
     assert_eq!(
-        with_state(next_blocks_max_height),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 
@@ -659,7 +659,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(next_blocks_max_height),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
@@ -693,7 +693,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(next_blocks_max_height),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
         with_state(main_chain_height) + SYNCING_THRESHOLD
     );
 
@@ -723,7 +723,7 @@ async fn test_syncing_with_next_blocks() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(next_blocks_max_height),
+        with_state(|s| s.unstable_blocks.next_blocks_max_height()),
         with_state(main_chain_height) + SYNCING_THRESHOLD + 1
     );
 

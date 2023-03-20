@@ -164,7 +164,14 @@ pub fn push(
         .outpoints_cache
         .insert(utxos, &block, height)
         .unwrap();
-    blocktree::extend(parent_block_tree, block)
+
+    let block_hash = block.block_hash();
+
+    blocktree::extend(parent_block_tree, block)?;
+
+    blocks.remove_received_block_from_next_blocks(&block_hash);
+
+    Ok(())
 }
 
 /// Returns the best guess on what the main blockchain is.

@@ -1,6 +1,6 @@
 use crate::{
     runtime::{call_get_successors, print},
-    state::{self, insert_next_block, remove_received_block_from_next_blocks, ResponseToProcess},
+    state::{self, ResponseToProcess},
     types::{
         Block, BlockHash, Flag, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
         GetSuccessorsRequestInitial, GetSuccessorsResponse,
@@ -166,18 +166,17 @@ fn maybe_process_response() {
                         state.syncing_state.num_insert_block_errors += 1;
                         return;
                     }
-
-                    remove_received_block_from_next_blocks(
-                        state,
-                        &BlockHash::from(block.block_hash()),
-                    );
                 }
                 for block_header_blob in response.next.iter() {
                     let block_header = BlockHeader::consensus_decode(block_header_blob.as_slice())
                         .expect("block header decoding must succeed");
                     let block_hash = BlockHash::from(block_header.block_hash());
                     let prev_hash = BlockHash::from(block_header.prev_blockhash);
-                    insert_next_block(state, &prev_hash, &block_hash);
+                    state.unstable_blocks.insert_next_block(
+                        &prev_hash,
+                        &block_hash,
+                        state.stable_height(),
+                    );
                 }
             }
             other => {

@@ -54,32 +54,6 @@ pub struct State {
     pub api_access: Flag,
 }
 
-// Inserts the block hash of the block that should be received.
-pub fn insert_next_block(state: &mut State, prev_block_hash: &BlockHash, block_hash: &BlockHash) {
-    state
-        .unstable_blocks
-        .insert_next_block(prev_block_hash, block_hash, state.stable_height());
-}
-
-// Removes the received block from 'next_blocks'.
-pub fn remove_received_block_from_next_blocks(state: &mut State, received_block: &BlockHash) {
-    state
-        .unstable_blocks
-        .remove_received_block_from_next_blocks(received_block);
-}
-
-// Removes blocks from 'next_blocks' with height up to current 'stable_height'.
-pub fn remove_next_blocks_based_on_stable_height(state: &mut State) {
-    state
-        .unstable_blocks
-        .remove_next_blocks_based_on_stable_height(state.stable_height());
-}
-
-// Public only for testing purpose.
-pub fn next_blocks_max_height(state: &State) -> Height {
-    state.unstable_blocks.next_blocks_max_height()
-}
-
 pub const SYNCING_THRESHOLD: u32 = 2;
 
 impl State {
@@ -126,7 +100,10 @@ impl State {
     pub fn is_fully_synced(&self) -> bool {
         let main_chain_height = main_chain_height(self);
         if main_chain_height + SYNCING_THRESHOLD
-            < max(next_blocks_max_height(self), main_chain_height)
+            < max(
+                self.unstable_blocks.next_blocks_max_height(),
+                main_chain_height,
+            )
         {
             return false;
         }
@@ -183,7 +160,6 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         Some(Slicing::Paused(())) => return has_state_changed(state),
         Some(Slicing::Done((ingested_block_hash, stats))) => {
             state.metrics.block_ingestion_stats = stats;
-            remove_next_blocks_based_on_stable_height(state);
             pop_block(state, ingested_block_hash)
         }
     }
@@ -199,13 +175,20 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done((ingested_block_hash, stats)) => {
                 state.metrics.block_ingestion_stats = stats;
-                remove_next_blocks_based_on_stable_height(state);
                 pop_block(state, ingested_block_hash)
             }
         }
     }
 
-    has_state_changed(state)
+    let is_changed = has_state_changed(state);
+
+    if is_changed {
+        state
+            .unstable_blocks
+            .remove_next_blocks_based_on_stable_height(state.stable_height());
+    }
+
+    is_changed
 }
 
 pub fn main_chain_height(state: &State) -> Height {
