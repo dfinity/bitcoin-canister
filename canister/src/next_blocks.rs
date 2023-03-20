@@ -47,7 +47,7 @@ impl NextBlocks {
     pub(crate) fn get_max_height(&self) -> Option<Height> {
         self.height_to_hash
             .iter()
-            .next_back()
+            .last()
             .map(|(height, _)| *height)
     }
 
