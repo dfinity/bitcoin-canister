@@ -122,7 +122,7 @@ mod test {
     }
 
     #[test]
-    pub(crate) fn test_remove_block() {
+    pub(crate) fn test_remove() {
         let mut block_hashes: NextBlockHashes = Default::default();
 
         assert_eq!(block_hashes.get_max_height(), None);
