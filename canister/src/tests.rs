@@ -692,7 +692,7 @@ async fn test_syncing_with_next_block_hashes() {
 
     verify_fully_synced();
 
-    // We are extending the longes chain of next blocks.
+    // We are extending the longest chain of next blocks.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
             blocks: vec![],
