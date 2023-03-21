@@ -27,7 +27,8 @@ ARGUMENT="(record {
     send_transaction_per_byte = 0; 
  }; 
  syncing = variant { enabled }; 
- api_access = variant { enabled }
+ api_access = variant { enabled };
+ disable_api_if_not_fully_synced = variant { enabled }
 })"
 
 # Download the latest release
