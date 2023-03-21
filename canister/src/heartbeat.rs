@@ -165,20 +165,25 @@ fn maybe_process_response() {
                     }
                 }
                 for block_header_blob in response.next.iter() {
-                    let block_header =
-                        match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
-                            Ok(header) => header,
-                            Err(err) => {
-                                print(&format!(
-                                    "ERROR: Failed decode block header. Err: {:?}",
-                                    err,
-                                ));
-                                break;
-                            }
-                        };
+                    let block_header = match BlockHeader::consensus_decode(
+                        block_header_blob.as_slice(),
+                    ) {
+                        Ok(header) => header,
+                        Err(err) => {
+                            print(&format!(
+                                "ERROR: Failed decode block header. Err: {:?}, Block header: {:?}",
+                                err, block_header_blob,
+                            ));
+                            break;
+                        }
+                    };
 
                     let target = block_header.target();
-                    if block_header.validate_pow(&target).is_err() {
+                    if let Err(err) = block_header.validate_pow(&target) {
+                        print(&format!(
+                            "ERROR: Failed validate block header. Err: {:?}, Block header: {:?}",
+                            err, block_header,
+                        ));
                         break;
                     }
                     let block_hash = BlockHash::from(block_header.block_hash());
