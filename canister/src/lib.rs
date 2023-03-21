@@ -222,7 +222,7 @@ pub const SYNCING_THRESHOLD: u32 = 2;
 /// Verifies that if the difference between the maximum height
 /// of all block headers and the maximum height of all unstable
 /// blocks is at most the SYNCING_THRESHOLD.
-pub fn verify_fully_synced() {
+fn verify_fully_synced() {
     with_state(|state| {
         let main_chain_height = main_chain_height(state);
         if main_chain_height + SYNCING_THRESHOLD
