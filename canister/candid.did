@@ -33,6 +33,7 @@ type config = record {
   syncing: flag;
   fees: fees;
   api_access: flag;
+  disable_api_if_not_fully_synced: flag;
 };
 
 type fees = record {
@@ -84,6 +85,8 @@ type set_config_request = record {
   stability_threshold: opt nat;
   syncing: opt flag;
   fees: opt fees;
+  api_access: opt flag;
+  disable_api_if_not_fully_synced: opt flag;
 };
 
 service bitcoin: (config) -> {

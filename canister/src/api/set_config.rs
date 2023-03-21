@@ -27,6 +27,9 @@ fn set_config_no_verification(request: SetConfigRequest) {
         if let Some(api_access) = request.api_access {
             s.api_access = api_access;
         }
+        if let Some(disable_api_if_not_fully_synced) = request.disable_api_if_not_fully_synced {
+            s.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
+        }
     });
 }
 
@@ -147,6 +150,20 @@ mod test {
                 with_state(|s| s.api_access),
                 *flag
             );
+        }
+    }
+
+    #[test]
+    fn set_disable_api_if_not_fully_synced() {
+        init(Config::default());
+
+        for flag in &[Flag::Enabled, Flag::Disabled] {
+            set_config_no_verification(SetConfigRequest {
+                disable_api_if_not_fully_synced: Some(*flag),
+                ..Default::default()
+            });
+
+            assert_eq!(with_state(|s| s.disable_api_if_not_fully_synced), *flag);
         }
     }
 }

@@ -91,6 +91,7 @@ pub fn init(config: Config) {
     with_state_mut(|s| s.blocks_source = config.blocks_source);
     with_state_mut(|s| s.api_access = config.api_access);
     with_state_mut(|s| s.syncing_state.syncing = config.syncing);
+    with_state_mut(|s| s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced);
     with_state_mut(|s| s.fees = config.fees);
 }
 
@@ -125,6 +126,7 @@ pub fn get_config() -> Config {
         network: s.network(),
         fees: s.fees.clone(),
         api_access: s.api_access,
+        disable_api_if_not_fully_synced: s.disable_api_if_not_fully_synced,
     })
 }
 
@@ -224,6 +226,9 @@ fn verify_api_access() {
 /// blocks is at most the SYNCING_THRESHOLD.
 fn verify_fully_synced() {
     with_state(|state| {
+        if state.disable_api_if_not_fully_synced == Flag::Disabled {
+            return;
+        }
         let main_chain_height = main_chain_height(state);
         if main_chain_height + SYNCING_THRESHOLD
             < max(
@@ -435,6 +440,27 @@ mod test {
 
         with_state(|s| {
             assert!(s.syncing_state.syncing == Flag::Enabled);
+        });
+    }
+
+    #[test]
+    fn init_sets_disable_api_if_not_fully_synced() {
+        init(Config {
+            disable_api_if_not_fully_synced: Flag::Disabled,
+            ..Default::default()
+        });
+
+        with_state(|s| {
+            assert!(s.disable_api_if_not_fully_synced == Flag::Disabled);
+        });
+
+        init(Config {
+            disable_api_if_not_fully_synced: Flag::Enabled,
+            ..Default::default()
+        });
+
+        with_state(|s| {
+            assert!(s.disable_api_if_not_fully_synced == Flag::Enabled);
         });
     }
 }
