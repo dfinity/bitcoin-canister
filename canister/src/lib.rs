@@ -38,6 +38,11 @@ use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
+/// Used to determine if the canister is synced based on difference
+/// between the maximum height of all block headers and the
+/// maximum height of all unstable blocks
+pub const SYNCING_THRESHOLD: u32 = 2;
+
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
 }
@@ -213,11 +218,6 @@ fn verify_api_access() {
         }
     });
 }
-
-/// Used to determine if the canister is synced based on difference
-/// between the maximum height of all block headers and the
-/// maximum height of all unstable blocks
-pub const SYNCING_THRESHOLD: u32 = 2;
 
 /// Verifies that if the difference between the maximum height
 /// of all block headers and the maximum height of all unstable
