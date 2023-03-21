@@ -91,18 +91,19 @@ impl UnstableBlocks {
         prev_block_hash: &BlockHash,
         block_hash: &BlockHash,
         stable_height: Height,
-    ) {
+    ) -> Result<(), BlockDoesNotExtendTree> {
         let height = match self.next_block_hashes.get_height(prev_block_hash) {
             Some(prev_height) => *prev_height,
             None => {
                 if let Ok(depth) = self.block_depth(prev_block_hash) {
                     stable_height + depth
                 } else {
-                    return;
+                    return Err(BlockDoesNotExtendTree(block_hash.clone()));
                 }
             }
         } + 1;
         self.next_block_hashes.insert(block_hash, height);
+        Ok(())
     }
 
     // Public only for testing purpose.
