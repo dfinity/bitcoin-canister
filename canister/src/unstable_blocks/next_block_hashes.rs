@@ -98,7 +98,7 @@ mod test {
             vec![hash1.clone()]
         );
 
-        // Check that insertion the same element does not
+        // Check that inserting the same element does not
         // create a duplicates.
         block_hashes.insert(&hash1, 5);
 
