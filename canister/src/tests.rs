@@ -9,7 +9,7 @@ use crate::{
         GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    verify_fully_synced, with_state, SYNCED_THRESHOLD,
+    verify_synced, with_state, SYNCED_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::{
@@ -619,7 +619,7 @@ async fn test_syncing_with_next_block_hashes() {
         with_state(main_chain_height) + SYNCED_THRESHOLD + 1
     );
 
-    assert!(catch_unwind(verify_fully_synced).is_err());
+    assert!(catch_unwind(verify_synced).is_err());
 
     let mut first_next_block_bytes = vec![];
 
@@ -656,7 +656,7 @@ async fn test_syncing_with_next_block_hashes() {
         with_state(main_chain_height) + SYNCED_THRESHOLD
     );
 
-    verify_fully_synced();
+    verify_synced();
 
     let (next_blocks, next_blocks_blobs) =
         get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
@@ -690,7 +690,7 @@ async fn test_syncing_with_next_block_hashes() {
         with_state(main_chain_height) + SYNCED_THRESHOLD
     );
 
-    verify_fully_synced();
+    verify_synced();
 
     // We are extending the longest chain of next blocks.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
@@ -719,5 +719,5 @@ async fn test_syncing_with_next_block_hashes() {
         with_state(main_chain_height) + SYNCED_THRESHOLD + 1
     );
 
-    assert!(catch_unwind(verify_fully_synced).is_err());
+    assert!(catch_unwind(verify_synced).is_err());
 }
