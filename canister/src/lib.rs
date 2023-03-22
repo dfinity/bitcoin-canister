@@ -38,10 +38,8 @@ use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
-/// Used to determine if the canister is synced based on difference
-/// between the maximum height of all block headers and the
-/// maximum height of all unstable blocks
-pub const SYNCING_THRESHOLD: u32 = 2;
+/// The maximum number of blocks the canister can be behind the tip to be considered synced.
+const SYNCED_THRESHOLD: u32 = 2;
 
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
@@ -223,14 +221,14 @@ fn verify_api_access() {
 
 /// Verifies that if the difference between the maximum height
 /// of all block headers and the maximum height of all unstable
-/// blocks is at most the SYNCING_THRESHOLD.
+/// blocks is at most the SYNCED_THRESHOLD.
 fn verify_fully_synced() {
     with_state(|state| {
         if state.disable_api_if_not_fully_synced == Flag::Disabled {
             return;
         }
         let main_chain_height = main_chain_height(state);
-        if main_chain_height + SYNCING_THRESHOLD
+        if main_chain_height + SYNCED_THRESHOLD
             < max(
                 state
                     .unstable_blocks

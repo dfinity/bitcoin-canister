@@ -9,7 +9,7 @@ use crate::{
         GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    verify_fully_synced, with_state, SYNCING_THRESHOLD,
+    verify_fully_synced, with_state, SYNCED_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::{
@@ -590,8 +590,8 @@ async fn test_syncing_with_next_block_hashes() {
         .collect();
 
     let (next_blocks, next_blocks_blobs) =
-        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCING_THRESHOLD + 1) as usize);
-    // We now have a chain of SYNCING_THRESHOLD + 1 next blocks
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
+    // We now have a chain of SYNCED_THRESHOLD + 1 next blocks
     // extending the unstable block (block_2).
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
@@ -616,7 +616,7 @@ async fn test_syncing_with_next_block_hashes() {
 
     assert_eq!(
         with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
-        with_state(main_chain_height) + SYNCING_THRESHOLD + 1
+        with_state(main_chain_height) + SYNCED_THRESHOLD + 1
     );
 
     assert!(catch_unwind(verify_fully_synced).is_err());
@@ -628,7 +628,7 @@ async fn test_syncing_with_next_block_hashes() {
         .consensus_encode(&mut first_next_block_bytes)
         .unwrap();
 
-    // We now have 2 UnstableBlocks and chain of SYNCING_THRESHOLD next blocks
+    // We now have 2 UnstableBlocks and chain of SYNCED_THRESHOLD next blocks
     // extending the last unstable block(first_next_block).
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
@@ -653,16 +653,16 @@ async fn test_syncing_with_next_block_hashes() {
 
     assert_eq!(
         with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
-        with_state(main_chain_height) + SYNCING_THRESHOLD
+        with_state(main_chain_height) + SYNCED_THRESHOLD
     );
 
     verify_fully_synced();
 
     let (next_blocks, next_blocks_blobs) =
-        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCING_THRESHOLD + 1) as usize);
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
 
-    // We now have 1 UnstableBlocks and chain of SYNCING_THRESHOLD + 2 next blocks
-    // extending the last stable block (block_1). Hence it is SYNCING_THRESHOLD + 1
+    // We now have 1 UnstableBlocks and chain of SYNCED_THRESHOLD + 2 next blocks
+    // extending the last stable block (block_1). Hence it is SYNCED_THRESHOLD + 1
     // longer than main_chain.
     runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
         GetSuccessorsCompleteResponse {
@@ -687,7 +687,7 @@ async fn test_syncing_with_next_block_hashes() {
 
     assert_eq!(
         with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
-        with_state(main_chain_height) + SYNCING_THRESHOLD
+        with_state(main_chain_height) + SYNCED_THRESHOLD
     );
 
     verify_fully_synced();
@@ -716,7 +716,7 @@ async fn test_syncing_with_next_block_hashes() {
 
     assert_eq!(
         with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
-        with_state(main_chain_height) + SYNCING_THRESHOLD + 1
+        with_state(main_chain_height) + SYNCED_THRESHOLD + 1
     );
 
     assert!(catch_unwind(verify_fully_synced).is_err());
