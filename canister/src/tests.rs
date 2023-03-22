@@ -606,7 +606,7 @@ async fn test_syncing_with_next_block_hashes() {
     // Process response.
     heartbeat().await;
 
-    // Ingest StableBlocks (block_1) into UTXOset.
+    // Ingest StableBlocks (block_1) into the UTXO set.
     heartbeat().await;
 
     // Assert that the block has been ingested.
@@ -643,7 +643,7 @@ async fn test_syncing_with_next_block_hashes() {
     // Process response.
     heartbeat().await;
 
-    // Ingest StableBlocks (block_2) into UTXOset.
+    // Ingest StableBlocks (block_2) into the UTXO set.
     heartbeat().await;
 
     // Assert that the block has been ingested.
@@ -677,7 +677,7 @@ async fn test_syncing_with_next_block_hashes() {
     // Process response.
     heartbeat().await;
 
-    // Try to ingest StableBlocks into UTXOset.
+    // Try to ingest StableBlocks into the UTXO set.
     heartbeat().await;
 
     // Assert that the block has been ingested.
@@ -706,7 +706,7 @@ async fn test_syncing_with_next_block_hashes() {
     // Process response.
     heartbeat().await;
 
-    // Try to ingest StableBlocks into UTXOset.
+    // Try to ingest StableBlocks into the UTXO set.
     heartbeat().await;
 
     // Assert that the block has been ingested.
