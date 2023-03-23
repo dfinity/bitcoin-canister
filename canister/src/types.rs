@@ -45,7 +45,8 @@ pub struct Config {
     /// Flag to control access to the apis provided by the canister.
     pub api_access: Flag,
 
-    /// Flag to control syncing of the next blocks.
+    /// Flag to determine if the API should be automatically disabled if
+    /// the canister isn't fully synced.
     pub disable_api_if_not_fully_synced: Flag,
 }
 
