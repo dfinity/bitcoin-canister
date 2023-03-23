@@ -8,6 +8,9 @@ use ic_btc_types::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
+mod next_block_hashes;
+use self::next_block_hashes::NextBlockHashes;
+
 /// A data structure for maintaining all unstable blocks.
 ///
 /// A block `b` is considered stable if:
@@ -19,6 +22,8 @@ pub struct UnstableBlocks {
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
     network: Network,
+    /// The hashes of the blocks that are expected to be received.
+    next_block_hashes: NextBlockHashes,
 }
 
 impl UnstableBlocks {
@@ -34,6 +39,7 @@ impl UnstableBlocks {
             tree: BlockTree::new(anchor.clone()),
             outpoints_cache,
             network,
+            next_block_hashes: NextBlockHashes::default(),
         }
     }
 
@@ -71,6 +77,39 @@ impl UnstableBlocks {
     pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
         self.tree.blocks_with_depths_by_heights()
     }
+
+    /// Returns depth in BlockTree of Block with given BlockHash.
+    fn block_depth(&mut self, block_hash: &BlockHash) -> Result<u32, BlockDoesNotExtendTree> {
+        let (_, depth) = blocktree::find_mut(&mut self.tree, block_hash)
+            .ok_or_else(|| BlockDoesNotExtendTree(block_hash.clone()))?;
+        Ok(depth)
+    }
+
+    // Inserts the block hash of the block that should be received.
+    pub fn insert_next_block_hash(
+        &mut self,
+        prev_block_hash: &BlockHash,
+        block_hash: &BlockHash,
+        stable_height: Height,
+    ) -> Result<(), BlockDoesNotExtendTree> {
+        let height = match self.next_block_hashes.get_height(prev_block_hash) {
+            Some(prev_height) => *prev_height,
+            None => {
+                if let Ok(depth) = self.block_depth(prev_block_hash) {
+                    stable_height + depth
+                } else {
+                    return Err(BlockDoesNotExtendTree(block_hash.clone()));
+                }
+            }
+        } + 1;
+        self.next_block_hashes.insert(block_hash, height);
+        Ok(())
+    }
+
+    // Public only for testing purpose.
+    pub(crate) fn next_block_hashes_max_height(&self) -> Option<Height> {
+        self.next_block_hashes.get_max_height()
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
@@ -81,7 +120,7 @@ pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
 /// Pops the `anchor` block iff ∃ a child `C` of the `anchor` block that
 /// is stable. The child `C` becomes the new `anchor` block, and all its
 /// siblings are discarded.
-pub fn pop(blocks: &mut UnstableBlocks) -> Option<Block> {
+pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> {
     match get_stable_child(blocks) {
         Some(stable_child_idx) => {
             let old_anchor = blocks.tree.root.clone();
@@ -91,6 +130,8 @@ pub fn pop(blocks: &mut UnstableBlocks) -> Option<Block> {
 
             // Remove the outpoints of the old anchor from the cache.
             blocks.outpoints_cache.remove(&old_anchor);
+
+            blocks.next_block_hashes.remove_until_height(stable_height);
 
             Some(old_anchor)
         }
@@ -118,7 +159,14 @@ pub fn push(
         .outpoints_cache
         .insert(utxos, &block, height)
         .unwrap();
-    blocktree::extend(parent_block_tree, block)
+
+    let block_hash = block.block_hash();
+
+    blocktree::extend(parent_block_tree, block)?;
+
+    blocks.next_block_hashes.remove(&block_hash);
+
+    Ok(())
 }
 
 /// Returns the best guess on what the main blockchain is.
@@ -238,9 +286,9 @@ mod test {
         let anchor = BlockBuilder::genesis().build();
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, anchor, network);
-        assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, anchor, network);
+        assert_eq!(peek(&unstable_blocks), None);
+        assert_eq!(pop(&mut unstable_blocks, 0), None);
     }
 
     #[test]
@@ -254,19 +302,19 @@ mod test {
 
         push(&mut forest, &utxos, block_1).unwrap();
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
 
         push(&mut forest, &utxos, block_2).unwrap();
 
         // Block 0 (the anchor) now has one stable child (Block 1).
         // Block 0 should be returned when calling `pop`.
         assert_eq!(peek(&forest), Some(&block_0));
-        assert_eq!(pop(&mut forest), Some(block_0));
+        assert_eq!(pop(&mut forest, 0), Some(block_0));
 
         // Block 1 is now the anchor. It doesn't have stable
         // children yet, so calling `pop` should return `None`.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
     }
 
     #[test]
@@ -286,7 +334,7 @@ mod test {
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
 
         push(&mut forest, &utxos, block_3).unwrap();
         // block_0 (the anchor) now has stable child block_1. Because block_1's
@@ -299,17 +347,17 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&block_0));
-        assert_eq!(pop(&mut forest), Some(block_0));
+        assert_eq!(pop(&mut forest, 0), Some(block_0));
 
         // block_1 (the anchor) now has one stable child (block_2).
         // block_1 should be returned when calling `pop`.
         assert_eq!(peek(&forest), Some(&block_1));
-        assert_eq!(pop(&mut forest), Some(block_1));
+        assert_eq!(pop(&mut forest, 0), Some(block_1));
 
         // block_2 is now the anchor. It doesn't have stable
         // children yet, so calling `pop` should return `None`.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
     }
 
     #[test]
@@ -327,7 +375,7 @@ mod test {
 
         // None of the forks are stable, so we shouldn't get anything.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
 
         // Extend fork2 by another block.
         let block_1 = BlockBuilder::with_prev_header(forked_block.header()).build();
@@ -336,7 +384,7 @@ mod test {
         //Now, fork2 has a difficulty_based_depth of 2, while fork1 has a difficulty_based_depth of 1,
         //hence we cannot get a stable child.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
 
         // Extend fork2 by another block.
         let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
@@ -344,17 +392,17 @@ mod test {
         //Now, fork2 has a difficulty_based_depth of 3, while fork1 has a difficulty_based_depth of 1,
         //hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&genesis_block));
-        assert_eq!(pop(&mut forest), Some(genesis_block));
+        assert_eq!(pop(&mut forest, 0), Some(genesis_block));
         assert_eq!(forest.tree.root, forked_block);
 
         //fork2 is still stable, hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&forked_block));
-        assert_eq!(pop(&mut forest), Some(forked_block));
+        assert_eq!(pop(&mut forest, 0), Some(forked_block));
         assert_eq!(forest.tree.root, block_1);
 
         // No stable children for fork2.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
     }
 
     #[test]
@@ -385,7 +433,7 @@ mod test {
         );
 
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
 
         // Extend fork1 by another block.
         let block_1 =
@@ -413,7 +461,7 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&genesis_block));
-        assert_eq!(pop(&mut forest), Some(genesis_block));
+        assert_eq!(pop(&mut forest, 0), Some(genesis_block));
         assert_eq!(forest.tree.root, fork2_block);
 
         // fork2_block should have a stable child block_2, because
@@ -426,11 +474,11 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&fork2_block));
-        assert_eq!(pop(&mut forest), Some(fork2_block));
+        assert_eq!(pop(&mut forest, 0), Some(fork2_block));
 
         // No stable child for block_2, because it does not have any children.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
 
         // Extend fork2 by another block.
         let block_3 =
@@ -447,12 +495,12 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&block_2));
-        assert_eq!(pop(&mut forest), Some(block_2));
+        assert_eq!(pop(&mut forest, 0), Some(block_2));
         assert_eq!(forest.tree.root, block_3);
 
         // No stable child for block_3, because it does not have any children.
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
     }
 
     #[test]
@@ -468,11 +516,11 @@ mod test {
         push(&mut forest, &utxos, block_2).unwrap();
 
         assert_eq!(peek(&forest), Some(&block_0));
-        assert_eq!(pop(&mut forest), Some(block_0));
+        assert_eq!(pop(&mut forest, 0), Some(block_0));
         assert_eq!(peek(&forest), Some(&block_1));
-        assert_eq!(pop(&mut forest), Some(block_1));
+        assert_eq!(pop(&mut forest, 0), Some(block_1));
         assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest), None);
+        assert_eq!(pop(&mut forest, 0), None);
     }
 
     // Creating a forest that looks like this:

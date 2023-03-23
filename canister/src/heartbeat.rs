@@ -1,14 +1,14 @@
 use crate::{
     runtime::{call_get_successors, print},
-    state::{self, ResponseToProcess},
+    state::{self, ResponseToProcess, State},
     types::{
-        Block, BlockHash, Flag, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
-        GetSuccessorsRequestInitial, GetSuccessorsResponse,
+        Block, BlockHash, BlockHeaderBlob, Flag, GetSuccessorsCompleteResponse,
+        GetSuccessorsRequest, GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
 use crate::{with_state, with_state_mut};
-use bitcoin::consensus::Decodable;
 use bitcoin::Block as BitcoinBlock;
+use bitcoin::{consensus::Decodable, BlockHeader};
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -128,6 +128,43 @@ fn ingest_stable_blocks_into_utxoset() -> bool {
     with_state_mut(state::ingest_stable_blocks_into_utxoset)
 }
 
+fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeaderBlob]) {
+    for block_header_blob in next_block_headers.iter() {
+        let block_header = match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
+            Ok(header) => header,
+            Err(err) => {
+                print(&format!(
+                    "ERROR: Failed decode block header. Err: {:?}, Block header: {:?}",
+                    err, block_header_blob,
+                ));
+                return;
+            }
+        };
+
+        let target = block_header.target();
+        if let Err(err) = block_header.validate_pow(&target) {
+            print(&format!(
+                "ERROR: Failed to validate block header. Err: {:?}, Block header: {:?}",
+                err, block_header,
+            ));
+            return;
+        }
+        let block_hash = BlockHash::from(block_header.block_hash());
+        let prev_hash = BlockHash::from(block_header.prev_blockhash);
+        if let Err(err) = state.unstable_blocks.insert_next_block_hash(
+            &prev_hash,
+            &block_hash,
+            state.stable_height(),
+        ) {
+            print(&format!(
+                "ERROR: Failed to insert next block hash. Err: {:?}, Block header: {:?}",
+                err, block_header,
+            ));
+            return;
+        }
+    }
+}
+
 // Process a `GetSuccessorsResponse` if one is available.
 fn maybe_process_response() {
     with_state_mut(|state| {
@@ -164,6 +201,7 @@ fn maybe_process_response() {
                         return;
                     }
                 }
+                insert_next_block_headers(state, &response.next);
             }
             other => {
                 // Not a complete response. Put it back into the state.

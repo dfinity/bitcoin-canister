@@ -33,9 +33,13 @@ use ic_btc_types::{
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
+use state::main_chain_height;
 use std::convert::TryInto;
+use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
+
+/// The maximum number of blocks the canister can be behind the tip to be considered synced.
+const SYNCED_THRESHOLD: u32 = 2;
 
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
@@ -93,18 +97,21 @@ pub fn get_current_fee_percentiles(
 ) -> Vec<MillisatoshiPerByte> {
     verify_api_access();
     verify_network(request.network.into());
+    verify_synced();
     api::get_current_fee_percentiles()
 }
 
 pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     verify_api_access();
     verify_network(request.network.into());
+    verify_synced();
     api::get_balance(request.into())
 }
 
 pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_api_access();
     verify_network(request.network.into());
+    verify_synced();
     api::get_utxos(request.into())
 }
 
@@ -206,6 +213,26 @@ fn verify_api_access() {
     with_state(|state| {
         if state.api_access == Flag::Disabled {
             panic!("Bitcoin API is disabled");
+        }
+    });
+}
+
+/// Verifies that if the difference between the maximum height
+/// of all block headers and the maximum height of all unstable
+/// blocks is at most the SYNCED_THRESHOLD.
+fn verify_synced() {
+    with_state(|state| {
+        let main_chain_height = main_chain_height(state);
+        if main_chain_height + SYNCED_THRESHOLD
+            < max(
+                state
+                    .unstable_blocks
+                    .next_block_hashes_max_height()
+                    .unwrap_or(0),
+                main_chain_height,
+            )
+        {
+            panic!("Canister state is not fully synced.");
         }
     });
 }

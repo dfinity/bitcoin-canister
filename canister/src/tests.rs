@@ -3,33 +3,33 @@ use crate::{
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
-    test_utils::{BlockBuilder, TransactionBuilder},
+    test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
     types::{
-        BlockBlob, BlockHash, GetBalanceRequest, GetSuccessorsCompleteResponse,
-        GetSuccessorsResponse, GetUtxosRequest, Network,
+        Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
+        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    with_state,
+    verify_synced, with_state, SYNCED_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
-use bitcoin::Block;
 use bitcoin::{
     consensus::{Decodable, Encodable},
     Txid,
 };
+use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_types::{GetUtxosResponse, UtxosFilter};
 use ic_btc_types::{OutPoint, Utxo};
 use ic_cdk::api::call::RejectionCode;
-use std::fs::File;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
+use std::{fs::File, panic::catch_unwind};
 mod confirmation_counts;
 
 async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
-    let mut chain: Vec<Block> = vec![];
+    let mut chain: Vec<BitcoinBlock> = vec![];
 
-    let mut blocks: HashMap<BlockHash, Block> = HashMap::new();
+    let mut blocks: HashMap<BlockHash, BitcoinBlock> = HashMap::new();
 
     let mut blk_file = BufReader::new(
         File::open(PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(blocks_file))
@@ -58,7 +58,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
 
         let _block_size = blk_file.read_u32::<LittleEndian>().unwrap();
 
-        let block = Block::consensus_decode(&mut blk_file).unwrap();
+        let block = BitcoinBlock::consensus_decode(&mut blk_file).unwrap();
 
         blocks.insert(BlockHash::from(block.header.prev_blockhash), block);
     }
@@ -81,7 +81,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
         .into_iter()
         .map(|block| {
             let mut block_bytes = vec![];
-            Block::consensus_encode(&block, &mut block_bytes).unwrap();
+            BitcoinBlock::consensus_encode(&block, &mut block_bytes).unwrap();
             GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
                 GetSuccessorsCompleteResponse {
                     blocks: vec![block_bytes],
@@ -543,4 +543,181 @@ async fn test_rejections_counting() {
     let counter_after = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
     assert_eq!(counter_prior, counter_after - 1);
+}
+
+// Serialize header.
+fn get_header_blob(header: &BlockHeader) -> BlockHeaderBlob {
+    let mut header_buff = vec![];
+    header.consensus_encode(&mut header_buff).unwrap();
+    header_buff.into()
+}
+
+fn get_chain_with_n_block_and_header_blobs(
+    previous_block: &Block,
+    n: usize,
+) -> (Vec<Block>, Vec<BlockHeaderBlob>) {
+    let block_vec = BlockChainBuilder::fork(previous_block, n as u32).build();
+
+    let mut blob_vec = vec![];
+    for block in block_vec.iter() {
+        blob_vec.push(get_header_blob(block.header()));
+    }
+    (block_vec, blob_vec)
+}
+
+#[async_std::test]
+async fn test_syncing_with_next_block_hashes() {
+    let network = Network::Regtest;
+
+    init(Config {
+        stability_threshold: 2,
+        network,
+        ..Default::default()
+    });
+
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+
+    // Serialize the blocks.
+    let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
+        .iter()
+        .map(|block| {
+            let mut block_bytes = vec![];
+            block.consensus_encode(&mut block_bytes).unwrap();
+            block_bytes
+        })
+        .collect();
+
+    let (next_blocks, next_blocks_blobs) =
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
+    // We now have a chain of SYNCED_THRESHOLD + 1 next blocks
+    // extending the unstable block (block_2).
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks,
+            next: next_blocks_blobs,
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Ingest StableBlocks (block_1) into the UTXO set.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 2);
+
+    assert_eq!(with_state(|s| s.stable_height()), 1);
+
+    assert_eq!(
+        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(main_chain_height) + SYNCED_THRESHOLD + 1
+    );
+
+    assert!(catch_unwind(verify_synced).is_err());
+
+    let mut first_next_block_bytes = vec![];
+
+    next_blocks[0]
+        .clone()
+        .consensus_encode(&mut first_next_block_bytes)
+        .unwrap();
+
+    // We now have 2 UnstableBlocks and chain of SYNCED_THRESHOLD next blocks
+    // extending the last unstable block(first_next_block).
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks: vec![first_next_block_bytes],
+            next: vec![],
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Ingest StableBlocks (block_2) into the UTXO set.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 3);
+
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+
+    assert_eq!(
+        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(main_chain_height) + SYNCED_THRESHOLD
+    );
+
+    verify_synced();
+
+    let (next_blocks, next_blocks_blobs) =
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
+
+    // We now have 1 UnstableBlocks and chain of SYNCED_THRESHOLD + 2 next blocks
+    // extending the last stable block (block_1). Hence it is SYNCED_THRESHOLD + 1
+    // longer than main_chain.
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks: vec![],
+            next: next_blocks_blobs,
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Try to ingest StableBlocks into the UTXO set.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 3);
+
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+
+    assert_eq!(
+        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(main_chain_height) + SYNCED_THRESHOLD
+    );
+
+    verify_synced();
+
+    // We are extending the longest chain of next blocks.
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks: vec![],
+            next: get_chain_with_n_block_and_header_blobs(next_blocks.last().unwrap(), 1).1,
+        },
+    )));
+
+    // Fetch blocks.
+    heartbeat().await;
+
+    // Process response.
+    heartbeat().await;
+
+    // Try to ingest StableBlocks into the UTXO set.
+    heartbeat().await;
+
+    // Assert that the block has been ingested.
+    assert_eq!(with_state(main_chain_height), 3);
+
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+
+    assert_eq!(
+        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(main_chain_height) + SYNCED_THRESHOLD + 1
+    );
+
+    assert!(catch_unwind(verify_synced).is_err());
 }
