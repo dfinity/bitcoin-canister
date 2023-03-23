@@ -350,7 +350,7 @@ jobs:
           bash e2e-tests/set_config.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "e2e-verify-is-synced", "charge-cycles-on-reject", "upgradability"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "e2e-verify-is-synced", "charge-cycles-on-reject", "upgradability", "set_config"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
