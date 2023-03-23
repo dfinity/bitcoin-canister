@@ -99,7 +99,7 @@ mod test {
         );
 
         // Check that inserting the same element does not
-        // create a duplicates.
+        // create a duplicate.
         block_hashes.insert(&hash1, 5);
 
         assert_eq!(block_hashes.get_max_height(), Some(5));

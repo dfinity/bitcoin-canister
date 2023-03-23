@@ -38,6 +38,7 @@ async fn verify_caller() {
     {
         use ic_cdk::api::management_canister::main::CanisterIdRecord;
 
+        let caller = ic_cdk::caller();
         let controllers =
             ic_cdk::api::management_canister::main::canister_status(CanisterIdRecord {
                 canister_id: ic_cdk::api::id(),
@@ -48,7 +49,7 @@ async fn verify_caller() {
             .settings
             .controllers;
 
-        if !controllers.contains(&ic_cdk::caller()) {
+        if !controllers.contains(&caller) {
             panic!("Only controllers can call set_config");
         }
     }

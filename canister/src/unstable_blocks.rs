@@ -107,7 +107,7 @@ impl UnstableBlocks {
     }
 
     // Public only for testing purpose.
-    pub fn next_block_hashes_max_height(&self) -> Option<Height> {
+    pub(crate) fn next_block_hashes_max_height(&self) -> Option<Height> {
         self.next_block_hashes.get_max_height()
     }
 }
@@ -286,9 +286,9 @@ mod test {
         let anchor = BlockBuilder::genesis().build();
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, anchor, network);
-        assert_eq!(peek(&forest), None);
-        assert_eq!(pop(&mut forest, 0), None);
+        let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, anchor, network);
+        assert_eq!(peek(&unstable_blocks), None);
+        assert_eq!(pop(&mut unstable_blocks, 0), None);
     }
 
     #[test]
