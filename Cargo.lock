@@ -2936,6 +2936,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "verify-is-synced"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid 0.8.4",
+ "ic-btc-test-utils",
+ "ic-cdk 0.6.10",
+ "ic-cdk-macros 0.6.10",
+ "serde",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

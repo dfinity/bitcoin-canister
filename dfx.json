@@ -32,6 +32,12 @@
       "package": "scenario-3",
       "wasm": "./target/wasm32-unknown-unknown/release/scenario-3.wasm.gz"
     },
+    "e2e-verify-is-synced": {
+      "type": "custom",
+      "candid": "./e2e-tests/verify-is-synced/candid.did",
+      "build": "./scripts/build-canister.sh verify-is-synced",
+      "wasm": "./target/wasm32-unknown-unknown/release/verify-is-synced.wasm.gz"
+    },
     "uploader": {
       "type": "custom",
       "candid": "./bootstrap/uploader/candid.did",

@@ -9,6 +9,7 @@ members = [
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
     "e2e-tests/scenario-3",
+    "e2e-tests/verify-is-synced",
     "validation",
 ]
 
