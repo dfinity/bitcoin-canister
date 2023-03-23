@@ -36,6 +36,7 @@
       "type": "custom",
       "candid": "./e2e-tests/verify-is-synced/candid.did",
       "build": "./scripts/build-canister.sh verify-is-synced",
+      "package": "verify-is-synced",
       "wasm": "./target/wasm32-unknown-unknown/release/verify-is-synced.wasm.gz"
     },
     "uploader": {

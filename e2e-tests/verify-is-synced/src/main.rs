@@ -1,5 +1,5 @@
 use bitcoin::{
-    blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
+    blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
     Network as BitcoinNetwork, OutPoint,
 };
 use candid::CandidType;
@@ -70,6 +70,8 @@ thread_local! {
     static BLOCKS: RefCell<Vec<BlockBlob>> = RefCell::new(Vec::new());
 
     static COUNT: Cell<u64> = Cell::new(0);
+
+    static BLOCK_HEADERS: RefCell<Vec<BlockHeaderBlob>> = RefCell::new(Vec::new());
 }
 
 // Initialize the blocks.
@@ -151,6 +153,31 @@ fn init() {
     }
     let block_5 = block_5.build();
     append_block(&block_5);
+
+    let next_block_1 = BlockBuilder::with_prev_header(block_5.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block_header(&next_block_1.header);
+    let next_block_2 = BlockBuilder::with_prev_header(next_block_1.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block_header(&next_block_2.header);
+    let next_block_3 = BlockBuilder::with_prev_header(next_block_2.header)
+        .with_transaction(
+            TransactionBuilder::new()
+                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
+                .build(),
+        )
+        .build();
+    append_block_header(&next_block_3.header);
 }
 
 #[update]
@@ -197,10 +224,16 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
             next: vec![],
         })
     } else if count == 6 {
-        // Send block 5 in full.
+        // Send block 5 in full, and all next block headers.
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
             blocks: vec![BLOCKS.with(|b| b.borrow()[4].clone())],
-            next: vec![],
+            next: BLOCK_HEADERS.with(|b| {
+                vec![
+                    b.borrow()[0].clone(),
+                    b.borrow()[1].clone(),
+                    b.borrow()[2].clone(),
+                ]
+            }),
         })
     } else {
         // Empty response
@@ -218,6 +251,12 @@ fn append_block(block: &Block) {
     let mut block_bytes = vec![];
     block.consensus_encode(&mut block_bytes).unwrap();
     BLOCKS.with(|b| b.borrow_mut().push(block_bytes));
+}
+
+fn append_block_header(block_header: &BlockHeader) {
+    let mut block_bytes = vec![];
+    block_header.consensus_encode(&mut block_bytes).unwrap();
+    BLOCK_HEADERS.with(|b| b.borrow_mut().push(block_bytes));
 }
 
 fn main() {}
