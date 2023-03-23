@@ -50,6 +50,10 @@ pub struct State {
     /// Flag to control access to the apis provided by the canister.
     #[serde(default)]
     pub api_access: Flag,
+
+    /// Flag to determine if the API should be automatically disabled
+    /// if the canister isn't fully synced.
+    pub disable_api_if_not_fully_synced: Flag,
 }
 
 impl State {
@@ -73,6 +77,7 @@ impl State {
             fees: Fees::default(),
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
+            disable_api_if_not_fully_synced: Flag::Enabled,
         }
     }
 

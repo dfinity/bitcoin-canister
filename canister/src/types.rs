@@ -44,6 +44,10 @@ pub struct Config {
 
     /// Flag to control access to the apis provided by the canister.
     pub api_access: Flag,
+
+    /// Flag to determine if the API should be automatically disabled if
+    /// the canister isn't fully synced.
+    pub disable_api_if_not_fully_synced: Flag,
 }
 
 impl Default for Config {
@@ -55,6 +59,7 @@ impl Default for Config {
             syncing: Flag::Enabled,
             fees: Fees::default(),
             api_access: Flag::Enabled,
+            disable_api_if_not_fully_synced: Flag::Enabled,
         }
     }
 }
@@ -913,6 +918,9 @@ pub struct SetConfigRequest {
 
     /// Whether or not to enable/disable the bitcoin apis.
     pub api_access: Option<Flag>,
+
+    /// Whether or not to enable/disable the bitcoin apis if not fully synced.
+    pub disable_api_if_not_fully_synced: Option<Flag>,
 }
 
 #[test]
