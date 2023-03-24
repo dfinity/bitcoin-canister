@@ -7,6 +7,7 @@ use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use ic_cdk_macros::{init, update};
 use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
+use std::cmp::Ordering;
 use std::str::FromStr;
 
 type BlockBlob = Vec<u8>;
@@ -128,24 +129,27 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
 
     let count = COUNT.with(|c| c.get());
 
-    let res = if count < NUM_BLOCKS - 1 {
+    let res = match Ord::cmp(&count, &(NUM_BLOCKS - 1)) {
         // Send block in full.
-        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+        Ordering::Less => GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
             blocks: vec![BLOCKS.with(|b| b.borrow()[count].clone())],
             next: vec![],
-        })
-    } else if count == NUM_BLOCKS - 1 {
-        // Send block in full, and all next block headers.
-        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCKS.with(|b| b.borrow()[count].clone())],
-            next: BLOCK_HEADERS.with(|b| b.borrow().clone()),
-        })
-    } else {
-        // Empty response
-        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![],
-            next: vec![],
-        })
+        }),
+
+        Ordering::Equal => {
+            // Send block in full, and all next block headers.
+            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+                blocks: vec![BLOCKS.with(|b| b.borrow()[count].clone())],
+                next: BLOCK_HEADERS.with(|b| b.borrow().clone()),
+            })
+        }
+        Ordering::Greater => {
+            // Empty response
+            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+                blocks: vec![],
+                next: vec![],
+            })
+        }
     };
 
     COUNT.with(|c| c.set(c.get() + 1));
