@@ -39,6 +39,13 @@
       "package": "scenario-3",
       "wasm": "./target/wasm32-unknown-unknown/release/scenario-3.wasm.gz"
     },
+    "e2e-disable-api-if-not-fully-synced-flag": {
+      "type": "custom",
+      "candid": "./e2e-tests/disable-api-if-not-fully-synced-flag/candid.did",
+      "build": "./scripts/build-canister.sh disable-api-if-not-fully-synced-flag",
+      "package": "disable-api-if-not-fully-synced-flag",
+      "wasm": "./target/wasm32-unknown-unknown/release/disable-api-if-not-fully-synced-flag.wasm.gz"
+    },
     "uploader": {
       "type": "custom",
       "candid": "./bootstrap/uploader/candid.did",
