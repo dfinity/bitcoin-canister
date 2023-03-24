@@ -126,8 +126,8 @@ UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
-# The address has 0 UTXOs.
-if ! [[ $(num_utxos "$UTXOS") = 0 ]]; then
+# The address has 2 UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 2 ]]; then
   echo "FAIL"
   exit 1
 fi

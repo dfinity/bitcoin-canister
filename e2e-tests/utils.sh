@@ -46,5 +46,5 @@ wait_until_stable_height () {
 num_utxos () {
   UTXOS=$1
   # Count the occurrences of a substring of a UTXO.
-  echo "$UTXOS" | grep -o "record { height = " | wc -l | xargs echo
+  echo "$UTXOS" | grep -o " height = " | wc -l | xargs echo
 }
