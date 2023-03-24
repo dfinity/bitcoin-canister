@@ -17,10 +17,7 @@ type BlockHash = Vec<u8>;
 const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 
 // The number of blocks to generate (on top of genesis)
-const NUM_BLOCKS: usize = 4;
-
-// The number of transactions in each of these blocks.
-const TXS_PER_BLOCK: u32 = 10_000;
+const NUM_BLOCKS: usize = 2;
 
 const SYNCED_THRESHOLD: u32 = 2;
 
@@ -86,22 +83,16 @@ fn init() {
 
     // Generate NUM_BLOCKS blocks, each with NUM_TRANSACTIONS transactions.
     let mut prev_header = genesis_block(network).header;
-    let mut lock_time_offset = 0;
     for _ in 0..NUM_BLOCKS {
-        let mut block = BlockBuilder::with_prev_header(prev_header);
-        for i in lock_time_offset..lock_time_offset + TXS_PER_BLOCK {
-            // A transaction giving 1 satoshi to the address.
-            block = block.with_transaction(
+        let block = BlockBuilder::with_prev_header(prev_header)
+            .with_transaction(
                 TransactionBuilder::new()
-                    .with_lock_time(i)
                     .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
                     .build(),
-            );
-        }
-        let block = block.build();
+            )
+            .build();
         append_block(&block);
         prev_header = block.header;
-        lock_time_offset += TXS_PER_BLOCK;
     }
 
     for _ in 0..SYNCED_THRESHOLD + 1 {

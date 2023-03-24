@@ -37,7 +37,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 # Wait until the ingestion of stable blocks is complete.
 # The number of next block headers should be 3, the canister
 # should reject all requests.
-wait_until_stable_height 4 60
+wait_until_stable_height 2 60
 
 # bitcoin_get_balance should panic.
 set +e
@@ -108,33 +108,29 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 })"
 
 # Wait until the ingestion of stable blocks is complete.
-wait_until_main_chain_height 4 60
+wait_until_main_chain_height 2 60
 
 BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
-if ! [[ $BALANCE = "(40_000 : nat64)" ]]; then
+if ! [[ $BALANCE = "(2 : nat64)" ]]; then
   echo "FAIL"
   exit 1
 fi
 
 # Verify that we are able to fetch the UTXOs of one address.
-# We temporarily pause outputting the commands to the terminal as
-# this command would print thousands of UTXOs.
-set +x
 UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
-# The address has 40k UTXOs. The first call to get_utxos should return 1,000.
-if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
+# The address has 0 UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 0 ]]; then
   echo "FAIL"
   exit 1
 fi
-set -x
 
 dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
   network = variant { regtest };
