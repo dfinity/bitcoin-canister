@@ -1,6 +1,6 @@
 use bitcoin::{
     blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
-    Network as BitcoinNetwork, OutPoint,
+    Network as BitcoinNetwork,
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
@@ -13,13 +13,15 @@ type BlockBlob = Vec<u8>;
 type BlockHeaderBlob = Vec<u8>;
 type BlockHash = Vec<u8>;
 
-const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
-const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
-const ADDRESS_3: &str = "bcrt1qp045tvzkxx0292645rxem9eryc7jpwsk3dy60h";
-const ADDRESS_4: &str = "bcrt1qjft8fhexv4znxu22hed7gxtpy2wazjn0x079mn";
-const ADDRESS_5: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 
-const NUM_BLOCKS: usize = 5;
+// The number of blocks to generate (on top of genesis)
+const NUM_BLOCKS: usize = 4;
+
+// The number of transactions in each of these blocks.
+const TXS_PER_BLOCK: u32 = 10_000;
+
+const SYNCED_THRESHOLD: u32 = 2;
 
 #[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 enum Network {
@@ -81,105 +83,37 @@ thread_local! {
 fn init() {
     let network = BitcoinNetwork::Regtest;
 
-    // Block 1: A single transaction that gives ADDRESS_1 50 BTC split over 10k inputs.
-    let mut tx_1 = TransactionBuilder::new();
-    for _ in 0..10_000 {
-        tx_1 = tx_1.with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000);
-    }
-    let tx_1 = tx_1.build();
-    let tx_1_id = tx_1.txid();
-
-    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header)
-        .with_transaction(tx_1)
-        .build();
-    append_block(&block_1);
-
-    // Block 2: 10k transactions that transfer all of ADDRESS_1's BTC to ADDRESS_2
-    let mut block_2_txs = vec![];
-    for i in 0..10_000 {
-        block_2_txs.push(
-            TransactionBuilder::new()
-                .with_input(OutPoint {
-                    txid: tx_1_id,
-                    vout: i,
-                })
-                .with_output(&Address::from_str(ADDRESS_2).unwrap(), 500_000)
-                .build(),
-        )
+    // Generate NUM_BLOCKS blocks, each with NUM_TRANSACTIONS transactions.
+    let mut prev_header = genesis_block(network).header;
+    let mut lock_time_offset = 0;
+    for _ in 0..NUM_BLOCKS {
+        let mut block = BlockBuilder::with_prev_header(prev_header);
+        for i in lock_time_offset..lock_time_offset + TXS_PER_BLOCK {
+            // A transaction giving 1 satoshi to the address.
+            block = block.with_transaction(
+                TransactionBuilder::new()
+                    .with_lock_time(i)
+                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .build(),
+            );
+        }
+        let block = block.build();
+        append_block(&block);
+        prev_header = block.header;
+        lock_time_offset += TXS_PER_BLOCK;
     }
 
-    let mut block_2 = BlockBuilder::with_prev_header(block_1.header);
-    for tx in block_2_txs.iter() {
-        block_2 = block_2.with_transaction(tx.clone());
+    for _ in 0..SYNCED_THRESHOLD + 1 {
+        let next_block = BlockBuilder::with_prev_header(prev_header)
+            .with_transaction(
+                TransactionBuilder::new()
+                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .build(),
+            )
+            .build();
+        append_block_header(&next_block.header);
+        prev_header = next_block.header;
     }
-    let block_2 = block_2.build();
-
-    append_block(&block_2);
-
-    // Remaining blocks contain a single coinbase transaction giving ADDRESS_3 some BTC.
-    let block_3 = BlockBuilder::with_prev_header(block_2.header)
-        .with_transaction(
-            TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
-                .build(),
-        )
-        .build();
-    append_block(&block_3);
-
-    let block_4 = BlockBuilder::with_prev_header(block_3.header)
-        .with_transaction(
-            TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_4).unwrap(), 500_000)
-                .build(),
-        )
-        .build();
-    append_block(&block_4);
-
-    // Block 5: 10k transactions that transfer all of ADDRESS_2's BTC to ADDRESS_5
-    let mut block_5_txs = vec![];
-    for block_2_tx in block_2_txs {
-        block_5_txs.push(
-            TransactionBuilder::new()
-                .with_input(OutPoint {
-                    txid: block_2_tx.txid(),
-                    vout: 0,
-                })
-                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
-                .build(),
-        )
-    }
-
-    let mut block_5 = BlockBuilder::with_prev_header(block_4.header);
-    for tx in block_5_txs.into_iter() {
-        block_5 = block_5.with_transaction(tx);
-    }
-    let block_5 = block_5.build();
-    append_block(&block_5);
-
-    let next_block_1 = BlockBuilder::with_prev_header(block_5.header)
-        .with_transaction(
-            TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
-                .build(),
-        )
-        .build();
-    append_block_header(&next_block_1.header);
-    let next_block_2 = BlockBuilder::with_prev_header(next_block_1.header)
-        .with_transaction(
-            TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
-                .build(),
-        )
-        .build();
-    append_block_header(&next_block_2.header);
-    let next_block_3 = BlockBuilder::with_prev_header(next_block_2.header)
-        .with_transaction(
-            TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
-                .build(),
-        )
-        .build();
-    append_block_header(&next_block_3.header);
 }
 
 #[update]

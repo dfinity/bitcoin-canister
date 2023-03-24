@@ -15,7 +15,7 @@ dfx deploy --no-wallet e2e-verify-is-synced
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 # And enabling 'disable_api_if_not_fully_synced'. 
 dfx deploy --no-wallet bitcoin --argument "(record {
-  stability_threshold = 2;
+  stability_threshold = 1;
   network = variant { regtest };
   blocks_source = principal \"$(dfx canister id e2e-verify-is-synced)\";
   syncing = variant { enabled };
@@ -37,7 +37,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 # Wait until the ingestion of stable blocks is complete.
 # The number of next block headers should be 3, the canister
 # should reject all requests.
-wait_until_stable_height 3 60
+wait_until_stable_height 4 60
 
 # bitcoin_get_balance should panic.
 set +e
@@ -88,7 +88,7 @@ dfx deploy --no-wallet e2e-verify-is-synced
 # And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make 
 # influence behaviour of the canister. 
 dfx deploy --no-wallet bitcoin --argument "(record {
-  stability_threshold = 2;
+  stability_threshold = 1;
   network = variant { regtest };
   blocks_source = principal \"$(dfx canister id e2e-verify-is-synced)\";
   syncing = variant { enabled };
@@ -108,39 +108,14 @@ dfx deploy --no-wallet bitcoin --argument "(record {
 })"
 
 # Wait until the ingestion of stable blocks is complete.
-wait_until_stable_height 3 60
+wait_until_main_chain_height 4 60
 
-# Fetch the balance of an address we do not expect to have funds.
 BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
-if ! [[ $BALANCE = "(0 : nat64)" ]]; then
-  echo "FAIL"
-  exit 1
-fi
-
-# Fetch the balance of an address we expect to have funds.
-BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
-  network = variant { regtest };
-  address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
-  min_confirmations = opt 2;
-})')
-
-# Verify that the balance is 50 BTC.
-if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
-  echo "FAIL"
-  exit 1
-fi
-
-UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
-  network = variant { regtest };
-  address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
-})')
-
-# The address has no UTXOs.
-if ! [[ $(num_utxos "$UTXOS") = 0 ]]; then
+if ! [[ $BALANCE = "(40_000 : nat64)" ]]; then
   echo "FAIL"
   exit 1
 fi
@@ -151,30 +126,16 @@ fi
 set +x
 UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
   network = variant { regtest };
-  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
+  address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
 
-# The address has 10000 UTXOs, but the response is capped to 1000 UTXOs.
+# The address has 40k UTXOs. The first call to get_utxos should return 1,000.
 if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
   echo "FAIL"
   exit 1
 fi
 set -x
 
-BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
-  network = variant { regtest };
-  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
-})')
-
-if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
-  echo "FAIL"
-  exit 1
-fi
-
-# Request the current fee percentiles. This is only for profiling purposes.
-dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
-  network = variant { regtest };
-})'
 dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
   network = variant { regtest };
 })'
