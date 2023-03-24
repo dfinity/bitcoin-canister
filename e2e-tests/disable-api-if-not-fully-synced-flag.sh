@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+#
+# Verify that the Bitcoin canister respects the `disable_api_if_not_fully_synced` flag.
 set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -10,14 +12,14 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the canister that returns the blocks.
-dfx deploy --no-wallet e2e-verify-is-synced
+dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 # And enabling 'disable_api_if_not_fully_synced'. 
 dfx deploy --no-wallet bitcoin --argument "(record {
   stability_threshold = 1;
   network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id e2e-verify-is-synced)\";
+  blocks_source = principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
   syncing = variant { enabled };
   fees = record {
     get_utxos_base = 0;
@@ -82,7 +84,7 @@ dfx stop
 dfx start --background --clean
 
 # Deploy the canister that returns the blocks.
-dfx deploy --no-wallet e2e-verify-is-synced
+dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 # And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make 
@@ -90,7 +92,7 @@ dfx deploy --no-wallet e2e-verify-is-synced
 dfx deploy --no-wallet bitcoin --argument "(record {
   stability_threshold = 1;
   network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id e2e-verify-is-synced)\";
+  blocks_source = principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
   syncing = variant { enabled };
   fees = record {
     get_utxos_base = 0;
@@ -132,8 +134,13 @@ if ! [[ $(num_utxos "$UTXOS") = 2 ]]; then
   exit 1
 fi
 
-dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
+FEES=$(dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
   network = variant { regtest };
-})'
+})')
+
+if ! [[ $FEES = "(vec {})" ]]; then
+  echo "FAIL"
+  exit 1
+fi
 
 echo "SUCCESS"

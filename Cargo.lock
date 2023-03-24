@@ -745,6 +745,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "disable-api-if-not-fully-synced-flag"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid 0.8.4",
+ "ic-btc-test-utils",
+ "ic-cdk 0.6.10",
+ "ic-cdk-macros 0.6.10",
+ "serde",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.14.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2944,18 +2956,6 @@ checksum = "2209b78d1249f7e6f3293657c9779fe31ced465df091bbd433a1cf88e916ec55"
 dependencies = [
  "ctor",
  "version_check",
-]
-
-[[package]]
-name = "verify-is-synced"
-version = "0.1.0"
-dependencies = [
- "bitcoin",
- "candid 0.8.4",
- "ic-btc-test-utils",
- "ic-cdk 0.6.10",
- "ic-cdk-macros 0.6.10",
- "serde",
 ]
 
 [[package]]

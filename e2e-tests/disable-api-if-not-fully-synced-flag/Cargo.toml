@@ -1,5 +1,5 @@
 [package]
-name = "verify-is-synced"
+name = "disable-api-if-not-fully-synced-flag"
 version = "0.1.0"
 edition = "2021"
 
