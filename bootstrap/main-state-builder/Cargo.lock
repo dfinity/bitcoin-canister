@@ -458,13 +458,14 @@ name = "ic-btc-canister"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "byteorder",
  "candid",
  "ciborium",
  "hex",
  "ic-btc-types",
+ "ic-btc-validation",
  "ic-cdk",
  "ic-cdk-macros",
+ "ic-metrics-encoder",
  "ic-stable-structures",
  "lazy_static",
  "serde",
@@ -479,6 +480,13 @@ dependencies = [
  "candid",
  "serde",
  "serde_bytes",
+]
+
+[[package]]
+name = "ic-btc-validation"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
 ]
 
 [[package]]
@@ -508,6 +516,12 @@ dependencies = [
  "serde_tokenstream",
  "syn",
 ]
+
+[[package]]
+name = "ic-metrics-encoder"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cb321e571828d64d62319deeaaec4c8e68cdf93144dd6fe248e7a51ab2d3b5d"
 
 [[package]]
 name = "ic-stable-structures"
