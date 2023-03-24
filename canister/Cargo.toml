@@ -12,7 +12,7 @@ candid = "0.8.1"
 #       blobs. At the time of this writing, a new version including this commit hasn't yet been released.
 ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
 hex = "0.4.3"
-ic-btc-types = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f167994de24c8ccf7ee37a4d8ac67" }
+ic-btc-interface = { path = "../interface" }
 ic-btc-validation = { path = "../validation" }
 ic-cdk = "0.6.1"
 ic-cdk-macros = "0.6.1"
@@ -30,7 +30,7 @@ path = "src/main.rs"
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = {version = "0.28.1", features = ["rand"]} # needed for generating secp256k1 keys.
 byteorder = "1.4.3"
-ic-btc-test-utils = { git = "https://github.com/dfinity/ic", rev = "c905ede6e62f167994de24c8ccf7ee37a4d8ac67" }
+ic-btc-test-utils = { path = "../test-utils" }
 maplit = "1.0.2"
 proptest = "0.9.4"
 tempfile = "3.2.0"

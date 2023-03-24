@@ -11,7 +11,7 @@ use crate::{
     validation::ValidationContext,
     UtxoSet,
 };
-use ic_btc_types::{Height, MillisatoshiPerByte};
+use ic_btc_interface::{Height, MillisatoshiPerByte};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};

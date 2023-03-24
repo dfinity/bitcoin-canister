@@ -2,6 +2,7 @@
 
 members = [
     "canister",
+    "interface",
 
     # Crates used for development only.
     "bootstrap/state-builder",
@@ -9,6 +10,7 @@ members = [
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
     "e2e-tests/scenario-3",
+    "test-utils",
     "validation",
 ]
 
