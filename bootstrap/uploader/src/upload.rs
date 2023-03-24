@@ -4,7 +4,7 @@
 //!
 //! Example run:
 //!
-//! cargo run --example uploader-script -- \
+//! cargo run --example upload -- \
 //!     --canister-id rwlgt-iiaaa-aaaaa-aaaaa-cai \
 //!     --state ./file-to-upload \
 //!     --ic-network http://127.0.0.1:8000 \
