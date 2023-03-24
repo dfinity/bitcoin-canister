@@ -19,6 +19,8 @@ const ADDRESS_3: &str = "bcrt1qp045tvzkxx0292645rxem9eryc7jpwsk3dy60h";
 const ADDRESS_4: &str = "bcrt1qjft8fhexv4znxu22hed7gxtpy2wazjn0x079mn";
 const ADDRESS_5: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 
+const NUM_BLOCKS: usize = 5;
+
 #[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 enum Network {
     #[serde(rename = "mainnet")]
@@ -69,7 +71,7 @@ struct GetSuccessorsPartialResponse {
 thread_local! {
     static BLOCKS: RefCell<Vec<BlockBlob>> = RefCell::new(Vec::new());
 
-    static COUNT: Cell<u64> = Cell::new(0);
+    static COUNT: Cell<usize> = Cell::new(0);
 
     static BLOCK_HEADERS: RefCell<Vec<BlockHeaderBlob>> = RefCell::new(Vec::new());
 }
@@ -192,48 +194,17 @@ fn bitcoin_get_successors(request: GetSuccessorsRequest) -> GetSuccessorsRespons
 
     let count = COUNT.with(|c| c.get());
 
-    let res = if count == 0 {
-        // Send block 1 in full.
+    let res = if count < NUM_BLOCKS - 1 {
+        // Send block in full.
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCKS.with(|b| b.borrow()[0].clone())],
+            blocks: vec![BLOCKS.with(|b| b.borrow()[count].clone())],
             next: vec![],
         })
-    } else if count == 1 {
-        // Send part of block 2.
-        GetSuccessorsResponse::Partial(GetSuccessorsPartialResponse {
-            partial_block: BLOCKS.with(|b| b.borrow()[1].clone())[0..20].to_vec(),
-            next: vec![],
-            remaining_follow_ups: 2,
-        })
-    } else if count == 2 {
-        // Send another part of block 2.
-        GetSuccessorsResponse::FollowUp(BLOCKS.with(|b| b.borrow()[1].clone())[20..40].to_vec())
-    } else if count == 3 {
-        // Send rest of block 2.
-        GetSuccessorsResponse::FollowUp(BLOCKS.with(|b| b.borrow()[1].clone())[40..].to_vec())
-    } else if count == 4 {
-        // Send block 3 in full.
+    } else if count == NUM_BLOCKS - 1 {
+        // Send block in full, and all next block headers.
         GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCKS.with(|b| b.borrow()[2].clone())],
-            next: vec![],
-        })
-    } else if count == 5 {
-        // Send block 4 in full.
-        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCKS.with(|b| b.borrow()[3].clone())],
-            next: vec![],
-        })
-    } else if count == 6 {
-        // Send block 5 in full, and all next block headers.
-        GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-            blocks: vec![BLOCKS.with(|b| b.borrow()[4].clone())],
-            next: BLOCK_HEADERS.with(|b| {
-                vec![
-                    b.borrow()[0].clone(),
-                    b.borrow()[1].clone(),
-                    b.borrow()[2].clone(),
-                ]
-            }),
+            blocks: vec![BLOCKS.with(|b| b.borrow()[count].clone())],
+            next: BLOCK_HEADERS.with(|b| b.borrow().clone()),
         })
     } else {
         // Empty response
