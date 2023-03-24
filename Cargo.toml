@@ -4,11 +4,13 @@ members = [
     "canister",
 
     # Crates used for development only.
+    "benchmarks",
     "bootstrap/state-builder",
     "bootstrap/uploader",
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
     "e2e-tests/scenario-3",
+    "e2e-tests/disable-api-if-not-fully-synced-flag",
     "validation",
 ]
 

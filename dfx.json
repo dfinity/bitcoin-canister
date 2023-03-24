@@ -1,11 +1,18 @@
 {
-  "dfx": "0.12.1",
+  "dfx": "0.13.1",
   "canisters": {
     "bitcoin": {
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
+    },
+    "benchmarks": {
+      "candid": "./benchmarks/candid.did",
+      "package": "benchmarks",
+      "type": "custom",
+      "build": "./scripts/build-canister.sh benchmarks",
+      "wasm": "./target/wasm32-unknown-unknown/release/benchmarks.wasm.gz"
     },
     "upgradablity-test": {
       "type": "custom",
@@ -31,6 +38,13 @@
       "build": "./scripts/build-canister.sh scenario-3",
       "package": "scenario-3",
       "wasm": "./target/wasm32-unknown-unknown/release/scenario-3.wasm.gz"
+    },
+    "e2e-disable-api-if-not-fully-synced-flag": {
+      "type": "custom",
+      "candid": "./e2e-tests/disable-api-if-not-fully-synced-flag/candid.did",
+      "build": "./scripts/build-canister.sh disable-api-if-not-fully-synced-flag",
+      "package": "disable-api-if-not-fully-synced-flag",
+      "wasm": "./target/wasm32-unknown-unknown/release/disable-api-if-not-fully-synced-flag.wasm.gz"
     },
     "uploader": {
       "type": "custom",

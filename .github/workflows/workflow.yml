@@ -2,7 +2,7 @@ name: CI Checks
 
 env:
   RUST_VERSION: 1.68.0
-  DFX_VERSION: 0.12.1
+  DFX_VERSION: 0.13.1
 
 on:
   push:
@@ -223,6 +223,38 @@ jobs:
         run: |
           bash e2e-tests/scenario-3.sh
 
+  e2e-disable-api-if-not-fully-synced-flag:
+    runs-on: ubuntu-20.04
+    needs: cargo-build
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install DFX
+        run: |
+          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
+          bash install-dfx.sh < <(yes Y)
+          rm install-dfx.sh
+          dfx cache install
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run disable api if not fully synced flag
+        run: |
+          bash e2e-tests/disable-api-if-not-fully-synced-flag.sh
+
   charge-cycles-on-reject:
     runs-on: ubuntu-20.04
     needs: cargo-build
@@ -320,7 +352,7 @@ jobs:
           bash e2e-tests/set_config.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "charge-cycles-on-reject", "upgradability"]
+    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-disable-api-if-not-fully-synced-flag", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "charge-cycles-on-reject", "upgradability", "set_config"]
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes

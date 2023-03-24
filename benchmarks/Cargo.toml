@@ -1,0 +1,15 @@
+[package]
+name = "benchmarks"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "benchmarks"
+path = "src/main.rs"
+
+[dependencies]
+bitcoin = {version = "0.28.1", features = ["use-serde"]}
+hex = "0.4.3"
+ic-cdk = "0.6.1"
+ic-cdk-macros = "0.6.1"
+ic-btc-canister = { path = "../canister" }
