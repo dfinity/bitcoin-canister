@@ -4,6 +4,7 @@ members = [
     "canister",
 
     # Crates used for development only.
+    "benchmarks",
     "bootstrap/state-builder",
     "bootstrap/uploader",
     "e2e-tests/scenario-1",

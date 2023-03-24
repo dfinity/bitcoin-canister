@@ -7,6 +7,13 @@
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
+    "benchmarks": {
+      "candid": "./benchmarks/candid.did",
+      "package": "benchmarks",
+      "type": "custom",
+      "build": "./scripts/build-canister.sh benchmarks",
+      "wasm": "./target/wasm32-unknown-unknown/release/benchmarks.wasm.gz"
+    },
     "upgradablity-test": {
       "type": "custom",
       "candid": "./canister/candid.did",
