@@ -101,6 +101,8 @@ pub struct Fees {
 pub struct Block {
     block: BitcoinBlock,
     transactions: Vec<Transaction>,
+    block_hash: RefCell<Option<BlockHash>>,
+
     #[cfg(test)]
     pub mock_difficulty: Option<u64>,
 }
@@ -114,6 +116,7 @@ impl Block {
                 .map(|tx| Transaction::new(tx.clone()))
                 .collect(),
             block,
+            block_hash: RefCell::new(None),
             #[cfg(test)]
             mock_difficulty: None,
         }
@@ -124,7 +127,17 @@ impl Block {
     }
 
     pub fn block_hash(&self) -> BlockHash {
-        BlockHash::from(self.block.block_hash())
+        if self.block_hash.borrow().is_none() {
+            // Compute the block_hash as it wasn't computed already.
+            // `block.block_hash()` is an expensive call, so it's useful to cache.
+            let block_hash = BlockHash::from(self.block.block_hash());
+            self.block_hash.borrow_mut().replace(block_hash);
+        }
+
+        self.block_hash
+            .borrow()
+            .clone()
+            .expect("block hash must be available")
     }
 
     pub fn txdata(&self) -> &[Transaction] {
