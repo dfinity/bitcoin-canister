@@ -113,8 +113,12 @@ fn main() {
         s.utxos.next_height = args.anchor_height;
 
         // Ingest the blocks.
-        s.unstable_blocks =
-            UnstableBlocks::new(&s.utxos, args.stability_threshold as u32, anchor_block);
+        s.unstable_blocks = UnstableBlocks::new(
+            &s.utxos,
+            args.stability_threshold as u32,
+            anchor_block,
+            args.network,
+        );
         unstable_blocks::push(&mut s.unstable_blocks, &s.utxos, next_block).unwrap();
     });
 
