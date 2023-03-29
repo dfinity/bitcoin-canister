@@ -26,7 +26,7 @@ use crate::{
 pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
-use ic_btc_types::{
+use ic_btc_interface::{
     GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosError,
     GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Satoshi,
 };
@@ -246,7 +246,7 @@ fn verify_synced() {
 mod test {
     use super::*;
     use crate::{test_utils::build_regtest_chain, types::Network};
-    use ic_btc_types::NetworkInRequest;
+    use ic_btc_interface::NetworkInRequest;
     use proptest::prelude::*;
 
     proptest! {

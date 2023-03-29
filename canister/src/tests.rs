@@ -18,8 +18,8 @@ use bitcoin::{
 };
 use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_types::{GetUtxosResponse, UtxosFilter};
-use ic_btc_types::{OutPoint, Utxo};
+use ic_btc_interface::{GetUtxosResponse, UtxosFilter};
+use ic_btc_interface::{OutPoint, Utxo};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
