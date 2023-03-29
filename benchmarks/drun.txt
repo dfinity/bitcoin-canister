@@ -1,0 +1,3 @@
+create
+install rwlgt-iiaaa-aaaaa-aaaaa-cai ../target/wasm32-unknown-unknown/release/benchmarks.wasm.gz ""
+query rwlgt-iiaaa-aaaaa-aaaaa-cai insert_300_blocks "DIDL\x00\x00"
