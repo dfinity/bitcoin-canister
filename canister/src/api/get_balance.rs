@@ -4,7 +4,7 @@ use crate::{
     types::{Address, GetBalanceRequest},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut,
 };
-use ic_btc_types::{GetBalanceError, Satoshi};
+use ic_btc_interface::{GetBalanceError, Satoshi};
 use std::str::FromStr;
 
 // Various profiling stats for tracking the performance of `get_balance`.

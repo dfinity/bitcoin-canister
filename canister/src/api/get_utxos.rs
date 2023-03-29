@@ -5,7 +5,7 @@ use crate::{
     types::{Address, Block, BlockHash, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
-use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
+use ic_btc_interface::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use serde_bytes::ByteBuf;
 use std::str::FromStr;
 
@@ -233,7 +233,7 @@ fn get_utxos_from_chain(
             PublicUtxo {
                 value: utxo.value,
                 height: utxo.height,
-                outpoint: ic_btc_types::OutPoint {
+                outpoint: ic_btc_interface::OutPoint {
                     vout: utxo.outpoint.vout,
                     txid: utxo.outpoint.txid.to_vec(),
                 },
@@ -271,11 +271,14 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, runtime, state,
-        test_utils::{random_p2pkh_address, random_p2tr_address, BlockBuilder, TransactionBuilder},
+        test_utils::{
+            random_p2pkh_address, random_p2tr_address, random_p2wpkh_address, random_p2wsh_address,
+            BlockBuilder, TransactionBuilder,
+        },
         types::{Block, Config, Fees, Network},
         with_state_mut,
     };
-    use ic_btc_types::{OutPoint, Utxo};
+    use ic_btc_interface::{OutPoint, Utxo};
     use proptest::prelude::*;
 
     #[test]
@@ -464,16 +467,29 @@ mod test {
     #[test]
     fn supports_taproot_addresses() {
         let network = Network::Regtest;
+        supports_address(network, random_p2tr_address(network));
+    }
 
+    #[test]
+    fn supports_p2wpkh_addresses() {
+        let network = Network::Regtest;
+        supports_address(network, random_p2wpkh_address(network));
+    }
+
+    #[test]
+    fn supports_p2wsh_addresses() {
+        let network = Network::Regtest;
+        supports_address(network, random_p2wsh_address(network));
+    }
+
+    // Tests that the provided address is supported and its UTXOs can be fetched.
+    fn supports_address(network: Network, address: Address) {
         crate::init(Config {
-            stability_threshold: 1,
             network,
             ..Default::default()
         });
 
-        let address = random_p2tr_address(network);
-
-        // Create a genesis block where 1000 satoshis are given to a taproot address.
+        // Create a genesis block where 1000 satoshis are given to the address.
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
@@ -487,7 +503,7 @@ mod test {
             state::insert_block(state, block.clone()).unwrap();
         });
 
-        // Assert that the UTXOs of the taproot address can be retrieved.
+        // Assert that the UTXOs of the address can be retrieved.
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: address.to_string(),

@@ -15,7 +15,7 @@ use ic_btc_canister::{
     unstable_blocks::{self, UnstableBlocks},
     with_state, with_state_mut,
 };
-use ic_btc_types::Height;
+use ic_btc_interface::Height;
 use ic_stable_structures::FileMemory;
 use std::{
     collections::BTreeMap,

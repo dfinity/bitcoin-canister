@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
-use ic_btc_types::{Height, Satoshi};
+use ic_btc_interface::{Height, Satoshi};
 use ic_stable_structures::{StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};

@@ -3,7 +3,7 @@ use bitcoin::{
     util::uint::Uint256, Address as BitcoinAddress, Block as BitcoinBlock,
     Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
-use ic_btc_types::{
+use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
     GetUtxosRequest as PublicGetUtxosRequest, Height, NetworkInRequest, Satoshi, UtxosFilter,
     UtxosFilterInRequest,

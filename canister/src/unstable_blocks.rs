@@ -4,7 +4,7 @@ use crate::{
     types::{Address, Block, BlockHash, Network, OutPoint, TxOut},
     UtxoSet,
 };
-use ic_btc_types::Height;
+use ic_btc_interface::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
