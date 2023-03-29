@@ -112,6 +112,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             &state.metrics.block_ingestion_stats.get_labels_and_values(),
         )?;
 
+        w.encode_gauge(
+            "is_synced",
+            if crate::is_synced() { 1.0 } else { 0.0 },
+            "Is the canister synced with the network?",
+        )?;
+
         Ok(())
     })
 }
