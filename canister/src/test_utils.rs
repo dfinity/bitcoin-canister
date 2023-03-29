@@ -3,13 +3,14 @@ use crate::{
     types::{Address, Block, Network, OutPoint, Transaction},
 };
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress, BlockHeader,
-    PublicKey,
+    hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
+    BlockHeader, PublicKey, Script, WScriptHash,
 };
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
+use proptest::prelude::RngCore;
 use std::str::FromStr;
 
 /// Generates a random P2PKH address.
@@ -26,6 +27,28 @@ pub fn random_p2pkh_address(network: Network) -> Address {
 
 pub fn random_p2tr_address(network: Network) -> Address {
     ic_btc_test_utils::random_p2tr_address(network.into()).into()
+}
+
+pub fn random_p2wpkh_address(network: Network) -> Address {
+    let secp = Secp256k1::new();
+    let mut rng = OsRng::new().unwrap();
+    BitcoinAddress::p2wpkh(
+        &PublicKey::new(secp.generate_keypair(&mut rng).1),
+        network.into(),
+    )
+    .expect("failed to create p2wpkh address")
+    .into()
+}
+
+pub fn random_p2wsh_address(network: Network) -> Address {
+    let mut rng = OsRng::new().unwrap();
+    let mut hash = [0u8; 32];
+    rng.fill_bytes(&mut hash);
+    BitcoinAddress::p2wsh(
+        &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&hash).unwrap())),
+        network.into(),
+    )
+    .into()
 }
 
 /// Builds a random chain with the given number of block and transactions.
