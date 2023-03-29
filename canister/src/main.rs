@@ -1,5 +1,5 @@
 use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, SetConfigRequest};
-use ic_btc_types::{
+use ic_btc_interface::{
     GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, MillisatoshiPerByte,
     SendTransactionRequest,
 };

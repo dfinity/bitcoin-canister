@@ -5,7 +5,7 @@ use crate::{
     types::{Address, Block, BlockHash, GetUtxosRequest, OutPoint, Page, Txid, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
-use ic_btc_types::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
+use ic_btc_interface::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use serde_bytes::ByteBuf;
 use std::str::FromStr;
 
@@ -233,7 +233,7 @@ fn get_utxos_from_chain(
             PublicUtxo {
                 value: utxo.value,
                 height: utxo.height,
-                outpoint: ic_btc_types::OutPoint {
+                outpoint: ic_btc_interface::OutPoint {
                     vout: utxo.outpoint.vout,
                     txid: utxo.outpoint.txid.to_vec(),
                 },
@@ -275,7 +275,7 @@ mod test {
         types::{Block, Config, Fees, Network},
         with_state_mut,
     };
-    use ic_btc_types::{OutPoint, Utxo};
+    use ic_btc_interface::{OutPoint, Utxo};
     use proptest::prelude::*;
 
     #[test]

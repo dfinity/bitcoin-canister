@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use async_std::task::block_on;
-use ic_btc_types::UtxosFilter;
+use ic_btc_interface::UtxosFilter;
 use proptest::prelude::*;
 
 const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
