@@ -151,14 +151,10 @@ pub fn push(
 
     let height = utxos.next_height() + depth + 1;
 
-    // TODO(EXC-1253): Make this whole function atomic.
-    // TODO(EXC-1254): Add time-slicing as inserting a block into the outpoints cache can be expensive.
-    // TODO(EXC-1256): Do not maintain the OutPointsCache until we're close to the tip.
-    // TODO(EXC-1255): Propagate the error here.
     blocks
         .outpoints_cache
         .insert(utxos, &block, height)
-        .unwrap();
+        .expect("inserting to outpoints cache must succeed.");
 
     let block_hash = block.block_hash();
 
