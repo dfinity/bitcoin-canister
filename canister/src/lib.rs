@@ -219,7 +219,7 @@ fn verify_api_access() {
     });
 }
 
-// Verifies that if the difference between the maximum height
+// Verifies if the difference between the maximum height
 // of all block headers and the maximum height of all unstable
 // blocks is at most the SYNCED_THRESHOLD.
 fn verify_synced() {
