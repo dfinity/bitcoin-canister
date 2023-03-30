@@ -219,16 +219,26 @@ fn verify_api_access() {
     });
 }
 
-/// Verifies that if the difference between the maximum height
-/// of all block headers and the maximum height of all unstable
-/// blocks is at most the SYNCED_THRESHOLD.
+// Verifies if the difference between the maximum height
+// of all block headers and the maximum height of all unstable
+// blocks is at most the SYNCED_THRESHOLD.
 fn verify_synced() {
     with_state(|state| {
         if state.disable_api_if_not_fully_synced == Flag::Disabled {
             return;
         }
+
+        if !is_synced() {
+            panic!("Canister state is not fully synced.");
+        }
+    });
+}
+
+/// Returns true if the canister is synced with the network, false otherwise.
+pub(crate) fn is_synced() -> bool {
+    with_state(|state| {
         let main_chain_height = main_chain_height(state);
-        if main_chain_height + SYNCED_THRESHOLD
+        main_chain_height + SYNCED_THRESHOLD
             < max(
                 state
                     .unstable_blocks
@@ -236,10 +246,7 @@ fn verify_synced() {
                     .unwrap_or(0),
                 main_chain_height,
             )
-        {
-            panic!("Canister state is not fully synced.");
-        }
-    });
+    })
 }
 
 #[cfg(test)]
