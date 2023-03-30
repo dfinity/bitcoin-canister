@@ -97,10 +97,13 @@ pub struct Fees {
     pub send_transaction_per_byte: u128,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq)]
+// NOTE: If new fields are added, then the implementation of `PartialEq` should be updated.
+#[derive(Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct Block {
     block: BitcoinBlock,
     transactions: Vec<Transaction>,
+    block_hash: RefCell<Option<BlockHash>>,
+
     #[cfg(test)]
     pub mock_difficulty: Option<u64>,
 }
@@ -114,6 +117,7 @@ impl Block {
                 .map(|tx| Transaction::new(tx.clone()))
                 .collect(),
             block,
+            block_hash: RefCell::new(None),
             #[cfg(test)]
             mock_difficulty: None,
         }
@@ -124,7 +128,10 @@ impl Block {
     }
 
     pub fn block_hash(&self) -> BlockHash {
-        BlockHash::from(self.block.block_hash())
+        self.block_hash
+            .borrow_mut()
+            .get_or_insert_with(|| BlockHash::from(self.block.block_hash()))
+            .clone()
     }
 
     pub fn txdata(&self) -> &[Transaction] {
@@ -150,6 +157,12 @@ impl Block {
     // https://en.bitcoin.it/wiki/Difficulty
     fn target_difficulty(network: Network, target: Uint256) -> u64 {
         (ic_btc_validation::max_target(&network.into()) / target).low_u64()
+    }
+}
+
+impl PartialEq for Block {
+    fn eq(&self, other: &Self) -> bool {
+        self.block == other.block && self.transactions == other.transactions
     }
 }
 
