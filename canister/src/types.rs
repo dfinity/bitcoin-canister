@@ -128,17 +128,10 @@ impl Block {
     }
 
     pub fn block_hash(&self) -> BlockHash {
-        if self.block_hash.borrow().is_none() {
-            // Compute the block_hash as it wasn't computed already.
-            // `block.block_hash()` is an expensive call, so it's useful to cache.
-            let block_hash = BlockHash::from(self.block.block_hash());
-            self.block_hash.borrow_mut().replace(block_hash);
-        }
-
         self.block_hash
-            .borrow()
+            .borrow_mut()
+            .get_or_insert_with(|| BlockHash::from(self.block.block_hash()))
             .clone()
-            .expect("block hash must be available")
     }
 
     pub fn txdata(&self) -> &[Transaction] {
