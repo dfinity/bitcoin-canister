@@ -239,7 +239,7 @@ pub(crate) fn is_synced() -> bool {
     with_state(|state| {
         let main_chain_height = main_chain_height(state);
         main_chain_height + SYNCED_THRESHOLD
-            < max(
+            >= max(
                 state
                     .unstable_blocks
                     .next_block_hashes_max_height()
