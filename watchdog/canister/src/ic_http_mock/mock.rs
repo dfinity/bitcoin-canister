@@ -44,7 +44,12 @@ fn hash(request: &CanisterHttpRequestArgument) -> String {
     let body = String::from_utf8(request.body.as_ref().unwrap_or(&vec![]).clone())
         .expect("Raw response is not UTF-8 encoded.");
     hash.push_str(&body);
-    //hash.push_str(request.transform.map());
+    let function_name = request
+        .transform
+        .as_ref()
+        .map(|transform| transform.function.0.method.clone())
+        .unwrap_or_default();
+    hash.push_str(&function_name);
 
     hash
 }
