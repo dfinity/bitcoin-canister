@@ -48,11 +48,12 @@ pub struct State {
     pub metrics: Metrics,
 
     /// Flag to control access to the apis provided by the canister.
-    #[serde(default)]
     pub api_access: Flag,
 
     /// Flag to determine if the API should be automatically disabled
     /// if the canister isn't fully synced.
+    // TODO(EXC-1379): Remove this code once it's deployed to production.
+    #[serde(default)]
     pub disable_api_if_not_fully_synced: Flag,
 }
 
