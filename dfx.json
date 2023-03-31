@@ -14,7 +14,7 @@
       "build": "./scripts/build-canister.sh benchmarks",
       "wasm": "./target/wasm32-unknown-unknown/release/benchmarks.wasm.gz"
     },
-    "upgradablity-test": {
+    "upgradability-test": {
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "upgradability-test.wasm.gz"
