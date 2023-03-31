@@ -7,7 +7,7 @@
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
-    "upgradablity-test": {
+    "upgradability-test": {
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "upgradability-test.wasm.gz"

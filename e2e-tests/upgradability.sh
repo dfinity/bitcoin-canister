@@ -36,13 +36,19 @@ wget -O upgradability-test.wasm.gz "${LATEST_RELEASE}"
 dfx start --background --clean
 
 # Deploy the latest release
-dfx deploy --no-wallet upgradablity-test --argument "${ARGUMENT}"
+dfx deploy --no-wallet upgradability-test --argument "${ARGUMENT}"
 
-dfx canister stop upgradablity-test
+dfx canister stop upgradability-test
 
-# replace from upgradablity-test with bitcoin in .dfx/local/canister_ids.json
+# replace from upgradability-test with bitcoin in .dfx/local/canister_ids.json
 # so that the canister is upgraded to the bitcoin canister of the current branch.
 sed -i'' -e 's/upgradability-test/bitcoin/' .dfx/local/canister_ids.json
+
+# Verify that the bitcoin canister now exists and is already stopped.
+if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
+  echo "Bitcoin canister must be already created and stopped."
+  exit 1
+fi
 
 # Deploy upgraded canister
 dfx deploy --no-wallet bitcoin --argument "${ARGUMENT}"
