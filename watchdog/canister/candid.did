@@ -1,0 +1,42 @@
+type config = record {
+  timer_interval_secs: nat32;
+  min_explorers: nat32;
+  blocks_ahead_threshold: int32;
+  blocks_behind_threshold: int32;
+  storage_ttl_millis: nat64;
+};
+
+type status_code = variant {
+  ok;
+  behind;
+  ahead;
+  no_bitcoin_canister_data;
+  not_enough_explorers;
+  no_pivot_data;
+};
+
+type status = record {
+  code: status_code;
+  message: text;
+  height_diff: opt int32;
+};
+
+type block_height = nat64;
+type tuple_name_height = record {
+  text;
+  block_height;
+};
+
+type info = record {
+  config: config;
+  status: status;
+  bitcoin_canister: opt block_height;
+  pivot: opt tuple_name_height;
+  explorers_n: nat32;
+  explorers: vec tuple_name_height;
+};
+
+service : (nat64) -> {
+  get_info: () -> (info) query;
+  get_info_json: () -> (text) query;
+}
