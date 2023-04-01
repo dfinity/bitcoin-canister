@@ -36,7 +36,7 @@ type info = record {
   explorers: vec tuple_name_height;
 };
 
-service : (nat64) -> {
+service : {
   get_info: () -> (info) query;
   get_info_json: () -> (text) query;
 }

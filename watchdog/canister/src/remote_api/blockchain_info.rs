@@ -46,7 +46,7 @@ impl BlockchainInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, HttpResponseBuilder};
+    use crate::ic_http_mock::{mock, create_response};
 
     // https://blockchain.info/q/getblockcount
     const RESPONSE: &str = "700001";
@@ -67,7 +67,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = BlockchainInfo::create_request();
-        let mocked_response = HttpResponseBuilder::new()
+        let mocked_response = create_response()
             .status(200)
             .body(RESPONSE)
             .build();

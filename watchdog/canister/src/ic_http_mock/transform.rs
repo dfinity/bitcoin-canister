@@ -7,23 +7,22 @@ use std::collections::HashMap;
 
 pub type TransformFn = fn(TransformArgs) -> HttpResponse;
 
+// A thread-local hashmap that stores transform functions.
 thread_local! {
     static TRANSFORM_FUNCTIONS: RefCell<HashMap<String, TransformFn>> = RefCell::default();
 }
 
-fn insert(function_name: String, func: TransformFn) {
+/// Inserts the provided transform function into a thread-local hashmap.
+fn registry_insert(function_name: String, func: TransformFn) {
     TRANSFORM_FUNCTIONS.with(|cell| cell.borrow_mut().insert(function_name, func));
 }
 
-pub(crate) fn get(function_name: String) -> Option<TransformFn> {
+/// Returns a cloned transform function from the thread-local hashmap.
+pub fn registry_get(function_name: String) -> Option<TransformFn> {
     TRANSFORM_FUNCTIONS.with(|cell| cell.borrow().get(&function_name).copied())
 }
 
-pub struct TransformContextBuilder {
-    func: TransformFn,
-    context: Vec<u8>,
-}
-
+/// Returns the name of a function as a string.
 fn get_function_name<F>(_: F) -> &'static str {
     let full_name = std::any::type_name::<F>();
     match full_name.rfind(':') {
@@ -32,38 +31,17 @@ fn get_function_name<F>(_: F) -> &'static str {
     }
 }
 
-fn transform_no_op(args: TransformArgs) -> HttpResponse {
-    args.response
-}
+/// Creates a `TransformContext` from a transform function and a context.
+/// Also inserts the transform function into a thread-local hashmap.
+pub fn create_transform_context(func: TransformFn, context: Vec<u8>) -> TransformContext {
+    let function_name = get_function_name(func).to_string();
+    registry_insert(function_name.clone(), func);
 
-impl TransformContextBuilder {
-    pub fn new() -> Self {
-        Self {
-            func: transform_no_op,
-            context: vec![],
-        }
-    }
-
-    pub fn func(mut self, func: TransformFn) -> Self {
-        self.func = func;
-        self
-    }
-
-    pub fn context(mut self, context: Vec<u8>) -> Self {
-        self.context = context;
-        self
-    }
-
-    pub fn build(self) -> TransformContext {
-        let function_name = get_function_name(self.func).to_string();
-        insert(function_name.clone(), self.func);
-
-        TransformContext {
-            function: TransformFunc(candid::Func {
-                principal: Principal::anonymous(),
-                method: function_name,
-            }),
-            context: self.context,
-        }
+    TransformContext {
+        function: TransformFunc(candid::Func {
+            principal: Principal::anonymous(),
+            method: function_name,
+        }),
+        context,
     }
 }

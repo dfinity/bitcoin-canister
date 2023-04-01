@@ -98,7 +98,7 @@ impl BitcoinCanister {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, HttpResponseBuilder};
+    use crate::ic_http_mock::{mock, create_response};
 
     // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
     const RESPONSE: &str = r#"{
@@ -132,7 +132,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = BitcoinCanister::create_request();
-        let mocked_response = HttpResponseBuilder::new()
+        let mocked_response = create_response()
             .status(200)
             .body(RESPONSE)
             .build();

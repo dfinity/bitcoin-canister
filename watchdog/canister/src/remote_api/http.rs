@@ -11,12 +11,12 @@ use ic_cdk::api::management_canister::http_request::{
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub async fn fetch(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
-    crate::ic_http_mock::fetch(arg).await
+pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
+    crate::ic_http_mock::http_request(&arg).await
 }
 
 #[cfg(target_arch = "wasm32")]
-pub async fn fetch(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
+pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
     ic_cdk::api::management_canister::http_request::http_request(arg).await
 }
 
@@ -25,10 +25,7 @@ pub fn build_transform_context(
     func: crate::ic_http_mock::TransformFn,
     context: Vec<u8>,
 ) -> TransformContext {
-    crate::ic_http_mock::TransformContextBuilder::new()
-        .func(func)
-        .context(context)
-        .build()
+    crate::ic_http_mock::create_transform_context(func, context)
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -40,7 +37,7 @@ where
 }
 
 pub async fn fetch_body(request: CanisterHttpRequestArgument) -> Result<String, String> {
-    match fetch(request).await {
+    match http_request(request).await {
         Ok((response,)) => {
             if response.status == 200 {
                 let body = String::from_utf8(response.body)
@@ -113,12 +110,12 @@ pub fn apply_to_body_json(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, HttpRequestBuilder, HttpResponseBuilder};
+    use crate::ic_http_mock::{mock, create_request, create_response};
 
     #[tokio::test]
     async fn test_fetch_body_status_200() {
-        let request = HttpRequestBuilder::new().build();
-        let mocked_response = HttpResponseBuilder::new().status(200).body("hello").build();
+        let request = create_request().build();
+        let mocked_response = create_response().status(200).body("hello").build();
         mock(&request, &mocked_response);
 
         let response = fetch_body(request).await;
@@ -128,8 +125,8 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_body_status_404() {
-        let request = HttpRequestBuilder::new().build();
-        let mocked_response = HttpResponseBuilder::new()
+        let request = create_request().build();
+        let mocked_response = create_response()
             .status(404)
             .body("page not found")
             .build();

@@ -71,7 +71,7 @@ impl ApiBlockcypherCom {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, HttpResponseBuilder};
+    use crate::ic_http_mock::{mock, create_response};
 
     // https://api.blockcypher.com/v1/btc/main
     const RESPONSE: &str = r#"{
@@ -107,7 +107,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = ApiBlockcypherCom::create_request();
-        let mocked_response = HttpResponseBuilder::new()
+        let mocked_response = create_response()
             .status(200)
             .body(RESPONSE)
             .build();
