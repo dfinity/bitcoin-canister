@@ -19,6 +19,7 @@ pub use blockstream_info::BlockstreamInfo;
 mod chain_api_btc_com;
 pub use chain_api_btc_com::ChainApiBtcCom;
 
+/// The remote APIs.
 #[derive(Eq, PartialEq, Debug)]
 pub enum RemoteAPI {
     ApiBitapsCom,
@@ -30,6 +31,7 @@ pub enum RemoteAPI {
 }
 
 impl RemoteAPI {
+    /// The host name of the remote API.
     fn host(&self) -> &'static str {
         match self {
             RemoteAPI::ApiBitapsCom => ApiBitapsCom::host(),

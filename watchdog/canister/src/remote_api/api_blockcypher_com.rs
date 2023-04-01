@@ -8,6 +8,7 @@ use ic_cdk::api::management_canister::http_request::{
 };
 use serde_json::json;
 
+/// The transform function for the remote API.
 #[ic_cdk_macros::query]
 fn transform_api_block_cypher_com(raw: TransformArgs) -> HttpResponse {
     apply_to_body_json(raw, ApiBlockcypherCom::transform)
@@ -15,23 +16,28 @@ fn transform_api_block_cypher_com(raw: TransformArgs) -> HttpResponse {
 pub struct ApiBlockcypherCom {}
 
 impl ApiBlockcypherCom {
+    /// The host name of the remote API.
     pub fn host() -> &'static str {
         "api.blockcypher.com"
     }
 
+    /// The URL of the remote API.
     pub fn url() -> String {
         let host = Self::host();
         format!("https://{host}/v1/btc/main")
     }
 
+    /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
         storage::get(Self::host())
     }
 
+    /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
         storage::insert(Self::host(), height)
     }
 
+    /// The transform function for the JSON body.
     fn transform(json: serde_json::Value) -> serde_json::Value {
         let empty = json!({});
         match json.get("height").and_then(BlockHeight::from_json) {
@@ -40,6 +46,7 @@ impl ApiBlockcypherCom {
         }
     }
 
+    /// Creates the HTTP request.
     fn create_request() -> CanisterHttpRequestArgument {
         create_request(
             Self::host(),
@@ -52,6 +59,7 @@ impl ApiBlockcypherCom {
         )
     }
 
+    /// Fetches the block height from the remote API and stores it in the local storage.
     pub async fn fetch() {
         let request = Self::create_request();
         let body = fetch_body(request).await;
@@ -71,7 +79,7 @@ impl ApiBlockcypherCom {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, create_response};
+    use crate::ic_http_mock::{create_response, mock};
 
     // https://api.blockcypher.com/v1/btc/main
     const RESPONSE: &str = r#"{
@@ -107,10 +115,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = ApiBlockcypherCom::create_request();
-        let mocked_response = create_response()
-            .status(200)
-            .body(RESPONSE)
-            .build();
+        let mocked_response = create_response().status(200).body(RESPONSE).build();
         mock(&request, &mocked_response);
 
         ApiBlockcypherCom::fetch().await;

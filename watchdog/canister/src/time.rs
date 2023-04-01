@@ -8,12 +8,19 @@ use std::time::Instant;
 
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
+    /// Canister inner uptime since start in nanoseconds.
     static START: RefCell<Instant> = RefCell::new(Instant::now());
 }
 
 /// Canister inner uptime since start in nanoseconds.
 #[derive(Copy, Clone)]
 pub struct CanisterUptime(u128);
+
+impl CanisterUptime {
+    fn from_nanos(nanos: u128) -> Self {
+        CanisterUptime(nanos)
+    }
+}
 
 impl std::ops::Sub<CanisterUptime> for CanisterUptime {
     type Output = Duration;
@@ -30,7 +37,7 @@ impl std::ops::Sub<CanisterUptime> for CanisterUptime {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn now() -> CanisterUptime {
     let nanos = START.with(|cell| cell.borrow().elapsed().as_nanos());
-    CanisterUptime(nanos)
+    CanisterUptime::from_nanos(nanos)
 }
 
 /// Canister inner uptime since start in nanoseconds.
@@ -38,5 +45,5 @@ pub fn now() -> CanisterUptime {
 pub fn now() -> CanisterUptime {
     // Current timestamp, in nanoseconds since the epoch (1970-01-01).
     let nanos = ic_cdk::api::time();
-    CanisterUptime(nanos.into())
+    CanisterUptime::from_nanos(nanos.into())
 }

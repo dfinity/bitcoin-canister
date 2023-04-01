@@ -23,6 +23,7 @@ pub fn print(msg: &str) {
     println!("{}", msg);
 }
 
+/// Fetches the latest block height from the remote APIs.
 pub async fn tick_async() {
     print("tick_async...");
 
@@ -37,6 +38,7 @@ pub async fn tick_async() {
     join_all(futures).await;
 }
 
+/// Returns the health info report based on the latest block heights.
 pub fn get_info() -> Info {
     let mut heights = vec![];
     // if let Some(height) = ApiBitapsCom::get_height() {

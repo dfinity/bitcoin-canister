@@ -9,6 +9,7 @@ use std::cell::RefCell;
 
 const RE_PATTERN: &str = r"\n\s*main_chain_height (\d+) \d+\n";
 
+// This is a thread-local storage for calculating the regex only once.
 thread_local! {
     static REGEX: RefCell<Result<Regex, regex::Error>> = RefCell::new(Regex::new(RE_PATTERN));
 }
@@ -24,6 +25,7 @@ fn apply(re: &Regex, text: &str) -> Result<String, String> {
     }
 }
 
+/// The transform function for the remote API.
 #[ic_cdk_macros::query]
 fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
     let mut response = HttpResponse {
@@ -43,23 +45,28 @@ fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
 pub struct BitcoinCanister {}
 
 impl BitcoinCanister {
+    /// The host of the remote API.
     pub fn host() -> &'static str {
         "ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app"
     }
 
+    /// The URL of the remote API.
     pub fn url() -> String {
         let host = Self::host();
         format!("https://{host}/metrics")
     }
 
+    /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
         storage::get(Self::host())
     }
 
+    /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
         storage::insert(Self::host(), height)
     }
 
+    /// The transform function for the text body.
     fn transform(text: String) -> String {
         match REGEX.with(|x| x.borrow().clone()) {
             Err(_) => String::new(),
@@ -70,6 +77,7 @@ impl BitcoinCanister {
         }
     }
 
+    /// Creates a request to the remote API.
     fn create_request() -> CanisterHttpRequestArgument {
         create_request(
             Self::host(),
@@ -79,6 +87,7 @@ impl BitcoinCanister {
         )
     }
 
+    /// Fetches the block height from the remote API and stores it in the local storage.
     pub async fn fetch() {
         let request = Self::create_request();
         let body = fetch_body(request).await;
@@ -98,7 +107,7 @@ impl BitcoinCanister {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, create_response};
+    use crate::ic_http_mock::{create_response, mock};
 
     // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
     const RESPONSE: &str = r#"{
@@ -132,10 +141,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = BitcoinCanister::create_request();
-        let mocked_response = create_response()
-            .status(200)
-            .body(RESPONSE)
-            .build();
+        let mocked_response = create_response().status(200).body(RESPONSE).build();
         mock(&request, &mocked_response);
 
         BitcoinCanister::fetch().await;

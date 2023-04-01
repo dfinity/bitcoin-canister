@@ -2,6 +2,7 @@ use crate::types::BlockHeight;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
+/// The status of the bitcoin_canister.
 #[derive(Debug, PartialEq, Serialize, Deserialize, CandidType, Clone)]
 enum StatusCode {
     #[serde(rename = "undefined")]
@@ -21,6 +22,7 @@ enum StatusCode {
 }
 
 impl StatusCode {
+    /// The message of the status code.
     fn message(&self) -> &'static str {
         match self {
             StatusCode::Undefined => "Undefined",
@@ -34,6 +36,7 @@ impl StatusCode {
     }
 }
 
+/// The status of the bitcoin_canister.
 #[derive(Debug, Serialize, Deserialize, CandidType, Clone)]
 struct Status {
     code: StatusCode,
@@ -54,6 +57,7 @@ impl Status {
     }
 }
 
+/// The configuration of the watchdog canister.
 #[derive(Clone, Debug, Serialize, Deserialize, CandidType)]
 pub struct Config {
     pub timer_interval_secs: u32,
@@ -67,6 +71,7 @@ const ONE_SECOND: u64 = 1_000; // 10^3 milli-seconds in one second.
 const ONE_MINUTE: u64 = 60 * ONE_SECOND;
 
 impl Default for Config {
+    /// The default configuration.
     fn default() -> Self {
         Self {
             timer_interval_secs: 60,
@@ -78,6 +83,7 @@ impl Default for Config {
     }
 }
 
+/// The information of the watchdog canister.
 #[derive(Debug, Serialize, Deserialize, CandidType, Clone)]
 pub struct Info {
     config: Config,
@@ -108,15 +114,21 @@ impl Info {
             explorers,
         };
 
+        // Compute the status based on the given data (bitcoin_canister, explorers, pivot).
         let status = match bitcoin_canister {
+            // No bitcoin_canister data.
             None => Status::new(StatusCode::NoBitcoinCanisterData, None),
             Some(bitcoin_canister_height) => {
                 if info.explorers_n < info.config.min_explorers {
+                    // No enough explorers.
                     Status::new(StatusCode::NotEnoughExplorers, None)
                 } else {
                     match &info.pivot {
+                        // No pivot data.
                         None => Status::new(StatusCode::NoPivotData, None),
                         Some((_name, pivot)) => {
+                            // All data is available.
+                            // Compute the difference between the bitcoin_canister height and the pivot.
                             let diff = bitcoin_canister_height.get() as i32 - pivot.get() as i32;
                             if diff < info.config.blocks_behind_threshold {
                                 Status::new(StatusCode::Behind, Some(diff))
@@ -139,6 +151,7 @@ impl Info {
     }
 }
 
+/// The median of the given values.
 fn median<T: std::cmp::Ord + Clone>(mut values: Vec<T>) -> Option<T> {
     let n = values.len();
     if n == 0 {

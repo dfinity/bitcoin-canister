@@ -10,16 +10,19 @@ use ic_cdk::api::management_canister::http_request::{
 /// Errors on the IC have two components; a Code and a message associated with it.
 pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 
+/// A mock for the http_request function.
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
     crate::ic_http_mock::http_request(&arg).await
 }
 
+/// Calls the http_request function.
 #[cfg(target_arch = "wasm32")]
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
     ic_cdk::api::management_canister::http_request::http_request(arg).await
 }
 
+/// A mock for the TransformContext.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn build_transform_context(
     func: crate::ic_http_mock::TransformFn,
@@ -28,6 +31,7 @@ pub fn build_transform_context(
     crate::ic_http_mock::create_transform_context(func, context)
 }
 
+/// Creates a TransformContext.
 #[cfg(target_arch = "wasm32")]
 pub fn build_transform_context<T>(func: T, context: Vec<u8>) -> TransformContext
 where
@@ -36,6 +40,7 @@ where
     TransformContext::new(func, context)
 }
 
+/// Performs a http_request and returns the body of the response.
 pub async fn fetch_body(request: CanisterHttpRequestArgument) -> Result<String, String> {
     match http_request(request).await {
         Ok((response,)) => {
@@ -48,19 +53,20 @@ pub async fn fetch_body(request: CanisterHttpRequestArgument) -> Result<String, 
                     "The http_request resulted into error with status: {:?}",
                     response.status
                 );
-                print(&message.clone());
+                print(&message);
                 Err(message)
             }
         }
         Err((r, m)) => {
             let message =
                 format!("The http_request resulted into error. RejectionCode: {r:?}, Error: {m}");
-            print(&message.clone());
+            print(&message);
             Err(message)
         }
     }
 }
 
+/// Creates a CanisterHttpRequestArgument.
 pub fn create_request(
     host: &str,
     url: String,
@@ -86,6 +92,7 @@ pub fn create_request(
     }
 }
 
+/// Applies a function to the body of the response assuming it contains JSON.
 pub fn apply_to_body_json(
     raw: TransformArgs,
     function: fn(serde_json::Value) -> serde_json::Value,
@@ -110,7 +117,7 @@ pub fn apply_to_body_json(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, create_request, create_response};
+    use crate::ic_http_mock::{create_request, create_response, mock};
 
     #[tokio::test]
     async fn test_fetch_body_status_200() {
@@ -126,10 +133,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_body_status_404() {
         let request = create_request().build();
-        let mocked_response = create_response()
-            .status(404)
-            .body("page not found")
-            .build();
+        let mocked_response = create_response().status(404).body("page not found").build();
         mock(&request, &mocked_response);
 
         let response = fetch_body(request).await;

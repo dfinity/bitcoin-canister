@@ -10,29 +10,35 @@ use serde_json::json;
 
 pub struct ChainApiBtcCom {}
 
+/// The transform function for the remote API.
 #[ic_cdk_macros::query]
 fn transform_chain_api_btc_com(raw: TransformArgs) -> HttpResponse {
     apply_to_body_json(raw, ChainApiBtcCom::transform)
 }
 
 impl ChainApiBtcCom {
+    /// The host name of the remote API.
     pub fn host() -> &'static str {
         "chain.api.btc.com"
     }
 
+    /// The URL of the remote API.
     pub fn url() -> String {
         let host = Self::host();
         format!("https://{host}/v3/block/latest")
     }
 
+    /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
         storage::get(Self::host())
     }
 
+    /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
         storage::insert(Self::host(), height)
     }
 
+    /// The transform function for the JSON body.
     fn transform(json: serde_json::Value) -> serde_json::Value {
         let empty = json!({});
         match json
@@ -46,6 +52,7 @@ impl ChainApiBtcCom {
         }
     }
 
+    /// Creates the HTTP request.
     fn create_request() -> CanisterHttpRequestArgument {
         create_request(
             Self::host(),
@@ -55,6 +62,7 @@ impl ChainApiBtcCom {
         )
     }
 
+    /// Fetches the block height from the remote API and stores it in the local storage.
     pub async fn fetch() {
         let request = Self::create_request();
         let body = fetch_body(request).await;
@@ -74,7 +82,7 @@ impl ChainApiBtcCom {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, create_response};
+    use crate::ic_http_mock::{create_response, mock};
 
     // https://chain.api.btc.com/v3/block/latest
     const RESPONSE: &str = r#"{
@@ -129,10 +137,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = ChainApiBtcCom::create_request();
-        let mocked_response = create_response()
-            .status(200)
-            .body(RESPONSE)
-            .build();
+        let mocked_response = create_response().status(200).body(RESPONSE).build();
         mock(&request, &mocked_response);
 
         ChainApiBtcCom::fetch().await;

@@ -3,6 +3,7 @@ use watchdog::{Config, Info};
 
 #[ic_cdk_macros::init]
 fn init() {
+    // Initialize the timer with the interval specified in the config.
     let config = Config::default();
     let interval = std::time::Duration::from_secs(config.timer_interval_secs as u64);
     watchdog::print(&format!(

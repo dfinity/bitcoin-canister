@@ -12,10 +12,12 @@ struct Entry {
     height: BlockHeight,
 }
 
+// This is a thread-local storage for the remote API data.
 thread_local! {
     static STORAGE: RefCell<HashMap<String, Entry>> = RefCell::default();
 }
 
+/// Inserts a new entry into the storage.
 pub(crate) fn insert(key: &str, height: BlockHeight) {
     let entry = Entry {
         insertion_time: time::now(),
@@ -24,6 +26,7 @@ pub(crate) fn insert(key: &str, height: BlockHeight) {
     STORAGE.with(|cell| cell.borrow_mut().insert(key.to_string(), entry));
 }
 
+/// Returns the entry from the storage.
 pub(crate) fn get(key: &str) -> Option<BlockHeight> {
     let entry = STORAGE.with(|cell| cell.borrow().get(&key.to_string()).copied());
     match entry {

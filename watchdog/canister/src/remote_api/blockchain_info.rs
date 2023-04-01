@@ -6,27 +6,33 @@ use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
 pub struct BlockchainInfo {}
 
 impl BlockchainInfo {
+    /// The host name of the remote API.
     pub fn host() -> &'static str {
         "blockchain.info"
     }
 
+    /// The URL of the remote API.
     pub fn url() -> String {
         let host = Self::host();
         format!("https://{host}/q/getblockcount")
     }
 
+    /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
         storage::get(Self::host())
     }
 
+    /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
         storage::insert(Self::host(), height)
     }
 
+    /// Creates the HTTP request.
     fn create_request() -> CanisterHttpRequestArgument {
         create_request(Self::host(), Self::url(), None, None)
     }
 
+    /// Fetches the block height from the remote API and stores it in the local storage.
     pub async fn fetch() {
         let request = Self::create_request();
         let body = fetch_body(request).await;
@@ -46,7 +52,7 @@ impl BlockchainInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{mock, create_response};
+    use crate::ic_http_mock::{create_response, mock};
 
     // https://blockchain.info/q/getblockcount
     const RESPONSE: &str = "700001";
@@ -67,10 +73,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch() {
         let request = BlockchainInfo::create_request();
-        let mocked_response = create_response()
-            .status(200)
-            .body(RESPONSE)
-            .build();
+        let mocked_response = create_response().status(200).body(RESPONSE).build();
         mock(&request, &mocked_response);
 
         BlockchainInfo::fetch().await;
