@@ -79,7 +79,7 @@ impl ApiBlockcypherCom {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_response, mock};
+    use ic_http_mock::{create_response, mock};
 
     // https://api.blockcypher.com/v1/btc/main
     const RESPONSE: &str = r#"{

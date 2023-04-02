@@ -82,7 +82,7 @@ impl ChainApiBtcCom {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_response, mock};
+    use ic_http_mock::{create_response, mock};
 
     // https://chain.api.btc.com/v3/block/latest
     const RESPONSE: &str = r#"{

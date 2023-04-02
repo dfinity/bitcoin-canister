@@ -82,7 +82,7 @@ impl ApiBitapsCom {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_response, mock};
+    use ic_http_mock::{create_response, mock};
 
     // https://api.bitaps.com/btc/v1/blockchain/block/last
     const RESPONSE: &str = r#"{

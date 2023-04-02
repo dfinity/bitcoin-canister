@@ -5,7 +5,6 @@ use ic_cdk::api::management_canister::http_request::{
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::time::Duration;
-use crate::ic_http_mock::transform;
 
 // A thread-local hashmap that stores mocks.
 thread_local! {
@@ -54,7 +53,7 @@ pub fn mock_with_delay(
     });
 }
 
-/// This function handles incoming HTTP requests by retrieving a mock response based
+/// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
 pub async fn http_request(
@@ -87,7 +86,7 @@ pub async fn http_request(
 
     // Apply the transform function if one is specified.
     let transform = match request.transform {
-        Some(ref t) => transform::registry_get(t.function.0.method.clone()),
+        Some(ref t) => crate::transform::registry_get(t.function.0.method.clone()),
         None => None,
     };
     let transformed_response = match transform {

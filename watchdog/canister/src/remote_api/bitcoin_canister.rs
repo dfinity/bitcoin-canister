@@ -107,7 +107,7 @@ impl BitcoinCanister {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_response, mock};
+    use ic_http_mock::{create_response, mock};
 
     // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
     const RESPONSE: &str = r#"{

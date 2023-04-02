@@ -52,7 +52,7 @@ impl BlockstreamInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_response, mock};
+    use ic_http_mock::{create_response, mock};
 
     // https://blockstream.info/api/blocks/tip/height
     const RESPONSE: &str = "783312";

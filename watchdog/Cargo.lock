@@ -501,6 +501,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-http-mock"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "ic-cdk 0.6.10",
+ "ic-cdk-macros",
+ "tokio",
+]
+
+[[package]]
 name = "ic0"
 version = "0.18.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1218,6 +1228,7 @@ dependencies = [
  "ic-cdk 0.6.10",
  "ic-cdk-macros",
  "ic-cdk-timers",
+ "ic-http-mock",
  "regex",
  "serde",
  "serde_json",

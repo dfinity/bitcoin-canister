@@ -13,7 +13,7 @@ pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 /// A mock for the http_request function.
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
-    crate::ic_http_mock::http_request(&arg).await
+    ic_http_mock::http_request(&arg).await
 }
 
 /// Calls the http_request function.
@@ -25,10 +25,10 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 /// A mock for the TransformContext.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn build_transform_context(
-    func: crate::ic_http_mock::TransformFn,
+    func: ic_http_mock::TransformFn,
     context: Vec<u8>,
 ) -> TransformContext {
-    crate::ic_http_mock::create_transform_context(func, context)
+    ic_http_mock::create_transform_context(func, context)
 }
 
 /// Creates a TransformContext.
@@ -117,7 +117,7 @@ pub fn apply_to_body_json(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_request, create_response, mock};
+    use ic_http_mock::{create_request, create_response, mock};
 
     #[tokio::test]
     async fn test_fetch_body_status_200() {

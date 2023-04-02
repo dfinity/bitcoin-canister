@@ -3,8 +3,8 @@ mod remote_api;
 mod time;
 mod types;
 
-#[cfg(not(target_arch = "wasm32"))]
-mod ic_http_mock;
+// #[cfg(not(target_arch = "wasm32"))]
+// mod ic_http_mock;
 
 pub use crate::info::{Config, Info};
 

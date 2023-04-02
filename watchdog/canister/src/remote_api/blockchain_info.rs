@@ -52,7 +52,7 @@ impl BlockchainInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::ic_http_mock::{create_response, mock};
+    use ic_http_mock::{create_response, mock};
 
     // https://blockchain.info/q/getblockcount
     const RESPONSE: &str = "700001";

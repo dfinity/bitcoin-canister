@@ -11,7 +11,7 @@ $ dfx stop
 
 $ dfx start --background  --clean
 
-$ dfx deploy watchdog '(0)'
+$ dfx deploy watchdog
 
 ...
 URLs:
