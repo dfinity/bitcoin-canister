@@ -7,6 +7,11 @@
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
+    "watchdog": {
+      "type": "rust",
+      "package": "watchdog",
+      "candid": "./watchdog/candid.did"
+    },
     "benchmarks": {
       "candid": "./benchmarks/candid.did",
       "package": "benchmarks",
