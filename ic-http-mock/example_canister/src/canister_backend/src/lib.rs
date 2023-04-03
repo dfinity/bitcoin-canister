@@ -2,7 +2,9 @@ use ic_cdk::api::call::RejectionCode;
 use ic_cdk::api::management_canister::http_request::{
     CanisterHttpRequestArgument, HttpHeader, TransformContext,
 };
-use ic_http_mock::*;
+
+#[cfg(not(target_arch = "wasm32"))]
+use ic_http_mock::{HttpResponse, TransformArgs, TransformFn};
 
 #[cfg(target_arch = "wasm32")]
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
@@ -47,7 +49,7 @@ fn transform(raw: TransformArgs) -> HttpResponse {
 /// Apply a transform function to the HTTP response.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn transform_context_wrapper(func: TransformFn, context: Vec<u8>) -> TransformContext {
-    create_transform_context(func, context)
+    ic_http_mock::create_transform_context(func, context)
 }
 
 /// Apply a transform function to the HTTP response.
@@ -63,7 +65,7 @@ where
 fn build_request() -> CanisterHttpRequestArgument {
     let host = "dummyjson.com";
     let url = format!("https://{host}/quotes/1");
-    create_request()
+    ic_http_mock::create_request()
         .get(&url)
         .header(HttpHeader {
             name: "User-Agent".to_string(),
@@ -116,6 +118,7 @@ pub async fn http_request_wrapper(
 #[cfg(test)]
 mod test {
     use super::*;
+    use ic_http_mock::*;
 
     #[tokio::test]
     async fn test_http_request_transform_body() {
