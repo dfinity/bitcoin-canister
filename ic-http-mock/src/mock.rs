@@ -64,6 +64,7 @@ pub async fn http_request(
     mock.times_called += 1;
     insert(mock.clone());
 
+    // Delay the response if necessary.
     if mock.delay > Duration::from_secs(0) {
         // TODO: Use a non-blocking sleep when the CDK supports it.
         #[cfg(not(target_arch = "wasm32"))]
