@@ -4,6 +4,9 @@ mod storage;
 mod api_bitaps_com;
 pub use api_bitaps_com::ApiBitapsCom;
 
+mod api_blockchair_com;
+pub use api_blockchair_com::ApiBlockchairCom;
+
 mod api_blockcypher_com;
 pub use api_blockcypher_com::ApiBlockcypherCom;
 
@@ -23,6 +26,7 @@ pub use chain_api_btc_com::ChainApiBtcCom;
 #[derive(Eq, PartialEq, Debug)]
 pub enum RemoteAPI {
     ApiBitapsCom,
+    ApiBlockchairCom,
     ApiBlockcypherCom,
     BitcoinCanister,
     BlockchainInfo,
@@ -35,6 +39,7 @@ impl RemoteAPI {
     fn host(&self) -> &'static str {
         match self {
             RemoteAPI::ApiBitapsCom => ApiBitapsCom::host(),
+            RemoteAPI::ApiBlockchairCom => ApiBlockchairCom::host(),
             RemoteAPI::ApiBlockcypherCom => ApiBlockcypherCom::host(),
             RemoteAPI::BitcoinCanister => BitcoinCanister::host(),
             RemoteAPI::BlockchainInfo => BlockchainInfo::host(),
@@ -54,6 +59,7 @@ mod test {
 
         let test_cases = [
             (ApiBitapsCom, "api.bitaps.com"),
+            (ApiBlockchairCom, "api.blockchair.com"),
             (ApiBlockcypherCom, "api.blockcypher.com"),
             (BitcoinCanister, "ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app"),
             (BlockchainInfo, "blockchain.info"),
