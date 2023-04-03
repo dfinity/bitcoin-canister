@@ -5,6 +5,7 @@ members = [
     "canister",
     "interface",
     "validation",
+    "watchdog",
 
     # Crates for bootstrapping the state
     "bootstrap/state-builder",
