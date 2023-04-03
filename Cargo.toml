@@ -17,5 +17,7 @@ members = [
     "e2e-tests/scenario-3",
     "e2e-tests/disable-api-if-not-fully-synced-flag",
     "test-utils",
+    "ic-http-mock",
+    "ic-http-mock/example_canister/src/canister_backend",
 ]
 
