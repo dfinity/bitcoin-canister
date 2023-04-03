@@ -4,14 +4,14 @@ use crate::{
     metrics::Metrics,
     runtime::{performance_counter, time},
     types::{
-        Address, Block, BlockHash, Fees, Flag, GetSuccessorsCompleteResponse,
-        GetSuccessorsPartialResponse, Network, Slicing,
+        Address, Block, BlockHash, GetSuccessorsCompleteResponse,
+        GetSuccessorsPartialResponse, Slicing, into_bitcoin_network
     },
     unstable_blocks::{self, UnstableBlocks},
     validation::ValidationContext,
     UtxoSet,
 };
-use ic_btc_interface::{Height, MillisatoshiPerByte};
+use ic_btc_interface::{Height, MillisatoshiPerByte, Fees, Flag, Network};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
@@ -102,7 +102,7 @@ impl State {
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
     let start = performance_counter();
     validate_header(
-        &state.network().into(),
+        &into_bitcoin_network(state.network()),
         &ValidationContext::new(state, block.header())
             .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
         block.header(),

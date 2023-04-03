@@ -21,14 +21,14 @@ mod validation;
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{Block, Config, Flag, HttpRequest, HttpResponse, Network, SetConfigRequest},
+    types::{into_bitcoin_network, Block, HttpRequest, HttpResponse},
 };
 pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
 use ic_btc_interface::{
-    GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosError,
-    GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Satoshi,
+    Config, Flag, GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest,
+    GetUtxosError, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Network, Satoshi,
 };
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
@@ -174,7 +174,9 @@ pub fn http_request(req: HttpRequest) -> HttpResponse {
 
 /// Returns the genesis block of the given network.
 pub(crate) fn genesis_block(network: Network) -> Block {
-    Block::new(bitcoin::blockdata::constants::genesis_block(network.into()))
+    Block::new(bitcoin::blockdata::constants::genesis_block(
+        into_bitcoin_network(network),
+    ))
 }
 
 pub(crate) fn charge_cycles(amount: u128) {
@@ -252,8 +254,8 @@ pub(crate) fn is_synced() -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{test_utils::build_regtest_chain, types::Network};
-    use ic_btc_interface::NetworkInRequest;
+    use crate::{test_utils::build_regtest_chain};
+    use ic_btc_interface::{NetworkInRequest, Network};
     use proptest::prelude::*;
 
     proptest! {

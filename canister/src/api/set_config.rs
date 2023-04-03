@@ -1,4 +1,4 @@
-use crate::SetConfigRequest;
+use ic_btc_interface::SetConfigRequest;
 use std::convert::TryInto;
 
 pub async fn set_config(request: SetConfigRequest) {
@@ -58,11 +58,8 @@ async fn verify_caller() {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        init,
-        types::{Config, Fees, Flag},
-        with_state,
-    };
+    use crate::{init, with_state};
+    use ic_btc_interface::{Config, Fees, Flag};
     use proptest::prelude::*;
 
     #[test]

@@ -5,10 +5,10 @@ use bitcoin::{
 };
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
-    GetUtxosRequest as PublicGetUtxosRequest, Height, NetworkInRequest, Satoshi, UtxosFilter,
-    UtxosFilterInRequest,
+    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi,
+    UtxosFilter, UtxosFilterInRequest,
 };
-use ic_cdk::export::{candid::CandidType, Principal};
+use ic_cdk::export::{candid::CandidType};
 use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -25,77 +25,6 @@ const BLOCK_HEADER_LENGTH: u32 = 80;
 
 // The expected length in bytes of the page.
 const EXPECTED_PAGE_LENGTH: usize = 72;
-
-/// The payload used to initialize the canister.
-#[derive(CandidType, Deserialize)]
-pub struct Config {
-    pub stability_threshold: u128,
-    pub network: Network,
-
-    /// The principal from which blocks are retrieved.
-    ///
-    /// Setting this source to the management canister means that the blocks will be
-    /// fetched directly from the replica, and that's what is used in production.
-    pub blocks_source: Principal,
-
-    pub syncing: Flag,
-
-    pub fees: Fees,
-
-    /// Flag to control access to the apis provided by the canister.
-    pub api_access: Flag,
-
-    /// Flag to determine if the API should be automatically disabled if
-    /// the canister isn't fully synced.
-    pub disable_api_if_not_fully_synced: Flag,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            stability_threshold: 0,
-            network: Network::Regtest,
-            blocks_source: Principal::management_canister(),
-            syncing: Flag::Enabled,
-            fees: Fees::default(),
-            api_access: Flag::Enabled,
-            disable_api_if_not_fully_synced: Flag::Enabled,
-        }
-    }
-}
-
-#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Default)]
-pub struct Fees {
-    /// The base fee to charge for all `get_utxos` requests.
-    pub get_utxos_base: u128,
-
-    /// The number of cycles to charge per 10 instructions.
-    pub get_utxos_cycles_per_ten_instructions: u128,
-
-    /// The maximum amount of cycles that can be charged in a `get_utxos` request.
-    /// A request must send at least this amount for it to be accepted.
-    pub get_utxos_maximum: u128,
-
-    /// The flat fee to charge for a `get_balance` request.
-    pub get_balance: u128,
-
-    /// The maximum amount of cycles that can be charged in a `get_balance` request.
-    /// A request must send at least this amount for it to be accepted.
-    pub get_balance_maximum: u128,
-
-    /// The flat fee to charge for a `get_current_fee_percentiles` request.
-    pub get_current_fee_percentiles: u128,
-
-    /// The maximum amount of cycles that can be charged in a `get_current_fee_percentiles` request.
-    /// A request must send at least this amount for it to be accepted.
-    pub get_current_fee_percentiles_maximum: u128,
-
-    /// The base fee to charge for all `send_transaction` requests.
-    pub send_transaction_base: u128,
-
-    /// The number of cycles to charge for each byte in the transaction.
-    pub send_transaction_per_byte: u128,
-}
 
 // NOTE: If new fields are added, then the implementation of `PartialEq` should be updated.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
@@ -156,7 +85,7 @@ impl Block {
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
     fn target_difficulty(network: Network, target: Uint256) -> u64 {
-        (ic_btc_validation::max_target(&network.into()) / target).low_u64()
+        (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
     }
 }
 
@@ -270,65 +199,6 @@ impl From<&BitcoinTxOut> for TxOut {
         Self {
             value: bitcoin_txout.value,
             script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
-        }
-    }
-}
-
-#[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub enum Network {
-    #[serde(rename = "mainnet")]
-    Mainnet,
-    #[serde(rename = "testnet")]
-    Testnet,
-    #[serde(rename = "regtest")]
-    Regtest,
-}
-
-impl FromStr for Network {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "mainnet" => Ok(Network::Mainnet),
-            "testnet" => Ok(Network::Testnet),
-            "regtest" => Ok(Network::Regtest),
-            _ => Err("Bad network".to_string()),
-        }
-    }
-}
-
-impl From<Network> for BitcoinNetwork {
-    fn from(network: Network) -> Self {
-        match network {
-            Network::Mainnet => BitcoinNetwork::Bitcoin,
-            Network::Testnet => BitcoinNetwork::Testnet,
-            Network::Regtest => BitcoinNetwork::Regtest,
-        }
-    }
-}
-
-impl From<NetworkInRequest> for Network {
-    fn from(network: NetworkInRequest) -> Network {
-        match network {
-            NetworkInRequest::Mainnet | NetworkInRequest::mainnet => Network::Mainnet,
-            NetworkInRequest::Testnet | NetworkInRequest::testnet => Network::Testnet,
-            NetworkInRequest::Regtest | NetworkInRequest::regtest => Network::Regtest,
-        }
-    }
-}
-
-impl std::fmt::Display for Network {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Mainnet => {
-                write!(f, "mainnet")
-            }
-            Self::Testnet => {
-                write!(f, "testnet")
-            }
-            Self::Regtest => {
-                write!(f, "regtest")
-            }
         }
     }
 }
@@ -775,7 +645,8 @@ pub struct Address(String);
 impl Address {
     /// Creates a new address from a bitcoin script.
     pub fn from_script(script: &Script, network: Network) -> Result<Self, InvalidAddress> {
-        let address = BitcoinAddress::from_script(script, network.into()).ok_or(InvalidAddress)?;
+        let address = BitcoinAddress::from_script(script, into_bitcoin_network(network))
+            .ok_or(InvalidAddress)?;
 
         // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
         // that `Address:from_script` succeeds even if the address is invalid.
@@ -909,31 +780,12 @@ impl PartialOrd for Utxo {
     }
 }
 
-#[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug, Default)]
-pub enum Flag {
-    #[serde(rename = "enabled")]
-    #[default]
-    Enabled,
-    #[serde(rename = "disabled")]
-    Disabled,
-}
-
-/// A request to update the canister's config.
-#[derive(CandidType, Deserialize, Default)]
-pub struct SetConfigRequest {
-    pub stability_threshold: Option<u128>,
-
-    /// Whether or not to enable/disable syncing of blocks from the network.
-    pub syncing: Option<Flag>,
-
-    /// The fees to charge for the various endpoints.
-    pub fees: Option<Fees>,
-
-    /// Whether or not to enable/disable the bitcoin apis.
-    pub api_access: Option<Flag>,
-
-    /// Whether or not to enable/disable the bitcoin apis if not fully synced.
-    pub disable_api_if_not_fully_synced: Option<Flag>,
+pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
+    match network {
+        Network::Mainnet => BitcoinNetwork::Bitcoin,
+        Network::Testnet => BitcoinNetwork::Testnet,
+        Network::Regtest => BitcoinNetwork::Regtest,
+    }
 }
 
 #[test]
