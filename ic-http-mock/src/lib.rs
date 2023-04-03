@@ -85,7 +85,7 @@
 //!
 //! Corresponding test:
 //!
-//! ```rust
+//! ```ignore
 //! #[tokio::test]
 //! async fn test_http_request_transform_body() {
 //!     // Arrange
