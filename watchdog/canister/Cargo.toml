@@ -22,8 +22,5 @@ regex = "1.7.0"
 futures = "0.3.27"
 ic-http-mock = {path = "../../ic-http-mock"}
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.15.0", features = [ "full" ] }
-
 [dev-dependencies]
 tokio = { version = "1.15.0", features = [ "full" ] }
