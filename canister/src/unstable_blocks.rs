@@ -277,7 +277,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{test_utils::BlockBuilder};
+    use crate::test_utils::BlockBuilder;
     use ic_btc_interface::Network;
 
     #[test]

@@ -254,8 +254,8 @@ pub(crate) fn is_synced() -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{test_utils::build_regtest_chain};
-    use ic_btc_interface::{NetworkInRequest, Network};
+    use crate::test_utils::build_regtest_chain;
+    use ic_btc_interface::{Network, NetworkInRequest};
     use proptest::prelude::*;
 
     proptest! {

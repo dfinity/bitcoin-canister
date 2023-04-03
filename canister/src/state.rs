@@ -4,14 +4,14 @@ use crate::{
     metrics::Metrics,
     runtime::{performance_counter, time},
     types::{
-        Address, Block, BlockHash, GetSuccessorsCompleteResponse,
-        GetSuccessorsPartialResponse, Slicing, into_bitcoin_network
+        into_bitcoin_network, Address, Block, BlockHash, GetSuccessorsCompleteResponse,
+        GetSuccessorsPartialResponse, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
     validation::ValidationContext,
     UtxoSet,
 };
-use ic_btc_interface::{Height, MillisatoshiPerByte, Fees, Flag, Network};
+use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};

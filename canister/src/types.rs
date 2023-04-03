@@ -5,10 +5,10 @@ use bitcoin::{
 };
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
-    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi,
-    UtxosFilter, UtxosFilterInRequest,
+    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, UtxosFilter,
+    UtxosFilterInRequest,
 };
-use ic_cdk::export::{candid::CandidType};
+use ic_cdk::export::candid::CandidType;
 use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;

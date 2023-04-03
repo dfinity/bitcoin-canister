@@ -66,9 +66,9 @@ mod test {
         state::{ingest_stable_blocks_into_utxoset, insert_block},
         test_utils::build_chain,
     };
+    use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::str::FromStr;
-    use ic_btc_interface::Network;
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]

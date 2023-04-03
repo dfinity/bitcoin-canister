@@ -116,10 +116,7 @@ impl<'a> AddressUtxoSet<'a> {
 mod test {
     use super::*;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
-    use crate::{
-        types::{OutPoint},
-        unstable_blocks,
-    };
+    use crate::{types::OutPoint, unstable_blocks};
     use ic_btc_interface::Network;
 
     #[test]

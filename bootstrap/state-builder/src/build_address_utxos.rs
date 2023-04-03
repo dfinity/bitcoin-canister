@@ -8,7 +8,7 @@
 //!   --utxos-dump-path utxos-dump.csv
 use bitcoin::{Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
-use ic_btc_canister::types::{Address, AddressUtxo, OutPoint, Txid, into_bitcoin_network};
+use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo, OutPoint, Txid};
 use ic_btc_interface::Network;
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::{

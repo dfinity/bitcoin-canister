@@ -150,10 +150,10 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{OutPoint},
+        types::OutPoint,
         with_state,
     };
-    use ic_btc_interface::{Config, Fees, Satoshi, Network};
+    use ic_btc_interface::{Config, Fees, Network, Satoshi};
     use std::iter::FromIterator;
 
     /// Covers an inclusive range of `[0, 100]` percentiles.
