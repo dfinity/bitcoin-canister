@@ -10,7 +10,8 @@ pub use crate::info::{Config, Info};
 
 use futures::future::{join_all, BoxFuture};
 use remote_api::{
-    ApiBlockcypherCom, BitcoinCanister, BlockchainInfo, BlockstreamInfo, ChainApiBtcCom,
+    ApiBlockchairCom, ApiBlockcypherCom, BitcoinCanister, BlockchainInfo, BlockstreamInfo,
+    ChainApiBtcCom,
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -29,6 +30,7 @@ pub async fn tick_async() {
 
     let futures: Vec<BoxFuture<_>> = vec![
         //Box::pin(ApiBitapsCom::fetch()),  // TODO: investigate why it lags behind.
+        Box::pin(ApiBlockchairCom::fetch()),
         Box::pin(ApiBlockcypherCom::fetch()),
         Box::pin(BitcoinCanister::fetch()),
         Box::pin(BlockchainInfo::fetch()),
@@ -44,6 +46,9 @@ pub fn get_info() -> Info {
     // if let Some(height) = ApiBitapsCom::get_height() {
     //    heights.push((ApiBitapsCom::host(), height));
     // }
+    if let Some(height) = ApiBlockchairCom::get_height() {
+        heights.push((ApiBlockchairCom::host(), height));
+    }
     if let Some(height) = ApiBlockcypherCom::get_height() {
         heights.push((ApiBlockcypherCom::host(), height));
     }
