@@ -1,0 +1,8 @@
+# Various IDEs and Editors
+.vscode/
+.idea/
+**/*~
+
+target
+.dfx
+.env
