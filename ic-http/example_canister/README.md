@@ -12,7 +12,7 @@ To run this project locally, you can use the following commands:
 dfx stop
 
 # Start the replica, running in the background
-dfx start --background
+dfx start --background --clean
 
 # Deploy your canisters to the replica and generate your Candid interface
 dfx deploy
