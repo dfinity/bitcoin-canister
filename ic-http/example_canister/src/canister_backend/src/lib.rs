@@ -1,10 +1,6 @@
-use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpHeader};
-
-#[cfg(not(target_arch = "wasm32"))]
-use ic_http::{HttpResponse, TransformArgs};
-
-#[cfg(target_arch = "wasm32")]
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk::api::management_canister::http_request::{
+    CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
+};
 
 #[cfg(target_arch = "wasm32")]
 pub fn print(msg: &str) {
@@ -16,6 +12,12 @@ pub fn print(msg: &str) {
     println!("{}", msg);
 }
 
+/// Parse the raw response body as JSON.
+fn parse_json(body: Vec<u8>) -> serde_json::Value {
+    let json_str = String::from_utf8(body).expect("Raw response is not UTF-8 encoded.");
+    serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
+}
+
 /// Apply a transform function to the HTTP response.
 #[ic_cdk_macros::query]
 fn transform(raw: TransformArgs) -> HttpResponse {
@@ -24,19 +26,14 @@ fn transform(raw: TransformArgs) -> HttpResponse {
         ..Default::default()
     };
     if response.status == 200 {
-        let json_str =
-            String::from_utf8(raw.response.body).expect("Raw response is not UTF-8 encoded.");
-        print(&format!("Before transform body: {:?}", json_str));
-        let json: serde_json::Value =
-            serde_json::from_str(&json_str).expect("Failed to parse JSON from string");
+        let original = parse_json(raw.response.body);
+
         // Extract the author from the JSON response.
-        let transformed = json
-            .get("author")
-            .cloned()
-            .map(|x| x.to_string())
-            .unwrap_or_default();
-        print(&format!("After transform body: {:?}", transformed));
-        response.body = transformed.into_bytes();
+        print(&format!("Before transform: {:?}", original.to_string()));
+        let transformed = original.get("author").cloned().unwrap_or_default();
+        print(&format!("After transform: {:?}", transformed.to_string()));
+
+        response.body = transformed.to_string().into_bytes();
     } else {
         print(&format!("Transform error: err = {:?}", raw));
     }
@@ -45,13 +42,11 @@ fn transform(raw: TransformArgs) -> HttpResponse {
 
 /// Create a request to the dummyjson.com API.
 fn build_request() -> CanisterHttpRequestArgument {
-    let host = "dummyjson.com";
-    let url = format!("https://{host}/quotes/1");
     ic_http::create_request()
-        .get(&url)
+        .get("https://dummyjson.com/quotes/1")
         .header(HttpHeader {
             name: "User-Agent".to_string(),
-            value: "ic-http-mock-example-canister".to_string(),
+            value: "ic-http-example-canister".to_string(),
         })
         .transform(ic_http::create_transform_context(transform, vec![]))
         .build()
@@ -61,7 +56,6 @@ fn build_request() -> CanisterHttpRequestArgument {
 #[ic_cdk_macros::update]
 async fn fetch() -> String {
     let request = build_request();
-    print(&format!("Request: {:?}", request));
     let result = ic_http::http_request(request).await;
 
     match result {
@@ -87,9 +81,9 @@ mod test {
             .status(200)
             .body(
                 r#"{
-                "id": 1,
-                "quote": "Life isn’t about getting and having, it’s about giving and being.",
-                "author": "Kevin Kruse"
+                    "id": 1,
+                    "quote": "Life isn’t about getting and having, it’s about giving and being.",
+                    "author": "Kevin Kruse"
             }"#,
             )
             .build();

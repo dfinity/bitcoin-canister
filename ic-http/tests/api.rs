@@ -1,3 +1,4 @@
+use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::time::{Duration, Instant};
 
 const STATUS_CODE_OK: u64 = 200;
@@ -49,7 +50,7 @@ async fn test_http_request_called_several_times() {
 #[tokio::test]
 async fn test_http_request_transform_status() {
     // Arrange
-    fn transform(_arg: ic_http::TransformArgs) -> ic_http::HttpResponse {
+    fn transform(_arg: TransformArgs) -> HttpResponse {
         ic_http::create_response()
             .status(STATUS_CODE_NOT_FOUND)
             .build()
@@ -78,7 +79,7 @@ async fn test_http_request_transform_body() {
     // Arrange
     const ORIGINAL_BODY: &str = "original body";
     const TRANSFORMED_BODY: &str = "transformed body";
-    fn transform(_arg: ic_http::TransformArgs) -> ic_http::HttpResponse {
+    fn transform(_arg: TransformArgs) -> HttpResponse {
         ic_http::create_response().body(TRANSFORMED_BODY).build()
     }
     let request = ic_http::create_request()

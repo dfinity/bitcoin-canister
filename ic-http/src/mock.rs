@@ -56,7 +56,7 @@ pub fn mock_with_delay(
 /// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
-pub async fn http_request(
+pub(crate) async fn http_request(
     request: CanisterHttpRequestArgument,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
     let mut mock =
