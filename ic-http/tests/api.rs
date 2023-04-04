@@ -12,15 +12,15 @@ async fn test_http_request_no_transform() {
         .status(STATUS_CODE_OK)
         .body(body)
         .build();
-    ic_http::mock::mock(&request, &mock_response);
+    ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(&request).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
     assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
     assert_eq!(response.body, body.to_string().as_bytes().to_vec());
-    assert_eq!(ic_http::mock::times_called(&request), 1);
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
 #[tokio::test]
@@ -33,17 +33,17 @@ async fn test_http_request_called_several_times() {
         .status(STATUS_CODE_OK)
         .body(body)
         .build();
-    ic_http::mock::mock(&request, &mock_response);
+    ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
     for _ in 0..calls {
-        let (response,) = ic_http::http_request(&request).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
         assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
         assert_eq!(response.body, body.to_string().as_bytes().to_vec());
     }
 
     // Assert
-    assert_eq!(ic_http::mock::times_called(&request), calls);
+    assert_eq!(ic_http::mock::times_called(request), calls);
 }
 
 #[tokio::test]
@@ -62,15 +62,15 @@ async fn test_http_request_transform_status() {
         .status(STATUS_CODE_OK)
         .body("some text")
         .build();
-    ic_http::mock::mock(&request, &mock_response);
+    ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(&request).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
     assert_ne!(response.status, candid::Nat::from(STATUS_CODE_OK));
     assert_eq!(response.status, candid::Nat::from(STATUS_CODE_NOT_FOUND));
-    assert_eq!(ic_http::mock::times_called(&request), 1);
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
 #[tokio::test]
@@ -85,19 +85,19 @@ async fn test_http_request_transform_body() {
         .get("https://dummyjson.com/todos/1")
         .transform(ic_http::create_transform_context(transform, vec![]))
         .build();
-    let mocked_response = ic_http::create_response()
+    let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)
         .body(ORIGINAL_BODY)
         .build();
-    ic_http::mock::mock(&request, &mocked_response);
+    ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(&request).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
     assert_ne!(response.body, ORIGINAL_BODY.as_bytes().to_vec());
     assert_eq!(response.body, TRANSFORMED_BODY.as_bytes().to_vec());
-    assert_eq!(ic_http::mock::times_called(&request), 1);
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
 #[tokio::test]
@@ -109,18 +109,18 @@ async fn test_http_request_max_response_bytes_ok() {
         .get("https://example.com")
         .max_response_bytes(max_response_bytes)
         .build();
-    let mocked_response = ic_http::create_response()
+    let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)
         .body(body_small_enough)
         .build();
-    ic_http::mock::mock(&request, &mocked_response);
+    ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let result = ic_http::http_request(&request).await;
+    let result = ic_http::http_request(request.clone()).await;
 
     // Assert
     assert!(result.is_ok());
-    assert_eq!(ic_http::mock::times_called(&request), 1);
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
 #[tokio::test]
@@ -132,18 +132,18 @@ async fn test_http_request_max_response_bytes_error() {
         .get("https://example.com")
         .max_response_bytes(max_response_bytes)
         .build();
-    let mocked_response = ic_http::create_response()
+    let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)
         .body(body_too_big)
         .build();
-    ic_http::mock::mock(&request, &mocked_response);
+    ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let result = ic_http::http_request(&request).await;
+    let result = ic_http::http_request(request.clone()).await;
 
     // Assert
     assert!(result.is_err());
-    assert_eq!(ic_http::mock::times_called(&request), 1);
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
 #[tokio::test]
@@ -152,23 +152,31 @@ async fn test_http_request_sequentially() {
     let request_a = ic_http::create_request().get("a").build();
     let request_b = ic_http::create_request().get("b").build();
     let request_c = ic_http::create_request().get("c").build();
-    let mocked_response = ic_http::create_response().status(STATUS_CODE_OK).build();
-    ic_http::mock::mock_with_delay(&request_a, &mocked_response, Duration::from_millis(100));
-    ic_http::mock::mock_with_delay(&request_b, &mocked_response, Duration::from_millis(200));
-    ic_http::mock::mock_with_delay(&request_c, &mocked_response, Duration::from_millis(300));
+    let mock_response = ic_http::create_response().status(STATUS_CODE_OK).build();
+    ic_http::mock::mock_with_delay(
+        request_a.clone(),
+        mock_response.clone(),
+        Duration::from_millis(100),
+    );
+    ic_http::mock::mock_with_delay(
+        request_b.clone(),
+        mock_response.clone(),
+        Duration::from_millis(200),
+    );
+    ic_http::mock::mock_with_delay(request_c.clone(), mock_response, Duration::from_millis(300));
 
     // Act
     let start = Instant::now();
-    let _ = ic_http::http_request(&request_a).await;
-    let _ = ic_http::http_request(&request_b).await;
-    let _ = ic_http::http_request(&request_c).await;
+    let _ = ic_http::http_request(request_a.clone()).await;
+    let _ = ic_http::http_request(request_b.clone()).await;
+    let _ = ic_http::http_request(request_c.clone()).await;
     println!("All finished after {} s", start.elapsed().as_secs_f32());
 
     // Assert
     assert!(start.elapsed() > Duration::from_millis(500));
-    assert_eq!(ic_http::mock::times_called(&request_a), 1);
-    assert_eq!(ic_http::mock::times_called(&request_b), 1);
-    assert_eq!(ic_http::mock::times_called(&request_c), 1);
+    assert_eq!(ic_http::mock::times_called(request_a), 1);
+    assert_eq!(ic_http::mock::times_called(request_b), 1);
+    assert_eq!(ic_http::mock::times_called(request_c), 1);
 }
 
 #[tokio::test]
@@ -177,24 +185,32 @@ async fn test_http_request_concurrently() {
     let request_a = ic_http::create_request().get("a").build();
     let request_b = ic_http::create_request().get("b").build();
     let request_c = ic_http::create_request().get("c").build();
-    let mocked_response = ic_http::create_response().status(STATUS_CODE_OK).build();
-    ic_http::mock::mock_with_delay(&request_a, &mocked_response, Duration::from_millis(100));
-    ic_http::mock::mock_with_delay(&request_b, &mocked_response, Duration::from_millis(200));
-    ic_http::mock::mock_with_delay(&request_c, &mocked_response, Duration::from_millis(300));
+    let mock_response = ic_http::create_response().status(STATUS_CODE_OK).build();
+    ic_http::mock::mock_with_delay(
+        request_a.clone(),
+        mock_response.clone(),
+        Duration::from_millis(100),
+    );
+    ic_http::mock::mock_with_delay(
+        request_b.clone(),
+        mock_response.clone(),
+        Duration::from_millis(200),
+    );
+    ic_http::mock::mock_with_delay(request_c.clone(), mock_response, Duration::from_millis(300));
 
     // Act
     let start = Instant::now();
     let futures = vec![
-        ic_http::http_request(&request_a),
-        ic_http::http_request(&request_b),
-        ic_http::http_request(&request_c),
+        ic_http::http_request(request_a.clone()),
+        ic_http::http_request(request_b.clone()),
+        ic_http::http_request(request_c.clone()),
     ];
     futures::future::join_all(futures).await;
     println!("All finished after {} s", start.elapsed().as_secs_f32());
 
     // Assert
     assert!(start.elapsed() < Duration::from_millis(500));
-    assert_eq!(ic_http::mock::times_called(&request_a), 1);
-    assert_eq!(ic_http::mock::times_called(&request_b), 1);
-    assert_eq!(ic_http::mock::times_called(&request_c), 1);
+    assert_eq!(ic_http::mock::times_called(request_a), 1);
+    assert_eq!(ic_http::mock::times_called(request_b), 1);
+    assert_eq!(ic_http::mock::times_called(request_c), 1);
 }

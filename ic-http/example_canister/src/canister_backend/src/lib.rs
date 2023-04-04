@@ -62,7 +62,7 @@ fn build_request() -> CanisterHttpRequestArgument {
 async fn fetch() -> String {
     let request = build_request();
     print(&format!("Request: {:?}", request));
-    let result = ic_http::http_request(&request).await;
+    let result = ic_http::http_request(request).await;
 
     match result {
         Ok((response,)) => {
@@ -93,16 +93,16 @@ mod test {
             }"#,
             )
             .build();
-        ic_http::mock::mock(&request, &mock_response);
+        ic_http::mock::mock(request.clone(), mock_response);
 
         // Act
-        let (response,) = ic_http::http_request(&request).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
         // Assert
         assert_eq!(
             String::from_utf8(response.body).unwrap(),
             r#""Kevin Kruse""#.to_string()
         );
-        assert_eq!(ic_http::mock::times_called(&request), 1);
+        assert_eq!(ic_http::mock::times_called(request), 1);
     }
 }

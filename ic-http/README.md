@@ -30,15 +30,15 @@ async fn test_http_request_transform_body() {
         .status(200)
         .body(ORIGINAL_BODY)
         .build();
-    ic_http::mock::mock(&request, &mocked_response);
+    ic_http::mock::mock(request.clone(), mocked_response);
 
     // Act
-    let (response,) = ic_http::http_request(&request).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
     assert_ne!(response.body, ORIGINAL_BODY.as_bytes().to_vec());
     assert_eq!(response.body, TRANSFORMED_BODY.as_bytes().to_vec());
-    assert_eq!(ic_http::mock::times_called(&request), 1);
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
 ```
 

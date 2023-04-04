@@ -33,7 +33,7 @@ struct Mock {
 /// Adds a mock for a given HTTP request and response. The mock will be returned by
 /// subsequent calls to `http_request` that match the same request. The response will be
 /// returned immediately, without any delay.
-pub fn mock(request: &CanisterHttpRequestArgument, response: &HttpResponse) {
+pub fn mock(request: CanisterHttpRequestArgument, response: HttpResponse) {
     mock_with_delay(request, response, Duration::from_secs(0));
 }
 
@@ -41,13 +41,13 @@ pub fn mock(request: &CanisterHttpRequestArgument, response: &HttpResponse) {
 /// subsequent calls to `http_request` that match the same request. The response will be
 /// returned after a delay specified by the `delay` argument.
 pub fn mock_with_delay(
-    request: &CanisterHttpRequestArgument,
-    response: &HttpResponse,
+    request: CanisterHttpRequestArgument,
+    response: HttpResponse,
     delay: Duration,
 ) {
     insert(Mock {
-        request: request.clone(),
-        response: response.clone(),
+        request,
+        response,
         delay,
         times_called: 0,
     });
@@ -57,10 +57,10 @@ pub fn mock_with_delay(
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
 pub async fn http_request(
-    request: &CanisterHttpRequestArgument,
+    request: CanisterHttpRequestArgument,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
     let mut mock =
-        get(request).ok_or((RejectionCode::CanisterReject, "No mock found".to_string()))?;
+        get(&request).ok_or((RejectionCode::CanisterReject, "No mock found".to_string()))?;
     mock.times_called += 1;
     insert(mock.clone());
 
@@ -103,8 +103,8 @@ pub async fn http_request(
 
 /// Returns the number of times the given request has been called.
 /// Returns 0 if no mock has been found for the request.
-pub fn times_called(request: &CanisterHttpRequestArgument) -> u64 {
-    get(request).map(|mock| mock.times_called).unwrap_or(0)
+pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
+    get(&request).map(|mock| mock.times_called).unwrap_or(0)
 }
 
 /// Create a hash from a CanisterHttpRequestArgument, which includes its URL,
