@@ -107,8 +107,9 @@ pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
     get(&request).map(|mock| mock.times_called).unwrap_or(0)
 }
 
-/// Create a hash from a CanisterHttpRequestArgument, which includes its URL,
+/// Create a hash from a `CanisterHttpRequestArgument`, which includes its URL,
 /// method, headers, body, and optionally, its transform function name.
+/// This is because `CanisterHttpRequestArgument` does not have `Hash` implemented.
 fn hash(request: &CanisterHttpRequestArgument) -> String {
     let mut hash = String::new();
 
