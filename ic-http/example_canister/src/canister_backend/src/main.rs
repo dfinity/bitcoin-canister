@@ -69,6 +69,8 @@ async fn fetch() -> String {
     }
 }
 
+fn main() {}
+
 #[cfg(test)]
 mod test {
     use super::*;
