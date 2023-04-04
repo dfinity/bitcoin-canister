@@ -135,7 +135,7 @@ pub fn is_stable_btreemap_equal<M: Memory + Clone, K: Storable + Eq, V: Storable
 }
 
 // A version of `is_stable_btreemap_equal` for the new stable-structures version.
-// TODO: delete the old version once the migration to the new stable-structures is complete.
+// TODO(EXC-1382): delete the old version once the migration to the new stable-structures is complete.
 pub fn is_stable_btreemap_equal_new<
     M: ic_stable_structures_new::Memory,
     K: ic_stable_structures_new::BoundedStorable + Ord + Eq + Clone,

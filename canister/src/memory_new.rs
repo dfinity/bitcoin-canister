@@ -1,4 +1,4 @@
-//! A copy of memory.rs that is compatibly with the new version of stable-structures.
+//! A copy of memory.rs that is compatible with the new version of stable-structures.
 //! Once the migration to the new stable-structures version is complete, this file will
 //! fully replace memory.rs
 
