@@ -24,6 +24,7 @@ impl Default for Config {
             blocks_ahead_threshold: 2,
             blocks_behind_threshold: -2,
             storage_ttl_millis: 5 * ONE_MINUTE,
+            // TODO: replace `raw.ic0.app` with a more secure alternative.
             bitcoin_canister_host: "ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app".to_string(),
         }
     }
