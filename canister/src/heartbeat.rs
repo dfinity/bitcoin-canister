@@ -2,13 +2,14 @@ use crate::{
     runtime::{call_get_successors, print},
     state::{self, ResponseToProcess, State},
     types::{
-        Block, BlockHash, BlockHeaderBlob, Flag, GetSuccessorsCompleteResponse,
-        GetSuccessorsRequest, GetSuccessorsRequestInitial, GetSuccessorsResponse,
+        Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
+        GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::Block as BitcoinBlock;
 use bitcoin::{consensus::Decodable, BlockHeader};
+use ic_btc_interface::Flag;
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -249,13 +250,11 @@ mod test {
         genesis_block, init,
         runtime::{self, GetSuccessorsReply},
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{
-            Address, BlockBlob, Config, GetSuccessorsCompleteResponse,
-            GetSuccessorsPartialResponse, Network,
-        },
+        types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
         utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader;
+    use ic_btc_interface::{Config, Network};
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);

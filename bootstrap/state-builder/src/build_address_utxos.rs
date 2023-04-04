@@ -8,7 +8,8 @@
 //!   --utxos-dump-path utxos-dump.csv
 use bitcoin::{Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
-use ic_btc_canister::types::{Address, AddressUtxo, Network, OutPoint, Txid};
+use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo, OutPoint, Txid};
+use ic_btc_interface::Network;
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::{
     fs::File,
@@ -64,7 +65,7 @@ fn main() {
         } else {
             BitcoinAddress::from_script(
                 &Script::from(hex::decode(script).expect("script must be valid hex")),
-                args.network.into(),
+                into_bitcoin_network(args.network),
             )
         };
 

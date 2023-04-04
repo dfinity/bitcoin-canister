@@ -103,9 +103,10 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::{Config, Fees, Network, OutPoint},
+        types::OutPoint,
         with_state_mut,
     };
+    use ic_btc_interface::{Config, Fees, Network};
 
     #[test]
     fn error_on_malformed_address() {

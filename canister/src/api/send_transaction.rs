@@ -41,8 +41,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::{Config, Fees, Flag, Network};
-    use ic_btc_interface::NetworkInRequest;
+    use ic_btc_interface::{Config, Fees, Flag, Network, NetworkInRequest};
 
     fn empty_transaction() -> Vec<u8> {
         let mut buf = vec![];
