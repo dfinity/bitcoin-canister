@@ -1,11 +1,11 @@
 use crate::{
-    memory::Memory,
+    memory_new::Memory,
     types::{Block, BlockHash, BlockHeaderBlob},
 };
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::BlockHeader;
 use ic_btc_interface::Height;
-use ic_stable_structures::StableBTreeMap;
+use ic_stable_structures_new::StableBTreeMap;
 use serde::{Deserialize, Serialize};
 
 /// Stores block headers and indexes them by block hash and height.
@@ -14,12 +14,12 @@ pub struct BlockHeaderStore {
     /// A map of a block hash to its corresponding raw block header.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_block_headers")]
-    pub block_headers: StableBTreeMap<Memory, BlockHash, BlockHeaderBlob>,
+    pub block_headers: StableBTreeMap<BlockHash, BlockHeaderBlob, Memory>,
 
     /// A map of a block height to its corresponding block hash.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_block_heights")]
-    pub block_heights: StableBTreeMap<Memory, Height, BlockHash>,
+    pub block_heights: StableBTreeMap<Height, BlockHash, Memory>,
 }
 
 // NOTE: `PartialEq` is only available in tests as it would be impractically
@@ -27,7 +27,7 @@ pub struct BlockHeaderStore {
 #[cfg(test)]
 impl PartialEq for BlockHeaderStore {
     fn eq(&self, other: &Self) -> bool {
-        use crate::test_utils::is_stable_btreemap_equal;
+        use crate::test_utils::is_stable_btreemap_equal_new as is_stable_btreemap_equal;
         is_stable_btreemap_equal(&self.block_headers, &other.block_headers)
             && is_stable_btreemap_equal(&self.block_heights, &other.block_heights)
     }
@@ -55,13 +55,8 @@ impl BlockHeaderStore {
 
     /// Inserts a block's header and hash into the store.
     pub fn insert(&mut self, block_hash: BlockHash, header_blob: BlockHeaderBlob, height: Height) {
-        self.block_headers
-            .insert(block_hash.clone(), header_blob)
-            .expect("block header insertion must succeed");
-
-        self.block_heights
-            .insert(height, block_hash)
-            .expect("block height insertion must succeed");
+        self.block_headers.insert(block_hash.clone(), header_blob);
+        self.block_heights.insert(height, block_hash);
     }
 
     pub fn get_with_block_hash(&self, block_hash: &BlockHash) -> Option<BlockHeader> {
@@ -85,10 +80,10 @@ fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {
         .expect("block header decoding must succeed")
 }
 
-fn init_block_headers() -> StableBTreeMap<Memory, BlockHash, BlockHeaderBlob> {
-    StableBTreeMap::init(crate::memory::get_block_headers_memory())
+fn init_block_headers() -> StableBTreeMap<BlockHash, BlockHeaderBlob, Memory> {
+    StableBTreeMap::init(crate::memory_new::get_block_headers_memory())
 }
 
-fn init_block_heights() -> StableBTreeMap<Memory, u32, BlockHash> {
-    StableBTreeMap::init(crate::memory::get_block_heights_memory())
+fn init_block_heights() -> StableBTreeMap<u32, BlockHash, Memory> {
+    StableBTreeMap::init(crate::memory_new::get_block_heights_memory())
 }

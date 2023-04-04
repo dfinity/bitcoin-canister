@@ -10,18 +10,15 @@ use ic_btc_interface::{
 };
 use ic_cdk::export::{candid::CandidType, Principal};
 use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable};
+use ic_stable_structures_new::{BoundedStorable as BoundedStorableNew, Storable as StorableNew};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
-use std::{cmp::Ordering, convert::TryInto, str::FromStr};
+use std::{borrow::Cow, cmp::Ordering, convert::TryInto, str::FromStr};
 
 // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
 // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
 const MAX_ADDRESS_LENGTH: u32 = 90;
-
-// A Bitcoin block header is always 80 bytes. See:
-// https://developer.bitcoin.org/reference/block_chain.html#block-headers
-const BLOCK_HEADER_LENGTH: u32 = 80;
 
 // The expected length in bytes of the page.
 const EXPECTED_PAGE_LENGTH: usize = 72;
@@ -368,7 +365,7 @@ impl Page {
         let outpoint_bytes = bytes.split_off(outpoint_offset);
         let height_bytes = bytes.split_off(height_offset);
 
-        let tip_block_hash = BlockHash::from_bytes(bytes);
+        let tip_block_hash = BlockHash::from(bytes);
 
         // The height is parsed from bytes that are given by the user, so ensure
         // that any errors are handled gracefully instead of using
@@ -425,9 +422,9 @@ impl BoundedStorable for OutPoint {
 impl Storable for (TxOut, Height) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.0.value.to_bytes().to_vec(), // Store the value (8 bytes)
-            self.0.script_pubkey.clone(),     // Then the script (size varies)
-            Storable::to_bytes(&self.1),      // Then the height (4 bytes)
+            StorableNew::to_bytes(&self.0.value).to_vec(), // Store the value (8 bytes)
+            self.0.script_pubkey.clone(),                  // Then the script (size varies)
+            Storable::to_bytes(&self.1),                   // Then the height (4 bytes)
         ]
         .into_iter()
         .flatten()
@@ -437,7 +434,7 @@ impl Storable for (TxOut, Height) {
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
         let height = <Height as Storable>::from_bytes(bytes.split_off(bytes.len() - 4));
         let script_pubkey = bytes.split_off(8);
-        let value = u64::from_bytes(bytes);
+        let value = <u64 as StorableNew>::from_bytes(Cow::Owned(bytes));
         (
             TxOut {
                 value,
@@ -551,20 +548,21 @@ pub type BlockBlob = Vec<u8>;
 #[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash)]
 pub struct BlockHeaderBlob(Vec<u8>);
 
-impl StableStructuresStorable for BlockHeaderBlob {
+impl StorableNew for BlockHeaderBlob {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        self.0.to_bytes()
+        Cow::Borrowed(self.0.as_slice())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self::from(bytes)
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self::from(bytes.to_vec())
     }
 }
 
-impl BoundedStorable for BlockHeaderBlob {
-    fn max_size() -> u32 {
-        BLOCK_HEADER_LENGTH
-    }
+impl BoundedStorableNew for BlockHeaderBlob {
+    // A Bitcoin block header is always 80 bytes. See:
+    // https://developer.bitcoin.org/reference/block_chain.html#block-headers
+    const MAX_SIZE: u32 = 80;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl BlockHeaderBlob {
@@ -577,9 +575,9 @@ impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::max_size(),
+            Self::MAX_SIZE,
             "BlockHeader must {} bytes",
-            Self::max_size()
+            Self::MAX_SIZE,
         );
         Self(bytes)
     }
@@ -591,20 +589,19 @@ impl From<Vec<u8>> for BlockHeaderBlob {
 )]
 pub struct BlockHash(Vec<u8>);
 
-impl StableStructuresStorable for BlockHash {
+impl StorableNew for BlockHash {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        self.0.to_bytes()
+        Cow::Borrowed(self.0.as_slice())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self::from(bytes)
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self::from(bytes.to_vec())
     }
 }
 
-impl BoundedStorable for BlockHash {
-    fn max_size() -> u32 {
-        32
-    }
+impl BoundedStorableNew for BlockHash {
+    const MAX_SIZE: u32 = 32;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl BlockHash {
@@ -617,9 +614,9 @@ impl From<Vec<u8>> for BlockHash {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::max_size(),
+            Self::MAX_SIZE,
             "BlockHash must {} bytes",
-            Self::max_size()
+            Self::MAX_SIZE
         );
         Self(bytes)
     }

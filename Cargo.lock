@@ -1284,7 +1284,8 @@ dependencies = [
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
  "ic-metrics-encoder",
- "ic-stable-structures",
+ "ic-stable-structures 0.3.0",
+ "ic-stable-structures 0.5.2",
  "lazy_static",
  "maplit",
  "proptest",
@@ -1382,6 +1383,12 @@ name = "ic-stable-structures"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cf57a7a43948acb3bc11572533f57e52f60cbbf33d7c699678ac9d1a9307537"
+
+[[package]]
+name = "ic-stable-structures"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d43ba7c5067d1360860e2234d93411d2126c8eac788467966ed1383161f91fc"
 
 [[package]]
 name = "ic-types"
@@ -2643,7 +2650,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
- "ic-stable-structures",
+ "ic-stable-structures 0.3.0",
  "integer-encoding",
  "rand 0.8.5",
  "rand_chacha 0.3.1",

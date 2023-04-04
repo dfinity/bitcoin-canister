@@ -5,6 +5,7 @@ mod blocktree;
 mod guard;
 mod heartbeat;
 pub mod memory;
+mod memory_new;
 mod metrics;
 mod multi_iter;
 pub mod runtime;
