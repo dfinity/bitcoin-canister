@@ -20,7 +20,7 @@ impl NextBlockHeaders {
         }
 
         self.hash_to_height_and_header
-            .insert(block_hash.clone(), (height, block_header));
+            .insert(block_hash, (height, block_header));
     }
 
     pub fn remove(&mut self, block: &BlockHash) {
