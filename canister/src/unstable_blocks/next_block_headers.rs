@@ -57,10 +57,8 @@ impl NextBlockHeaders {
             .map(|(height, _)| height)
     }
 
-    pub fn get_header(&self, hash: &BlockHash) -> Option<&BlockHeader> {
-        self.hash_to_height_and_header
-            .get(hash)
-            .map(|(_, header)| header)
+    pub fn get(&self, hash: &BlockHash) -> Option<&(u32, BlockHeader)> {
+        self.hash_to_height_and_header.get(hash)
     }
 }
 
