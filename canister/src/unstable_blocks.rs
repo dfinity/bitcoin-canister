@@ -4,12 +4,13 @@ use crate::{
     types::{Address, Block, BlockHash, Network, OutPoint, TxOut},
     UtxoSet,
 };
+use bitcoin::BlockHeader;
 use ic_btc_interface::Height;
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
-mod next_block_hashes;
-use self::next_block_hashes::NextBlockHashes;
+mod next_block_headers;
+use self::next_block_headers::NextBlockHeaders;
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -22,10 +23,10 @@ pub struct UnstableBlocks {
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
     network: Network,
-    /// The hashes of the blocks that are expected to be received.
+    /// The headers of the blocks that are expected to be received.
     // TODO(EXC-1379): remove this directive once it's deployed to production.
     #[serde(default)]
-    next_block_hashes: NextBlockHashes,
+    next_block_headers: NextBlockHeaders,
 }
 
 impl UnstableBlocks {
@@ -41,7 +42,7 @@ impl UnstableBlocks {
             tree: BlockTree::new(anchor.clone()),
             outpoints_cache,
             network,
-            next_block_hashes: NextBlockHashes::default(),
+            next_block_headers: NextBlockHeaders::default(),
         }
     }
 
@@ -87,30 +88,32 @@ impl UnstableBlocks {
         Ok(depth)
     }
 
-    // Inserts the block hash of the block that should be received.
-    pub fn insert_next_block_hash(
+    // Inserts the block header of the block that should be received.
+    pub fn insert_next_block_header(
         &mut self,
-        prev_block_hash: &BlockHash,
-        block_hash: &BlockHash,
+        block_header: BlockHeader,
         stable_height: Height,
     ) -> Result<(), BlockDoesNotExtendTree> {
-        let height = match self.next_block_hashes.get_height(prev_block_hash) {
+        let prev_block_hash = BlockHash::from(block_header.prev_blockhash);
+        let height = match self.next_block_headers.get_height(&prev_block_hash) {
             Some(prev_height) => *prev_height,
             None => {
-                if let Ok(depth) = self.block_depth(prev_block_hash) {
+                if let Ok(depth) = self.block_depth(&prev_block_hash) {
                     stable_height + depth
                 } else {
-                    return Err(BlockDoesNotExtendTree(block_hash.clone()));
+                    return Err(BlockDoesNotExtendTree(BlockHash::from(
+                        block_header.block_hash(),
+                    )));
                 }
             }
         } + 1;
-        self.next_block_hashes.insert(block_hash, height);
+        self.next_block_headers.insert(block_header, height);
         Ok(())
     }
 
     // Public only for testing purpose.
-    pub(crate) fn next_block_hashes_max_height(&self) -> Option<Height> {
-        self.next_block_hashes.get_max_height()
+    pub(crate) fn next_block_headers_max_height(&self) -> Option<Height> {
+        self.next_block_headers.get_max_height()
     }
 }
 
@@ -133,7 +136,7 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
             // Remove the outpoints of the old anchor from the cache.
             blocks.outpoints_cache.remove(&old_anchor);
 
-            blocks.next_block_hashes.remove_until_height(stable_height);
+            blocks.next_block_headers.remove_until_height(stable_height);
 
             Some(old_anchor)
         }
@@ -162,7 +165,7 @@ pub fn push(
 
     blocktree::extend(parent_block_tree, block)?;
 
-    blocks.next_block_hashes.remove(&block_hash);
+    blocks.next_block_headers.remove(&block_hash);
 
     Ok(())
 }

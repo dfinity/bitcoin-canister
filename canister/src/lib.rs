@@ -242,7 +242,7 @@ pub(crate) fn is_synced() -> bool {
             >= max(
                 state
                     .unstable_blocks
-                    .next_block_hashes_max_height()
+                    .next_block_headers_max_height()
                     .unwrap_or(0),
                 main_chain_height,
             )

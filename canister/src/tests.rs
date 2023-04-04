@@ -566,7 +566,7 @@ fn get_chain_with_n_block_and_header_blobs(
 }
 
 #[async_std::test]
-async fn test_syncing_with_next_block_hashes() {
+async fn test_syncing_with_next_block_headers() {
     let network = Network::Regtest;
 
     init(Config {
@@ -615,7 +615,7 @@ async fn test_syncing_with_next_block_hashes() {
     assert_eq!(with_state(|s| s.stable_height()), 1);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(|s| s.unstable_blocks.next_block_headers_max_height().unwrap()),
         with_state(main_chain_height) + SYNCED_THRESHOLD + 1
     );
 
@@ -652,7 +652,7 @@ async fn test_syncing_with_next_block_hashes() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(|s| s.unstable_blocks.next_block_headers_max_height().unwrap()),
         with_state(main_chain_height) + SYNCED_THRESHOLD
     );
 
@@ -686,7 +686,7 @@ async fn test_syncing_with_next_block_hashes() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(|s| s.unstable_blocks.next_block_headers_max_height().unwrap()),
         with_state(main_chain_height) + SYNCED_THRESHOLD
     );
 
@@ -715,7 +715,7 @@ async fn test_syncing_with_next_block_hashes() {
     assert_eq!(with_state(|s| s.stable_height()), 2);
 
     assert_eq!(
-        with_state(|s| s.unstable_blocks.next_block_hashes_max_height().unwrap()),
+        with_state(|s| s.unstable_blocks.next_block_headers_max_height().unwrap()),
         with_state(main_chain_height) + SYNCED_THRESHOLD + 1
     );
 
