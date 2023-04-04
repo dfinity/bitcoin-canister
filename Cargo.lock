@@ -492,7 +492,7 @@ dependencies = [
  "candid 0.8.4",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
- "ic-http-mock",
+ "ic-http",
  "serde",
  "serde_json",
  "tokio",
@@ -1413,7 +1413,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-http-mock"
+name = "ic-http"
 version = "0.1.0"
 dependencies = [
  "candid 0.8.4",
