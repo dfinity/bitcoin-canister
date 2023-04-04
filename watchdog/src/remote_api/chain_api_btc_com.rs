@@ -18,8 +18,8 @@ fn transform_chain_api_btc_com(raw: TransformArgs) -> HttpResponse {
 
 impl ChainApiBtcCom {
     /// The host name of the remote API.
-    pub fn host() -> &'static str {
-        "chain.api.btc.com"
+    pub fn host() -> String {
+        "chain.api.btc.com".to_string()
     }
 
     /// The URL of the remote API.
@@ -30,12 +30,12 @@ impl ChainApiBtcCom {
 
     /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
-        storage::get(Self::host())
+        storage::get(&Self::host())
     }
 
     /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
-        storage::insert(Self::host(), height)
+        storage::insert(&Self::host(), height)
     }
 
     /// The transform function for the JSON body.

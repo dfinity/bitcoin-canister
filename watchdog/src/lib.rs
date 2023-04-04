@@ -1,12 +1,11 @@
+mod config;
 mod info;
 mod remote_api;
 mod time;
 mod types;
 
-// #[cfg(not(target_arch = "wasm32"))]
-// mod ic_http_mock;
-
-pub use crate::info::{Config, Info};
+pub use crate::config::Config;
+pub use crate::info::Info;
 
 use futures::future::{join_all, BoxFuture};
 use remote_api::{

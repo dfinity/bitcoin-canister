@@ -1,4 +1,4 @@
-use crate::info::Config;
+use crate::config::Config;
 use crate::time;
 use crate::types::BlockHeight;
 use std::cell::RefCell;

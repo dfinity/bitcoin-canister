@@ -78,7 +78,7 @@ pub async fn fetch_body(request: CanisterHttpRequestArgument) -> Result<String, 
 
 /// Creates a CanisterHttpRequestArgument.
 pub fn create_request(
-    host: &str,
+    host: String,
     url: String,
     max_response_bytes: Option<u64>,
     transform: Option<TransformContext>,

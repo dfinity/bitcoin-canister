@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::types::BlockHeight;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -57,32 +58,6 @@ impl Status {
     }
 }
 
-/// The configuration of the watchdog canister.
-#[derive(Clone, Debug, Serialize, Deserialize, CandidType)]
-pub struct Config {
-    pub timer_interval_secs: u32,
-    pub min_explorers: u32,
-    pub blocks_ahead_threshold: i32,
-    pub blocks_behind_threshold: i32,
-    pub storage_ttl_millis: u64,
-}
-
-const ONE_SECOND: u64 = 1_000; // 10^3 milli-seconds in one second.
-const ONE_MINUTE: u64 = 60 * ONE_SECOND;
-
-impl Default for Config {
-    /// The default configuration.
-    fn default() -> Self {
-        Self {
-            timer_interval_secs: 60,
-            min_explorers: 2,
-            blocks_ahead_threshold: 2,
-            blocks_behind_threshold: -2,
-            storage_ttl_millis: 5 * ONE_MINUTE,
-        }
-    }
-}
-
 /// The information of the watchdog canister.
 #[derive(Debug, Serialize, Deserialize, CandidType, Clone)]
 pub struct Info {
@@ -120,7 +95,7 @@ impl Info {
             None => Status::new(StatusCode::NoBitcoinCanisterData, None),
             Some(bitcoin_canister_height) => {
                 if info.explorers_n < info.config.min_explorers {
-                    // No enough explorers.
+                    // Not enough explorers.
                     Status::new(StatusCode::NotEnoughExplorers, None)
                 } else {
                     match &info.pivot {

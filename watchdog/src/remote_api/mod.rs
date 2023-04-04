@@ -36,7 +36,7 @@ pub enum RemoteAPI {
 
 impl RemoteAPI {
     /// The host name of the remote API.
-    fn host(&self) -> &'static str {
+    fn host(&self) -> String {
         match self {
             RemoteAPI::ApiBitapsCom => ApiBitapsCom::host(),
             RemoteAPI::ApiBlockchairCom => ApiBlockchairCom::host(),
@@ -67,7 +67,7 @@ mod test {
             (ChainApiBtcCom, "chain.api.btc.com"),
         ];
         for (variant, host) in test_cases {
-            assert_eq!(variant.host(), host);
+            assert_eq!(variant.host(), host.to_string());
         }
     }
 }

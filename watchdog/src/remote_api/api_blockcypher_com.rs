@@ -17,8 +17,8 @@ pub struct ApiBlockcypherCom {}
 
 impl ApiBlockcypherCom {
     /// The host name of the remote API.
-    pub fn host() -> &'static str {
-        "api.blockcypher.com"
+    pub fn host() -> String {
+        "api.blockcypher.com".to_string()
     }
 
     /// The URL of the remote API.
@@ -29,12 +29,12 @@ impl ApiBlockcypherCom {
 
     /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
-        storage::get(Self::host())
+        storage::get(&Self::host())
     }
 
     /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
-        storage::insert(Self::host(), height)
+        storage::insert(&Self::host(), height)
     }
 
     /// The transform function for the JSON body.

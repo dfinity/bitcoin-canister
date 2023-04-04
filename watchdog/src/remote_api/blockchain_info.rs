@@ -7,8 +7,8 @@ pub struct BlockchainInfo {}
 
 impl BlockchainInfo {
     /// The host name of the remote API.
-    pub fn host() -> &'static str {
-        "blockchain.info"
+    pub fn host() -> String {
+        "blockchain.info".to_string()
     }
 
     /// The URL of the remote API.
@@ -19,12 +19,12 @@ impl BlockchainInfo {
 
     /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
-        storage::get(Self::host())
+        storage::get(&Self::host())
     }
 
     /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
-        storage::insert(Self::host(), height)
+        storage::insert(&Self::host(), height)
     }
 
     /// Creates the HTTP request.

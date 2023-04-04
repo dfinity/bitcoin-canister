@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::remote_api::http::{build_transform_context, create_request, fetch_body};
 use crate::remote_api::storage;
 use crate::types::BlockHeight;
@@ -46,8 +47,8 @@ pub struct BitcoinCanister {}
 
 impl BitcoinCanister {
     /// The host of the remote API.
-    pub fn host() -> &'static str {
-        "ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app"
+    pub fn host() -> String {
+        Config::default().bitcoin_canister_host
     }
 
     /// The URL of the remote API.
@@ -58,12 +59,12 @@ impl BitcoinCanister {
 
     /// Reads the block height from the local storage.
     pub fn get_height() -> Option<BlockHeight> {
-        storage::get(Self::host())
+        storage::get(&Self::host())
     }
 
     /// Stores the block height in the local storage.
     fn set_height(height: BlockHeight) {
-        storage::insert(Self::host(), height)
+        storage::insert(&Self::host(), height)
     }
 
     /// The transform function for the text body.
