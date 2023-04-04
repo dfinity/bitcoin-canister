@@ -40,7 +40,7 @@ pub fn create_transform_context(func: TransformFn, context: Vec<u8>) -> Transfor
 
     TransformContext {
         function: TransformFunc(candid::Func {
-            principal: Principal::anonymous(),
+            principal: Principal::management_canister(),
             method: function_name,
         }),
         context,
