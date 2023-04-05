@@ -1,11 +1,12 @@
 use crate::{
     genesis_block,
-    types::{Address, Block, Network, OutPoint, Transaction},
+    types::{into_bitcoin_network, Address, Block, OutPoint, Transaction},
 };
 use bitcoin::{
     hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
     BlockHeader, PublicKey, Script, WScriptHash,
 };
+use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
@@ -20,13 +21,13 @@ pub fn random_p2pkh_address(network: Network) -> Address {
 
     BitcoinAddress::p2pkh(
         &PublicKey::new(secp.generate_keypair(&mut rng).1),
-        network.into(),
+        into_bitcoin_network(network),
     )
     .into()
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
-    ic_btc_test_utils::random_p2tr_address(network.into()).into()
+    ic_btc_test_utils::random_p2tr_address(into_bitcoin_network(network)).into()
 }
 
 pub fn random_p2wpkh_address(network: Network) -> Address {
@@ -34,7 +35,7 @@ pub fn random_p2wpkh_address(network: Network) -> Address {
     let mut rng = OsRng::new().unwrap();
     BitcoinAddress::p2wpkh(
         &PublicKey::new(secp.generate_keypair(&mut rng).1),
-        network.into(),
+        into_bitcoin_network(network),
     )
     .expect("failed to create p2wpkh address")
     .into()
@@ -46,7 +47,7 @@ pub fn random_p2wsh_address(network: Network) -> Address {
     rng.fill_bytes(&mut hash);
     BitcoinAddress::p2wsh(
         &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&hash).unwrap())),
-        network.into(),
+        into_bitcoin_network(network),
     )
     .into()
 }

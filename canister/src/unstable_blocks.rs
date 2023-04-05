@@ -1,11 +1,11 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
-    types::{Address, Block, BlockHash, Network, OutPoint, TxOut},
+    types::{Address, Block, BlockHash, OutPoint, TxOut},
     UtxoSet,
 };
 use bitcoin::BlockHeader;
-use ic_btc_interface::Height;
+use ic_btc_interface::{Height, Network};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
@@ -294,7 +294,8 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{test_utils::BlockBuilder, types::Network};
+    use crate::test_utils::BlockBuilder;
+    use ic_btc_interface::Network;
 
     #[test]
     fn empty() {

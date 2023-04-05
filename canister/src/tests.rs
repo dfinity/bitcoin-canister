@@ -6,7 +6,7 @@ use crate::{
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
     types::{
         Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
-        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest, Network,
+        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     verify_synced, with_state, SYNCED_THRESHOLD,
@@ -18,7 +18,7 @@ use bitcoin::{
 };
 use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_interface::{GetUtxosResponse, UtxosFilter};
+use ic_btc_interface::{GetUtxosResponse, Network, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;

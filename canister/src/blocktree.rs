@@ -1,4 +1,5 @@
-use crate::types::{Block, BlockHash, Network};
+use crate::types::{Block, BlockHash};
+use ic_btc_interface::Network;
 use std::fmt;
 mod serde;
 
