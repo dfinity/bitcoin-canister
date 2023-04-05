@@ -152,7 +152,7 @@ mod test {
         );
         assert_eq!(
             *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
+            vec![hash1, hash2]
         );
     }
 
@@ -256,7 +256,7 @@ mod test {
         block_headers.remove_until_height(2);
         assert_eq!(
             *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
+            vec![hash1, hash2]
         );
         assert_eq!(
             *block_headers.height_to_hash.get(&7).unwrap(),
@@ -273,14 +273,8 @@ mod test {
         // All blocks on height 5 are removed.
         block_headers.remove_until_height(6);
         assert_eq!(block_headers.height_to_hash.get(&5), None);
-        assert_eq!(
-            *block_headers.height_to_hash.get(&7).unwrap(),
-            vec![hash3.clone()]
-        );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&9).unwrap(),
-            vec![hash4.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&7).unwrap(), vec![hash3]);
+        assert_eq!(*block_headers.height_to_hash.get(&9).unwrap(), vec![hash4]);
         assert_eq!(block_headers.height_to_hash.len(), 2);
         assert_eq!(block_headers.hash_to_height_and_header.len(), 2);
         assert_eq!(block_headers.get_max_height(), Some(9));
