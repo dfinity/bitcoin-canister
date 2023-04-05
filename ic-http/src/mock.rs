@@ -2,29 +2,12 @@ use ic_cdk::api::call::RejectionCode;
 use ic_cdk::api::management_canister::http_request::{
     CanisterHttpRequestArgument, HttpResponse, TransformArgs,
 };
-use std::cell::RefCell;
-use std::collections::HashMap;
 use std::time::Duration;
-
-// A thread-local hashmap that stores mocks.
-thread_local! {
-    static MOCKS: RefCell<HashMap<String, Mock>> = RefCell::default();
-}
-
-/// Inserts the provided mock into a thread-local hashmap.
-fn insert(mock: Mock) {
-    MOCKS.with(|cell| cell.borrow_mut().insert(hash(&mock.request), mock));
-}
-
-/// Returns a cloned mock from the thread-local hashmap that corresponds to the provided request.
-fn get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
-    MOCKS.with(|cell| cell.borrow().get(&hash(request)).cloned())
-}
 
 /// Represents a mock HTTP request and its corresponding response.
 #[derive(Clone)]
-struct Mock {
-    request: CanisterHttpRequestArgument,
+pub(crate) struct Mock {
+    pub(crate) request: CanisterHttpRequestArgument,
     response: HttpResponse,
     delay: Duration,
     times_called: u64,
@@ -45,7 +28,7 @@ pub fn mock_with_delay(
     response: HttpResponse,
     delay: Duration,
 ) {
-    insert(Mock {
+    crate::mock_insert(Mock {
         request,
         response,
         delay,
@@ -59,10 +42,10 @@ pub fn mock_with_delay(
 pub(crate) async fn http_request(
     request: CanisterHttpRequestArgument,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
-    let mut mock =
-        get(&request).ok_or((RejectionCode::CanisterReject, "No mock found".to_string()))?;
+    let mut mock = crate::mock_get(&request)
+        .ok_or((RejectionCode::CanisterReject, "No mock found".to_string()))?;
     mock.times_called += 1;
-    insert(mock.clone());
+    crate::mock_insert(mock.clone());
 
     // Delay the response if necessary.
     if mock.delay > Duration::from_secs(0) {
@@ -87,7 +70,7 @@ pub(crate) async fn http_request(
 
     // Apply the transform function if one is specified.
     let transform = match request.transform {
-        Some(ref t) => crate::transform::registry_get(t.function.0.method.clone()),
+        Some(ref t) => crate::transform_function_get(t.function.0.method.clone()),
         None => None,
     };
     let transformed_response = match transform {
@@ -104,13 +87,15 @@ pub(crate) async fn http_request(
 /// Returns the number of times the given request has been called.
 /// Returns 0 if no mock has been found for the request.
 pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
-    get(&request).map(|mock| mock.times_called).unwrap_or(0)
+    crate::mock_get(&request)
+        .map(|mock| mock.times_called)
+        .unwrap_or(0)
 }
 
 /// Create a hash from a `CanisterHttpRequestArgument`, which includes its URL,
 /// method, headers, body, and optionally, its transform function name.
 /// This is because `CanisterHttpRequestArgument` does not have `Hash` implemented.
-fn hash(request: &CanisterHttpRequestArgument) -> String {
+pub(crate) fn hash(request: &CanisterHttpRequestArgument) -> String {
     let mut hash = String::new();
 
     hash.push_str(&request.url);

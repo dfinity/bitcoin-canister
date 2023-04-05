@@ -99,10 +99,12 @@
 //!
 
 mod http_request;
-pub mod mock;
 mod request;
 mod response;
 mod transform;
+
+// Export.
+pub mod mock;
 
 // Re-export.
 pub use crate::http_request::http_request;
@@ -110,3 +112,37 @@ pub use crate::request::create_request;
 pub use crate::response::create_response;
 pub use crate::transform::create_transform_context;
 pub use crate::transform::TransformFn;
+
+use crate::mock::{hash, Mock};
+use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
+use std::cell::RefCell;
+use std::collections::HashMap;
+
+// A thread-local hashmap.
+thread_local! {
+    /// A thread-local hashmap of mocks.
+    static MOCKS: RefCell<HashMap<String, Mock>> = RefCell::default();
+
+    /// A thread-local hashmap of transform functions.
+    static TRANSFORM_FUNCTIONS: RefCell<HashMap<String, TransformFn>> = RefCell::default();
+}
+
+/// Inserts the provided mock into a thread-local hashmap.
+fn mock_insert(mock: Mock) {
+    MOCKS.with(|cell| cell.borrow_mut().insert(hash(&mock.request), mock));
+}
+
+/// Returns a cloned mock from the thread-local hashmap that corresponds to the provided request.
+fn mock_get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
+    MOCKS.with(|cell| cell.borrow().get(&hash(request)).cloned())
+}
+
+/// Inserts the provided transform function into a thread-local hashmap.
+fn transform_function_insert(function_name: String, func: TransformFn) {
+    TRANSFORM_FUNCTIONS.with(|cell| cell.borrow_mut().insert(function_name, func));
+}
+
+/// Returns a cloned transform function from the thread-local hashmap.
+fn transform_function_get(function_name: String) -> Option<TransformFn> {
+    TRANSFORM_FUNCTIONS.with(|cell| cell.borrow().get(&function_name).copied())
+}
