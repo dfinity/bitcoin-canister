@@ -115,6 +115,13 @@ impl UnstableBlocks {
     pub(crate) fn next_block_headers_max_height(&self) -> Option<Height> {
         self.next_block_headers.get_max_height()
     }
+
+    pub fn get_next_block_height_and_header(
+        &self,
+        block_hash: &BlockHash,
+    ) -> Option<&(u32, BlockHeader)> {
+        self.next_block_headers.get(block_hash)
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
