@@ -91,11 +91,57 @@ mod test {
     use super::*;
     use crate::{
         state::{ingest_stable_blocks_into_utxoset, insert_block},
-        test_utils::build_chain,
+        test_utils::{build_chain, BlockBuilder},
     };
     use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::str::FromStr;
+
+    #[test]
+    fn test_new_with_next_block_headers() {
+        let genesis = BlockBuilder::genesis().build();
+        let network = Network::Mainnet;
+
+        let mut state = State::new(2, network, genesis.clone());
+        let block_0 = BlockBuilder::with_prev_header(genesis.header()).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        state
+            .unstable_blocks
+            .insert_next_block_header(*block_0.header(), 0)
+            .unwrap();
+        state
+            .unstable_blocks
+            .insert_next_block_header(*block_1.header(), 0)
+            .unwrap();
+        state
+            .unstable_blocks
+            .insert_next_block_header(*block_2.header(), 0)
+            .unwrap();
+
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+
+        let validation_context =
+            ValidationContext::new_with_next_block_headers(&state, block_3.header()).unwrap();
+
+        assert_eq!(
+            validation_context.chain,
+            vec![
+                (genesis.header(), genesis.block_hash()),
+                (block_0.header(), block_0.block_hash()),
+                (block_1.header(), block_1.block_hash()),
+                (block_2.header(), block_2.block_hash()),
+            ]
+        );
+
+        let not_inserted_1 = BlockBuilder::with_prev_header(genesis.header()).build();
+        let not_inserted_2 = BlockBuilder::with_prev_header(not_inserted_1.header()).build();
+
+        assert!(matches!(
+            ValidationContext::new_with_next_block_headers(&state, not_inserted_2.header()),
+            Err(BlockDoesNotExtendTree(..))
+        ));
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]
