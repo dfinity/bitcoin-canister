@@ -58,7 +58,7 @@
 //!             name: "User-Agent".to_string(),
 //!             value: "ic-http-example-canister".to_string(),
 //!         })
-//!         .transform(ic_http::create_transform_context(transform, vec![]))
+//!         .transform_func(transform, vec![])
 //!         .build()
 //! }
 //!
@@ -124,7 +124,6 @@ pub mod mock;
 pub use crate::http_request::http_request;
 pub use crate::request::create_request;
 pub use crate::response::create_response;
-pub use crate::transform::create_transform_context;
 pub use crate::transform::TransformFn;
 
 use crate::mock::{hash, Mock};

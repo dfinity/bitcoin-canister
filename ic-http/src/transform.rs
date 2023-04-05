@@ -8,7 +8,7 @@ pub type TransformFn = fn(TransformArgs) -> HttpResponse;
 /// Creates a `TransformContext` from a transform function and a context.
 /// Also inserts the transform function into a thread-local hashmap.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn create_transform_context(func: TransformFn, context: Vec<u8>) -> TransformContext {
+pub(crate) fn create_transform_context(func: TransformFn, context: Vec<u8>) -> TransformContext {
     let function_name = get_function_name(func).to_string();
     crate::transform_function_insert(function_name.clone(), func);
 
@@ -23,7 +23,7 @@ pub fn create_transform_context(func: TransformFn, context: Vec<u8>) -> Transfor
 
 /// Creates a `TransformContext` from a transform function and a context.
 #[cfg(target_arch = "wasm32")]
-pub fn create_transform_context<T>(func: T, context: Vec<u8>) -> TransformContext
+pub(crate) fn create_transform_context<T>(func: T, context: Vec<u8>) -> TransformContext
 where
     T: Fn(TransformArgs) -> HttpResponse,
 {

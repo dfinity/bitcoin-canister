@@ -57,7 +57,7 @@ async fn test_http_request_transform_status() {
     }
     let request = ic_http::create_request()
         .get("https://example.com")
-        .transform(ic_http::create_transform_context(transform, vec![]))
+        .transform_func(transform, vec![])
         .build();
     let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)
@@ -84,7 +84,7 @@ async fn test_http_request_transform_body() {
     }
     let request = ic_http::create_request()
         .get("https://dummyjson.com/todos/1")
-        .transform(ic_http::create_transform_context(transform, vec![]))
+        .transform_func(transform, vec![])
         .build();
     let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)

@@ -52,7 +52,7 @@ fn build_request() -> CanisterHttpRequestArgument {
             name: "User-Agent".to_string(),
             value: "ic-http-example-canister".to_string(),
         })
-        .transform(ic_http::create_transform_context(transform, vec![]))
+        .transform_func(transform, vec![])
         .build()
 }
 
