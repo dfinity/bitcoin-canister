@@ -13,7 +13,21 @@
 //!
 //! ## Canister
 //!
-//! ```ignore
+//! ```rust
+//! # use ic_cdk::api::management_canister::http_request::{
+//! #     CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
+//! # };
+//! #
+//! # pub fn print(msg: &str) {
+//! #    println!("{}", msg);
+//! # }
+//! #
+//! # /// Parse the raw response body as JSON.
+//! # fn parse_json(body: Vec<u8>) -> serde_json::Value {
+//! #     let json_str = String::from_utf8(body).expect("Raw response is not UTF-8 encoded.");
+//! #     serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
+//! # }
+//! #
 //! /// Apply a transform function to the HTTP response.
 //! #[ic_cdk_macros::query]
 //! fn transform(raw: TransformArgs) -> HttpResponse {
@@ -68,7 +82,7 @@
 //!
 //! ## Test
 //!
-//! ```ignore
+//! ```rust
 //! #[tokio::test]
 //! async fn test_http_request_transform_body() {
 //!     // Arrange

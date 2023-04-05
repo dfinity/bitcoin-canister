@@ -1420,6 +1420,7 @@ dependencies = [
  "futures",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
+ "serde_json",
  "tokio",
 ]
 
