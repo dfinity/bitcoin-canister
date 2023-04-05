@@ -115,34 +115,38 @@ pub use crate::transform::TransformFn;
 
 use crate::mock::{hash, Mock};
 use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
-use std::cell::RefCell;
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 // A thread-local hashmap.
 thread_local! {
     /// A thread-local hashmap of mocks.
-    static MOCKS: RefCell<HashMap<String, Mock>> = RefCell::default();
+    static MOCKS: RwLock<HashMap<String, Mock>> = RwLock::new(HashMap::new());
 
     /// A thread-local hashmap of transform functions.
-    static TRANSFORM_FUNCTIONS: RefCell<HashMap<String, TransformFn>> = RefCell::default();
+    static TRANSFORM_FUNCTIONS: RwLock<HashMap<String, TransformFn>> = RwLock::new(HashMap::new());
 }
 
 /// Inserts the provided mock into a thread-local hashmap.
 fn mock_insert(mock: Mock) {
-    MOCKS.with(|cell| cell.borrow_mut().insert(hash(&mock.request), mock));
+    MOCKS.with(|cell| {
+        cell.write().unwrap().insert(hash(&mock.request), mock);
+    });
 }
 
 /// Returns a cloned mock from the thread-local hashmap that corresponds to the provided request.
 fn mock_get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
-    MOCKS.with(|cell| cell.borrow().get(&hash(request)).cloned())
+    MOCKS.with(|cell| cell.read().unwrap().get(&hash(request)).cloned())
 }
 
 /// Inserts the provided transform function into a thread-local hashmap.
 fn transform_function_insert(function_name: String, func: TransformFn) {
-    TRANSFORM_FUNCTIONS.with(|cell| cell.borrow_mut().insert(function_name, func));
+    TRANSFORM_FUNCTIONS.with(|cell| {
+        cell.write().unwrap().insert(function_name, func);
+    });
 }
 
 /// Returns a cloned transform function from the thread-local hashmap.
 fn transform_function_get(function_name: String) -> Option<TransformFn> {
-    TRANSFORM_FUNCTIONS.with(|cell| cell.borrow().get(&function_name).copied())
+    TRANSFORM_FUNCTIONS.with(|cell| cell.read().unwrap().get(&function_name).cloned())
 }
