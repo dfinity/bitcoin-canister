@@ -1,11 +1,11 @@
-use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks, Block};
+use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
 use bitcoin::BlockHeader;
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.
 pub struct ValidationContext<'a> {
     state: &'a State,
-    chain: Vec<&'a Block>,
+    chain: Vec<(&'a BlockHeader, crate::types::BlockHash)>,
 }
 
 impl<'a> ValidationContext<'a> {
@@ -16,9 +16,35 @@ impl<'a> ValidationContext<'a> {
         let prev_block_hash = header.prev_blockhash.into();
         let chain = unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
             .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
-            .into_chain();
+            .into_chain()
+            .iter()
+            .map(|block| (block.header(), block.block_hash()))
+            .collect();
 
         Ok(Self { state, chain })
+    }
+
+    fn insert_in_chain(&mut self, item: (&'a BlockHeader, crate::types::BlockHash)) {
+        self.chain.push(item)
+    }
+
+    pub fn new_with_next_blocks(
+        state: &'a State,
+        header: &BlockHeader,
+    ) -> Result<Self, BlockDoesNotExtendTree> {
+        let prev_block_hash = header.prev_blockhash.into();
+        let next_block_headers_chain = state
+            .unstable_blocks
+            .get_next_block_headers_chain_with_tip(prev_block_hash);
+        if next_block_headers_chain.is_empty() {
+            Self::new(state, header)
+        } else {
+            let mut context = Self::new(state, next_block_headers_chain[0].0)?;
+            for item in next_block_headers_chain.iter() {
+                context.insert_in_chain(item.clone())
+            }
+            Ok(context)
+        }
     }
 }
 
@@ -27,9 +53,9 @@ impl<'a> HeaderStore for ValidationContext<'a> {
     fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<BlockHeader> {
         // Check if the header is in the chain.
         let hash = crate::types::BlockHash::from(hash.to_vec());
-        for block in self.chain.iter() {
-            if block.block_hash() == hash {
-                return Some(*block.header());
+        for item in self.chain.iter() {
+            if item.1 == hash {
+                return Some(*item.0);
             }
         }
 
@@ -51,7 +77,7 @@ impl<'a> HeaderStore for ValidationContext<'a> {
         } else if height <= self.height() {
             // The height requested is for an unstable block.
             // Retrieve the block header from the chain.
-            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].header())
+            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].0)
         } else {
             // The height requested is higher than the tip.
             None

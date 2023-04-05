@@ -116,11 +116,18 @@ impl UnstableBlocks {
         self.next_block_headers.get_max_height()
     }
 
-    pub fn get_next_block_height_and_header(
+    pub fn get_next_block_headers_chain_with_tip(
         &self,
-        block_hash: &BlockHash,
-    ) -> Option<&(u32, BlockHeader)> {
-        self.next_block_headers.get(block_hash)
+        block_hash: BlockHash,
+    ) -> Vec<(&BlockHeader, BlockHash)> {
+        let mut chain = vec![];
+        let mut curr_hash = block_hash;
+        while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
+            chain.push((curr_header, curr_hash));
+            curr_hash = BlockHash::from(curr_header.prev_blockhash);
+        }
+        chain.reverse();
+        chain
     }
 }
 

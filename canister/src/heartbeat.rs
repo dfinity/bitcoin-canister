@@ -143,35 +143,28 @@ fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeade
             }
         };
 
-        match ValidationContext::new(state, &block_header)
+        let validation_result = match ValidationContext::new_with_next_blocks(state, &block_header)
             .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
         {
-            Ok(store) => {
-                if let Err(err) =
-                    validate_header(&state.network().into(), &store, &block_header, time())
-                {
-                    print(&format!(
-                        "ERROR: Failed to validate block header. Err: {:?}, Block header: {:?}",
-                        err, block_header,
-                    ));
-                    return;
-                }
-            }
-            Err(err) => {
-                print(&format!(
-                    "ERROR: Failed to validate block header. Err: {:?}, Block header: {:?}",
-                    err, block_header,
-                ));
-                return;
-            }
+            Ok(store) => validate_header(&state.network().into(), &store, &block_header, time()),
+            Err(err) => Err(err),
         };
+
+        if let Err(err) = validation_result {
+            print(&format!(
+                "ERROR: Failed to validate block header. Err: {:?}, Block header: {:?}",
+                err, block_header,
+            ));
+
+            return;
+        }
 
         if let Err(err) = state
             .unstable_blocks
             .insert_next_block_header(block_header, state.stable_height())
         {
             print(&format!(
-                "ERROR: Failed to insert next block hash. Err: {:?}, Block header: {:?}",
+                "ERROR: Failed to insert next block header. Err: {:?}, Block header: {:?}",
                 err, block_header,
             ));
             return;
