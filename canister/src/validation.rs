@@ -27,8 +27,9 @@ impl<'a> ValidationContext<'a> {
     fn insert_in_chain(&mut self, item: (&'a BlockHeader, crate::types::BlockHash)) {
         self.chain.push(item)
     }
-
-    pub fn new_with_next_blocks(
+    /// Initialize a `ValidationContext` for the given block header.
+    /// The given block header can be in the 'NextBlockHeaders'.
+    pub fn new_with_next_block_headers(
         state: &'a State,
         header: &BlockHeader,
     ) -> Result<Self, BlockDoesNotExtendTree> {

@@ -143,12 +143,15 @@ fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeade
             }
         };
 
-        let validation_result = match ValidationContext::new_with_next_blocks(state, &block_header)
-            .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
-        {
-            Ok(store) => validate_header(&state.network().into(), &store, &block_header, time()),
-            Err(err) => Err(err),
-        };
+        let validation_result =
+            match ValidationContext::new_with_next_block_headers(state, &block_header)
+                .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
+            {
+                Ok(store) => {
+                    validate_header(&state.network().into(), &store, &block_header, time())
+                }
+                Err(err) => Err(err),
+            };
 
         if let Err(err) = validation_result {
             print(&format!(
