@@ -2,17 +2,16 @@ use crate::{
     runtime::{call_get_successors, print, time},
     state::{self, ResponseToProcess, State},
     types::{
-        Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
-        GetSuccessorsRequestInitial, GetSuccessorsResponse,
+        into_bitcoin_network, Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse,
+        GetSuccessorsRequest, GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
     validation::ValidationContext,
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::Block as BitcoinBlock;
 use bitcoin::{consensus::Decodable, BlockHeader};
-use ic_btc_validation::{validate_header, ValidateHeaderError};
 use ic_btc_interface::Flag;
-
+use ic_btc_validation::{validate_header, ValidateHeaderError};
 /// The heartbeat of the Bitcoin canister.
 ///
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
@@ -148,9 +147,12 @@ fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeade
             match ValidationContext::new_with_next_block_headers(state, &block_header)
                 .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
             {
-                Ok(store) => {
-                    validate_header(&state.network().into(), &store, &block_header, time())
-                }
+                Ok(store) => validate_header(
+                    &into_bitcoin_network(state.network()),
+                    &store,
+                    &block_header,
+                    time(),
+                ),
                 Err(err) => Err(err),
             };
 
