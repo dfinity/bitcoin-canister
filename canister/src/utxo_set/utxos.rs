@@ -92,14 +92,14 @@ impl Utxos {
     pub fn insert(&mut self, key: OutPoint, value: (TxOut, Height)) -> bool {
         let value_encoded = value.to_bytes();
 
-        if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL as usize {
+        if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL {
             self.small_utxos
                 .insert(
                     Blob::try_from(key.to_bytes().as_ref()).unwrap(),
                     Blob::try_from(value_encoded.as_ref()).unwrap(),
                 )
                 .is_some()
-        } else if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_MEDIUM as usize {
+        } else if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_MEDIUM {
             self.medium_utxos
                 .insert(
                     Blob::try_from(key.to_bytes().as_ref()).unwrap(),
