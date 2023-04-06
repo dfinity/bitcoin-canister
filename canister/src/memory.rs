@@ -4,7 +4,7 @@ use ic_stable_structures::DefaultMemoryImpl;
 use ic_stable_structures::FileMemory;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
-    Memory as MemoryTrait,
+    Memory as MemoryTrait, RestrictedMemory,
 };
 use std::cell::RefCell;
 
@@ -22,7 +22,7 @@ const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 type InnerMemory = FileMemory;
 
 #[cfg(not(feature = "file_memory"))]
-type InnerMemory = DefaultMemoryImpl;
+type InnerMemory = RestrictedMemory<DefaultMemoryImpl>;
 
 pub type Memory = VirtualMemory<InnerMemory>;
 
@@ -35,7 +35,7 @@ thread_local! {
 
 #[cfg(not(feature = "file_memory"))]
 thread_local! {
-    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(InnerMemory::default()));
+    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(RestrictedMemory::new(DefaultMemoryImpl::default(), 10000..20000)));
 
     static MEMORY_MANAGER: RefCell<Option<MemoryManager<InnerMemory>>> =
         RefCell::new(Some(MemoryManager::init(MEMORY.with(|m| m.borrow().clone().unwrap()))));

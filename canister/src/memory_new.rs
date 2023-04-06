@@ -3,12 +3,14 @@
 //! fully replace memory.rs
 
 use ic_stable_structures_new::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
-#[cfg(not(feature = "file_memory"))]
-use ic_stable_structures_new::DefaultMemoryImpl;
 #[cfg(feature = "file_memory")]
 use ic_stable_structures_new::FileMemory;
+#[cfg(not(feature = "file_memory"))]
+use ic_stable_structures_new::{DefaultMemoryImpl, RestrictedMemory};
 use std::cell::RefCell;
 
+const SMALL_UTXOS: MemoryId = MemoryId::new(2);
+const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
 const BLOCK_HEADERS: MemoryId = MemoryId::new(5);
 const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 
@@ -16,7 +18,7 @@ const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 type InnerMemory = FileMemory;
 
 #[cfg(not(feature = "file_memory"))]
-type InnerMemory = DefaultMemoryImpl;
+type InnerMemory = RestrictedMemory<DefaultMemoryImpl>;
 
 pub type Memory = VirtualMemory<InnerMemory>;
 
@@ -29,10 +31,10 @@ thread_local! {
 
 #[cfg(not(feature = "file_memory"))]
 thread_local! {
-    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(InnerMemory::default()));
+    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(RestrictedMemory::new(DefaultMemoryImpl::default(), 0..10000)));
 
     static MEMORY_MANAGER: RefCell<Option<MemoryManager<InnerMemory>>> =
-        RefCell::new(Some(MemoryManager::init(MEMORY.with(|m| m.borrow().clone().unwrap()))));
+        RefCell::new(Some(MemoryManager::init_with_bucket_size(MEMORY.with(|m| m.borrow().clone().unwrap()), 1024)));
 }
 
 fn with_memory_manager<R>(f: impl FnOnce(&MemoryManager<InnerMemory>) -> R) -> R {
@@ -42,6 +44,14 @@ fn with_memory_manager<R>(f: impl FnOnce(&MemoryManager<InnerMemory>) -> R) -> R
             .as_ref()
             .expect("memory manager not initialized"))
     })
+}
+
+pub fn get_utxos_small_memory() -> Memory {
+    with_memory_manager(|m| m.get(SMALL_UTXOS))
+}
+
+pub fn get_utxos_medium_memory() -> Memory {
+    with_memory_manager(|m| m.get(MEDIUM_UTXOS))
 }
 
 pub fn get_block_headers_memory() -> Memory {

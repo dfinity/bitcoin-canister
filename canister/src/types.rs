@@ -381,7 +381,7 @@ impl Page {
         Ok(Page {
             tip_block_hash,
             height,
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         })
     }
 }
@@ -393,7 +393,7 @@ pub trait Storable {
     fn from_bytes(bytes: Vec<u8>) -> Self;
 }
 
-impl StableStructuresStorable for OutPoint {
+impl StorableNew for OutPoint {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
@@ -404,7 +404,7 @@ impl StableStructuresStorable for OutPoint {
         std::borrow::Cow::Owned(v)
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
         assert_eq!(bytes.len(), 36);
         OutPoint {
             txid: Txid::from(bytes[..32].to_vec()),
@@ -413,10 +413,9 @@ impl StableStructuresStorable for OutPoint {
     }
 }
 
-impl BoundedStorable for OutPoint {
-    fn max_size() -> u32 {
-        OUTPOINT_SIZE
-    }
+impl BoundedStorableNew for OutPoint {
+    const MAX_SIZE: u32 = OUTPOINT_SIZE;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl Storable for (TxOut, Height) {
@@ -489,14 +488,14 @@ impl StableStructuresStorable for AddressUtxo {
         Self {
             address: Address::from_bytes(bytes),
             height: <Height as Storable>::from_bytes(height_bytes),
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         }
     }
 }
 
 impl BoundedStorable for AddressUtxo {
     fn max_size() -> u32 {
-        Address::max_size() + 4 /* height bytes */ + OutPoint::max_size()
+        Address::max_size() + 4 /* height bytes */ + OutPoint::MAX_SIZE
     }
 }
 
@@ -536,7 +535,7 @@ impl Storable for (Height, OutPoint) {
 
         (
             <Height as Storable>::from_bytes(bytes),
-            OutPoint::from_bytes(outpoint_bytes),
+            OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         )
     }
 }
