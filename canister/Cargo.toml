@@ -17,8 +17,7 @@ ic-btc-validation = { path = "../validation" }
 ic-cdk = "0.6.1"
 ic-cdk-macros = "0.6.1"
 ic-metrics-encoder = "1.0.0"
-ic-stable-structures = "0.3.0"
-ic-stable-structures_new = { package = "ic-stable-structures", version = "0.5.2" }
+ic-stable-structures = "0.5.2"
 lazy_static = "1.4.0"
 serde = "1.0.132"
 serde_bytes = "0.11"

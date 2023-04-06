@@ -1,5 +1,5 @@
 use crate::{
-    memory_new::Memory as MemoryNew,
+    memory::Memory as MemoryNew,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
@@ -9,7 +9,7 @@ use crate::{
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Satoshi};
-use ic_stable_structures_new::{
+use ic_stable_structures::{
     storable::Blob, BoundedStorable, StableBTreeMap as StableBTreeMapNew, Storable,
 };
 use serde::{Deserialize, Serialize};
@@ -451,11 +451,11 @@ impl UtxoSet {
 }
 
 fn init_address_utxos() -> StableBTreeMapNew<Blob<130>, (), MemoryNew> {
-    StableBTreeMapNew::init(crate::memory_new::get_address_utxos_memory())
+    StableBTreeMapNew::init(crate::memory::get_address_utxos_memory())
 }
 
 fn init_balances() -> StableBTreeMapNew<Address, u64, MemoryNew> {
-    StableBTreeMapNew::init(crate::memory_new::get_balances_memory())
+    StableBTreeMapNew::init(crate::memory::get_balances_memory())
 }
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.

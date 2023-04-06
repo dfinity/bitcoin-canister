@@ -4,19 +4,28 @@ use ic_stable_structures::DefaultMemoryImpl;
 use ic_stable_structures::FileMemory;
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
-    Memory as MemoryTrait, RestrictedMemory,
+    Memory as MemoryTrait,
 };
 use std::cell::RefCell;
 
 const WASM_PAGE_SIZE: u64 = 65536;
 
 const UPGRADES: MemoryId = MemoryId::new(0);
+const ADDRESS_UTXOS: MemoryId = MemoryId::new(1);
+const SMALL_UTXOS: MemoryId = MemoryId::new(2);
+const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
+const BALANCES: MemoryId = MemoryId::new(4);
+const BLOCK_HEADERS: MemoryId = MemoryId::new(5);
+const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
+
+#[cfg(feature = "file_memory")]
+type InnerMemory = FileMemory;
 
 #[cfg(feature = "file_memory")]
 type InnerMemory = FileMemory;
 
 #[cfg(not(feature = "file_memory"))]
-type InnerMemory = RestrictedMemory<DefaultMemoryImpl>;
+type InnerMemory = DefaultMemoryImpl;
 
 pub type Memory = VirtualMemory<InnerMemory>;
 
@@ -29,7 +38,7 @@ thread_local! {
 
 #[cfg(not(feature = "file_memory"))]
 thread_local! {
-    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(RestrictedMemory::new(DefaultMemoryImpl::default(), 10000..20000)));
+    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(DefaultMemoryImpl::default()));
 
     static MEMORY_MANAGER: RefCell<Option<MemoryManager<InnerMemory>>> =
         RefCell::new(Some(MemoryManager::init(MEMORY.with(|m| m.borrow().clone().unwrap()))));
@@ -64,6 +73,30 @@ pub fn set_memory(memory: InnerMemory) {
 
 pub fn get_upgrades_memory() -> Memory {
     with_memory_manager(|m| m.get(UPGRADES))
+}
+
+pub fn get_utxos_small_memory() -> Memory {
+    with_memory_manager(|m| m.get(SMALL_UTXOS))
+}
+
+pub fn get_utxos_medium_memory() -> Memory {
+    with_memory_manager(|m| m.get(MEDIUM_UTXOS))
+}
+
+pub fn get_balances_memory() -> Memory {
+    with_memory_manager(|m| m.get(BALANCES))
+}
+
+pub fn get_block_headers_memory() -> Memory {
+    with_memory_manager(|m| m.get(BLOCK_HEADERS))
+}
+
+pub fn get_block_heights_memory() -> Memory {
+    with_memory_manager(|m| m.get(BLOCK_HEIGHTS))
+}
+
+pub fn get_address_utxos_memory() -> Memory {
+    with_memory_manager(|m| m.get(ADDRESS_UTXOS))
 }
 
 /// Writes the bytes at the specified offset, growing the memory size if needed.

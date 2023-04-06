@@ -1,11 +1,11 @@
 use crate::{
-    memory_new::Memory,
+    memory::Memory,
     types::{Block, BlockHash, BlockHeaderBlob},
 };
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::BlockHeader;
 use ic_btc_interface::Height;
-use ic_stable_structures_new::StableBTreeMap;
+use ic_stable_structures::StableBTreeMap;
 use serde::{Deserialize, Serialize};
 
 /// Stores block headers and indexes them by block hash and height.
@@ -81,9 +81,9 @@ fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {
 }
 
 fn init_block_headers() -> StableBTreeMap<BlockHash, BlockHeaderBlob, Memory> {
-    StableBTreeMap::init(crate::memory_new::get_block_headers_memory())
+    StableBTreeMap::init(crate::memory::get_block_headers_memory())
 }
 
 fn init_block_heights() -> StableBTreeMap<u32, BlockHash, Memory> {
-    StableBTreeMap::init(crate::memory_new::get_block_heights_memory())
+    StableBTreeMap::init(crate::memory::get_block_heights_memory())
 }

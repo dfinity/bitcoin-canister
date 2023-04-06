@@ -9,7 +9,7 @@ use ic_btc_interface::{
     UtxosFilterInRequest,
 };
 use ic_cdk::export::{candid::CandidType, Principal};
-use ic_stable_structures_new::{
+use ic_stable_structures::{
     storable::Blob, BoundedStorable as BoundedStorableNew, Storable as StorableNew,
 };
 use serde::{Deserialize, Serialize};

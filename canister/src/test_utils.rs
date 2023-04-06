@@ -9,7 +9,7 @@ use bitcoin::{
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_stable_structures_new::{BoundedStorable, Memory, StableBTreeMap};
+use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
 use std::str::FromStr;
 

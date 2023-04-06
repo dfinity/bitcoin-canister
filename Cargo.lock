@@ -1284,7 +1284,6 @@ dependencies = [
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
  "ic-metrics-encoder",
- "ic-stable-structures 0.3.0",
  "ic-stable-structures 0.5.2",
  "lazy_static",
  "maplit",

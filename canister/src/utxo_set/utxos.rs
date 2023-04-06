@@ -1,14 +1,12 @@
 use crate::{
-    memory_new::{get_utxos_medium_memory, get_utxos_small_memory, Memory},
+    memory::{get_utxos_medium_memory, get_utxos_small_memory, Memory},
     state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL},
     types::{OutPoint, Storable, TxOut},
 };
 use ic_btc_interface::Height;
 #[cfg(test)]
-use ic_stable_structures_new::{btreemap, Memory as MemoryTrait};
-use ic_stable_structures_new::{
-    storable::Blob, StableBTreeMap, Storable as StableStructuresStorable,
-};
+use ic_stable_structures::{btreemap, Memory as MemoryTrait};
+use ic_stable_structures::{storable::Blob, StableBTreeMap, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
