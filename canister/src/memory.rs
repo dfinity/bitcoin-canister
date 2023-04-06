@@ -11,7 +11,6 @@ use std::cell::RefCell;
 const WASM_PAGE_SIZE: u64 = 65536;
 
 const UPGRADES: MemoryId = MemoryId::new(0);
-const ADDRESS_OUTPOINTS: MemoryId = MemoryId::new(1);
 
 #[cfg(feature = "file_memory")]
 type InnerMemory = FileMemory;
@@ -65,10 +64,6 @@ pub fn set_memory(memory: InnerMemory) {
 
 pub fn get_upgrades_memory() -> Memory {
     with_memory_manager(|m| m.get(UPGRADES))
-}
-
-pub fn get_address_utxos_memory() -> Memory {
-    with_memory_manager(|m| m.get(ADDRESS_OUTPOINTS))
 }
 
 /// Writes the bytes at the specified offset, growing the memory size if needed.

@@ -9,6 +9,7 @@ use ic_stable_structures_new::FileMemory;
 use ic_stable_structures_new::{DefaultMemoryImpl, RestrictedMemory};
 use std::cell::RefCell;
 
+const ADDRESS_UTXOS: MemoryId = MemoryId::new(1);
 const SMALL_UTXOS: MemoryId = MemoryId::new(2);
 const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
 const BALANCES: MemoryId = MemoryId::new(4);
@@ -65,4 +66,8 @@ pub fn get_block_headers_memory() -> Memory {
 
 pub fn get_block_heights_memory() -> Memory {
     with_memory_manager(|m| m.get(BLOCK_HEIGHTS))
+}
+
+pub fn get_address_utxos_memory() -> Memory {
+    with_memory_manager(|m| m.get(ADDRESS_UTXOS))
 }

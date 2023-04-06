@@ -1,21 +1,22 @@
 use crate::{
-    memory::Memory,
     memory_new::Memory as MemoryNew,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
-        Address, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing, Storable, Transaction,
-        TxOut, Txid, Utxo,
+        Address, AddressRange, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing,
+        Transaction, TxOut, Txid, Utxo,
     },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Satoshi};
-use ic_stable_structures::StableBTreeMap;
-use ic_stable_structures_new::{StableBTreeMap as StableBTreeMapNew, Storable as _};
+use ic_stable_structures_new::{
+    storable::Blob, BoundedStorable, StableBTreeMap as StableBTreeMapNew, Storable,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
 mod utxos_delta;
+use std::convert::TryFrom;
 use utxos::Utxos;
 use utxos_delta::UtxosDelta;
 
@@ -35,7 +36,7 @@ pub struct UtxoSet {
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_utxos")]
-    address_utxos: StableBTreeMap<Memory, AddressUtxo, ()>,
+    address_utxos: StableBTreeMapNew<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), MemoryNew>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
@@ -225,13 +226,13 @@ impl UtxoSet {
         // that were added by the ingesting block.
         let stable_outpoints = self
             .address_utxos
-            .range(
-                address.to_bytes().to_vec(),
-                offset
-                    .as_ref()
-                    .map(|u| (u.height, u.outpoint.clone()).to_bytes()),
-            )
-            .map(|(address_utxo, _)| address_utxo.outpoint)
+            .range(AddressRange::new(address, offset))
+            .map(|(address_utxo_blob, _)| {
+                let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
+                    address_utxo_blob.as_slice(),
+                ));
+                address_utxo.outpoint
+            })
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
 
         // Return the stable outpoints along with the outpoints removed by the ingesting block.
@@ -322,7 +323,9 @@ impl UtxoSet {
                             outpoint: outpoint.clone(),
                         };
 
-                        let found = self.address_utxos.remove(&address_utxo);
+                        let found = self
+                            .address_utxos
+                            .remove(&Blob::try_from(address_utxo.to_bytes().as_ref()).unwrap());
 
                         assert!(
                             found.is_some(),
@@ -400,16 +403,19 @@ impl UtxoSet {
         let tx_out: TxOut = (&output).into();
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
-            self.address_utxos
-                .insert(
+            self.address_utxos.insert(
+                Blob::try_from(
                     AddressUtxo {
                         address: address.clone(),
                         height: self.next_height,
                         outpoint: outpoint.clone(),
-                    },
-                    (),
+                    }
+                    .to_bytes()
+                    .as_ref(),
                 )
-                .expect("insertion must succeed");
+                .unwrap(),
+                (),
+            );
 
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
@@ -444,8 +450,8 @@ impl UtxoSet {
     }
 }
 
-fn init_address_utxos() -> StableBTreeMap<Memory, AddressUtxo, ()> {
-    StableBTreeMap::init(crate::memory::get_address_utxos_memory())
+fn init_address_utxos() -> StableBTreeMapNew<Blob<130>, (), MemoryNew> {
+    StableBTreeMapNew::init(crate::memory_new::get_address_utxos_memory())
 }
 
 fn init_balances() -> StableBTreeMapNew<Address, u64, MemoryNew> {
@@ -540,13 +546,12 @@ impl BlockIngestionStats {
 impl PartialEq for UtxoSet {
     fn eq(&self, other: &Self) -> bool {
         use crate::test_utils::is_stable_btreemap_equal;
-        use crate::test_utils::is_stable_btreemap_equal_new;
         self.utxos == other.utxos
             && self.network == other.network
             && self.next_height == other.next_height
             && self.ingesting_block == other.ingesting_block
             && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
-            && is_stable_btreemap_equal_new(&self.balances, &other.balances)
+            && is_stable_btreemap_equal(&self.balances, &other.balances)
     }
 }
 
@@ -691,11 +696,11 @@ mod test {
                 .map(|(k, _)| k)
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                AddressUtxo {
+                Blob::try_from(AddressUtxo {
                     address: address_1.clone(),
                     height: 0,
                     outpoint: OutPoint::new(coinbase_tx.txid(), 0)
-                }
+                }.to_bytes().as_ref()).unwrap()
             }
         );
 
@@ -733,11 +738,11 @@ mod test {
                 .map(|(k, _)| k)
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
-                AddressUtxo {
+                Blob::try_from(AddressUtxo {
                     address: address_2,
                     height: 1,
                     outpoint: OutPoint::new(tx.txid(), 0)
-                }
+                }.to_bytes().as_ref()).unwrap()
             }
         );
     }
@@ -750,23 +755,31 @@ mod test {
 
         // Insert some entries into the map with different heights in some random order.
         for height in [17u32, 0, 31, 4, 2].iter() {
-            utxo.address_utxos
-                .insert(
+            utxo.address_utxos.insert(
+                Blob::try_from(
                     AddressUtxo {
                         address: address.clone(),
                         height: *height,
                         outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
-                    },
-                    (),
+                    }
+                    .to_bytes()
+                    .as_ref(),
                 )
-                .unwrap();
+                .unwrap(),
+                (),
+            );
         }
 
         // Verify that the entries returned are sorted in descending height.
         assert_eq!(
             utxo.address_utxos
-                .range(address.to_bytes().to_vec(), None)
-                .map(|(address_utxo, _)| { address_utxo.height })
+                .range(AddressRange::new(&address, &None))
+                .map(|(address_utxo_blob, _)| {
+                    let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
+                        address_utxo_blob.as_slice(),
+                    ));
+                    address_utxo.height
+                })
                 .collect::<Vec<_>>(),
             vec![31, 17, 4, 2, 0]
         );

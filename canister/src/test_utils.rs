@@ -9,7 +9,7 @@ use bitcoin::{
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_stable_structures::{Memory, StableBTreeMap, Storable};
+use ic_stable_structures_new::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
 use std::str::FromStr;
 
@@ -117,32 +117,13 @@ fn build_chain_with_genesis_block(
 }
 
 /// Returns true if the instances of `StableBTreeMap` provided are equal.
-pub fn is_stable_btreemap_equal<M: Memory + Clone, K: Storable + Eq, V: Storable + Eq>(
-    a: &StableBTreeMap<M, K, V>,
-    b: &StableBTreeMap<M, K, V>,
-) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-
-    for (x, y) in a.iter().zip(b.iter()) {
-        if x != y {
-            return false;
-        }
-    }
-
-    true
-}
-
-// A version of `is_stable_btreemap_equal` for the new stable-structures version.
-// TODO(EXC-1382): delete the old version once the migration to the new stable-structures is complete.
-pub fn is_stable_btreemap_equal_new<
-    M: ic_stable_structures_new::Memory,
-    K: ic_stable_structures_new::BoundedStorable + Ord + Eq + Clone,
-    V: ic_stable_structures_new::BoundedStorable + Eq,
+pub fn is_stable_btreemap_equal<
+    M: Memory,
+    K: BoundedStorable + Ord + Eq + Clone,
+    V: BoundedStorable + Eq,
 >(
-    a: &ic_stable_structures_new::StableBTreeMap<K, V, M>,
-    b: &ic_stable_structures_new::StableBTreeMap<K, V, M>,
+    a: &StableBTreeMap<K, V, M>,
+    b: &StableBTreeMap<K, V, M>,
 ) -> bool {
     if a.len() != b.len() {
         return false;

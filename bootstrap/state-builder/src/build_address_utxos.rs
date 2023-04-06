@@ -1,3 +1,4 @@
+/*
 //! A script for building the Bitcoin canister's address UTXOs from a UTXO dump text file.
 //!
 //! Example run:
@@ -97,4 +98,5 @@ fn main() {
         Err(err) => panic!("couldn't write to {}: {}", args.output.display(), err),
         Ok(_) => println!("successfully wrote balances to {}", args.output.display()),
     };
-}
+}*/
+fn main() {}

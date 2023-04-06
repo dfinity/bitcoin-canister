@@ -27,7 +27,7 @@ pub struct BlockHeaderStore {
 #[cfg(test)]
 impl PartialEq for BlockHeaderStore {
     fn eq(&self, other: &Self) -> bool {
-        use crate::test_utils::is_stable_btreemap_equal_new as is_stable_btreemap_equal;
+        use crate::test_utils::is_stable_btreemap_equal;
         is_stable_btreemap_equal(&self.block_headers, &other.block_headers)
             && is_stable_btreemap_equal(&self.block_heights, &other.block_heights)
     }
