@@ -13,7 +13,6 @@ use ic_btc_interface::Network;
 use ic_stable_structures::{
     storable::Blob, BoundedStorable, DefaultMemoryImpl, StableBTreeMap, Storable,
 };
-use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},

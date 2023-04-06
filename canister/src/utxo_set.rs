@@ -3,13 +3,13 @@ use crate::{
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
-        Address, AddressUtxo, Block, BlockHash, OutPoint, Slicing, Storable, Transaction, TxOut,
-        Txid, Utxo,
+        Address, AddressUtxo, AddressUtxoRange, Block, BlockHash, OutPoint, Slicing, Transaction,
+        TxOut, Txid, Utxo,
     },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Network, Satoshi};
-use ic_stable_structures::{StableBTreeMap, Storable as _, storable::Blob};
+use ic_stable_structures::{storable::Blob, BoundedStorable, StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
