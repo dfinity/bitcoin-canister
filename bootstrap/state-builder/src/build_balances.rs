@@ -1,4 +1,3 @@
-/*
 //! A script for building the Bitcoin canister's balances from a UTXO dump text file.
 //!
 //! Example run:
@@ -90,7 +89,7 @@ fn main() {
 
     println!("Writing to stable structure...");
     let memory = DefaultMemoryImpl::default();
-    let mut stable_balances: StableBTreeMap<_, Address, u64> = StableBTreeMap::init(memory.clone());
+    let mut stable_balances: StableBTreeMap<Address, u64, _> = StableBTreeMap::init(memory.clone());
 
     // Write the balances into a stable btreemap.
     for (address, amount) in balances.into_iter() {
@@ -107,5 +106,4 @@ fn main() {
         Err(err) => panic!("couldn't write to {}: {}", args.output.display(), err),
         Ok(_) => println!("successfully wrote balances to {}", args.output.display()),
     };
-}*/
-fn main() {}
+}

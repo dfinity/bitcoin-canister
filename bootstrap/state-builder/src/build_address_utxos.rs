@@ -1,4 +1,3 @@
-/*
 //! A script for building the Bitcoin canister's address UTXOs from a UTXO dump text file.
 //!
 //! Example run:
@@ -10,7 +9,9 @@
 use bitcoin::{Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
 use ic_btc_canister::types::{Address, AddressUtxo, Network, OutPoint, Txid};
-use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
+use ic_stable_structures::{
+    storable::Blob, BoundedStorable, DefaultMemoryImpl, StableBTreeMap, Storable,
+};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -41,7 +42,7 @@ fn main() {
     let reader = BufReader::new(utxos_file);
 
     let memory = DefaultMemoryImpl::default();
-    let mut address_utxos: StableBTreeMap<AddressUtxo, (), _> =
+    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), _> =
         StableBTreeMap::init(memory.clone());
 
     for (i, line) in reader.lines().enumerate() {
@@ -74,14 +75,19 @@ fn main() {
 
             address_utxos
                 .insert(
-                    AddressUtxo {
-                        address,
-                        height,
-                        outpoint: OutPoint {
-                            txid: txid.clone(),
-                            vout,
-                        },
-                    },
+                    Blob::try_from(
+                        AddressUtxo {
+                            address,
+                            height,
+                            outpoint: OutPoint {
+                                txid: txid.clone(),
+                                vout,
+                            },
+                        }
+                        .to_bytes()
+                        .as_ref(),
+                    )
+                    .unwrap(),
                     (),
                 )
                 .unwrap();
@@ -98,5 +104,4 @@ fn main() {
         Err(err) => panic!("couldn't write to {}: {}", args.output.display(), err),
         Ok(_) => println!("successfully wrote balances to {}", args.output.display()),
     };
-}*/
-fn main() {}
+}

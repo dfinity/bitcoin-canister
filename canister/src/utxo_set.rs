@@ -450,7 +450,7 @@ impl UtxoSet {
     }
 }
 
-fn init_address_utxos() -> StableBTreeMapNew<Blob<130>, (), Memory> {
+fn init_address_utxos() -> StableBTreeMapNew<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory> {
     StableBTreeMapNew::init(crate::memory::get_address_utxos_memory())
 }
 

@@ -555,7 +555,7 @@ impl AddressUtxoRange {
     }
 }
 
-impl RangeBounds<Blob<130>> for AddressUtxoRange {
+impl RangeBounds<Blob<{ AddressUtxo::MAX_SIZE as usize }>> for AddressUtxoRange {
     fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
         Bound::Included(&self.start_bound)
     }

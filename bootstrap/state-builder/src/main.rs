@@ -7,8 +7,7 @@
 //!     --network testnet \
 //!     --blocks-path /path/to/data/testnet3 \
 //!     --tip 000000002ce019cc4a8f2af62b3ecf7c30a19d29828b25268a0194dbac3cac50
-fn main() {}
-/*use bitcoin::{consensus::Decodable, BlockHash, BlockHeader};
+use bitcoin::{consensus::Decodable, BlockHash, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
 use clap::Parser;
 use ic_btc_canister::{
@@ -190,4 +189,4 @@ async fn main() {
         Err(err) => panic!("couldn't write to {}: {}", args.state_path.display(), err),
         Ok(_) => println!("successfully wrote state to {}", args.state_path.display()),
     };
-}*/
+}
