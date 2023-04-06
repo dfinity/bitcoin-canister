@@ -114,12 +114,10 @@ impl Utxos {
         let key_vec = Blob::try_from(key.to_bytes().as_ref()).unwrap();
 
         if let Some(value) = self.small_utxos.get(&key_vec) {
-            // TODO: performance optimization here?
             return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
         if let Some(value) = self.medium_utxos.get(&key_vec) {
-            // TODO: performance optimization here?
             return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
@@ -187,7 +185,6 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
     fn next(&mut self) -> Option<Self::Item> {
         // First, iterate over the small utxos.
         if let Some((key_bytes, value_bytes)) = self.small_utxos_iter.next() {
-            // TODO: these conversions are probably slow.
             return Some((
                 OutPoint::from_bytes(std::borrow::Cow::Borrowed(key_bytes.as_slice())),
                 <(TxOut, Height)>::from_bytes(value_bytes.as_slice().to_vec()),

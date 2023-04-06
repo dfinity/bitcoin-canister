@@ -3,7 +3,7 @@ use crate::{
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
-        Address, AddressRange, AddressUtxo, Block, BlockHash, Network, OutPoint, Slicing,
+        Address, AddressUtxo, AddressUtxoRange, Block, BlockHash, Network, OutPoint, Slicing,
         Transaction, TxOut, Txid, Utxo,
     },
 };
@@ -226,7 +226,7 @@ impl UtxoSet {
         // that were added by the ingesting block.
         let stable_outpoints = self
             .address_utxos
-            .range(AddressRange::new(address, offset))
+            .range(AddressUtxoRange::new(address, offset))
             .map(|(address_utxo_blob, _)| {
                 let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
                     address_utxo_blob.as_slice(),
@@ -773,7 +773,7 @@ mod test {
         // Verify that the entries returned are sorted in descending height.
         assert_eq!(
             utxo.address_utxos
-                .range(AddressRange::new(&address, &None))
+                .range(AddressUtxoRange::new(&address, &None))
                 .map(|(address_utxo_blob, _)| {
                     let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
                         address_utxo_blob.as_slice(),

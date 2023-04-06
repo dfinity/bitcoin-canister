@@ -424,9 +424,9 @@ impl BoundedStorableNew for OutPoint {
 impl Storable for (TxOut, Height) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
-            StableStructuresStorable::to_bytes(&self.0.value).to_vec(), // Store the value (8 bytes)
-            self.0.script_pubkey.clone(), // Then the script (size varies)
-            Storable::to_bytes(&self.1),  // Then the height (4 bytes)
+            self.0.value.to_bytes().to_vec(), // Store the value (8 bytes)
+            self.0.script_pubkey.clone(),     // Then the script (size varies)
+            Storable::to_bytes(&self.1),      // Then the height (4 bytes)
         ]
         .into_iter()
         .flatten()
@@ -471,12 +471,45 @@ pub struct AddressUtxo {
     pub outpoint: OutPoint,
 }
 
-pub struct AddressRange {
-    start_bound: Blob<130>,
-    end_bound: Blob<130>,
+impl StableStructuresStorable for AddressUtxo {
+    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+        let bytes = vec![
+            Address::to_bytes(&self.address).to_vec(),
+            Storable::to_bytes(&self.height),
+            OutPoint::to_bytes(&self.outpoint).to_vec(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+
+        std::borrow::Cow::Owned(bytes)
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        let len = bytes.len();
+        Self {
+            address: Address::from_bytes(Cow::Borrowed(
+                &bytes[0..len - OUTPOINT_SIZE as usize - 4],
+            )),
+            height: <Height as Storable>::from_bytes(
+                bytes[len - OUTPOINT_SIZE as usize - 4..len - OUTPOINT_SIZE as usize].to_vec(),
+            ),
+            outpoint: OutPoint::from_bytes(Cow::Borrowed(&bytes[len - OUTPOINT_SIZE as usize..])),
+        }
+    }
 }
 
-impl AddressRange {
+impl BoundedStorableNew for AddressUtxo {
+    const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+pub struct AddressUtxoRange {
+    start_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
+    end_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
+}
+
+impl AddressUtxoRange {
     pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
         let start_bound = Blob::try_from(
             match utxo {
@@ -514,47 +547,14 @@ impl AddressRange {
     }
 }
 
-impl RangeBounds<Blob<130>> for AddressRange {
-    fn start_bound(&self) -> Bound<&Blob<130>> {
+impl RangeBounds<Blob<130>> for AddressUtxoRange {
+    fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
         Bound::Included(&self.start_bound)
     }
 
-    fn end_bound(&self) -> Bound<&Blob<130>> {
+    fn end_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
         Bound::Included(&self.end_bound)
     }
-}
-
-impl StableStructuresStorable for AddressUtxo {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        let bytes = vec![
-            Address::to_bytes(&self.address).to_vec(),
-            Storable::to_bytes(&self.height),
-            OutPoint::to_bytes(&self.outpoint).to_vec(),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-
-        std::borrow::Cow::Owned(bytes)
-    }
-
-    fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        let len = bytes.len();
-        Self {
-            address: Address::from_bytes(Cow::Borrowed(
-                &bytes[0..len - OUTPOINT_SIZE as usize - 4],
-            )),
-            height: <Height as Storable>::from_bytes(
-                bytes[len - OUTPOINT_SIZE as usize - 4..len - OUTPOINT_SIZE as usize].to_vec(),
-            ),
-            outpoint: OutPoint::from_bytes(Cow::Borrowed(&bytes[len - OUTPOINT_SIZE as usize..])),
-        }
-    }
-}
-
-impl BoundedStorableNew for AddressUtxo {
-    const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
-    const IS_FIXED_SIZE: bool = false;
 }
 
 impl Storable for Height {
