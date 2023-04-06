@@ -1,0 +1,21 @@
+[package]
+name = "ic-http"
+description = "Mocking HTTPS Outcalls on the Internet Computer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+candid = "0.8.2"
+ic-cdk = "0.6.0"
+ic-cdk-macros = "0.6.0"
+
+# Added to use non-blocking sleep to mock delayed responses.
+# Currently wasm32 does not support tokio, so we need to disable it for wasm32.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1.15.0", features = [ "full" ] }
+
+[dev-dependencies]
+futures = "0.3.27"
+serde_json = "1.0.94"
