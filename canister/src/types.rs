@@ -9,9 +9,7 @@ use ic_btc_interface::{
     UtxosFilterInRequest,
 };
 use ic_cdk::export::{candid::CandidType, Principal};
-use ic_stable_structures::{
-    storable::Blob, BoundedStorable as BoundedStorableNew, Storable as StableStructuresStorable,
-};
+use ic_stable_structures::{storable::Blob, BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
@@ -416,7 +414,7 @@ impl StableStructuresStorable for OutPoint {
     }
 }
 
-impl BoundedStorableNew for OutPoint {
+impl BoundedStorable for OutPoint {
     const MAX_SIZE: u32 = OUTPOINT_SIZE;
     const IS_FIXED_SIZE: bool = true;
 }
@@ -457,7 +455,7 @@ impl StableStructuresStorable for Address {
     }
 }
 
-impl BoundedStorableNew for Address {
+impl BoundedStorable for Address {
     // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
     // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
     const MAX_SIZE: u32 = 90;
@@ -499,7 +497,7 @@ impl StableStructuresStorable for AddressUtxo {
     }
 }
 
-impl BoundedStorableNew for AddressUtxo {
+impl BoundedStorable for AddressUtxo {
     const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
     const IS_FIXED_SIZE: bool = false;
 }
@@ -510,19 +508,29 @@ pub struct AddressUtxoRange {
 }
 
 impl AddressUtxoRange {
+    /// Given an address and UTXO, returns a range that matches with all of the address's UTXOs
+    /// that are >= the given UTXO.
+    ///
+    /// The UTXOs are sorted by height in descending order, and then by outpoint.
     pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
+        let (start_height, start_outpoint) = match utxo {
+            Some(utxo) => (utxo.height, utxo.outpoint.clone()),
+
+            // No UTXO specified. Start with the minimum value possible for a height and OutPoint.
+            // Heights are sorted in descending order, so u32::MAX is considered its minimum.
+            None => (u32::MAX, OutPoint::new(Txid::from(vec![0; 32]), 0)),
+        };
+
+        // The end of the range is the maximum value possible for a height and OutPoint.
+        // i.e. The range with matches with all UTXOs of that address that are >= the given UTXO.
+        // Heights are sorted in descending order, so `0` is considered its minimum.
+        let (end_height, end_outpoint) = (0, OutPoint::new(Txid::from(vec![255; 32]), u32::MAX));
+
         let start_bound = Blob::try_from(
-            match utxo {
-                Some(utxo) => AddressUtxo {
-                    address: address.clone(),
-                    height: utxo.height,
-                    outpoint: utxo.outpoint.clone(),
-                },
-                None => AddressUtxo {
-                    address: address.clone(),
-                    height: u32::MAX,
-                    outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
-                },
+            AddressUtxo {
+                address: address.clone(),
+                height: start_height,
+                outpoint: start_outpoint,
             }
             .to_bytes()
             .as_ref(),
@@ -532,8 +540,8 @@ impl AddressUtxoRange {
         let end_bound = Blob::try_from(
             AddressUtxo {
                 address: address.clone(),
-                height: 0,
-                outpoint: OutPoint::new(Txid::from(vec![255; 32]), u32::MAX),
+                height: end_height,
+                outpoint: end_outpoint,
             }
             .to_bytes()
             .as_ref(),
@@ -615,7 +623,7 @@ impl StableStructuresStorable for BlockHeaderBlob {
     }
 }
 
-impl BoundedStorableNew for BlockHeaderBlob {
+impl BoundedStorable for BlockHeaderBlob {
     // A Bitcoin block header is always 80 bytes. See:
     // https://developer.bitcoin.org/reference/block_chain.html#block-headers
     const MAX_SIZE: u32 = 80;
@@ -656,7 +664,7 @@ impl StableStructuresStorable for BlockHash {
     }
 }
 
-impl BoundedStorableNew for BlockHash {
+impl BoundedStorable for BlockHash {
     const MAX_SIZE: u32 = 32;
     const IS_FIXED_SIZE: bool = true;
 }
