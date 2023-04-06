@@ -21,9 +21,6 @@ const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 #[cfg(feature = "file_memory")]
 type InnerMemory = FileMemory;
 
-#[cfg(feature = "file_memory")]
-type InnerMemory = FileMemory;
-
 #[cfg(not(feature = "file_memory"))]
 type InnerMemory = DefaultMemoryImpl;
 
@@ -38,7 +35,7 @@ thread_local! {
 
 #[cfg(not(feature = "file_memory"))]
 thread_local! {
-    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(DefaultMemoryImpl::default()));
+    static MEMORY: RefCell<Option<InnerMemory>> = RefCell::new(Some(InnerMemory::default()));
 
     static MEMORY_MANAGER: RefCell<Option<MemoryManager<InnerMemory>>> =
         RefCell::new(Some(MemoryManager::init(MEMORY.with(|m| m.borrow().clone().unwrap()))));
@@ -75,6 +72,10 @@ pub fn get_upgrades_memory() -> Memory {
     with_memory_manager(|m| m.get(UPGRADES))
 }
 
+pub fn get_address_utxos_memory() -> Memory {
+    with_memory_manager(|m| m.get(ADDRESS_UTXOS))
+}
+
 pub fn get_utxos_small_memory() -> Memory {
     with_memory_manager(|m| m.get(SMALL_UTXOS))
 }
@@ -93,10 +94,6 @@ pub fn get_block_headers_memory() -> Memory {
 
 pub fn get_block_heights_memory() -> Memory {
     with_memory_manager(|m| m.get(BLOCK_HEIGHTS))
-}
-
-pub fn get_address_utxos_memory() -> Memory {
-    with_memory_manager(|m| m.get(ADDRESS_UTXOS))
 }
 
 /// Writes the bytes at the specified offset, growing the memory size if needed.

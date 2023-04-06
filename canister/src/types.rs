@@ -10,7 +10,7 @@ use ic_btc_interface::{
 };
 use ic_cdk::export::{candid::CandidType, Principal};
 use ic_stable_structures::{
-    storable::Blob, BoundedStorable as BoundedStorableNew, Storable as StorableNew,
+    storable::Blob, BoundedStorable as BoundedStorableNew, Storable as StableStructuresStorable,
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -396,12 +396,11 @@ pub trait Storable {
     fn from_bytes(bytes: Vec<u8>) -> Self;
 }
 
-impl StorableNew for OutPoint {
+impl StableStructuresStorable for OutPoint {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
-        println!("v len {}", v.len());
         // An outpoint is always exactly 36 bytes.
         assert_eq!(v.len(), OUTPOINT_SIZE as usize);
 
@@ -425,9 +424,9 @@ impl BoundedStorableNew for OutPoint {
 impl Storable for (TxOut, Height) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
-            StorableNew::to_bytes(&self.0.value).to_vec(), // Store the value (8 bytes)
-            self.0.script_pubkey.clone(),                  // Then the script (size varies)
-            Storable::to_bytes(&self.1),                   // Then the height (4 bytes)
+            StableStructuresStorable::to_bytes(&self.0.value).to_vec(), // Store the value (8 bytes)
+            self.0.script_pubkey.clone(), // Then the script (size varies)
+            Storable::to_bytes(&self.1),  // Then the height (4 bytes)
         ]
         .into_iter()
         .flatten()
@@ -437,7 +436,7 @@ impl Storable for (TxOut, Height) {
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
         let height = <Height as Storable>::from_bytes(bytes.split_off(bytes.len() - 4));
         let script_pubkey = bytes.split_off(8);
-        let value = <u64 as StorableNew>::from_bytes(Cow::Owned(bytes));
+        let value = u64::from_bytes(Cow::Owned(bytes));
         (
             TxOut {
                 value,
@@ -448,7 +447,7 @@ impl Storable for (TxOut, Height) {
     }
 }
 
-impl StorableNew for Address {
+impl StableStructuresStorable for Address {
     fn to_bytes(&self) -> Cow<[u8]> {
         Cow::Borrowed(self.0.as_bytes())
     }
@@ -525,7 +524,7 @@ impl RangeBounds<Blob<130>> for AddressRange {
     }
 }
 
-impl StorableNew for AddressUtxo {
+impl StableStructuresStorable for AddressUtxo {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         let bytes = vec![
             Address::to_bytes(&self.address).to_vec(),
@@ -606,7 +605,7 @@ pub type BlockBlob = Vec<u8>;
 #[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash)]
 pub struct BlockHeaderBlob(Vec<u8>);
 
-impl StorableNew for BlockHeaderBlob {
+impl StableStructuresStorable for BlockHeaderBlob {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Borrowed(self.0.as_slice())
     }
@@ -647,7 +646,7 @@ impl From<Vec<u8>> for BlockHeaderBlob {
 )]
 pub struct BlockHash(Vec<u8>);
 
-impl StorableNew for BlockHash {
+impl StableStructuresStorable for BlockHash {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Borrowed(self.0.as_slice())
     }

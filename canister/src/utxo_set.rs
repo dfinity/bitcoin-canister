@@ -1,5 +1,5 @@
 use crate::{
-    memory::Memory as MemoryNew,
+    memory::Memory,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
@@ -36,12 +36,12 @@ pub struct UtxoSet {
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_utxos")]
-    address_utxos: StableBTreeMapNew<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), MemoryNew>,
+    address_utxos: StableBTreeMapNew<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_balances")]
-    balances: StableBTreeMapNew<Address, u64, MemoryNew>,
+    balances: StableBTreeMapNew<Address, u64, Memory>,
 
     // The height of the block that will be ingested next.
     // NOTE: The `next_height` is stored, rather than the current height, because:
@@ -450,11 +450,11 @@ impl UtxoSet {
     }
 }
 
-fn init_address_utxos() -> StableBTreeMapNew<Blob<130>, (), MemoryNew> {
+fn init_address_utxos() -> StableBTreeMapNew<Blob<130>, (), Memory> {
     StableBTreeMapNew::init(crate::memory::get_address_utxos_memory())
 }
 
-fn init_balances() -> StableBTreeMapNew<Address, u64, MemoryNew> {
+fn init_balances() -> StableBTreeMapNew<Address, u64, Memory> {
     StableBTreeMapNew::init(crate::memory::get_balances_memory())
 }
 
