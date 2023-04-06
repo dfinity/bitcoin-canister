@@ -1,7 +1,7 @@
-use ic_btc_canister::types::{Config, HttpRequest, HttpResponse, SetConfigRequest};
+use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
-    GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest, MillisatoshiPerByte,
-    SendTransactionRequest,
+    Config, GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest,
+    MillisatoshiPerByte, SendTransactionRequest, SetConfigRequest,
 };
 use ic_cdk::api::call::{reject, reply};
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};

@@ -1,8 +1,9 @@
-//! Types used to support the candid API.
+//! Types used in the interface of the Bitcoin Canister.
 
 use candid::{CandidType, Deserialize, Principal};
 use serde::Serialize;
 use serde_bytes::ByteBuf;
+use std::str::FromStr;
 
 pub type Address = String;
 pub type Satoshi = u64;
@@ -13,8 +14,11 @@ pub type Page = ByteBuf;
 
 #[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
 pub enum Network {
+    #[serde(rename = "mainnet")]
     Mainnet,
+    #[serde(rename = "testnet")]
     Testnet,
+    #[serde(rename = "regtest")]
     Regtest,
 }
 
@@ -24,6 +28,19 @@ impl std::fmt::Display for Network {
             Self::Mainnet => write!(f, "mainnet"),
             Self::Testnet => write!(f, "testnet"),
             Self::Regtest => write!(f, "regtest"),
+        }
+    }
+}
+
+impl FromStr for Network {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "mainnet" => Ok(Network::Mainnet),
+            "testnet" => Ok(Network::Testnet),
+            "regtest" => Ok(Network::Regtest),
+            _ => Err("Bad network".to_string()),
         }
     }
 }
@@ -78,19 +95,6 @@ impl std::fmt::Display for NetworkInRequest {
             Self::regtest => write!(f, "regtest"),
         }
     }
-}
-
-/// An enum representing a Bitcoin network.
-// TODO(EXC-1234): Exclusively use this enum and remove the legacy `Network` and
-// `NetworkInRequest` enums.
-#[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
-pub enum NetworkSnakeCase {
-    #[serde(rename = "mainnet")]
-    Mainnet,
-    #[serde(rename = "testnet")]
-    Testnet,
-    #[serde(rename = "regtest")]
-    Regtest,
 }
 
 /// A reference to a transaction output.
@@ -307,10 +311,10 @@ pub enum Flag {
 }
 
 /// The payload used to initialize the canister.
-#[derive(CandidType, Deserialize, Debug)]
+#[derive(CandidType, Deserialize)]
 pub struct Config {
     pub stability_threshold: u128,
-    pub network: NetworkSnakeCase,
+    pub network: Network,
 
     /// The principal from which blocks are retrieved.
     ///
@@ -324,17 +328,22 @@ pub struct Config {
 
     /// Flag to control access to the apis provided by the canister.
     pub api_access: Flag,
+
+    /// Flag to determine if the API should be automatically disabled if
+    /// the canister isn't fully synced.
+    pub disable_api_if_not_fully_synced: Flag,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
             stability_threshold: 0,
-            network: NetworkSnakeCase::Regtest,
+            network: Network::Regtest,
             blocks_source: Principal::management_canister(),
             syncing: Flag::Enabled,
             fees: Fees::default(),
             api_access: Flag::Enabled,
+            disable_api_if_not_fully_synced: Flag::Enabled,
         }
     }
 }

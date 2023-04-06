@@ -266,6 +266,7 @@ dependencies = [
  "bitcoin",
  "hex",
  "ic-btc-canister",
+ "ic-btc-interface",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
 ]

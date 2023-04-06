@@ -275,9 +275,10 @@ mod test {
             random_p2pkh_address, random_p2tr_address, random_p2wpkh_address, random_p2wsh_address,
             BlockBuilder, TransactionBuilder,
         },
-        types::{Block, Config, Fees, Network},
+        types::Block,
         with_state_mut,
     };
+    use ic_btc_interface::{Config, Fees, Network};
     use ic_btc_interface::{OutPoint, Utxo};
     use proptest::prelude::*;
 
