@@ -1,5 +1,6 @@
 use crate::{
     memory::Memory,
+    memory_new::Memory as MemoryNew,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
@@ -9,7 +10,8 @@ use crate::{
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Satoshi};
-use ic_stable_structures::{StableBTreeMap, Storable as _};
+use ic_stable_structures::StableBTreeMap;
+use ic_stable_structures_new::{StableBTreeMap as StableBTreeMapNew, Storable as _};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
@@ -38,7 +40,7 @@ pub struct UtxoSet {
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_balances")]
-    balances: StableBTreeMap<Memory, Address, u64>,
+    balances: StableBTreeMapNew<Address, u64, MemoryNew>,
 
     // The height of the block that will be ingested next.
     // NOTE: The `next_height` is stored, rather than the current height, because:
@@ -339,7 +341,7 @@ impl UtxoSet {
                                 // Remove the address from the map if balance is zero.
                                 0 => self.balances.remove(&address),
                                 // Update the balance in the map.
-                                balance => self.balances.insert(address.clone(), balance).unwrap(),
+                                balance => self.balances.insert(address.clone(), balance),
                             };
                         }
 
@@ -412,8 +414,7 @@ impl UtxoSet {
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value)
-                .expect("insertion must succeed");
+                .insert(address.clone(), address_balance + output.value);
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }
@@ -447,8 +448,8 @@ fn init_address_utxos() -> StableBTreeMap<Memory, AddressUtxo, ()> {
     StableBTreeMap::init(crate::memory::get_address_utxos_memory())
 }
 
-fn init_balances() -> StableBTreeMap<Memory, Address, u64> {
-    StableBTreeMap::init(crate::memory::get_balances_memory())
+fn init_balances() -> StableBTreeMapNew<Address, u64, MemoryNew> {
+    StableBTreeMapNew::init(crate::memory_new::get_balances_memory())
 }
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
@@ -539,12 +540,13 @@ impl BlockIngestionStats {
 impl PartialEq for UtxoSet {
     fn eq(&self, other: &Self) -> bool {
         use crate::test_utils::is_stable_btreemap_equal;
+        use crate::test_utils::is_stable_btreemap_equal_new;
         self.utxos == other.utxos
             && self.network == other.network
             && self.next_height == other.next_height
             && self.ingesting_block == other.ingesting_block
             && is_stable_btreemap_equal(&self.address_utxos, &other.address_utxos)
-            && is_stable_btreemap_equal(&self.balances, &other.balances)
+            && is_stable_btreemap_equal_new(&self.balances, &other.balances)
     }
 }
 

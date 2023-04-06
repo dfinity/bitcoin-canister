@@ -11,6 +11,7 @@ use std::cell::RefCell;
 
 const SMALL_UTXOS: MemoryId = MemoryId::new(2);
 const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
+const BALANCES: MemoryId = MemoryId::new(4);
 const BLOCK_HEADERS: MemoryId = MemoryId::new(5);
 const BLOCK_HEIGHTS: MemoryId = MemoryId::new(6);
 
@@ -52,6 +53,10 @@ pub fn get_utxos_small_memory() -> Memory {
 
 pub fn get_utxos_medium_memory() -> Memory {
     with_memory_manager(|m| m.get(MEDIUM_UTXOS))
+}
+
+pub fn get_balances_memory() -> Memory {
+    with_memory_manager(|m| m.get(BALANCES))
 }
 
 pub fn get_block_headers_memory() -> Memory {

@@ -16,10 +16,6 @@ use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::{borrow::Cow, cmp::Ordering, convert::TryInto, str::FromStr};
 
-// The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-const MAX_ADDRESS_LENGTH: u32 = 90;
-
 // The expected length in bytes of the page.
 const EXPECTED_PAGE_LENGTH: usize = 72;
 
@@ -444,20 +440,21 @@ impl Storable for (TxOut, Height) {
     }
 }
 
-impl StableStructuresStorable for Address {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        std::borrow::Cow::Borrowed(self.0.as_bytes())
+impl StorableNew for Address {
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.0.as_bytes())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Address(String::from_utf8(bytes).expect("Loading address cannot fail."))
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self(String::from_utf8(bytes.to_vec()).expect("Loading address cannot fail."))
     }
 }
 
-impl BoundedStorable for Address {
-    fn max_size() -> u32 {
-        MAX_ADDRESS_LENGTH
-    }
+impl BoundedStorableNew for Address {
+    // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
+    // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+    const MAX_SIZE: u32 = 90;
+    const IS_FIXED_SIZE: bool = false;
 }
 
 #[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
@@ -486,7 +483,7 @@ impl StableStructuresStorable for AddressUtxo {
         let height_bytes = bytes.split_off(bytes.len() - 4);
 
         Self {
-            address: Address::from_bytes(bytes),
+            address: Address::from_bytes(Cow::Owned(bytes)),
             height: <Height as Storable>::from_bytes(height_bytes),
             outpoint: OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         }
@@ -495,7 +492,7 @@ impl StableStructuresStorable for AddressUtxo {
 
 impl BoundedStorable for AddressUtxo {
     fn max_size() -> u32 {
-        Address::max_size() + 4 /* height bytes */ + OutPoint::MAX_SIZE
+        Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE
     }
 }
 
