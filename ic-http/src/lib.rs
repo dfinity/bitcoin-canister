@@ -118,6 +118,7 @@ mod response;
 mod transform;
 
 // Export.
+#[cfg(not(target_arch = "wasm32"))]
 pub mod mock;
 
 // Re-export.
