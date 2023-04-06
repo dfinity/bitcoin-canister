@@ -3,15 +3,13 @@ use crate::{
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
     types::{
-        Address, AddressUtxo, AddressUtxoRange, Block, BlockHash, Network, OutPoint, Slicing,
-        Transaction, TxOut, Txid, Utxo,
+        Address, AddressUtxo, Block, BlockHash, OutPoint, Slicing, Storable, Transaction, TxOut,
+        Txid, Utxo,
     },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
-use ic_btc_interface::{Height, Satoshi};
-use ic_stable_structures::{
-    storable::Blob, BoundedStorable, StableBTreeMap as StableBTreeMapNew, Storable,
-};
+use ic_btc_interface::{Height, Network, Satoshi};
+use ic_stable_structures::{StableBTreeMap, Storable as _, storable::Blob};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
@@ -36,12 +34,12 @@ pub struct UtxoSet {
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_utxos")]
-    address_utxos: StableBTreeMapNew<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory>,
+    address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_balances")]
-    balances: StableBTreeMapNew<Address, u64, Memory>,
+    balances: StableBTreeMap<Address, u64, Memory>,
 
     // The height of the block that will be ingested next.
     // NOTE: The `next_height` is stored, rather than the current height, because:
@@ -450,12 +448,12 @@ impl UtxoSet {
     }
 }
 
-fn init_address_utxos() -> StableBTreeMapNew<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory> {
-    StableBTreeMapNew::init(crate::memory::get_address_utxos_memory())
+fn init_address_utxos() -> StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory> {
+    StableBTreeMap::init(crate::memory::get_address_utxos_memory())
 }
 
-fn init_balances() -> StableBTreeMapNew<Address, u64, Memory> {
-    StableBTreeMapNew::init(crate::memory::get_balances_memory())
+fn init_balances() -> StableBTreeMap<Address, u64, Memory> {
+    StableBTreeMap::init(crate::memory::get_balances_memory())
 }
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
@@ -574,10 +572,11 @@ mod test {
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{
         address_utxoset::AddressUtxoSet,
-        types::{Network, OutPoint, Txid},
+        types::{OutPoint, Txid},
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
+    use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
 

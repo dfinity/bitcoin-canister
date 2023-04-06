@@ -1,10 +1,7 @@
 use bitcoin::consensus::Decodable;
 use bitcoin::Block as BitcoinBlock;
-use ic_btc_canister::{
-    types::Config,
-    types::{Block, Network},
-    with_state_mut,
-};
+use ic_btc_canister::{types::Block, with_state_mut};
+use ic_btc_interface::{Config, Network};
 use ic_cdk_macros::{init, query};
 use std::cell::RefCell;
 

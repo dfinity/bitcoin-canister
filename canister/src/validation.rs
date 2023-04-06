@@ -65,8 +65,8 @@ mod test {
     use crate::{
         state::{ingest_stable_blocks_into_utxoset, insert_block},
         test_utils::build_chain,
-        types::Network,
     };
+    use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::str::FromStr;
 

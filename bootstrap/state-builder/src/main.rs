@@ -13,9 +13,10 @@ use clap::Parser;
 use ic_btc_canister::{
     heartbeat, pre_upgrade, runtime,
     state::main_chain_height,
-    types::{Config, Flag, GetSuccessorsCompleteResponse, GetSuccessorsResponse, Network},
+    types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse},
     with_state,
 };
+use ic_btc_interface::{Config, Flag, Network};
 use rusty_leveldb::{Options, DB};
 use std::{
     collections::BTreeMap,

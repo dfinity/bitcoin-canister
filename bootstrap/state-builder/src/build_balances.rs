@@ -8,7 +8,8 @@
 //!   --utxos-dump-path utxos-dump.csv
 use bitcoin::{Address as BitcoinAddress, Script};
 use clap::Parser;
-use ic_btc_canister::types::{Address, Network};
+use ic_btc_canister::types::{into_bitcoin_network, Address};
+use ic_btc_interface::Network;
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;
@@ -63,7 +64,7 @@ fn main() {
         } else {
             BitcoinAddress::from_script(
                 &Script::from(hex::decode(script).expect("script must be valid hex")),
-                args.network.into(),
+                into_bitcoin_network(args.network),
             )
         };
 
