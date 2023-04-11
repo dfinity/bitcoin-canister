@@ -1,14 +1,15 @@
 use crate::{
-    memory::Memory,
+    memory::{get_utxos_medium_memory, get_utxos_small_memory, Memory},
     state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL},
     types::{OutPoint, Storable, TxOut},
 };
 use ic_btc_interface::Height;
 #[cfg(test)]
 use ic_stable_structures::{btreemap, Memory as MemoryTrait};
-use ic_stable_structures::{StableBTreeMap, Storable as StableStructuresStorable};
+use ic_stable_structures::{storable::Blob, StableBTreeMap, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
 
 /// A key-value store for UTXOs (unspent transaction outputs).
 ///
@@ -48,12 +49,12 @@ pub struct Utxos {
     // A map storing the UTXOs that are "small" in size.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_small_utxos")]
-    pub small_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    pub small_utxos: StableBTreeMap<Blob<UTXO_KEY_SIZE>, Blob<UTXO_VALUE_MAX_SIZE_SMALL>, Memory>,
 
     // A map storing the UTXOs that are "medium" in size.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_medium_utxos")]
-    pub medium_utxos: StableBTreeMap<Memory, Vec<u8>, Vec<u8>>,
+    pub medium_utxos: StableBTreeMap<Blob<UTXO_KEY_SIZE>, Blob<UTXO_VALUE_MAX_SIZE_MEDIUM>, Memory>,
 
     // A map storing the UTXOs that are "large" in size.
     // The number of entries stored in this map is tiny (see docs above), so a
@@ -89,15 +90,19 @@ impl Utxos {
     pub fn insert(&mut self, key: OutPoint, value: (TxOut, Height)) -> bool {
         let value_encoded = value.to_bytes();
 
-        if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL as usize {
+        if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_SMALL {
             self.small_utxos
-                .insert(key.to_bytes().to_vec(), value_encoded)
-                .expect("Inserting small UTXO must succeed.")
+                .insert(
+                    Blob::try_from(key.to_bytes().as_ref()).unwrap(),
+                    Blob::try_from(value_encoded.as_ref()).unwrap(),
+                )
                 .is_some()
-        } else if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_MEDIUM as usize {
+        } else if value_encoded.len() <= UTXO_VALUE_MAX_SIZE_MEDIUM {
             self.medium_utxos
-                .insert(key.to_bytes().to_vec(), value_encoded)
-                .expect("Inserting medium UTXO must succeed.")
+                .insert(
+                    Blob::try_from(key.to_bytes().as_ref()).unwrap(),
+                    Blob::try_from(value_encoded.as_ref()).unwrap(),
+                )
                 .is_some()
         } else {
             self.large_utxos.insert(key, value).is_some()
@@ -106,14 +111,14 @@ impl Utxos {
 
     /// Returns the value associated with the given outpoint if it exists.
     pub fn get(&self, key: &OutPoint) -> Option<(TxOut, Height)> {
-        let key_vec = key.to_bytes().to_vec();
+        let key_vec = Blob::try_from(key.to_bytes().as_ref()).unwrap();
 
         if let Some(value) = self.small_utxos.get(&key_vec) {
-            return Some(<(TxOut, Height)>::from_bytes(value));
+            return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
         if let Some(value) = self.medium_utxos.get(&key_vec) {
-            return Some(<(TxOut, Height)>::from_bytes(value));
+            return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
         self.large_utxos.get(key).cloned()
@@ -121,14 +126,14 @@ impl Utxos {
 
     /// Removes a key from the map, returning the previous value at the key if it exists.
     pub fn remove(&mut self, key: &OutPoint) -> Option<(TxOut, Height)> {
-        let key_vec = key.to_bytes().to_vec();
+        let key_vec = Blob::try_from(key.to_bytes().as_ref()).unwrap();
 
         if let Some(value) = self.small_utxos.remove(&key_vec) {
-            return Some(<(TxOut, Height)>::from_bytes(value));
+            return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
         if let Some(value) = self.medium_utxos.remove(&key_vec) {
-            return Some(<(TxOut, Height)>::from_bytes(value));
+            return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
         self.large_utxos
@@ -157,8 +162,8 @@ impl Utxos {
 #[cfg(test)]
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a, M: MemoryTrait> {
-    small_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
-    medium_utxos_iter: btreemap::Iter<'a, M, Vec<u8>, Vec<u8>>,
+    small_utxos_iter: btreemap::Iter<'a, Blob<UTXO_KEY_SIZE>, Blob<UTXO_VALUE_MAX_SIZE_SMALL>, M>,
+    medium_utxos_iter: btreemap::Iter<'a, Blob<UTXO_KEY_SIZE>, Blob<UTXO_VALUE_MAX_SIZE_MEDIUM>, M>,
     large_utxos_iter: std::collections::btree_map::Iter<'a, OutPoint, (TxOut, Height)>,
 }
 
@@ -181,16 +186,16 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
         // First, iterate over the small utxos.
         if let Some((key_bytes, value_bytes)) = self.small_utxos_iter.next() {
             return Some((
-                OutPoint::from_bytes(key_bytes),
-                <(TxOut, Height)>::from_bytes(value_bytes),
+                OutPoint::from_bytes(std::borrow::Cow::Borrowed(key_bytes.as_slice())),
+                <(TxOut, Height)>::from_bytes(value_bytes.as_slice().to_vec()),
             ));
         }
 
         // Second, iterate over the medium utxos.
         if let Some((key_bytes, value_bytes)) = self.medium_utxos_iter.next() {
             return Some((
-                OutPoint::from_bytes(key_bytes),
-                <(TxOut, Height)>::from_bytes(value_bytes),
+                OutPoint::from_bytes(std::borrow::Cow::Borrowed(key_bytes.as_slice())),
+                <(TxOut, Height)>::from_bytes(value_bytes.as_slice().to_vec()),
             ));
         }
 
@@ -201,18 +206,12 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
     }
 }
 
-fn init_small_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
-    StableBTreeMap::init_with_sizes(
-        crate::memory::get_utxos_small_memory(),
-        UTXO_KEY_SIZE,
-        UTXO_VALUE_MAX_SIZE_SMALL,
-    )
+fn init_small_utxos() -> StableBTreeMap<Blob<UTXO_KEY_SIZE>, Blob<UTXO_VALUE_MAX_SIZE_SMALL>, Memory>
+{
+    StableBTreeMap::init(get_utxos_small_memory())
 }
 
-fn init_medium_utxos() -> StableBTreeMap<Memory, Vec<u8>, Vec<u8>> {
-    StableBTreeMap::init_with_sizes(
-        crate::memory::get_utxos_medium_memory(),
-        UTXO_KEY_SIZE,
-        UTXO_VALUE_MAX_SIZE_MEDIUM,
-    )
+fn init_medium_utxos(
+) -> StableBTreeMap<Blob<UTXO_KEY_SIZE>, Blob<UTXO_VALUE_MAX_SIZE_MEDIUM>, Memory> {
+    StableBTreeMap::init(get_utxos_medium_memory())
 }
