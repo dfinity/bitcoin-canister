@@ -3,15 +3,15 @@ use crate::{
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
     runtime::{performance_counter, time},
+    types::{
+        into_bitcoin_network, Address, Block, BlockHash, GetSuccessorsCompleteResponse,
+        GetSuccessorsPartialResponse, Slicing,
+    },
     unstable_blocks::{self, UnstableBlocks},
     validation::ValidationContext,
     UtxoSet,
 };
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
-use ic_btc_types::{
-    into_bitcoin_network, Address, Block, BlockHash, GetSuccessorsCompleteResponse,
-    GetSuccessorsPartialResponse, Slicing, OUTPOINT_SIZE,
-};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
@@ -178,6 +178,11 @@ pub fn main_chain_height(state: &State) -> Height {
 pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
     unstable_blocks::get_blocks(&state.unstable_blocks)
 }
+
+// The size of an outpoint in bytes.
+const OUTPOINT_TX_ID_SIZE: u32 = 32; // The size of the transaction ID.
+const OUTPOINT_VOUT_SIZE: u32 = 4; // The size of a transaction's vout.
+pub const OUTPOINT_SIZE: u32 = OUTPOINT_TX_ID_SIZE + OUTPOINT_VOUT_SIZE;
 
 // The maximum size in bytes of a bitcoin script for it to be considered "small".
 const TX_OUT_SCRIPT_MAX_SIZE_SMALL: u32 = 25;

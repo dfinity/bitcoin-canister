@@ -2,7 +2,7 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use ic_btc_types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
+use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
 #[cfg(not(target_arch = "wasm32"))]
 use ic_cdk::api::call::RejectionCode;
 use ic_cdk::{api::call::CallResult, export::Principal};
@@ -63,7 +63,7 @@ pub fn call_get_successors(
     _id: Principal,
     _request: GetSuccessorsRequest,
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
-    use ic_btc_types::GetSuccessorsCompleteResponse;
+    use crate::types::GetSuccessorsCompleteResponse;
 
     let reply = GET_SUCCESSORS_RESPONSES.with(|responses| {
         // Get the response at the current index.

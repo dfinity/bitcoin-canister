@@ -1,3 +1,4 @@
+use crate::state::OUTPOINT_SIZE;
 use bitcoin::{
     util::uint::Uint256, Address as BitcoinAddress, Block as BitcoinBlock,
     BlockHeader as BitcoinBlockHeader, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
@@ -21,9 +22,6 @@ use std::{
     str::FromStr,
 };
 
-mod constants;
-pub use crate::constants::{max_target, OUTPOINT_SIZE};
-
 // The expected length in bytes of the page.
 const EXPECTED_PAGE_LENGTH: usize = 72;
 
@@ -33,7 +31,7 @@ pub struct Block {
     block_header: BlockHeader,
     transactions: Vec<Transaction>,
 
-    #[cfg(feature = "test-utils")]
+    #[cfg(test)]
     pub mock_difficulty: Option<u64>,
 }
 
@@ -46,7 +44,7 @@ impl Block {
                 .map(|tx| Transaction::new(tx.clone()))
                 .collect(),
             block_header: BlockHeader::new(block.header),
-            #[cfg(feature = "test-utils")]
+            #[cfg(test)]
             mock_difficulty: None,
         }
     }
@@ -64,19 +62,18 @@ impl Block {
     }
 
     pub fn difficulty(&self, network: Network) -> u64 {
-        #[cfg(feature = "test-utils")]
+        #[cfg(test)]
         if let Some(difficulty) = self.mock_difficulty {
             return difficulty;
         }
 
         Self::target_difficulty(network, self.header().target())
     }
-
-    #[cfg(feature = "test-utils")]
+    #[cfg(test)]
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
         let bitcoin_block = BitcoinBlock {
-            header: *self.header(),
+            header: self.header().clone(),
             txdata: self
                 .transactions
                 .clone()
@@ -91,7 +88,7 @@ impl Block {
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
     fn target_difficulty(network: Network, target: Uint256) -> u64 {
-        (crate::max_target(&into_bitcoin_network(network)) / target).low_u64()
+        (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
     }
 }
 
@@ -189,7 +186,7 @@ impl PartialEq for Transaction {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(test)]
 impl From<Transaction> for bitcoin::Transaction {
     fn from(tx: Transaction) -> Self {
         tx.tx
@@ -218,7 +215,7 @@ impl From<&BitcoinOutPoint> for OutPoint {
     }
 }
 
-#[cfg(feature = "test-utils")]
+#[cfg(test)]
 impl From<OutPoint> for bitcoin::OutPoint {
     fn from(outpoint: OutPoint) -> Self {
         use bitcoin::hashes::Hash;
@@ -1040,9 +1037,9 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Regtest,
-            ic_btc_test_utils::BlockBuilder::genesis()
+            crate::test_utils::BlockBuilder::genesis()
                 .build()
-                .header
+                .header()
                 .target()
         ),
         1

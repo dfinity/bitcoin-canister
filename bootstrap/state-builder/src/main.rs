@@ -10,9 +10,13 @@
 use bitcoin::{consensus::Decodable, BlockHash, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
 use clap::Parser;
-use ic_btc_canister::{heartbeat, pre_upgrade, runtime, state::main_chain_height, with_state};
+use ic_btc_canister::{
+    heartbeat, pre_upgrade, runtime,
+    state::main_chain_height,
+    types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse},
+    with_state,
+};
 use ic_btc_interface::{Config, Flag, Network};
-use ic_btc_types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse};
 use rusty_leveldb::{Options, DB};
 use std::{
     collections::BTreeMap,

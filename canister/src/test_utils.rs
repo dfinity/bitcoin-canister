@@ -1,4 +1,7 @@
-use crate::genesis_block;
+use crate::{
+    genesis_block,
+    types::{into_bitcoin_network, Address, Block, OutPoint, Transaction},
+};
 use bitcoin::{
     hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
     BlockHeader, PublicKey, Script, WScriptHash,
@@ -7,7 +10,6 @@ use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_btc_types::{into_bitcoin_network, Address, Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
 use std::str::FromStr;
@@ -137,7 +139,7 @@ pub fn is_stable_btreemap_equal<
     true
 }
 
-/// A wrapper around `ic_btc_test_utils::BlockBuilder` that returns `ic_btc_types::Block`
+/// A wrapper around `ic_btc_test_utils::BlockBuilder` that returns `crate::types::Block`
 /// as opposed to `bitcoin::Block`.
 pub struct BlockBuilder {
     builder: ExternalBlockBuilder,
@@ -174,7 +176,7 @@ impl BlockBuilder {
 }
 
 /// A wrapper around `ic_btc_test_utils::TransactionBuilder` that returns
-/// `ic_btc_types::Transaction` as opposed to `bitcoin::Transaction`.
+/// `crate::types::Transaction` as opposed to `bitcoin::Transaction`.
 pub struct TransactionBuilder {
     builder: ExternalTransactionBuilder,
 }

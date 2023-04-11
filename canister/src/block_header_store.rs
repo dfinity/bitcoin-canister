@@ -1,6 +1,7 @@
-use crate::memory::Memory;
-use ic_btc_types::{Block, BlockHash, BlockHeaderBlob};
-
+use crate::{
+    memory::Memory,
+    types::{Block, BlockHash, BlockHeaderBlob},
+};
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::BlockHeader;
 use ic_btc_interface::Height;

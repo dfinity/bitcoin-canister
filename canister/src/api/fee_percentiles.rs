@@ -2,11 +2,11 @@ use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
     state::{FeePercentilesCache, State},
+    types::{Block, Transaction},
     unstable_blocks::{self, UnstableBlocks},
     verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_interface::MillisatoshiPerByte;
-use ic_btc_types::{Block, Transaction};
 
 /// The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
@@ -150,11 +150,12 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        types::OutPoint,
         with_state,
     };
     use ic_btc_interface::{Config, Fees, Network, Satoshi};
-    use ic_btc_types::OutPoint;
     use std::iter::FromIterator;
+
     /// Covers an inclusive range of `[0, 100]` percentiles.
     const PERCENTILE_BUCKETS: usize = 101;
 

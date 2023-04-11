@@ -1,5 +1,4 @@
-use crate::{metrics::InstructionHistogram, state, with_state};
-use ic_btc_types::HttpResponse;
+use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
 use ic_cdk::api::time;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;

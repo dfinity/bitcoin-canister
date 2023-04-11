@@ -1,16 +1,16 @@
 use crate::{
     runtime::{call_get_successors, print, time},
     state::{self, ResponseToProcess, State},
+    types::{
+        into_bitcoin_network, Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse,
+        GetSuccessorsRequest, GetSuccessorsRequestInitial, GetSuccessorsResponse,
+    },
     validation::ValidationContext,
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::Block as BitcoinBlock;
 use bitcoin::{consensus::Decodable, BlockHeader};
 use ic_btc_interface::Flag;
-use ic_btc_types::{
-    into_bitcoin_network, Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse,
-    GetSuccessorsRequest, GetSuccessorsRequestInitial, GetSuccessorsResponse,
-};
 use ic_btc_validation::{validate_header, ValidateHeaderError};
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -262,13 +262,11 @@ mod test {
         genesis_block, init,
         runtime::{self, GetSuccessorsReply},
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
         utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader;
     use ic_btc_interface::{Config, Network};
-    use ic_btc_types::{
-        Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse,
-    };
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
@@ -475,7 +473,7 @@ mod test {
         // Create another transaction where the UTXOs of address 1 are transferred to address 2.
         let mut tx_2 = TransactionBuilder::new();
         for i in 0..tx_cardinality {
-            tx_2 = tx_2.with_input(ic_btc_types::OutPoint {
+            tx_2 = tx_2.with_input(crate::types::OutPoint {
                 txid: tx_1.txid(),
                 vout: i,
             });
@@ -555,7 +553,7 @@ mod test {
 
             // The addresses 1 and 2 do not change while ingestion is in progress.
             assert_eq!(
-                crate::api::get_balance(ic_btc_types::GetBalanceRequest {
+                crate::api::get_balance(crate::types::GetBalanceRequest {
                     address: address_1.to_string(),
                     min_confirmations: None
                 })
@@ -564,7 +562,7 @@ mod test {
             );
 
             assert_eq!(
-                crate::api::get_balance(ic_btc_types::GetBalanceRequest {
+                crate::api::get_balance(crate::types::GetBalanceRequest {
                     address: address_2.to_string(),
                     min_confirmations: None
                 })
@@ -586,7 +584,7 @@ mod test {
 
         // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
         assert_eq!(
-            crate::api::get_balance(ic_btc_types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address_1.to_string(),
                 min_confirmations: None
             })
@@ -595,7 +593,7 @@ mod test {
         );
 
         assert_eq!(
-            crate::api::get_balance(ic_btc_types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address_2.to_string(),
                 min_confirmations: None
             })
@@ -652,7 +650,7 @@ mod test {
 
         // The response hasn't been fully processed yet, so the balance should still be zero.
         assert_eq!(
-            crate::api::get_balance(ic_btc_types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: None
             })
@@ -665,7 +663,7 @@ mod test {
 
         // Query the balance, validating the block was processed.
         assert_eq!(
-            crate::api::get_balance(ic_btc_types::GetBalanceRequest {
+            crate::api::get_balance(crate::types::GetBalanceRequest {
                 address: address.to_string(),
                 min_confirmations: None
             })

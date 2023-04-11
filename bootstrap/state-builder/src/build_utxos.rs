@@ -8,9 +8,11 @@
 //!   --utxos-dump-path utxos-dump.csv
 use bitcoin::{Address, Txid as BitcoinTxid};
 use clap::Parser;
-use ic_btc_canister::{with_state, with_state_mut};
+use ic_btc_canister::{
+    types::{OutPoint, TxOut, Txid},
+    with_state, with_state_mut,
+};
 use ic_btc_interface::{Config, Flag, Network};
-use ic_btc_types::{OutPoint, TxOut, Txid};
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
     Memory,

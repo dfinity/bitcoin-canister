@@ -1,9 +1,11 @@
+use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader, Network};
+
 use crate::{
-    constants::{no_pow_retargeting, pow_limit_bits, DIFFICULTY_ADJUSTMENT_INTERVAL, TEN_MINUTES},
+    constants::{
+        max_target, no_pow_retargeting, pow_limit_bits, DIFFICULTY_ADJUSTMENT_INTERVAL, TEN_MINUTES,
+    },
     BlockHeight,
 };
-use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader, Network};
-use ic_btc_types::max_target;
 
 /// An error thrown when trying to validate a header.
 #[derive(Debug, PartialEq)]
@@ -289,7 +291,7 @@ fn compute_next_difficulty(
 
     // Adjusting the newly computed difficulty target so that it doesn't exceed the
     // max_difficulty_target limit
-    target = Uint256::min(target, ic_btc_types::max_target(network));
+    target = Uint256::min(target, max_target(network));
 
     // Converting the target (Uint256) into a 32 bit representation used by Bitcoin
     BlockHeader::compact_target_from_u256(&target)

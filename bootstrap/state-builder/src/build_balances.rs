@@ -8,8 +8,8 @@
 //!   --utxos-dump-path utxos-dump.csv
 use bitcoin::{Address as BitcoinAddress, Script};
 use clap::Parser;
+use ic_btc_canister::types::{into_bitcoin_network, Address};
 use ic_btc_interface::Network;
-use ic_btc_types::{into_bitcoin_network, Address};
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use rand::prelude::*;
 use rand_chacha::ChaCha8Rng;

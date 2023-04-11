@@ -2,13 +2,13 @@ use crate::{
     memory::Memory,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
+    types::{
+        Address, AddressUtxo, AddressUtxoRange, Block, BlockHash, OutPoint, Slicing, Transaction,
+        TxOut, Txid, Utxo,
+    },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Network, Satoshi};
-use ic_btc_types::{
-    Address, AddressUtxo, AddressUtxoRange, Block, BlockHash, OutPoint, Slicing, Transaction,
-    TxOut, Txid, Utxo,
-};
 use ic_stable_structures::{storable::Blob, BoundedStorable, StableBTreeMap, Storable as _};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
@@ -570,10 +570,13 @@ mod test {
     use super::*;
     use crate::runtime;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
-    use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
+    use crate::{
+        address_utxoset::AddressUtxoSet,
+        types::{OutPoint, Txid},
+        unstable_blocks::UnstableBlocks,
+    };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
     use ic_btc_interface::Network;
-    use ic_btc_types::{OutPoint, Txid};
     use proptest::prelude::*;
     use std::collections::BTreeSet;
 

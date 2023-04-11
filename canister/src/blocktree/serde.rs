@@ -1,5 +1,5 @@
 use super::BlockTree;
-use ic_btc_types::Block;
+use crate::types::Block;
 use serde::{
     de::{Deserializer, SeqAccess, Visitor},
     ser::SerializeSeq,

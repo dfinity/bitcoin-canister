@@ -1,9 +1,9 @@
 use crate::{
-    charge_cycles, runtime, verify_api_access, verify_network, with_state, with_state_mut,
+    charge_cycles, runtime, types::SendTransactionInternalRequest, verify_api_access,
+    verify_network, with_state, with_state_mut,
 };
 use bitcoin::{consensus::Decodable, Transaction};
 use ic_btc_interface::{SendTransactionError, SendTransactionRequest};
-use ic_btc_types::SendTransactionInternalRequest;
 
 pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), SendTransactionError> {
     verify_api_access();
