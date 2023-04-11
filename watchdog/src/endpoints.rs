@@ -156,6 +156,7 @@ impl Endpoint {
     }
 }
 
+/// Applies the given transformation function to the body of the response.
 fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpResponse {
     let mut response = HttpResponse {
         status: raw.response.status.clone(),
@@ -172,6 +173,7 @@ fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpRe
     response
 }
 
+/// Applies the given transformation function to the JSON inside the body of the response.
 fn apply_to_body_json(
     raw: TransformArgs,
     f: impl FnOnce(serde_json::Value) -> serde_json::Value,
@@ -183,7 +185,7 @@ fn apply_to_body_json(
     })
 }
 
-/// Apply regex rule to a given text.
+/// Applies regex rule to a given text.
 fn apply_regex(re: &Regex, text: &str) -> Result<String, String> {
     match re.captures(text) {
         None => Err("Regex: no match found.".to_string()),

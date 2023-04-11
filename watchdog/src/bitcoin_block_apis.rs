@@ -4,12 +4,18 @@ use serde_json::json;
 /// APIs that serve Bitcoin block data.
 #[derive(Debug)]
 pub enum BitcoinBlockApi {
+    // TODO: investigate why this API is not working.
+    #[allow(dead_code)]
     ApiBitapsCom,
+
     ApiBlockchairCom,
     ApiBlockcypherCom,
     BitcoinCanister,
     BlockchainInfo,
     BlockstreamInfo,
+
+    // TODO: investigate why this API is not working.
+    #[allow(dead_code)]
     ChainApiBtcCom,
 }
 

@@ -1,5 +1,6 @@
 use crate::endpoints::Endpoint::*;
 
+/// Mocks all the outcalls.
 pub fn mock_all_outcalls() {
     let mocks = [
         (ApiBitapsComBlock, API_BITAPS_COM_RESPONSE),
