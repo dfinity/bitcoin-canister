@@ -76,7 +76,7 @@ impl Block {
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
         let bitcoin_block = BitcoinBlock {
-            header: self.header().clone(),
+            header: self.header(),
             txdata: self
                 .transactions
                 .clone()
