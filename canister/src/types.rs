@@ -10,19 +10,17 @@ use ic_btc_interface::{
     UtxosFilterInRequest,
 };
 use ic_cdk::export::candid::CandidType;
-use ic_stable_structures::{BoundedStorable, Storable as StableStructuresStorable};
+use ic_stable_structures::{storable::Blob, BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
-use std::{cmp::Ordering, convert::TryInto, str::FromStr};
-
-// The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-// See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-const MAX_ADDRESS_LENGTH: u32 = 90;
-
-// A Bitcoin block header is always 80 bytes. See:
-// https://developer.bitcoin.org/reference/block_chain.html#block-headers
-const BLOCK_HEADER_LENGTH: u32 = 80;
+use std::{
+    borrow::Cow,
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    ops::{Bound, RangeBounds},
+    str::FromStr,
+};
 
 // The expected length in bytes of the page.
 const EXPECTED_PAGE_LENGTH: usize = 72;
@@ -282,7 +280,7 @@ impl Page {
         let outpoint_bytes = bytes.split_off(outpoint_offset);
         let height_bytes = bytes.split_off(height_offset);
 
-        let tip_block_hash = BlockHash::from_bytes(bytes);
+        let tip_block_hash = BlockHash::from(bytes);
 
         // The height is parsed from bytes that are given by the user, so ensure
         // that any errors are handled gracefully instead of using
@@ -298,7 +296,7 @@ impl Page {
         Ok(Page {
             tip_block_hash,
             height,
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            outpoint: OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         })
     }
 }
@@ -321,7 +319,7 @@ impl StableStructuresStorable for OutPoint {
         std::borrow::Cow::Owned(v)
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
         assert_eq!(bytes.len(), 36);
         OutPoint {
             txid: Txid::from(bytes[..32].to_vec()),
@@ -331,9 +329,8 @@ impl StableStructuresStorable for OutPoint {
 }
 
 impl BoundedStorable for OutPoint {
-    fn max_size() -> u32 {
-        OUTPOINT_SIZE
-    }
+    const MAX_SIZE: u32 = OUTPOINT_SIZE;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl Storable for (TxOut, Height) {
@@ -351,7 +348,7 @@ impl Storable for (TxOut, Height) {
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
         let height = <Height as Storable>::from_bytes(bytes.split_off(bytes.len() - 4));
         let script_pubkey = bytes.split_off(8);
-        let value = u64::from_bytes(bytes);
+        let value = u64::from_bytes(Cow::Owned(bytes));
         (
             TxOut {
                 value,
@@ -363,22 +360,23 @@ impl Storable for (TxOut, Height) {
 }
 
 impl StableStructuresStorable for Address {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        std::borrow::Cow::Borrowed(self.0.as_bytes())
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Borrowed(self.0.as_bytes())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Address(String::from_utf8(bytes).expect("Loading address cannot fail."))
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self(String::from_utf8(bytes.to_vec()).expect("Loading address cannot fail."))
     }
 }
 
 impl BoundedStorable for Address {
-    fn max_size() -> u32 {
-        MAX_ADDRESS_LENGTH
-    }
+    // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
+    // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+    const MAX_SIZE: u32 = 90;
+    const IS_FIXED_SIZE: bool = false;
 }
 
-#[derive(PartialEq, Eq, Ord, PartialOrd, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct AddressUtxo {
     pub address: Address,
     pub height: Height,
@@ -399,21 +397,85 @@ impl StableStructuresStorable for AddressUtxo {
         std::borrow::Cow::Owned(bytes)
     }
 
-    fn from_bytes(mut bytes: Vec<u8>) -> Self {
-        let outpoint_bytes = bytes.split_off(bytes.len() - OUTPOINT_SIZE as usize);
-        let height_bytes = bytes.split_off(bytes.len() - 4);
-
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        let len = bytes.len();
         Self {
-            address: Address::from_bytes(bytes),
-            height: <Height as Storable>::from_bytes(height_bytes),
-            outpoint: OutPoint::from_bytes(outpoint_bytes),
+            address: Address::from_bytes(Cow::Borrowed(
+                &bytes[0..len - OUTPOINT_SIZE as usize - 4],
+            )),
+            height: <Height as Storable>::from_bytes(
+                bytes[len - OUTPOINT_SIZE as usize - 4..len - OUTPOINT_SIZE as usize].to_vec(),
+            ),
+            outpoint: OutPoint::from_bytes(Cow::Borrowed(&bytes[len - OUTPOINT_SIZE as usize..])),
         }
     }
 }
 
 impl BoundedStorable for AddressUtxo {
-    fn max_size() -> u32 {
-        Address::max_size() + 4 /* height bytes */ + OutPoint::max_size()
+    const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
+    const IS_FIXED_SIZE: bool = false;
+}
+
+pub struct AddressUtxoRange {
+    start_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
+    end_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
+}
+
+impl AddressUtxoRange {
+    /// Given an address and UTXO, returns a range that matches with all of the address's UTXOs
+    /// that are >= the given UTXO.
+    ///
+    /// The UTXOs are sorted by height in descending order, and then by outpoint.
+    pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
+        let (start_height, start_outpoint) = match utxo {
+            Some(utxo) => (utxo.height, utxo.outpoint.clone()),
+
+            // No UTXO specified. Start with the minimum value possible for a height and OutPoint.
+            // Heights are sorted in descending order, so u32::MAX is considered its minimum.
+            None => (u32::MAX, OutPoint::new(Txid::from(vec![0; 32]), 0)),
+        };
+
+        // The end of the range is the maximum value possible for a height and OutPoint.
+        // i.e. the range that matches with all UTXOs of that address that are >= the given UTXO.
+        // Heights are sorted in descending order, so `0` is considered its minimum.
+        let (end_height, end_outpoint) = (0, OutPoint::new(Txid::from(vec![255; 32]), u32::MAX));
+
+        let start_bound = Blob::try_from(
+            AddressUtxo {
+                address: address.clone(),
+                height: start_height,
+                outpoint: start_outpoint,
+            }
+            .to_bytes()
+            .as_ref(),
+        )
+        .unwrap();
+
+        let end_bound = Blob::try_from(
+            AddressUtxo {
+                address: address.clone(),
+                height: end_height,
+                outpoint: end_outpoint,
+            }
+            .to_bytes()
+            .as_ref(),
+        )
+        .unwrap();
+
+        Self {
+            start_bound,
+            end_bound,
+        }
+    }
+}
+
+impl RangeBounds<Blob<{ AddressUtxo::MAX_SIZE as usize }>> for AddressUtxoRange {
+    fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
+        Bound::Included(&self.start_bound)
+    }
+
+    fn end_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
+        Bound::Included(&self.end_bound)
     }
 }
 
@@ -453,7 +515,7 @@ impl Storable for (Height, OutPoint) {
 
         (
             <Height as Storable>::from_bytes(bytes),
-            OutPoint::from_bytes(outpoint_bytes),
+            OutPoint::from_bytes(Cow::Owned(outpoint_bytes)),
         )
     }
 }
@@ -467,18 +529,19 @@ pub struct BlockHeaderBlob(Vec<u8>);
 
 impl StableStructuresStorable for BlockHeaderBlob {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        self.0.to_bytes()
+        Cow::Borrowed(self.0.as_slice())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self::from(bytes)
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self::from(bytes.to_vec())
     }
 }
 
 impl BoundedStorable for BlockHeaderBlob {
-    fn max_size() -> u32 {
-        BLOCK_HEADER_LENGTH
-    }
+    // A Bitcoin block header is always 80 bytes. See:
+    // https://developer.bitcoin.org/reference/block_chain.html#block-headers
+    const MAX_SIZE: u32 = 80;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl BlockHeaderBlob {
@@ -491,9 +554,9 @@ impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::max_size(),
+            Self::MAX_SIZE,
             "BlockHeader must {} bytes",
-            Self::max_size()
+            Self::MAX_SIZE,
         );
         Self(bytes)
     }
@@ -507,18 +570,17 @@ pub struct BlockHash(Vec<u8>);
 
 impl StableStructuresStorable for BlockHash {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        self.0.to_bytes()
+        Cow::Borrowed(self.0.as_slice())
     }
 
-    fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self::from(bytes)
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Self::from(bytes.to_vec())
     }
 }
 
 impl BoundedStorable for BlockHash {
-    fn max_size() -> u32 {
-        32
-    }
+    const MAX_SIZE: u32 = 32;
+    const IS_FIXED_SIZE: bool = true;
 }
 
 impl BlockHash {
@@ -531,9 +593,9 @@ impl From<Vec<u8>> for BlockHash {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::max_size(),
+            Self::MAX_SIZE,
             "BlockHash must {} bytes",
-            Self::max_size()
+            Self::MAX_SIZE
         );
         Self(bytes)
     }
