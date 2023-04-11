@@ -96,6 +96,38 @@ impl PartialEq for Block {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
+struct BlockHeader {
+    header: bitcoin::BlockHeader,
+    block_hash: RefCell<Option<BlockHash>>,
+}
+
+impl BlockHeader {
+    pub fn new(header: bitcoin::BlockHeader) -> Self {
+        Self {
+            header,
+            block_hash: RefCell::new(None),
+        }
+    }
+
+    pub fn header(&self) -> &bitcoin::BlockHeader {
+        &self.header
+    }
+
+    pub fn block_hash(&self) -> BlockHash {
+        self.block_hash
+            .borrow_mut()
+            .get_or_insert_with(|| BlockHash::from(self.header.block_hash()))
+            .clone()
+    }
+}
+
+impl PartialEq for BlockHeader {
+    fn eq(&self, other: &Self) -> bool {
+        self.header == other.header
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct Transaction {
     tx: bitcoin::Transaction,
     txid: RefCell<Option<Txid>>,
