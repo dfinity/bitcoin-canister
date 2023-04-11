@@ -6,7 +6,7 @@ mod http;
 mod test_utils;
 
 use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::endpoints::Endpoint::*;
+use crate::endpoints::*;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 
 // TODO: this is a temporary debug method, cleanup before rolling out to prod.
@@ -38,47 +38,47 @@ pub async fn fetch_data() -> String {
 
 #[ic_cdk_macros::query]
 fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpResponse {
-    ApiBitapsComBlock.get().transform(raw)
+    endpoint_api_bitaps_com_block().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpResponse {
-    ApiBlockchairComBlock.get().transform(raw)
+    endpoint_api_blockchair_com_block().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_api_blockcypher_com_block(raw: TransformArgs) -> HttpResponse {
-    ApiBlockcypherComBlock.get().transform(raw)
+    endpoint_api_blockcypher_com_block().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
-    BitcoinCanister.get().transform(raw)
+    endpoint_bitcoin_canister().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpResponse {
-    BlockchainInfoHash.get().transform(raw)
+    endpoint_blockchain_info_hash().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_blockchain_info_height(raw: TransformArgs) -> HttpResponse {
-    BlockchainInfoHeight.get().transform(raw)
+    endpoint_blockchain_info_height().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpResponse {
-    BlockstreamInfoHash.get().transform(raw)
+    endpoint_blockstream_info_hash().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
-    BlockstreamInfoHeight.get().transform(raw)
+    endpoint_blockstream_info_height().transform(raw)
 }
 
 #[ic_cdk_macros::query]
 fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
-    ChainApiBtcComBlock.get().transform(raw)
+    endpoint_chain_api_btc_com_block().transform(raw)
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -1,20 +1,41 @@
-use crate::endpoints::Endpoint::*;
+use crate::endpoints::*;
 
 /// Mocks all the outcalls.
 pub fn mock_all_outcalls() {
     let mocks = [
-        (ApiBitapsComBlock, API_BITAPS_COM_RESPONSE),
-        (ApiBlockchairComBlock, API_BLOCKCHAIR_COM_RESPONSE),
-        (ApiBlockcypherComBlock, API_BLOCKCYPHER_COM_RESPONSE),
-        (BitcoinCanister, BITCOIN_CANISTER_RESPONSE),
-        (BlockchainInfoHash, BLOCKCHAIN_INFO_HASH_RESPONSE),
-        (BlockchainInfoHeight, BLOCKCHAIN_INFO_HEIGHT_RESPONSE),
-        (BlockstreamInfoHash, BLOCKSTREAM_INFO_HASH_RESPONSE),
-        (BlockstreamInfoHeight, BLOCKSTREAM_INFO_HEIGHT_RESPONSE),
-        (ChainApiBtcComBlock, CHAIN_API_BTC_COM_RESPONSE),
+        (endpoint_api_bitaps_com_block(), API_BITAPS_COM_RESPONSE),
+        (
+            endpoint_api_blockchair_com_block(),
+            API_BLOCKCHAIR_COM_RESPONSE,
+        ),
+        (
+            endpoint_api_blockcypher_com_block(),
+            API_BLOCKCYPHER_COM_RESPONSE,
+        ),
+        (endpoint_bitcoin_canister(), BITCOIN_CANISTER_RESPONSE),
+        (
+            endpoint_blockchain_info_hash(),
+            BLOCKCHAIN_INFO_HASH_RESPONSE,
+        ),
+        (
+            endpoint_blockchain_info_height(),
+            BLOCKCHAIN_INFO_HEIGHT_RESPONSE,
+        ),
+        (
+            endpoint_blockstream_info_hash(),
+            BLOCKSTREAM_INFO_HASH_RESPONSE,
+        ),
+        (
+            endpoint_blockstream_info_height(),
+            BLOCKSTREAM_INFO_HEIGHT_RESPONSE,
+        ),
+        (
+            endpoint_chain_api_btc_com_block(),
+            CHAIN_API_BTC_COM_RESPONSE,
+        ),
     ];
-    for (outcall, response_body) in mocks {
-        let request = outcall.get().request();
+    for (config, response_body) in mocks {
+        let request = config.request();
         let mock_response = ic_http::create_response()
             .status(200)
             .body(response_body)

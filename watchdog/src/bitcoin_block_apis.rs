@@ -1,4 +1,4 @@
-use crate::endpoints::Endpoint;
+use crate::endpoints::*;
 use serde_json::json;
 
 /// APIs that serve Bitcoin block data.
@@ -23,44 +23,40 @@ impl BitcoinBlockApi {
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            BitcoinBlockApi::ApiBitapsCom => http_request(Endpoint::ApiBitapsComBlock).await,
+            BitcoinBlockApi::ApiBitapsCom => http_request(endpoint_api_bitaps_com_block()).await,
             BitcoinBlockApi::ApiBlockchairCom => {
-                http_request(Endpoint::ApiBlockchairComBlock).await
+                http_request(endpoint_api_blockchair_com_block()).await
             }
             BitcoinBlockApi::ApiBlockcypherCom => {
-                http_request(Endpoint::ApiBlockcypherComBlock).await
+                http_request(endpoint_api_blockcypher_com_block()).await
             }
-            BitcoinBlockApi::BitcoinCanister => http_request(Endpoint::BitcoinCanister).await,
+            BitcoinBlockApi::BitcoinCanister => http_request(endpoint_bitcoin_canister()).await,
             BitcoinBlockApi::BlockchainInfo => {
-                let futures = vec![
-                    http_request(Endpoint::BlockchainInfoHeight),
-                    http_request(Endpoint::BlockchainInfoHash),
-                ];
-                let results = futures::future::join_all(futures).await;
+                let height = http_request(endpoint_blockchain_info_height()).await;
+                let hash = http_request(endpoint_blockchain_info_hash()).await;
                 json!({
-                    "height": results[0]["height"],
-                    "hash": results[1]["hash"],
+                    "height": height["height"],
+                    "hash": hash["hash"],
                 })
             }
             BitcoinBlockApi::BlockstreamInfo => {
-                let futures = vec![
-                    http_request(Endpoint::BlockstreamInfoHeight),
-                    http_request(Endpoint::BlockstreamInfoHash),
-                ];
-                let results = futures::future::join_all(futures).await;
+                let height = http_request(endpoint_blockstream_info_height()).await;
+                let hash = http_request(endpoint_blockstream_info_hash()).await;
                 json!({
-                    "height": results[0]["height"],
-                    "hash": results[1]["hash"],
+                    "height": height["height"],
+                    "hash": hash["hash"],
                 })
             }
-            BitcoinBlockApi::ChainApiBtcCom => http_request(Endpoint::ChainApiBtcComBlock).await,
+            BitcoinBlockApi::ChainApiBtcCom => {
+                http_request(endpoint_chain_api_btc_com_block()).await
+            }
         }
     }
 }
 
 /// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
-async fn http_request(outcall: Endpoint) -> serde_json::Value {
-    let request = outcall.get().request();
+async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Value {
+    let request = config.request();
     let (response,) = ic_http::http_request(request).await.unwrap();
     let json_str = String::from_utf8(response.body).expect("Raw response is not UTF-8 encoded.");
     serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
@@ -76,7 +72,7 @@ mod test {
     /// Runs a test for the given API.
     async fn run_test(
         api: BitcoinBlockApi,
-        times_called: Vec<(Endpoint, u64)>,
+        times_called: Vec<(crate::http::HttpRequestConfig, u64)>,
         expected: serde_json::Value,
     ) {
         test_utils::mock_all_outcalls();
@@ -84,8 +80,8 @@ mod test {
         let response = api.fetch_data().await;
         assert_json_eq!(response, expected);
 
-        for (outcall, count) in times_called {
-            let request = outcall.get().request();
+        for (config, count) in times_called {
+            let request = config.request();
             assert_eq!(ic_http::mock::times_called(request), count);
         }
     }
@@ -94,7 +90,7 @@ mod test {
     async fn test_api_bitaps_com() {
         run_test(
             BitcoinBlockApi::ApiBitapsCom,
-            vec![(Endpoint::ApiBitapsComBlock, 1)],
+            vec![(endpoint_api_bitaps_com_block(), 1)],
             json!({
                 "height": 700001,
                 "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
@@ -107,7 +103,7 @@ mod test {
     async fn test_api_blockchair_com() {
         run_test(
             BitcoinBlockApi::ApiBlockchairCom,
-            vec![(Endpoint::ApiBlockchairComBlock, 1)],
+            vec![(endpoint_api_blockchair_com_block(), 1)],
             json!({
                 "height": 700002,
                 "hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
@@ -120,7 +116,7 @@ mod test {
     async fn test_api_blockcypher_com() {
         run_test(
             BitcoinBlockApi::ApiBlockcypherCom,
-            vec![(Endpoint::ApiBlockcypherComBlock, 1)],
+            vec![(endpoint_api_blockcypher_com_block(), 1)],
             json!({
                 "height": 700003,
                 "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
@@ -134,7 +130,7 @@ mod test {
     async fn test_bitcoin_canister() {
         run_test(
             BitcoinBlockApi::BitcoinCanister,
-            vec![(Endpoint::BitcoinCanister, 1)],
+            vec![(endpoint_bitcoin_canister(), 1)],
             json!({
                 "height": 700007,
             }),
@@ -147,8 +143,8 @@ mod test {
         run_test(
             BitcoinBlockApi::BlockchainInfo,
             vec![
-                (Endpoint::BlockchainInfoHash, 1),
-                (Endpoint::BlockchainInfoHeight, 1),
+                (endpoint_blockchain_info_hash(), 1),
+                (endpoint_blockchain_info_height(), 1),
             ],
             json!({
                 "height": 700004,
@@ -163,8 +159,8 @@ mod test {
         run_test(
             BitcoinBlockApi::BlockstreamInfo,
             vec![
-                (Endpoint::BlockstreamInfoHash, 1),
-                (Endpoint::BlockstreamInfoHeight, 1),
+                (endpoint_blockstream_info_hash(), 1),
+                (endpoint_blockstream_info_height(), 1),
             ],
             json!({
                 "height": 700005,
@@ -178,7 +174,7 @@ mod test {
     async fn test_chain_api_btc_com() {
         run_test(
             BitcoinBlockApi::ChainApiBtcCom,
-            vec![(Endpoint::ChainApiBtcComBlock, 1)],
+            vec![(endpoint_chain_api_btc_com_block(), 1)],
             json!({
                 "height": 700006,
                 "hash": "0000000000000000000aaa666666666666666666666666666666666666666666",
