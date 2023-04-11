@@ -51,7 +51,7 @@ impl BitcoinBlockApi {
 }
 
 async fn http_request(outcall: Endpoint) -> serde_json::Value {
-    let request = outcall.get().create_request();
+    let request = outcall.get().request();
     let (response,) = ic_http::http_request(request).await.unwrap();
     let json_str = String::from_utf8(response.body).expect("Raw response is not UTF-8 encoded.");
     serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
@@ -75,7 +75,7 @@ mod test {
         assert_json_eq!(response, expected);
 
         for (outcall, count) in times_called {
-            let request = outcall.get().create_request();
+            let request = outcall.get().request();
             assert_eq!(ic_http::mock::times_called(request), count);
         }
     }

@@ -1,3 +1,4 @@
 service : {
     version : () -> (text) query; // TODO : cleanup.
+    fetch_data : () -> (text); // TODO : cleanup.
 };

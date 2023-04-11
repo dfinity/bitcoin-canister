@@ -13,7 +13,7 @@ pub fn mock_all_outcalls() {
         (ChainApiBtcComBlock, CHAIN_API_BTC_COM_RESPONSE),
     ];
     for (outcall, response_body) in mocks {
-        let request = outcall.get().create_request();
+        let request = outcall.get().request();
         let mock_response = ic_http::create_response()
             .status(200)
             .body(response_body)

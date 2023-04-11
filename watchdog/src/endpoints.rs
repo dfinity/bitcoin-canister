@@ -206,7 +206,7 @@ mod test {
         response_body: &str,
         expected: serde_json::Value,
     ) {
-        let request = endpoint.get().create_request();
+        let request = endpoint.get().request();
         let mock_response = ic_http::create_response()
             .status(200)
             .body(response_body)
