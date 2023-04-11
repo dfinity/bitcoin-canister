@@ -4,6 +4,7 @@ members = [
     # Production crates
     "canister",
     "interface",
+    "types",
     "validation",
 
     # Crates for bootstrapping the state

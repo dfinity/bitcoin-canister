@@ -14,3 +14,4 @@ ic-cdk = "0.6.1"
 ic-cdk-macros = "0.6.1"
 ic-btc-canister = { path = "../canister" }
 ic-btc-interface = { path = "../interface" }
+ic-btc-types = { path = "../types" }

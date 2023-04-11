@@ -3,10 +3,10 @@ use crate::{
     heartbeat,
     runtime::{set_successors_responses, GetSuccessorsReply},
     test_utils::BlockChainBuilder,
-    types::{Block, GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest},
 };
 use async_std::task::block_on;
 use ic_btc_interface::{Network, UtxosFilter};
+use ic_btc_types::{Block, GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest};
 use proptest::prelude::*;
 
 const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";

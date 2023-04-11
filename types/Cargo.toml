@@ -1,0 +1,18 @@
+[package]
+name = "ic-btc-types"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+candid = "0.8.1"
+serde = "1.0.132"
+serde_bytes = "0.11"
+bitcoin = {version = "0.28.1", features = ["use-serde"]}
+ic-stable-structures = "0.5.2"
+ic-cdk = "0.6.1"
+ic-btc-interface = { path = "../interface" }
+hex = "0.4.3"
+
+[dev-dependencies]
+ic-btc-test-utils = { path = "../test-utils" }
+

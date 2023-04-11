@@ -13,6 +13,7 @@ candid = "0.8.1"
 ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
 hex = "0.4.3"
 ic-btc-interface = { path = "../interface" }
+ic-btc-types = { path = "../types" }
 ic-btc-validation = { path = "../validation" }
 ic-cdk = "0.6.1"
 ic-cdk-macros = "0.6.1"

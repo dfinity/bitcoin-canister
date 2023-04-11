@@ -1,4 +1,4 @@
-use bitcoin::{util::uint::Uint256, Network};
+use bitcoin::Network;
 
 use crate::BlockHeight;
 
@@ -7,48 +7,6 @@ pub const DIFFICULTY_ADJUSTMENT_INTERVAL: BlockHeight = 6 * 24 * 14;
 
 /// Needed to help test check for the 20 minute testnet/regtest rule
 pub const TEN_MINUTES: u32 = 60 * 10;
-
-/// Bitcoin mainnet maximum target value
-const BITCOIN_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000,
-    0x0000000000000000,
-    0x0000000000000000,
-    0x00000000ffff0000,
-]);
-
-/// Bitcoin testnet maximum target value
-const TESTNET_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000,
-    0x0000000000000000,
-    0x0000000000000000,
-    0x00000000ffff0000,
-]);
-
-/// Bitcoin regtest maximum target value
-const REGTEST_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000,
-    0x0000000000000000,
-    0x0000000000000000,
-    0x7fffff0000000000,
-]);
-
-/// Bitcoin signet maximum target value
-const SIGNET_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x00000377ae000000u64,
-]);
-
-/// Returns the maximum difficulty target depending on the network
-pub fn max_target(network: &Network) -> Uint256 {
-    match network {
-        Network::Bitcoin => BITCOIN_MAX_TARGET,
-        Network::Testnet => TESTNET_MAX_TARGET,
-        Network::Regtest => REGTEST_MAX_TARGET,
-        Network::Signet => SIGNET_MAX_TARGET,
-    }
-}
 
 /// Returns false iff PoW difficulty level of blocks can be
 /// readjusted in the network after a fixed time interval.

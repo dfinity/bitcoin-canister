@@ -1,4 +1,3 @@
-use crate::state::OUTPOINT_SIZE;
 use bitcoin::{
     util::uint::Uint256, Address as BitcoinAddress, Block as BitcoinBlock,
     BlockHeader as BitcoinBlockHeader, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
@@ -21,6 +20,9 @@ use std::{
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
+
+mod constants;
+pub use crate::constants::{max_target, OUTPOINT_SIZE};
 
 // The expected length in bytes of the page.
 const EXPECTED_PAGE_LENGTH: usize = 72;
@@ -88,7 +90,7 @@ impl Block {
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
     fn target_difficulty(network: Network, target: Uint256) -> u64 {
-        (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
+        (crate::max_target(&into_bitcoin_network(network)) / target).low_u64()
     }
 }
 
@@ -1037,9 +1039,9 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Regtest,
-            crate::test_utils::BlockBuilder::genesis()
+            ic_btc_test_utils::BlockBuilder::genesis()
                 .build()
-                .header()
+                .header
                 .target()
         ),
         1
