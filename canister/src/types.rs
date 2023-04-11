@@ -392,7 +392,7 @@ impl AddressUtxoRange {
         };
 
         // The end of the range is the maximum value possible for a height and OutPoint.
-        // i.e. The range with matches with all UTXOs of that address that are >= the given UTXO.
+        // i.e. the range that matches with all UTXOs of that address that are >= the given UTXO.
         // Heights are sorted in descending order, so `0` is considered its minimum.
         let (end_height, end_outpoint) = (0, OutPoint::new(Txid::from(vec![255; 32]), u32::MAX));
 
