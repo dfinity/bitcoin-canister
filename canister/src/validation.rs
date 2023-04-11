@@ -1,16 +1,19 @@
-use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
-use bitcoin::BlockHeader;
+use crate::{blocktree::BlockDoesNotExtendTree, state::State, types::BlockHeader, unstable_blocks};
+use bitcoin::BlockHeader as BitcoinBlockHeader;
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.
 pub struct ValidationContext<'a> {
     state: &'a State,
-    chain: Vec<(&'a BlockHeader, crate::types::BlockHash)>,
+    chain: Vec<BlockHeader>,
 }
 
 impl<'a> ValidationContext<'a> {
     /// Initialize a `ValidationContext` for the given block header.
-    pub fn new(state: &'a State, header: &BlockHeader) -> Result<Self, BlockDoesNotExtendTree> {
+    pub fn new(
+        state: &'a State,
+        header: &BitcoinBlockHeader,
+    ) -> Result<Self, BlockDoesNotExtendTree> {
         // Retrieve the chain that the given header extends.
         // The given header must extend one of the unstable blocks.
         let prev_block_hash = header.prev_blockhash.into();
@@ -18,7 +21,7 @@ impl<'a> ValidationContext<'a> {
             .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
             .into_chain()
             .iter()
-            .map(|block| (block.header(), block.block_hash()))
+            .map(|block| BlockHeader::new(*block.header()))
             .collect();
 
         Ok(Self { state, chain })
@@ -28,7 +31,7 @@ impl<'a> ValidationContext<'a> {
     /// The given block header can be in the 'NextBlockHeaders'.
     pub fn new_with_next_block_headers(
         state: &'a State,
-        header: &BlockHeader,
+        header: &BitcoinBlockHeader,
     ) -> Result<Self, BlockDoesNotExtendTree> {
         let prev_block_hash = header.prev_blockhash.into();
         let next_block_headers_chain = state
@@ -37,9 +40,9 @@ impl<'a> ValidationContext<'a> {
         if next_block_headers_chain.is_empty() {
             Self::new(state, header)
         } else {
-            let mut context = Self::new(state, next_block_headers_chain[0].0)?;
+            let mut context = Self::new(state, next_block_headers_chain[0].header())?;
             for item in next_block_headers_chain.iter() {
-                context.chain.push(item.clone())
+                context.chain.push(item.clone().to_owned())
             }
             Ok(context)
         }
@@ -48,12 +51,12 @@ impl<'a> ValidationContext<'a> {
 
 /// Implements the `HeaderStore` trait that's used for validating headers.
 impl<'a> HeaderStore for ValidationContext<'a> {
-    fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<BlockHeader> {
+    fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<BitcoinBlockHeader> {
         // Check if the header is in the chain.
         let hash = crate::types::BlockHash::from(hash.to_vec());
         for item in self.chain.iter() {
-            if item.1 == hash {
-                return Some(*item.0);
+            if item.block_hash() == hash {
+                return Some(*item.header());
             }
         }
 
@@ -67,7 +70,7 @@ impl<'a> HeaderStore for ValidationContext<'a> {
         self.state.utxos.next_height() + self.chain.len() as u32 - 1
     }
 
-    fn get_with_height(&self, height: u32) -> Option<BlockHeader> {
+    fn get_with_height(&self, height: u32) -> Option<BitcoinBlockHeader> {
         if height < self.state.utxos.next_height() {
             // The height requested is for a stable block.
             // Retrieve the block header from the stable block headers.
@@ -75,7 +78,7 @@ impl<'a> HeaderStore for ValidationContext<'a> {
         } else if height <= self.height() {
             // The height requested is for an unstable block.
             // Retrieve the block header from the chain.
-            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].0)
+            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].header())
         } else {
             // The height requested is higher than the tip.
             None
@@ -124,10 +127,10 @@ mod test {
         assert_eq!(
             validation_context.chain,
             vec![
-                (genesis.header(), genesis.block_hash()),
-                (block_0.header(), block_0.block_hash()),
-                (block_1.header(), block_1.block_hash()),
-                (block_2.header(), block_2.block_hash()),
+                BlockHeader::new(*genesis.header()),
+                BlockHeader::new(*block_0.header()),
+                BlockHeader::new(*block_1.header()),
+                BlockHeader::new(*block_2.header()),
             ]
         );
 

@@ -1,10 +1,10 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
-    types::{Address, Block, BlockHash, OutPoint, TxOut},
+    types::{Address, Block, BlockHash, BlockHeader, OutPoint, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader;
+use bitcoin::BlockHeader as BitcoinBlockHeader;
 use ic_btc_interface::{Height, Network};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
@@ -91,7 +91,7 @@ impl UnstableBlocks {
     // Inserts the block header of the block that should be received.
     pub fn insert_next_block_header(
         &mut self,
-        block_header: BlockHeader,
+        block_header: BitcoinBlockHeader,
         stable_height: Height,
     ) -> Result<(), BlockDoesNotExtendTree> {
         let prev_block_hash = BlockHash::from(block_header.prev_blockhash);
@@ -121,11 +121,11 @@ impl UnstableBlocks {
     pub fn get_next_block_headers_chain_with_tip(
         &self,
         tip_block_hash: BlockHash,
-    ) -> Vec<(&BlockHeader, BlockHash)> {
+    ) -> Vec<BlockHeader> {
         let mut chain = vec![];
         let mut curr_hash = tip_block_hash;
         while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
-            chain.push((curr_header, curr_hash));
+            chain.push(BlockHeader::new_with_hash(*curr_header, curr_hash));
             curr_hash = BlockHash::from(curr_header.prev_blockhash);
         }
         chain.reverse();
@@ -776,18 +776,18 @@ mod test {
         assert_eq!(
             unstable_blocks.get_next_block_headers_chain_with_tip(block_3.block_hash()),
             vec![
-                (block_0.header(), block_0.block_hash()),
-                (block_1.header(), block_1.block_hash()),
-                (block_2.header(), block_2.block_hash()),
-                (block_3.header(), block_3.block_hash())
+                BlockHeader::new(*block_0.header()),
+                BlockHeader::new(*block_1.header()),
+                BlockHeader::new(*block_2.header()),
+                BlockHeader::new(*block_3.header())
             ]
         );
         assert_eq!(
             unstable_blocks.get_next_block_headers_chain_with_tip(block_y.block_hash()),
             vec![
-                (block_0.header(), block_0.block_hash()),
-                (block_x.header(), block_x.block_hash()),
-                (block_y.header(), block_y.block_hash()),
+                BlockHeader::new(*block_0.header()),
+                BlockHeader::new(*block_x.header()),
+                BlockHeader::new(*block_y.header()),
             ]
         );
     }

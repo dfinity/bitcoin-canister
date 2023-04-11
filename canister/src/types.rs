@@ -96,7 +96,7 @@ impl PartialEq for Block {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
-struct BlockHeader {
+pub struct BlockHeader {
     header: bitcoin::BlockHeader,
     block_hash: RefCell<Option<BlockHash>>,
 }
@@ -106,6 +106,13 @@ impl BlockHeader {
         Self {
             header,
             block_hash: RefCell::new(None),
+        }
+    }
+
+    pub fn new_with_hash(header: bitcoin::BlockHeader, hash: BlockHash) -> Self {
+        Self {
+            header,
+            block_hash: RefCell::new(Some(hash)),
         }
     }
 
