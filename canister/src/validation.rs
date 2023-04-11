@@ -24,9 +24,6 @@ impl<'a> ValidationContext<'a> {
         Ok(Self { state, chain })
     }
 
-    fn insert_in_chain(&mut self, item: (&'a BlockHeader, crate::types::BlockHash)) {
-        self.chain.push(item)
-    }
     /// Initialize a `ValidationContext` for the given block header.
     /// The given block header can be in the 'NextBlockHeaders'.
     pub fn new_with_next_block_headers(
@@ -42,7 +39,7 @@ impl<'a> ValidationContext<'a> {
         } else {
             let mut context = Self::new(state, next_block_headers_chain[0].0)?;
             for item in next_block_headers_chain.iter() {
-                context.insert_in_chain(item.clone())
+                context.chain.push(item.clone())
             }
             Ok(context)
         }
