@@ -1,7 +1,9 @@
-use candid::Principal;
 use ic_cdk::api::management_canister::http_request::{
-    HttpResponse, TransformArgs, TransformContext, TransformFunc,
+    HttpResponse, TransformArgs, TransformContext,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use {candid::Principal, ic_cdk::api::management_canister::http_request::TransformFunc};
 
 pub type TransformFn = fn(TransformArgs) -> HttpResponse;
 
@@ -31,6 +33,7 @@ where
 }
 
 /// Returns the name of a function as a string.
+#[cfg(not(target_arch = "wasm32"))]
 fn get_function_name<F>(_: F) -> &'static str {
     let full_name = std::any::type_name::<F>();
     match full_name.rfind(':') {

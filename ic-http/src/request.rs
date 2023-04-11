@@ -1,7 +1,13 @@
-use crate::transform::{create_transform_context, TransformFn};
+use crate::transform::create_transform_context;
 use ic_cdk::api::management_canister::http_request::{
     CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::transform::TransformFn;
+
+#[cfg(target_arch = "wasm32")]
+use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 
 /// Creates a new `HttpRequestBuilder` to construct an HTTP request.
 pub fn create_request() -> HttpRequestBuilder {
