@@ -11,7 +11,7 @@ use std::cell::RefCell;
 const WASM_PAGE_SIZE: u64 = 65536;
 
 const UPGRADES: MemoryId = MemoryId::new(0);
-const ADDRESS_OUTPOINTS: MemoryId = MemoryId::new(1);
+const ADDRESS_UTXOS: MemoryId = MemoryId::new(1);
 const SMALL_UTXOS: MemoryId = MemoryId::new(2);
 const MEDIUM_UTXOS: MemoryId = MemoryId::new(3);
 const BALANCES: MemoryId = MemoryId::new(4);
@@ -73,7 +73,7 @@ pub fn get_upgrades_memory() -> Memory {
 }
 
 pub fn get_address_utxos_memory() -> Memory {
-    with_memory_manager(|m| m.get(ADDRESS_OUTPOINTS))
+    with_memory_manager(|m| m.get(ADDRESS_UTXOS))
 }
 
 pub fn get_utxos_small_memory() -> Memory {

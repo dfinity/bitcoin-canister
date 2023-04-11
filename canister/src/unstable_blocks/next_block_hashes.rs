@@ -56,15 +56,14 @@ impl NextBlockHashes {
 #[cfg(test)]
 mod test {
     use crate::{types::BlockHash, unstable_blocks::next_block_hashes::NextBlockHashes};
-    use ic_stable_structures::Storable;
 
     #[test]
     fn test_get_max_height() {
         let mut block_hashes: NextBlockHashes = Default::default();
 
         assert_eq!(block_hashes.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
+        let hash1 = BlockHash::from(vec![1; 32]);
+        let hash2 = BlockHash::from(vec![2; 32]);
         block_hashes.insert(&hash1, 5);
 
         assert_eq!(block_hashes.get_max_height(), Some(5));
@@ -87,7 +86,7 @@ mod test {
         let mut block_hashes: NextBlockHashes = Default::default();
 
         assert_eq!(block_hashes.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
+        let hash1 = BlockHash::from(vec![1; 32]);
 
         block_hashes.insert(&hash1, 5);
 
@@ -109,7 +108,7 @@ mod test {
             vec![hash1.clone()]
         );
 
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
+        let hash2 = BlockHash::from(vec![2; 32]);
 
         block_hashes.insert(&hash2, 5);
 
@@ -126,9 +125,9 @@ mod test {
         let mut block_hashes: NextBlockHashes = Default::default();
 
         assert_eq!(block_hashes.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
-        let hash3 = BlockHash::from_bytes(vec![5; 32]);
+        let hash1 = BlockHash::from(vec![1; 32]);
+        let hash2 = BlockHash::from(vec![2; 32]);
+        let hash3 = BlockHash::from(vec![5; 32]);
 
         block_hashes.insert(&hash1, 5);
         block_hashes.insert(&hash2, 5);
@@ -184,10 +183,10 @@ mod test {
         let mut block_hashes: NextBlockHashes = Default::default();
 
         assert_eq!(block_hashes.get_max_height(), None);
-        let hash1 = BlockHash::from_bytes(vec![1; 32]);
-        let hash2 = BlockHash::from_bytes(vec![2; 32]);
-        let hash3 = BlockHash::from_bytes(vec![5; 32]);
-        let hash4 = BlockHash::from_bytes(vec![7; 32]);
+        let hash1 = BlockHash::from(vec![1; 32]);
+        let hash2 = BlockHash::from(vec![2; 32]);
+        let hash3 = BlockHash::from(vec![5; 32]);
+        let hash4 = BlockHash::from(vec![7; 32]);
 
         block_hashes.insert(&hash1, 5);
         block_hashes.insert(&hash2, 5);
