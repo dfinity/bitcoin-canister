@@ -1,4 +1,3 @@
 service : {
-    version : () -> (text) query; // TODO : cleanup.
-    fetch_data : () -> (text); // TODO : cleanup.
+    fetch_data : () -> (text); // TODO: this is a temporary debug method, cleanup before rolling out to prod.
 };

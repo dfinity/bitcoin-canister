@@ -1,6 +1,7 @@
 use crate::endpoints::Endpoint;
 use serde_json::json;
 
+/// APIs that serve Bitcoin block data.
 #[derive(Debug)]
 pub enum BitcoinBlockApi {
     ApiBitapsCom,
@@ -13,6 +14,7 @@ pub enum BitcoinBlockApi {
 }
 
 impl BitcoinBlockApi {
+    /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
             BitcoinBlockApi::ApiBitapsCom => http_request(Endpoint::ApiBitapsComBlock).await,
@@ -50,6 +52,7 @@ impl BitcoinBlockApi {
     }
 }
 
+/// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
 async fn http_request(outcall: Endpoint) -> serde_json::Value {
     let request = outcall.get().request();
     let (response,) = ic_http::http_request(request).await.unwrap();
@@ -64,6 +67,7 @@ mod test {
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
+    /// Runs a test for the given API.
     async fn run_test(
         api: BitcoinBlockApi,
         times_called: Vec<(Endpoint, u64)>,

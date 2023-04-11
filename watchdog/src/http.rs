@@ -1,12 +1,18 @@
-use crate::print;
 use ic_cdk::api::management_canister::http_request::{
     CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
 };
 
 pub type TransformFn = fn(TransformArgs) -> HttpResponse;
 
+/// Stores the configuration of the HTTP request, which includes:
+/// - URL
+/// - HTTP request
+/// - Transform function inner implementation to be called inside the canister's endpoint
 pub struct HttpRequestConfig {
+    // URL is added only for tests.
+    #[allow(dead_code)]
     url: String,
+
     request: CanisterHttpRequestArgument,
     transform_implementation: TransformFn,
 }
@@ -41,19 +47,24 @@ impl HttpRequestConfig {
         }
     }
 
+    // URL is added only for tests.
+    #[allow(dead_code)]
     pub fn url(&self) -> &str {
         &self.url
     }
 
+    /// Executes the transform function.
     pub fn transform(&self, raw: TransformArgs) -> HttpResponse {
         (self.transform_implementation)(raw)
     }
 
+    /// Returns the HTTP request.
     pub fn request(&self) -> CanisterHttpRequestArgument {
         self.request.clone()
     }
 }
 
+/// Creates a new HTTP request.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn create_request(
     url: &str,
@@ -71,6 +82,7 @@ pub fn create_request(
     builder.build()
 }
 
+/// Creates a new HTTP request.
 #[cfg(target_arch = "wasm32")]
 pub fn create_request<T>(url: &str, transform_func: Option<T>) -> CanisterHttpRequestArgument
 where

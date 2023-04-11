@@ -11,6 +11,11 @@ use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs
 use regex::Regex;
 use serde_json::json;
 
+/// Bitcoin Block API endpoints.
+/// Allows to store the configuration of each endpoint, which includes:
+/// - URL
+/// - Transform function canister endpoint
+/// - Transform function inner implementation to be called inside the canister's endpoint
 #[derive(Debug)]
 pub enum Endpoint {
     ApiBitapsComBlock,
@@ -25,6 +30,7 @@ pub enum Endpoint {
 }
 
 impl Endpoint {
+    /// Returns the configuration of the endpoint.
     pub fn get(&self) -> HttpRequestConfig {
         match self {
             Endpoint::ApiBitapsComBlock => HttpRequestConfig::new(

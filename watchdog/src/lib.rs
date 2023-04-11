@@ -9,12 +9,8 @@ use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::endpoints::Endpoint::*;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 
-// TODO: cleanup.
-#[ic_cdk_macros::query]
-pub fn version() -> String {
-    String::from("v.0.1.0")
-}
-
+// TODO: this is a temporary debug method, cleanup before rolling out to prod.
+// This method allows to check the data returned by all the APIs.
 #[ic_cdk_macros::update]
 pub async fn fetch_data() -> String {
     let api_providers = [
