@@ -1,7 +1,8 @@
 use crate::state::OUTPOINT_SIZE;
 use bitcoin::{
     util::uint::Uint256, Address as BitcoinAddress, Block as BitcoinBlock,
-    Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
+    BlockHeader as BitcoinBlockHeader, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
+    Script, TxOut as BitcoinTxOut,
 };
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
@@ -29,9 +30,8 @@ const EXPECTED_PAGE_LENGTH: usize = 72;
 // NOTE: If new fields are added, then the implementation of `PartialEq` should be updated.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct Block {
-    block: BitcoinBlock,
+    block_header: BlockHeader,
     transactions: Vec<Transaction>,
-    block_hash: RefCell<Option<BlockHash>>,
 
     #[cfg(test)]
     pub mock_difficulty: Option<u64>,
@@ -45,22 +45,18 @@ impl Block {
                 .iter()
                 .map(|tx| Transaction::new(tx.clone()))
                 .collect(),
-            block,
-            block_hash: RefCell::new(None),
+            block_header: BlockHeader::new(block.header),
             #[cfg(test)]
             mock_difficulty: None,
         }
     }
 
-    pub fn header(&self) -> &bitcoin::BlockHeader {
-        &self.block.header
+    pub fn header(&self) -> &BitcoinBlockHeader {
+        self.block_header.header()
     }
 
     pub fn block_hash(&self) -> BlockHash {
-        self.block_hash
-            .borrow_mut()
-            .get_or_insert_with(|| BlockHash::from(self.block.block_hash()))
-            .clone()
+        self.block_header.block_hash()
     }
 
     pub fn txdata(&self) -> &[Transaction] {
@@ -78,7 +74,16 @@ impl Block {
     #[cfg(test)]
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
-        self.block.consensus_encode(buffer)
+        let bitcoin_block = BitcoinBlock {
+            header: self.header().clone(),
+            txdata: self
+                .transactions
+                .clone()
+                .into_iter()
+                .map(|t| t.into())
+                .collect(),
+        };
+        bitcoin_block.consensus_encode(buffer)
     }
 
     // Computes the difficulty given a block's target.
@@ -91,32 +96,32 @@ impl Block {
 
 impl PartialEq for Block {
     fn eq(&self, other: &Self) -> bool {
-        self.block == other.block && self.transactions == other.transactions
+        self.block_header == other.block_header && self.transactions == other.transactions
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct BlockHeader {
-    header: bitcoin::BlockHeader,
+    header: BitcoinBlockHeader,
     block_hash: RefCell<Option<BlockHash>>,
 }
 
 impl BlockHeader {
-    pub fn new(header: bitcoin::BlockHeader) -> Self {
+    pub fn new(header: BitcoinBlockHeader) -> Self {
         Self {
             header,
             block_hash: RefCell::new(None),
         }
     }
 
-    pub fn new_with_hash(header: bitcoin::BlockHeader, hash: BlockHash) -> Self {
+    pub fn new_with_hash(header: BitcoinBlockHeader, hash: BlockHash) -> Self {
         Self {
             header,
             block_hash: RefCell::new(Some(hash)),
         }
     }
 
-    pub fn header(&self) -> &bitcoin::BlockHeader {
+    pub fn header(&self) -> &BitcoinBlockHeader {
         &self.header
     }
 
@@ -921,7 +926,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
+            BitcoinBlockHeader::u256_from_compact_target(0x1b0404cb)
         ),
         16_307
     );
@@ -931,7 +936,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386397584)
+            BitcoinBlockHeader::u256_from_compact_target(386397584)
         ),
         35_364_065_900_457
     );
@@ -941,7 +946,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386877668)
+            BitcoinBlockHeader::u256_from_compact_target(386877668)
         ),
         18_415_156_832_118
     );
@@ -951,7 +956,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(422681968)
+            BitcoinBlockHeader::u256_from_compact_target(422681968)
         ),
         86_564_599
     );
@@ -961,7 +966,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(457142912)
+            BitcoinBlockHeader::u256_from_compact_target(457142912)
         ),
         1_032
     );
