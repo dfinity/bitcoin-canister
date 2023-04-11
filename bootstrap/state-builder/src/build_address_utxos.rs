@@ -10,7 +10,9 @@ use bitcoin::{Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
 use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo, OutPoint, Txid};
 use ic_btc_interface::Network;
-use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
+use ic_stable_structures::{
+    storable::Blob, BoundedStorable, DefaultMemoryImpl, StableBTreeMap, Storable,
+};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -41,7 +43,7 @@ fn main() {
     let reader = BufReader::new(utxos_file);
 
     let memory = DefaultMemoryImpl::default();
-    let mut address_utxos: StableBTreeMap<_, AddressUtxo, ()> =
+    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), _> =
         StableBTreeMap::init(memory.clone());
 
     for (i, line) in reader.lines().enumerate() {
@@ -74,14 +76,19 @@ fn main() {
 
             address_utxos
                 .insert(
-                    AddressUtxo {
-                        address,
-                        height,
-                        outpoint: OutPoint {
-                            txid: txid.clone(),
-                            vout,
-                        },
-                    },
+                    Blob::try_from(
+                        AddressUtxo {
+                            address,
+                            height,
+                            outpoint: OutPoint {
+                                txid: txid.clone(),
+                                vout,
+                            },
+                        }
+                        .to_bytes()
+                        .as_ref(),
+                    )
+                    .unwrap(),
                     (),
                 )
                 .unwrap();

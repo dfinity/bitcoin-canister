@@ -10,7 +10,7 @@ use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_stable_structures::{Memory, StableBTreeMap, Storable};
+use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
 use std::str::FromStr;
 
@@ -118,9 +118,13 @@ fn build_chain_with_genesis_block(
 }
 
 /// Returns true if the instances of `StableBTreeMap` provided are equal.
-pub fn is_stable_btreemap_equal<M: Memory + Clone, K: Storable + Eq, V: Storable + Eq>(
-    a: &StableBTreeMap<M, K, V>,
-    b: &StableBTreeMap<M, K, V>,
+pub fn is_stable_btreemap_equal<
+    M: Memory,
+    K: BoundedStorable + Ord + Eq + Clone,
+    V: BoundedStorable + Eq,
+>(
+    a: &StableBTreeMap<K, V, M>,
+    b: &StableBTreeMap<K, V, M>,
 ) -> bool {
     if a.len() != b.len() {
         return false;

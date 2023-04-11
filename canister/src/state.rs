@@ -201,13 +201,13 @@ const TX_OUT_MAX_SIZE_MEDIUM: u32 = TX_OUT_SCRIPT_MAX_SIZE_MEDIUM + TX_OUT_VALUE
 const HEIGHT_SIZE: u32 = 4;
 
 /// The size of a key in the UTXOs map, which is an outpoint.
-pub const UTXO_KEY_SIZE: u32 = OUTPOINT_SIZE;
+pub const UTXO_KEY_SIZE: usize = OUTPOINT_SIZE as usize;
 
 /// The max size of a value in the "small UTXOs" map.
-pub const UTXO_VALUE_MAX_SIZE_SMALL: u32 = TX_OUT_MAX_SIZE_SMALL + HEIGHT_SIZE;
+pub const UTXO_VALUE_MAX_SIZE_SMALL: usize = (TX_OUT_MAX_SIZE_SMALL + HEIGHT_SIZE) as usize;
 
 /// The max size of a value in the "medium UTXOs" map.
-pub const UTXO_VALUE_MAX_SIZE_MEDIUM: u32 = TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE;
+pub const UTXO_VALUE_MAX_SIZE_MEDIUM: usize = (TX_OUT_MAX_SIZE_MEDIUM + HEIGHT_SIZE) as usize;
 
 /// A response awaiting to be processed.
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
