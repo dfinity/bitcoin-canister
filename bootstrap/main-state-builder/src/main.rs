@@ -17,6 +17,7 @@ use ic_btc_canister::{
 use ic_btc_interface::{Config, Flag, Height, Network};
 use ic_btc_types::{Block, BlockHash, BlockHeaderBlob, OutPoint, TxOut};
 use ic_stable_structures::FileMemory;
+use std::str::FromStr;
 use std::{
     collections::BTreeMap,
     fs::File,

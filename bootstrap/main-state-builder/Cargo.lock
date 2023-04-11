@@ -499,6 +499,7 @@ dependencies = [
  "ciborium",
  "hex",
  "ic-btc-interface",
+ "ic-btc-types",
  "ic-btc-validation",
  "ic-cdk",
  "ic-cdk-macros",
@@ -519,10 +520,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-btc-types"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid",
+ "hex",
+ "ic-btc-interface",
+ "ic-cdk",
+ "ic-stable-structures",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "ic-btc-validation"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+ "ic-btc-types",
 ]
 
 [[package]]
@@ -721,6 +737,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
+ "ic-btc-types",
  "ic-stable-structures",
 ]
 
