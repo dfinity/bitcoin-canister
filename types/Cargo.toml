@@ -16,3 +16,5 @@ hex = "0.4.3"
 [dev-dependencies]
 ic-btc-test-utils = { path = "../test-utils" }
 
+[features]
+test-utils = []

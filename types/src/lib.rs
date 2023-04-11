@@ -33,7 +33,7 @@ pub struct Block {
     block_header: BlockHeader,
     transactions: Vec<Transaction>,
 
-    #[cfg(test)]
+    #[cfg(feature = "test-utils")]
     pub mock_difficulty: Option<u64>,
 }
 
@@ -46,7 +46,7 @@ impl Block {
                 .map(|tx| Transaction::new(tx.clone()))
                 .collect(),
             block_header: BlockHeader::new(block.header),
-            #[cfg(test)]
+            #[cfg(feature = "test-utils")]
             mock_difficulty: None,
         }
     }
@@ -64,14 +64,15 @@ impl Block {
     }
 
     pub fn difficulty(&self, network: Network) -> u64 {
-        #[cfg(test)]
+        #[cfg(feature = "test-utils")]
         if let Some(difficulty) = self.mock_difficulty {
             return difficulty;
         }
 
         Self::target_difficulty(network, self.header().target())
     }
-    #[cfg(test)]
+
+    #[cfg(feature = "test-utils")]
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
         let bitcoin_block = BitcoinBlock {
@@ -188,7 +189,7 @@ impl PartialEq for Transaction {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "test-utils")]
 impl From<Transaction> for bitcoin::Transaction {
     fn from(tx: Transaction) -> Self {
         tx.tx
@@ -217,7 +218,7 @@ impl From<&BitcoinOutPoint> for OutPoint {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "test-utils")]
 impl From<OutPoint> for bitcoin::OutPoint {
     fn from(outpoint: OutPoint) -> Self {
         use bitcoin::hashes::Hash;
