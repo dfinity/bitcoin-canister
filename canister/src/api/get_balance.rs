@@ -1,12 +1,11 @@
 use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
-    types::{Address, GetBalanceRequest},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_interface::{GetBalanceError, Satoshi};
+use ic_btc_types::{Address, GetBalanceRequest};
 use std::str::FromStr;
-
 // Various profiling stats for tracking the performance of `get_balance`.
 #[derive(Debug, Default)]
 struct Stats {
@@ -103,11 +102,10 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::OutPoint,
         with_state_mut,
     };
     use ic_btc_interface::{Config, Fees, Network};
-
+    use ic_btc_types::OutPoint;
     #[test]
     fn error_on_malformed_address() {
         crate::init(Config {

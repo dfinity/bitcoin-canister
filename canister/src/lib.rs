@@ -13,7 +13,7 @@ pub mod state;
 mod test_utils;
 #[cfg(test)]
 mod tests;
-pub mod types;
+
 pub mod unstable_blocks;
 mod utxo_set;
 mod validation;
@@ -21,7 +21,6 @@ mod validation;
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{into_bitcoin_network, Block, HttpRequest, HttpResponse},
 };
 pub use api::send_transaction;
 pub use api::set_config;
@@ -30,6 +29,8 @@ use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest,
     GetUtxosError, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Network, Satoshi,
 };
+pub use ic_btc_types;
+use ic_btc_types::{into_bitcoin_network, Block, HttpRequest, HttpResponse};
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
 use serde_bytes::ByteBuf;

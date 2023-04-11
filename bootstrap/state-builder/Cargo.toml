@@ -33,3 +33,4 @@ integer-encoding = "3.0.4"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 rusty-leveldb = "1.0.4"
+ic-btc-types = { path = "../../types" }

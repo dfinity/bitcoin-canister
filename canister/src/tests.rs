@@ -4,10 +4,6 @@ use crate::{
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
-    types::{
-        Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest,
-        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
-    },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
@@ -20,6 +16,10 @@ use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{GetUtxosResponse, Network, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
+use ic_btc_types::{
+    Block, BlockBlob, BlockHash, BlockHeaderBlob, GetBalanceRequest, GetSuccessorsCompleteResponse,
+    GetSuccessorsResponse, GetUtxosRequest,
+};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
@@ -508,7 +508,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
     // Query the balance, expecting address 1 to be empty and address 2 to be non-empty.
     assert_eq!(
-        get_balance(crate::types::GetBalanceRequest {
+        get_balance(ic_btc_types::GetBalanceRequest {
             address: address_1.to_string(),
             min_confirmations: None
         })
@@ -517,7 +517,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
     );
 
     assert_eq!(
-        get_balance(crate::types::GetBalanceRequest {
+        get_balance(ic_btc_types::GetBalanceRequest {
             address: address_2.to_string(),
             min_confirmations: None
         })
