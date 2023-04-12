@@ -18,7 +18,7 @@ fn parse_json(body: Vec<u8>) -> serde_json::Value {
     serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
 }
 
-/// Apply a transform function to the HTTP response.
+/// Apply a transform function to the quote HTTP response.
 #[ic_cdk_macros::query]
 fn transform_quote(raw: TransformArgs) -> HttpResponse {
     let mut response = HttpResponse {
@@ -40,7 +40,7 @@ fn transform_quote(raw: TransformArgs) -> HttpResponse {
     response
 }
 
-/// Create a request to the dummyjson.com API.
+/// Create a request to the dummyjson.com API for quotes.
 fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
     ic_http::create_request()
         .get(url)
@@ -52,6 +52,7 @@ fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
         .build()
 }
 
+/// Fetch data by making an HTTP request.
 async fn fetch(request: CanisterHttpRequestArgument) -> String {
     let result = ic_http::http_request(request).await;
 
@@ -73,6 +74,7 @@ async fn fetch_quote() -> String {
     fetch(request).await
 }
 
+/// Apply a transform function to the user HTTP response.
 #[ic_cdk_macros::query]
 fn transform_user(raw: TransformArgs) -> HttpResponse {
     let mut response = HttpResponse {
@@ -94,6 +96,7 @@ fn transform_user(raw: TransformArgs) -> HttpResponse {
     response
 }
 
+/// Create a request to the dummyjson.com API for users.
 fn build_user_request(url: &str) -> CanisterHttpRequestArgument {
     ic_http::create_request()
         .get(url)
@@ -105,6 +108,7 @@ fn build_user_request(url: &str) -> CanisterHttpRequestArgument {
         .build()
 }
 
+/// Fetch a user from the dummyjson.com API.
 #[ic_cdk_macros::update]
 async fn fetch_user() -> String {
     let request = build_user_request("https://dummyjson.com/users/1");
@@ -118,7 +122,7 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn test_http_request_transform_body() {
+    async fn test_http_request_transform_body_quote() {
         // Arrange.
         let request = build_quote_request("https://dummyjson.com/quotes/1");
         let mock_response = ic_http::create_response()
@@ -145,7 +149,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_http_request_transform_body_for_many() {
+    async fn test_http_request_transform_body_for_both_quote_and_user() {
         // Arrange.
         let input = [
             (

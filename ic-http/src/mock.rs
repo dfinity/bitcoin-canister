@@ -69,20 +69,18 @@ pub(crate) async fn http_request(
     }
 
     // Apply the transform function if one is specified.
-    let transform = match request.transform {
-        Some(ref t) => crate::transform_function_call(
-            t.function.0.method.clone(),
-            TransformArgs {
-                response: mock.response.clone(),
-                context: vec![],
-            },
-        ),
-        None => None,
-    };
-    let transformed_response = match transform {
-        Some(response) => response,
-        None => mock.response.clone(),
-    };
+    let transformed_response = request
+        .transform
+        .and_then(|t| {
+            crate::transform_function_call(
+                t.function.0.method,
+                TransformArgs {
+                    response: mock.response.clone(),
+                    context: vec![],
+                },
+            )
+        })
+        .unwrap_or_else(|| mock.response.clone());
 
     Ok((transformed_response,))
 }
