@@ -80,7 +80,7 @@ pub(crate) async fn http_request(
                 },
             )
         })
-        .unwrap_or_else(|| mock.response.clone());
+        .unwrap_or(mock.response.clone());
 
     Ok((transformed_response,))
 }
