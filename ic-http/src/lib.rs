@@ -125,23 +125,29 @@ pub mod mock;
 pub use crate::http_request::http_request;
 pub use crate::request::create_request;
 pub use crate::response::create_response;
-pub use crate::transform::TransformFn;
 
-use crate::mock::{hash, Mock};
-use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
-use std::collections::HashMap;
-use std::sync::RwLock;
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    crate::mock::{hash, Mock},
+    crate::transform::TransformFn,
+    ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument,
+    ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs},
+    std::collections::HashMap,
+    std::sync::RwLock,
+};
 
 // A thread-local hashmap.
+#[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     /// A thread-local hashmap of mocks.
     static MOCKS: RwLock<HashMap<String, Mock>> = RwLock::new(HashMap::new());
 
     /// A thread-local hashmap of transform functions.
-    static TRANSFORM_FUNCTIONS: RwLock<HashMap<String, TransformFn>> = RwLock::new(HashMap::new());
+    static TRANSFORM_FUNCTIONS: RwLock<HashMap<String, Box<TransformFn>>> = RwLock::new(HashMap::new());
 }
 
 /// Inserts the provided mock into a thread-local hashmap.
+#[cfg(not(target_arch = "wasm32"))]
 fn mock_insert(mock: Mock) {
     MOCKS.with(|cell| {
         cell.write().unwrap().insert(hash(&mock.request), mock);
@@ -149,18 +155,38 @@ fn mock_insert(mock: Mock) {
 }
 
 /// Returns a cloned mock from the thread-local hashmap that corresponds to the provided request.
+#[cfg(not(target_arch = "wasm32"))]
 fn mock_get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
     MOCKS.with(|cell| cell.read().unwrap().get(&hash(request)).cloned())
 }
 
 /// Inserts the provided transform function into a thread-local hashmap.
-fn transform_function_insert(function_name: String, func: TransformFn) {
+/// If a transform function with the same name already exists, it is not inserted.
+#[cfg(not(target_arch = "wasm32"))]
+fn transform_function_insert(name: String, func: Box<TransformFn>) {
     TRANSFORM_FUNCTIONS.with(|cell| {
-        cell.write().unwrap().insert(function_name, func);
+        // This is a workaround to prevent the transform function from being
+        // overridden when it might be used by another async call.
+        if cell.read().unwrap().get(&name).is_none() {
+            cell.write().unwrap().insert(name, func);
+        }
     });
 }
 
-/// Returns a cloned transform function from the thread-local hashmap.
-fn transform_function_get(function_name: String) -> Option<TransformFn> {
-    TRANSFORM_FUNCTIONS.with(|cell| cell.read().unwrap().get(&function_name).cloned())
+/// Executes the transform function that corresponds to the provided name.
+#[cfg(not(target_arch = "wasm32"))]
+fn transform_function_call(name: String, arg: TransformArgs) -> Option<HttpResponse> {
+    TRANSFORM_FUNCTIONS.with(|cell| cell.read().unwrap().get(&name).map(|f| f(arg)))
+}
+
+/// Returns a sorted list of transform function names.
+/// This is used for testing.
+#[allow(dead_code)]
+#[cfg(not(target_arch = "wasm32"))]
+fn transform_function_names() -> Vec<String> {
+    TRANSFORM_FUNCTIONS.with(|cell| {
+        let mut names: Vec<String> = cell.read().unwrap().keys().cloned().collect();
+        names.sort();
+        names
+    })
 }
