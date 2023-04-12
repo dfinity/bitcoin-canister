@@ -4,9 +4,6 @@ use ic_cdk::api::management_canister::http_request::{
     TransformContext,
 };
 
-#[cfg(target_arch = "wasm32")]
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
-
 /// Creates a new `HttpRequestBuilder` to construct an HTTP request.
 pub fn create_request() -> HttpRequestBuilder {
     HttpRequestBuilder::new()
