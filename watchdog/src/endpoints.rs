@@ -360,4 +360,26 @@ mod test {
         )
         .await;
     }
+
+    #[test]
+    fn test_transform_function_names() {
+        test_utils::mock_all_outcalls();
+
+        let names = ic_http::mock::registered_transform_function_names();
+
+        assert_eq!(
+            names.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            vec![
+                "transform_api_bitaps_com_block",
+                "transform_api_blockchair_com_block",
+                "transform_api_blockcypher_com_block",
+                "transform_bitcoin_canister",
+                "transform_blockchain_info_hash",
+                "transform_blockchain_info_height",
+                "transform_blockstream_info_hash",
+                "transform_blockstream_info_height",
+                "transform_chain_api_btc_com_block"
+            ]
+        );
+    }
 }
