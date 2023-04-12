@@ -1,10 +1,8 @@
 use crate::transform::create_transform_context;
 use ic_cdk::api::management_canister::http_request::{
-    CanisterHttpRequestArgument, HttpHeader, HttpMethod, TransformContext,
+    CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse, TransformArgs,
+    TransformContext,
 };
-
-#[cfg(not(target_arch = "wasm32"))]
-use crate::transform::TransformFn;
 
 #[cfg(target_arch = "wasm32")]
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
@@ -78,16 +76,9 @@ impl HttpRequestBuilder {
         self
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn transform_func(mut self, func: TransformFn, context: Vec<u8>) -> Self {
-        self.transform = Some(create_transform_context(func, context));
-        self
-    }
-
-    #[cfg(target_arch = "wasm32")]
     pub fn transform_func<T>(mut self, func: T, context: Vec<u8>) -> Self
     where
-        T: Fn(TransformArgs) -> HttpResponse,
+        T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
         self.transform = Some(create_transform_context(func, context));
         self
