@@ -11,6 +11,7 @@ use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs
 use regex::Regex;
 use serde_json::json;
 
+/// Creates a new HttpRequestConfig for fetching block data from api.bitaps.com.
 pub fn endpoint_api_bitaps_com_block() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.bitaps.com/btc/v1/blockchain/block/last",
@@ -27,6 +28,7 @@ pub fn endpoint_api_bitaps_com_block() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockchair.com/bitcoin/stats",
@@ -43,6 +45,7 @@ pub fn endpoint_api_blockchair_com_block() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching block data from api.blockcypher.com.
 pub fn endpoint_api_blockcypher_com_block() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockcypher.com/v1/btc/main",
@@ -59,6 +62,7 @@ pub fn endpoint_api_blockcypher_com_block() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
@@ -80,6 +84,7 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching hash data from blockchain.info.
 pub fn endpoint_blockchain_info_hash() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/latesthash",
@@ -95,6 +100,7 @@ pub fn endpoint_blockchain_info_hash() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching height data from blockchain.info.
 pub fn endpoint_blockchain_info_height() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/getblockcount",
@@ -110,6 +116,7 @@ pub fn endpoint_blockchain_info_height() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching hash data from blockstream.info.
 pub fn endpoint_blockstream_info_hash() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/hash",
@@ -125,6 +132,7 @@ pub fn endpoint_blockstream_info_hash() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching height data from blockstream.info.
 pub fn endpoint_blockstream_info_height() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/height",
@@ -140,6 +148,7 @@ pub fn endpoint_blockstream_info_height() -> HttpRequestConfig {
     )
 }
 
+/// Creates a new HttpRequestConfig for fetching block data from chain.api.btc.com.
 pub fn endpoint_chain_api_btc_com_block() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://chain.api.btc.com/v3/block/latest",
