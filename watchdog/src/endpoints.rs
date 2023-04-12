@@ -366,9 +366,10 @@ mod test {
         test_utils::mock_all_outcalls();
 
         let names = ic_http::mock::registered_transform_function_names();
+        let names = names.iter().map(|s| s.as_str()).collect::<Vec<_>>();
 
         assert_eq!(
-            names.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+            names,
             vec![
                 "transform_api_bitaps_com_block",
                 "transform_api_blockchair_com_block",
