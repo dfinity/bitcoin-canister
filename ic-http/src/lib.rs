@@ -117,6 +117,9 @@ mod request;
 mod response;
 mod transform;
 
+#[cfg(not(target_arch = "wasm32"))]
+mod storage;
+
 // Export.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod mock;
@@ -125,42 +128,3 @@ pub mod mock;
 pub use crate::http_request::http_request;
 pub use crate::request::create_request;
 pub use crate::response::create_response;
-pub use crate::transform::TransformFn;
-
-use crate::mock::{hash, Mock};
-use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
-use std::collections::HashMap;
-use std::sync::RwLock;
-
-// A thread-local hashmap.
-thread_local! {
-    /// A thread-local hashmap of mocks.
-    static MOCKS: RwLock<HashMap<String, Mock>> = RwLock::new(HashMap::new());
-
-    /// A thread-local hashmap of transform functions.
-    static TRANSFORM_FUNCTIONS: RwLock<HashMap<String, TransformFn>> = RwLock::new(HashMap::new());
-}
-
-/// Inserts the provided mock into a thread-local hashmap.
-fn mock_insert(mock: Mock) {
-    MOCKS.with(|cell| {
-        cell.write().unwrap().insert(hash(&mock.request), mock);
-    });
-}
-
-/// Returns a cloned mock from the thread-local hashmap that corresponds to the provided request.
-fn mock_get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
-    MOCKS.with(|cell| cell.read().unwrap().get(&hash(request)).cloned())
-}
-
-/// Inserts the provided transform function into a thread-local hashmap.
-fn transform_function_insert(function_name: String, func: TransformFn) {
-    TRANSFORM_FUNCTIONS.with(|cell| {
-        cell.write().unwrap().insert(function_name, func);
-    });
-}
-
-/// Returns a cloned transform function from the thread-local hashmap.
-fn transform_function_get(function_name: String) -> Option<TransformFn> {
-    TRANSFORM_FUNCTIONS.with(|cell| cell.read().unwrap().get(&function_name).cloned())
-}

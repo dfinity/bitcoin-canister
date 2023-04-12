@@ -491,6 +491,7 @@ name = "canister_backend"
 version = "0.1.0"
 dependencies = [
  "candid 0.8.4",
+ "futures",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
  "ic-http",
