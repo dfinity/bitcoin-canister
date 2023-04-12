@@ -93,6 +93,11 @@ pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
         .unwrap_or(0)
 }
 
+/// Returns a sorted list of registered transform function names.
+pub fn registered_transform_function_names() -> Vec<String> {
+    crate::transform_function_names()
+}
+
 /// Create a hash from a `CanisterHttpRequestArgument`, which includes its URL,
 /// method, headers, body, and optionally, its transform function name.
 /// This is because `CanisterHttpRequestArgument` does not have `Hash` implemented.

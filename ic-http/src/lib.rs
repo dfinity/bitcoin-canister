@@ -181,7 +181,6 @@ fn transform_function_call(name: String, arg: TransformArgs) -> Option<HttpRespo
 
 /// Returns a sorted list of transform function names.
 /// This is used for testing.
-#[allow(dead_code)]
 #[cfg(not(target_arch = "wasm32"))]
 fn transform_function_names() -> Vec<String> {
     TRANSFORM_FUNCTIONS.with(|cell| {
