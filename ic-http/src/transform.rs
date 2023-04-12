@@ -16,7 +16,7 @@ where
     T: Fn(TransformArgs) -> HttpResponse + 'static,
 {
     let function_name = get_function_name(&func).to_string();
-    crate::transform_function_insert(function_name.clone(), Box::new(func));
+    crate::storage::transform_function_insert(function_name.clone(), Box::new(func));
 
     TransformContext {
         function: TransformFunc(candid::Func {
@@ -66,7 +66,7 @@ mod test {
         T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
         let name = get_function_name(&f).to_string();
-        crate::transform_function_insert(name, Box::new(f));
+        crate::storage::transform_function_insert(name, Box::new(f));
     }
 
     /// This test makes sure that transform function names are preserved
@@ -78,7 +78,7 @@ mod test {
         insert(transform_function_2);
 
         // Act.
-        let names = crate::transform_function_names();
+        let names = crate::mock::registered_transform_function_names();
 
         // Assert.
         assert_eq!(names, vec!["transform_function_1", "transform_function_2"]);

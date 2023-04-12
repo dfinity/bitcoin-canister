@@ -28,7 +28,7 @@ pub fn mock_with_delay(
     response: HttpResponse,
     delay: Duration,
 ) {
-    crate::mock_insert(Mock {
+    crate::storage::mock_insert(Mock {
         request,
         response,
         delay,
@@ -42,10 +42,10 @@ pub fn mock_with_delay(
 pub(crate) async fn http_request(
     request: CanisterHttpRequestArgument,
 ) -> Result<(HttpResponse,), (RejectionCode, String)> {
-    let mut mock = crate::mock_get(&request)
+    let mut mock = crate::storage::mock_get(&request)
         .ok_or((RejectionCode::CanisterReject, "No mock found".to_string()))?;
     mock.times_called += 1;
-    crate::mock_insert(mock.clone());
+    crate::storage::mock_insert(mock.clone());
 
     // Delay the response if necessary.
     if mock.delay > Duration::from_secs(0) {
@@ -72,7 +72,7 @@ pub(crate) async fn http_request(
     let transformed_response = request
         .transform
         .and_then(|t| {
-            crate::transform_function_call(
+            crate::storage::transform_function_call(
                 t.function.0.method,
                 TransformArgs {
                     response: mock.response.clone(),
@@ -88,14 +88,14 @@ pub(crate) async fn http_request(
 /// Returns the number of times the given request has been called.
 /// Returns 0 if no mock has been found for the request.
 pub fn times_called(request: CanisterHttpRequestArgument) -> u64 {
-    crate::mock_get(&request)
+    crate::storage::mock_get(&request)
         .map(|mock| mock.times_called)
         .unwrap_or(0)
 }
 
 /// Returns a sorted list of registered transform function names.
 pub fn registered_transform_function_names() -> Vec<String> {
-    crate::transform_function_names()
+    crate::storage::transform_function_names()
 }
 
 /// Create a hash from a `CanisterHttpRequestArgument`, which includes its URL,
