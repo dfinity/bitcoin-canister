@@ -102,6 +102,73 @@ async fn test_http_request_transform_body() {
 }
 
 #[tokio::test]
+async fn test_http_request_transform_both_status_and_body() {
+    // Arrange
+    const ORIGINAL_BODY: &str = "original body";
+    const TRANSFORMED_BODY: &str = "transformed body";
+
+    fn transform_status(arg: TransformArgs) -> HttpResponse {
+        let mut response = arg.response;
+        response.status = candid::Nat::from(STATUS_CODE_NOT_FOUND);
+        response
+    }
+
+    fn transform_body(arg: TransformArgs) -> HttpResponse {
+        let mut response = arg.response;
+        response.body = TRANSFORMED_BODY.as_bytes().to_vec();
+        response
+    }
+
+    let request_1 = ic_http::create_request()
+        .get("https://dummyjson.com/todos/1")
+        .transform_func(transform_status, vec![])
+        .build();
+    let mock_response_1 = ic_http::create_response()
+        .status(STATUS_CODE_NOT_FOUND)
+        .body(ORIGINAL_BODY)
+        .build();
+    ic_http::mock::mock(request_1.clone(), mock_response_1);
+
+    let request_2 = ic_http::create_request()
+        .get("https://dummyjson.com/todos/2")
+        .transform_func(transform_body, vec![])
+        .build();
+    let mock_response_2 = ic_http::create_response()
+        .status(STATUS_CODE_OK)
+        .body(TRANSFORMED_BODY)
+        .build();
+    ic_http::mock::mock(request_2.clone(), mock_response_2);
+
+    // Act
+    let futures = vec![
+        ic_http::http_request(request_1.clone()),
+        ic_http::http_request(request_2.clone()),
+    ];
+    let results = futures::future::join_all(futures).await;
+    let responses: Vec<_> = results
+        .into_iter()
+        .filter(|result| result.is_ok())
+        .map(|result| result.unwrap().0)
+        .collect();
+
+    // Assert
+    assert_eq!(
+        ic_http::mock::registered_transform_function_names(),
+        vec!["transform_body", "transform_status"]
+    );
+    assert_eq!(responses.len(), 2);
+    assert_eq!(
+        responses[0].status,
+        candid::Nat::from(STATUS_CODE_NOT_FOUND)
+    );
+    assert_eq!(responses[0].body, ORIGINAL_BODY.as_bytes().to_vec());
+    assert_eq!(responses[1].status, candid::Nat::from(STATUS_CODE_OK));
+    assert_eq!(responses[1].body, TRANSFORMED_BODY.as_bytes().to_vec());
+    assert_eq!(ic_http::mock::times_called(request_1), 1);
+    assert_eq!(ic_http::mock::times_called(request_2), 1);
+}
+
+#[tokio::test]
 async fn test_http_request_max_response_bytes_ok() {
     // Arrange
     let max_response_bytes = 3;

@@ -1,3 +1,4 @@
 service : {
-    "fetch": () -> (text);
-}
+    fetch_quote : () -> (text);
+    fetch_user : () -> (text);
+};
