@@ -32,19 +32,25 @@ impl BitcoinBlockApi {
             }
             BitcoinBlockApi::BitcoinCanister => http_request(endpoint_bitcoin_canister()).await,
             BitcoinBlockApi::BlockchainInfo => {
-                let height = http_request(endpoint_blockchain_info_height()).await;
-                let hash = http_request(endpoint_blockchain_info_hash()).await;
+                let futures = vec![
+                    http_request(endpoint_blockchain_info_height()),
+                    http_request(endpoint_blockchain_info_hash()),
+                ];
+                let results = futures::future::join_all(futures).await;
                 json!({
-                    "height": height["height"],
-                    "hash": hash["hash"],
+                    "height": results[0]["height"],
+                    "hash": results[1]["hash"],
                 })
             }
             BitcoinBlockApi::BlockstreamInfo => {
-                let height = http_request(endpoint_blockstream_info_height()).await;
-                let hash = http_request(endpoint_blockstream_info_hash()).await;
+                let futures = vec![
+                    http_request(endpoint_blockstream_info_height()),
+                    http_request(endpoint_blockstream_info_hash()),
+                ];
+                let results = futures::future::join_all(futures).await;
                 json!({
-                    "height": height["height"],
-                    "hash": hash["hash"],
+                    "height": results[0]["height"],
+                    "hash": results[1]["hash"],
                 })
             }
             BitcoinBlockApi::ChainApiBtcCom => {

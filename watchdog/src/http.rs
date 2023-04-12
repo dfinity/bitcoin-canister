@@ -18,27 +18,13 @@ pub struct HttpRequestConfig {
 }
 
 impl HttpRequestConfig {
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn new(
-        url: &str,
-        transform_endpoint: Option<TransformFn>,
-        transform_implementation: TransformFn,
-    ) -> Self {
-        Self {
-            url: String::from(url),
-            request: create_request(url, transform_endpoint),
-            transform_implementation,
-        }
-    }
-
-    #[cfg(target_arch = "wasm32")]
     pub fn new<T>(
         url: &str,
         transform_endpoint: Option<T>,
         transform_implementation: TransformFn,
     ) -> Self
     where
-        T: Fn(TransformArgs) -> HttpResponse,
+        T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
         Self {
             url: String::from(url),
@@ -64,29 +50,9 @@ impl HttpRequestConfig {
     }
 }
 
-/// Creates a new HTTP request.
-#[cfg(not(target_arch = "wasm32"))]
-pub fn create_request(
-    url: &str,
-    transform_func: Option<TransformFn>,
-) -> CanisterHttpRequestArgument {
-    let builder = ic_http::create_request().get(url).header(HttpHeader {
-        name: "User-Agent".to_string(),
-        value: "bitcoin_watchdog_canister".to_string(),
-    });
-    let builder = if let Some(func) = transform_func {
-        builder.transform_func(func, vec![])
-    } else {
-        builder
-    };
-    builder.build()
-}
-
-/// Creates a new HTTP request.
-#[cfg(target_arch = "wasm32")]
-pub fn create_request<T>(url: &str, transform_func: Option<T>) -> CanisterHttpRequestArgument
+fn create_request<T>(url: &str, transform_func: Option<T>) -> CanisterHttpRequestArgument
 where
-    T: Fn(TransformArgs) -> HttpResponse,
+    T: Fn(TransformArgs) -> HttpResponse + 'static,
 {
     let builder = ic_http::create_request().get(url).header(HttpHeader {
         name: "User-Agent".to_string(),
