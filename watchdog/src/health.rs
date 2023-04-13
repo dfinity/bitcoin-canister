@@ -8,10 +8,10 @@ const MIN_EXPLORERS: usize = 3;
 
 #[derive(Clone, Debug, CandidType, PartialEq, Eq)]
 pub enum StatusCode {
+    NoData,
     Ok,
     Ahead,
     Behind,
-    Error(String),
 }
 
 #[derive(Clone, Debug, CandidType, PartialEq, Eq)]
@@ -48,7 +48,7 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
     let height_diff = source_height
         .zip(target_height)
         .map(|(source, target)| source as i64 - target as i64);
-    let status = height_diff.map_or(StatusCode::Error("Not enough data".to_string()), |diff| {
+    let status = height_diff.map_or(StatusCode::NoData, |diff| {
         if diff < BLOCKS_BEHIND_THRESHOLD {
             StatusCode::Behind
         } else if diff > BLOCKS_AHEAD_THRESHOLD {
@@ -95,7 +95,7 @@ mod test {
                 source_height: None,
                 target_height: None,
                 height_diff: None,
-                status: StatusCode::Error("Not enough data".to_string()),
+                status: StatusCode::NoData,
             }
         );
     }
@@ -113,7 +113,7 @@ mod test {
                 source_height: Some(1_000),
                 target_height: None,
                 height_diff: None,
-                status: StatusCode::Error("Not enough data".to_string()),
+                status: StatusCode::NoData,
             }
         );
     }
@@ -134,7 +134,7 @@ mod test {
                 source_height: Some(1_000),
                 target_height: None,
                 height_diff: None,
-                status: StatusCode::Error("Not enough data".to_string()),
+                status: StatusCode::NoData,
             }
         );
     }
