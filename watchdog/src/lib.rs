@@ -1,39 +1,64 @@
 mod bitcoin_block_apis;
 mod endpoints;
+mod fetch;
 mod http;
+mod storage;
 
 #[cfg(test)]
 mod test_utils;
 
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::endpoints::*;
+use crate::fetch::BlockInfo;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use std::time::Duration;
 
-// TODO: this is a temporary debug method, cleanup before rolling out to prod.
-// This method allows to check the data returned by all the APIs.
-#[ic_cdk_macros::update]
-pub async fn fetch_data() -> String {
-    let api_providers = [
-        //BitcoinBlockApi::ApiBitapsCom,
-        BitcoinBlockApi::ApiBlockchairCom,
-        BitcoinBlockApi::ApiBlockcypherCom,
-        BitcoinBlockApi::BitcoinCanister,
-        BitcoinBlockApi::BlockchainInfo,
-        BitcoinBlockApi::BlockstreamInfo,
-        //BitcoinBlockApi::ChainApiBtcCom,
-    ];
-    let futures = api_providers
-        .iter()
-        .map(|api| api.fetch_data())
-        .collect::<Vec<_>>();
-    let results = futures::future::join_all(futures).await;
-    let mut result = String::new();
-    for (api, value) in api_providers.iter().zip(results.iter()) {
-        result.push_str(format!("{:?} => ", api).as_str());
-        result.push_str(&value.to_string());
-        result.push('\n');
-    }
-    result
+/// The number of seconds to wait before the first tick.
+const DELAY_BEFORE_FIRST_TICK_SEC: u64 = 1;
+
+/// The number of seconds to wait between the ticks.
+const INTERVAL_BETWEEN_TICKS_SEC: u64 = 60;
+
+thread_local! {
+    /// The local storage for the data fetched from the external APIs.
+    static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
+}
+
+/// This function is called when the canister is created.
+#[ic_cdk_macros::init]
+fn init() {
+    ic_cdk_timers::set_timer(Duration::from_secs(DELAY_BEFORE_FIRST_TICK_SEC), || {
+        ic_cdk::spawn(async {
+            tick().await;
+            ic_cdk_timers::set_timer_interval(
+                Duration::from_secs(INTERVAL_BETWEEN_TICKS_SEC),
+                || ic_cdk::spawn(tick()),
+            );
+        })
+    });
+}
+
+/// This function is called after the canister is upgraded.
+#[ic_cdk_macros::post_upgrade]
+fn post_upgrade() {
+    init()
+}
+
+/// Fetches the data from the external APIs and stores it in the local storage.
+async fn tick() {
+    let data = crate::fetch::fetch_all_data().await;
+    data.into_iter().for_each(crate::storage::insert);
+}
+
+/// Prints a message to the console.
+pub fn print(msg: &str) {
+    #[cfg(target_arch = "wasm32")]
+    ic_cdk::api::print(msg);
+
+    #[cfg(not(target_arch = "wasm32"))]
+    println!("{}", msg);
 }
 
 // Exposing the endpoints in `lib.rs` (not in `main.rs`) to make them available
@@ -82,14 +107,4 @@ fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
 #[ic_cdk_macros::query]
 fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
     endpoint_chain_api_btc_com_block().transform(raw)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn print(msg: &str) {
-    ic_cdk::api::print(msg);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn print(msg: &str) {
-    println!("{}", msg);
 }

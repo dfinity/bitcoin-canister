@@ -2,7 +2,7 @@ use crate::endpoints::*;
 use serde_json::json;
 
 /// APIs that serve Bitcoin block data.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BitcoinBlockApi {
     // TODO: investigate why this API is not working.
     #[allow(dead_code)]
