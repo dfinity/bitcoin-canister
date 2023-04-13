@@ -21,7 +21,7 @@ use std::time::Duration;
 const DELAY_BEFORE_FIRST_TICK_SEC: u64 = 1;
 
 /// The number of seconds to wait between the ticks.
-const INTERVAL_BETWEEN_TICKS_SEC: u64 = 60;
+const INTERVAL_BETWEEN_TICKS_SEC: u64 = 5;
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
@@ -50,6 +50,7 @@ fn post_upgrade() {
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn tick() {
+    print("tick...");
     let data = crate::fetch::fetch_all_data().await;
     data.into_iter().for_each(crate::storage::insert);
 }

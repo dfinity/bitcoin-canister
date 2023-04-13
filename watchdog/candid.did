@@ -1,3 +1,19 @@
+type status_code = variant {
+    no_data;
+    ok;
+    behind;
+    ahead;
+};
+
+type health_status = record {
+    source_height : opt nat64;
+    other_number : nat64;
+    other_heights : vec nat64;
+    target_height : opt nat64;
+    height_diff : opt int64;
+    status : status_code;
+};
+
 service : {
-    //fetch_data : () -> (text); // TODO: this is a temporary debug method, cleanup before rolling out to prod.
+    health_status : () -> (health_status) query;
 };

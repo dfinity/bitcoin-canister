@@ -1,22 +1,29 @@
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::fetch::BlockInfo;
 use candid::CandidType;
+use serde::{Deserialize, Serialize};
 
 const BLOCKS_BEHIND_THRESHOLD: i64 = -2;
 const BLOCKS_AHEAD_THRESHOLD: i64 = 2;
 const MIN_EXPLORERS: usize = 3;
 
-#[derive(Clone, Debug, CandidType, PartialEq, Eq)]
+#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StatusCode {
+    #[serde(rename = "no_data")]
     NoData,
+    #[serde(rename = "ok")]
     Ok,
+    #[serde(rename = "ahead")]
     Ahead,
+    #[serde(rename = "behind")]
     Behind,
 }
 
-#[derive(Clone, Debug, CandidType, PartialEq, Eq)]
+#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatus {
     pub source_height: Option<u64>,
+    pub other_number: u64,
+    pub other_heights: Vec<u64>,
     pub target_height: Option<u64>,
     pub height_diff: Option<i64>,
     pub status: StatusCode,
@@ -40,6 +47,8 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
         .iter()
         .filter_map(|block| block.height)
         .collect::<Vec<_>>();
+    let other_number = heights.len() as u64;
+    let other_heights = heights.clone();
     let target_height = if heights.len() < MIN_EXPLORERS {
         None // Not enough data from explorers.
     } else {
@@ -60,6 +69,8 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
 
     HealthStatus {
         source_height,
+        other_number,
+        other_heights,
         target_height,
         height_diff,
         status,
@@ -93,6 +104,8 @@ mod test {
             compare(source, other),
             HealthStatus {
                 source_height: None,
+                other_number: 0,
+                other_heights: vec![],
                 target_height: None,
                 height_diff: None,
                 status: StatusCode::NoData,
@@ -111,6 +124,8 @@ mod test {
             compare(source, other),
             HealthStatus {
                 source_height: Some(1_000),
+                other_number: 0,
+                other_heights: vec![],
                 target_height: None,
                 height_diff: None,
                 status: StatusCode::NoData,
@@ -132,6 +147,8 @@ mod test {
             compare(source, other),
             HealthStatus {
                 source_height: Some(1_000),
+                other_number: 2,
+                other_heights: vec![1_005, 1_005],
                 target_height: None,
                 height_diff: None,
                 status: StatusCode::NoData,
@@ -154,6 +171,8 @@ mod test {
             compare(source, other),
             HealthStatus {
                 source_height: Some(1_000),
+                other_number: 3,
+                other_heights: vec![1_006, 1_005, 1_004],
                 target_height: Some(1_005),
                 height_diff: Some(-5),
                 status: StatusCode::Behind,
@@ -176,6 +195,8 @@ mod test {
             compare(source, other),
             HealthStatus {
                 source_height: Some(1_000),
+                other_number: 3,
+                other_heights: vec![996, 995, 994],
                 target_height: Some(995),
                 height_diff: Some(5),
                 status: StatusCode::Ahead,
