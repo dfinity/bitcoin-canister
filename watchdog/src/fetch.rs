@@ -3,9 +3,20 @@ use crate::bitcoin_block_apis::BitcoinBlockApi;
 #[derive(Clone, Debug)]
 pub struct BlockInfo {
     pub provider: BitcoinBlockApi,
-    height: Option<u64>,
+    pub height: Option<u64>,
     hash: Option<String>,
     previous_hash: Option<String>,
+}
+
+impl BlockInfo {
+    pub fn new(provider: BitcoinBlockApi, height: u64) -> Self {
+        Self {
+            provider,
+            height: Some(height),
+            hash: None,
+            previous_hash: None,
+        }
+    }
 }
 
 /// Fetches the data from the external APIs.

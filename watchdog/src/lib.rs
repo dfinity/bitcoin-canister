@@ -1,6 +1,7 @@
 mod bitcoin_block_apis;
 mod endpoints;
 mod fetch;
+mod health;
 mod http;
 mod storage;
 
@@ -10,6 +11,7 @@ mod test_utils;
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
+use crate::health::HealthStatus;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -50,6 +52,11 @@ fn post_upgrade() {
 async fn tick() {
     let data = crate::fetch::fetch_all_data().await;
     data.into_iter().for_each(crate::storage::insert);
+}
+
+#[ic_cdk_macros::query]
+fn health_status() -> HealthStatus {
+    crate::health::calculate()
 }
 
 /// Prints a message to the console.

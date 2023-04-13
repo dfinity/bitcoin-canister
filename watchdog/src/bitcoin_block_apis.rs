@@ -4,22 +4,28 @@ use serde_json::json;
 /// APIs that serve Bitcoin block data.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BitcoinBlockApi {
-    // TODO: investigate why this API is not working.
-    #[allow(dead_code)]
-    ApiBitapsCom,
-
+    ApiBitapsCom, // TODO: investigate why this API is not working.
     ApiBlockchairCom,
     ApiBlockcypherCom,
     BitcoinCanister,
     BlockchainInfo,
     BlockstreamInfo,
-
-    // TODO: investigate why this API is not working.
-    #[allow(dead_code)]
-    ChainApiBtcCom,
+    ChainApiBtcCom, // TODO: investigate why this API is not working.
 }
 
 impl BitcoinBlockApi {
+    /// Returns the list of all explorers.
+    pub fn explorers() -> Vec<Self> {
+        vec![
+            BitcoinBlockApi::ApiBitapsCom,
+            BitcoinBlockApi::ApiBlockchairCom,
+            BitcoinBlockApi::ApiBlockcypherCom,
+            BitcoinBlockApi::BlockchainInfo,
+            BitcoinBlockApi::BlockstreamInfo,
+            BitcoinBlockApi::ChainApiBtcCom,
+        ]
+    }
+
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {

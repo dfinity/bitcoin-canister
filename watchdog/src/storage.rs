@@ -10,6 +10,6 @@ pub fn insert(info: BlockInfo) {
 }
 
 /// Returns the data from the local storage.
-pub fn get(provider: BitcoinBlockApi) -> Option<BlockInfo> {
-    BLOCK_INFO_DATA.with(|data| data.read().unwrap().get(&provider).cloned())
+pub fn get(provider: &BitcoinBlockApi) -> Option<BlockInfo> {
+    BLOCK_INFO_DATA.with(|data| data.read().unwrap().get(provider).cloned())
 }
