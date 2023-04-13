@@ -29,7 +29,7 @@ pub struct HealthStatus {
     pub status: StatusCode,
 }
 
-/// Calculates the health status.
+/// Calculates the health status of the Bitcoin canister.
 pub fn calculate() -> HealthStatus {
     compare(
         crate::storage::get(&BitcoinBlockApi::BitcoinCanister),

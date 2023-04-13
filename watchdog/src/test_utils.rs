@@ -1,6 +1,6 @@
 use crate::endpoints::*;
 
-/// Mocks all the outcalls.
+/// Mocks all the outcalls to be successful.
 pub fn mock_all_outcalls() {
     let mocks = [
         (endpoint_api_bitaps_com_block(), API_BITAPS_COM_RESPONSE),
@@ -40,6 +40,26 @@ pub fn mock_all_outcalls() {
             .status(200)
             .body(response_body)
             .build();
+        ic_http::mock::mock(request, mock_response);
+    }
+}
+
+/// Mocks all the outcalls to fail with status code 404.
+pub fn mock_all_outcalls_404() {
+    let mocks = [
+        endpoint_api_bitaps_com_block(),
+        endpoint_api_blockchair_com_block(),
+        endpoint_api_blockcypher_com_block(),
+        endpoint_bitcoin_canister(),
+        endpoint_blockchain_info_hash(),
+        endpoint_blockchain_info_height(),
+        endpoint_blockstream_info_hash(),
+        endpoint_blockstream_info_height(),
+        endpoint_chain_api_btc_com_block(),
+    ];
+    for config in mocks {
+        let request = config.request();
+        let mock_response = ic_http::create_response().status(404).build();
         ic_http::mock::mock(request, mock_response);
     }
 }
