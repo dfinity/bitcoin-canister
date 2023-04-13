@@ -5,6 +5,7 @@ members = [
     "canister",
     "interface",
     "validation",
+    "watchdog",
 
     # Crates for bootstrapping the state
     "bootstrap/state-builder",
@@ -20,4 +21,3 @@ members = [
     "ic-http",
     "ic-http/example_canister/src/canister_backend",
 ]
-
