@@ -62,6 +62,28 @@ pub fn endpoint_api_blockcypher_com_block() -> HttpRequestConfig {
     )
 }
 
+/// Applies regex rule to parse bitcoin_canister block height.
+fn regex_height(text: String) -> Result<String, String> {
+    const RE_PATTERN: &str = r"\s*main_chain_height (\d+) \d+";
+    let re = Regex::new(RE_PATTERN).expect("Regex: failed to compile.");
+    match re.captures(&text) {
+        None => Err("Regex: no match found.".to_string()),
+        Some(cap) => match cap.len() {
+            2 => Ok(String::from(&cap[1])),
+            x => Err(format!("Regex: expected 1 group exactly, provided {}.", x)),
+        },
+    }
+}
+
+/// Parses text for bitcoin_canister block height.
+fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
+    let height = regex_height(text)?;
+    match height.parse::<u64>() {
+        Ok(height) => Ok(height),
+        Err(_) => Err(format!("Failed to parse height: {}", height)),
+    }
+}
+
 /// Creates a new HttpRequestConfig for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
@@ -69,16 +91,14 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
         Some(transform_bitcoin_canister),
         |raw| {
             apply_to_body(raw, |text| {
-                const RE_PATTERN: &str = r"\n\s*main_chain_height (\d+) \d+\n";
-                let re = Regex::new(RE_PATTERN).unwrap();
-                let height: u64 = match apply_regex(&re, &text) {
-                    Err(_) => panic!("oops"),
-                    Ok(height) => height.parse::<u64>().unwrap(),
-                };
-                json!({
-                    "height": height,
-                })
-                .to_string()
+                parse_bitcoin_canister_height(text)
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
             })
         },
     )
@@ -107,10 +127,14 @@ pub fn endpoint_blockchain_info_height() -> HttpRequestConfig {
         Some(transform_blockchain_info_height),
         |raw| {
             apply_to_body(raw, |text| {
-                json!({
-                    "height": text.parse::<u64>().unwrap(),
-                })
-                .to_string()
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
             })
         },
     )
@@ -139,10 +163,14 @@ pub fn endpoint_blockstream_info_height() -> HttpRequestConfig {
         Some(transform_blockstream_info_height),
         |raw| {
             apply_to_body(raw, |text| {
-                json!({
-                    "height": text.parse::<u64>().unwrap(),
-                })
-                .to_string()
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
             })
         },
     )
@@ -195,17 +223,6 @@ fn apply_to_body_json(
     })
 }
 
-/// Applies regex rule to a given text.
-fn apply_regex(re: &Regex, text: &str) -> Result<String, String> {
-    match re.captures(text) {
-        None => Err("Regex: no match found.".to_string()),
-        Some(cap) => match cap.len() {
-            2 => Ok(String::from(&cap[1])),
-            x => Err(format!("Regex: expected 1 group exactly, provided {}.", x)),
-        },
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -231,7 +248,9 @@ mod test {
             .build();
         ic_http::mock::mock(request.clone(), mock_response);
 
-        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone())
+            .await
+            .expect("HTTP request failed");
 
         assert_eq!(config.url(), url);
         assert_json_eq!(parse_json(response.body), expected);
@@ -382,5 +401,37 @@ mod test {
                 "transform_chain_api_btc_com_block"
             ]
         );
+    }
+
+    #[test]
+    fn test_height_regex() {
+        let test_cases = [
+            (r#"main_chain_height 700007 1680014894644"#, Ok(700007)),
+            (
+                r#"    main_chain_height 700007 1680014894644   "#,
+                Ok(700007),
+            ),
+            (
+                r#"
+                    # HELP main_chain_height Height of the main chain.
+                    # TYPE main_chain_height gauge
+                    main_chain_height 700007 1680014894644
+                    # HELP stable_height The height of the latest stable block.
+                    # TYPE stable_height gauge
+                    stable_height 782801 1680014894644
+                "#,
+                Ok(700007),
+            ),
+            (r#"700007"#, Err("Regex: no match found.".to_string())),
+            (
+                r#"main_chain_height 123456789012345678901234567890 123"#,
+                Err("Failed to parse height: 123456789012345678901234567890".to_string()),
+            ),
+        ];
+
+        for (text, expected) in test_cases {
+            let result = parse_bitcoin_canister_height(text.to_string());
+            assert_eq!(result, expected);
+        }
     }
 }

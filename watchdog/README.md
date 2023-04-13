@@ -1,6 +1,6 @@
 # bitcoin-canister-watchdog
 
-TODO: add description.
+Watchdog service for a bitcoin_canister that compares its latest block height against several bitcoin explorer APIs and decides if bitcoin_canister is healthy or not.
 
 ## Commands
 
