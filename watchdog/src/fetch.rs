@@ -1,5 +1,6 @@
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 
+/// The data fetched from the external bitcoin block APIs.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BlockInfo {
     pub provider: BitcoinBlockApi,
@@ -9,6 +10,7 @@ pub struct BlockInfo {
 }
 
 impl BlockInfo {
+    #[cfg(test)]
     pub fn new(provider: BitcoinBlockApi, height: u64) -> Self {
         Self {
             provider,

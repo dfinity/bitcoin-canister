@@ -7,6 +7,7 @@ const BLOCKS_BEHIND_THRESHOLD: i64 = -2;
 const BLOCKS_AHEAD_THRESHOLD: i64 = 2;
 const MIN_EXPLORERS: usize = 3;
 
+/// Status codes for the health of Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StatusCode {
     #[serde(rename = "no_data")]
@@ -19,6 +20,7 @@ pub enum StatusCode {
     Behind,
 }
 
+/// The health status of the Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatus {
     pub source_height: Option<u64>,

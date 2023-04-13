@@ -104,6 +104,7 @@ async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Val
     }
 }
 
+/// Parses the given HTTP response into a JSON value.
 fn parse_response(response: HttpResponse) -> serde_json::Value {
     match String::from_utf8(response.body) {
         Ok(json_str) => serde_json::from_str(&json_str).unwrap_or_else(|error| {

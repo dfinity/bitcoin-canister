@@ -54,6 +54,7 @@ async fn tick() {
     data.into_iter().for_each(crate::storage::insert);
 }
 
+/// Returns the health status of the Bitcoin canister.
 #[ic_cdk_macros::query]
 fn health_status() -> HealthStatus {
     crate::health::calculate()
