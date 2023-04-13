@@ -57,6 +57,15 @@ mod test {
             result,
             vec![
                 BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsCom,
+                    height: Some(700001),
+                    hash: Some(
+                        "0000000000000000000aaa111111111111111111111111111111111111111111"
+                            .to_string()
+                    ),
+                    previous_hash: None
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: Some(700002),
                     hash: Some(
@@ -100,6 +109,18 @@ mod test {
                             .to_string()
                     ),
                     previous_hash: None
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::ChainApiBtcCom,
+                    height: Some(700006),
+                    hash: Some(
+                        "0000000000000000000aaa666666666666666666666666666666666666666666"
+                            .to_string()
+                    ),
+                    previous_hash: Some(
+                        "0000000000000000000aaa555555555555555555555555555555555555555555"
+                            .to_string()
+                    )
                 }
             ]
         );
@@ -113,6 +134,12 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsCom,
+                    height: None,
+                    hash: None,
+                    previous_hash: None
+                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: None,
@@ -139,6 +166,12 @@ mod test {
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BlockstreamInfo,
+                    height: None,
+                    hash: None,
+                    previous_hash: None
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::ChainApiBtcCom,
                     height: None,
                     hash: None,
                     previous_hash: None
