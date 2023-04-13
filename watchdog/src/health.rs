@@ -3,10 +3,6 @@ use crate::fetch::BlockInfo;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-const BLOCKS_BEHIND_THRESHOLD: i64 = -2;
-const BLOCKS_AHEAD_THRESHOLD: i64 = 2;
-const MIN_EXPLORERS: usize = 3;
-
 /// Status codes for the health of Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StatusCode {
@@ -51,7 +47,7 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
         .collect::<Vec<_>>();
     let other_number = heights.len() as u64;
     let other_heights = heights.clone();
-    let target_height = if heights.len() < MIN_EXPLORERS {
+    let target_height = if heights.len() < crate::config::MIN_EXPLORERS {
         None // Not enough data from explorers.
     } else {
         median(heights)
@@ -60,9 +56,9 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
         .zip(target_height)
         .map(|(source, target)| source as i64 - target as i64);
     let status = height_diff.map_or(StatusCode::NoData, |diff| {
-        if diff < BLOCKS_BEHIND_THRESHOLD {
+        if diff < crate::config::BLOCKS_BEHIND_THRESHOLD {
             StatusCode::Behind
-        } else if diff > BLOCKS_AHEAD_THRESHOLD {
+        } else if diff > crate::config::BLOCKS_AHEAD_THRESHOLD {
             StatusCode::Ahead
         } else {
             StatusCode::Ok

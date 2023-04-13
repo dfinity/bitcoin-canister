@@ -1,4 +1,5 @@
 mod bitcoin_block_apis;
+mod config;
 mod endpoints;
 mod fetch;
 mod health;
@@ -17,12 +18,6 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::Duration;
 
-/// The number of seconds to wait before the first tick.
-const DELAY_BEFORE_FIRST_TICK_SEC: u64 = 1;
-
-/// The number of seconds to wait between the ticks.
-const INTERVAL_BETWEEN_TICKS_SEC: u64 = 60;
-
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
@@ -31,15 +26,18 @@ thread_local! {
 /// This function is called when the canister is created.
 #[ic_cdk_macros::init]
 fn init() {
-    ic_cdk_timers::set_timer(Duration::from_secs(DELAY_BEFORE_FIRST_TICK_SEC), || {
-        ic_cdk::spawn(async {
-            tick().await;
-            ic_cdk_timers::set_timer_interval(
-                Duration::from_secs(INTERVAL_BETWEEN_TICKS_SEC),
-                || ic_cdk::spawn(tick()),
-            );
-        })
-    });
+    ic_cdk_timers::set_timer(
+        Duration::from_secs(crate::config::DELAY_BEFORE_FIRST_FETCH_SEC),
+        || {
+            ic_cdk::spawn(async {
+                fetch_data().await;
+                ic_cdk_timers::set_timer_interval(
+                    Duration::from_secs(crate::config::INTERVAL_BETWEEN_FETCHES_SEC),
+                    || ic_cdk::spawn(fetch_data()),
+                );
+            })
+        },
+    );
 }
 
 /// This function is called after the canister is upgraded.
@@ -49,7 +47,7 @@ fn post_upgrade() {
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
-async fn tick() {
+async fn fetch_data() {
     let data = crate::fetch::fetch_all_data().await;
     data.into_iter().for_each(crate::storage::insert);
 }
