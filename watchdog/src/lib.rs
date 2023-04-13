@@ -36,6 +36,9 @@ pub async fn fetch_data() -> String {
     result
 }
 
+// Exposing the endpoints in `lib.rs` (not in `main.rs`) to make them available
+// to the downstream code which creates HTTP requests with transform functions.
+
 #[ic_cdk_macros::query]
 fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpResponse {
     endpoint_api_bitaps_com_block().transform(raw)
