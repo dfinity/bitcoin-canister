@@ -50,7 +50,6 @@ fn post_upgrade() {
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn tick() {
-    print("tick...");
     let data = crate::fetch::fetch_all_data().await;
     data.into_iter().for_each(crate::storage::insert);
 }

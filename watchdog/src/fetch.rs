@@ -21,15 +21,7 @@ impl BlockInfo {
 
 /// Fetches the data from the external APIs.
 pub async fn fetch_all_data() -> Vec<BlockInfo> {
-    let api_providers = [
-        //BitcoinBlockApi::ApiBitapsCom,
-        BitcoinBlockApi::ApiBlockchairCom,
-        BitcoinBlockApi::ApiBlockcypherCom,
-        BitcoinBlockApi::BitcoinCanister,
-        BitcoinBlockApi::BlockchainInfo,
-        BitcoinBlockApi::BlockstreamInfo,
-        //BitcoinBlockApi::ChainApiBtcCom,
-    ];
+    let api_providers = BitcoinBlockApi::all_providers();
     let futures = api_providers
         .iter()
         .map(|api| api.fetch_data())

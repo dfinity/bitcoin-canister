@@ -7,22 +7,35 @@ pub enum BitcoinBlockApi {
     ApiBitapsCom, // TODO: investigate why this API is not working.
     ApiBlockchairCom,
     ApiBlockcypherCom,
-    BitcoinCanister,
+    BitcoinCanister, // Not an explorer.
     BlockchainInfo,
     BlockstreamInfo,
     ChainApiBtcCom, // TODO: investigate why this API is not working.
 }
 
 impl BitcoinBlockApi {
-    /// Returns the list of all explorers.
+    /// Returns the list of all API providers.
+    pub fn all_providers() -> Vec<Self> {
+        vec![
+            //BitcoinBlockApi::ApiBitapsCom,
+            BitcoinBlockApi::ApiBlockchairCom,
+            BitcoinBlockApi::ApiBlockcypherCom,
+            BitcoinBlockApi::BitcoinCanister, // Not an explorer.
+            BitcoinBlockApi::BlockchainInfo,
+            BitcoinBlockApi::BlockstreamInfo,
+            //BitcoinBlockApi::ChainApiBtcCom,
+        ]
+    }
+
+    /// Returns the list of explorers only.
     pub fn explorers() -> Vec<Self> {
         vec![
-            BitcoinBlockApi::ApiBitapsCom,
+            //BitcoinBlockApi::ApiBitapsCom,
             BitcoinBlockApi::ApiBlockchairCom,
             BitcoinBlockApi::ApiBlockcypherCom,
             BitcoinBlockApi::BlockchainInfo,
             BitcoinBlockApi::BlockstreamInfo,
-            BitcoinBlockApi::ChainApiBtcCom,
+            //BitcoinBlockApi::ChainApiBtcCom,
         ]
     }
 
