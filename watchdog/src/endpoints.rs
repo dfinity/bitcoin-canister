@@ -252,7 +252,7 @@ mod test {
             .await
             .expect("HTTP request failed");
 
-        assert_eq!(config.url(), url);
+        assert_eq!(config.url(), url.to_string());
         assert_json_eq!(parse_json(response.body), expected);
         assert_eq!(ic_http::mock::times_called(request), 1);
     }

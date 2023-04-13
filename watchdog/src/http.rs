@@ -9,10 +9,6 @@ pub type TransformFn = fn(TransformArgs) -> HttpResponse;
 /// - HTTP request
 /// - Transform function inner implementation to be called inside the canister's endpoint
 pub struct HttpRequestConfig {
-    // URL is added only for tests.
-    #[allow(dead_code)]
-    url: String,
-
     request: CanisterHttpRequestArgument,
     transform_implementation: TransformFn,
 }
@@ -27,16 +23,9 @@ impl HttpRequestConfig {
         T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
         Self {
-            url: String::from(url),
             request: create_request(url, transform_endpoint),
             transform_implementation,
         }
-    }
-
-    // URL is added only for tests.
-    #[allow(dead_code)]
-    pub fn url(&self) -> &str {
-        &self.url
     }
 
     /// Executes the transform function.
@@ -47,6 +36,12 @@ impl HttpRequestConfig {
     /// Returns the HTTP request.
     pub fn request(&self) -> CanisterHttpRequestArgument {
         self.request.clone()
+    }
+
+    /// Returns the request URL.
+    #[cfg(test)]
+    pub fn url(&self) -> String {
+        self.request.url.clone()
     }
 }
 
