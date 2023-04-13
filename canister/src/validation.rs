@@ -1,11 +1,13 @@
-use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks, Block};
+use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
 use bitcoin::BlockHeader;
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.
 pub struct ValidationContext<'a> {
     state: &'a State,
-    chain: Vec<&'a Block>,
+    // BlockHash is stored in order to avoid repeatedly calling to
+    // BlockHeader::block_hash() which is expensive.
+    chain: Vec<(&'a BlockHeader, crate::types::BlockHash)>,
 }
 
 impl<'a> ValidationContext<'a> {
@@ -16,9 +18,33 @@ impl<'a> ValidationContext<'a> {
         let prev_block_hash = header.prev_blockhash.into();
         let chain = unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
             .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
-            .into_chain();
+            .into_chain()
+            .iter()
+            .map(|block| (block.header(), block.block_hash()))
+            .collect();
 
         Ok(Self { state, chain })
+    }
+
+    /// Initialize a `ValidationContext` for the given block header.
+    /// The given block header can be in the 'NextBlockHeaders'.
+    pub fn new_with_next_block_headers(
+        state: &'a State,
+        header: &BlockHeader,
+    ) -> Result<Self, BlockDoesNotExtendTree> {
+        let prev_block_hash = header.prev_blockhash.into();
+        let next_block_headers_chain = state
+            .unstable_blocks
+            .get_next_block_headers_chain_with_tip(prev_block_hash);
+        if next_block_headers_chain.is_empty() {
+            Self::new(state, header)
+        } else {
+            let mut context = Self::new(state, next_block_headers_chain[0].0)?;
+            for item in next_block_headers_chain.iter() {
+                context.chain.push(item.clone())
+            }
+            Ok(context)
+        }
     }
 }
 
@@ -27,9 +53,9 @@ impl<'a> HeaderStore for ValidationContext<'a> {
     fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<BlockHeader> {
         // Check if the header is in the chain.
         let hash = crate::types::BlockHash::from(hash.to_vec());
-        for block in self.chain.iter() {
-            if block.block_hash() == hash {
-                return Some(*block.header());
+        for item in self.chain.iter() {
+            if item.1 == hash {
+                return Some(*item.0);
             }
         }
 
@@ -51,7 +77,7 @@ impl<'a> HeaderStore for ValidationContext<'a> {
         } else if height <= self.height() {
             // The height requested is for an unstable block.
             // Retrieve the block header from the chain.
-            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].header())
+            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].0)
         } else {
             // The height requested is higher than the tip.
             None
@@ -64,11 +90,57 @@ mod test {
     use super::*;
     use crate::{
         state::{ingest_stable_blocks_into_utxoset, insert_block},
-        test_utils::build_chain,
+        test_utils::{build_chain, BlockBuilder},
     };
     use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::str::FromStr;
+
+    #[test]
+    fn test_new_with_next_block_headers() {
+        let genesis = BlockBuilder::genesis().build();
+        let network = Network::Mainnet;
+
+        let mut state = State::new(2, network, genesis.clone());
+        let block_0 = BlockBuilder::with_prev_header(genesis.header()).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        state
+            .unstable_blocks
+            .insert_next_block_header(*block_0.header(), 0)
+            .unwrap();
+        state
+            .unstable_blocks
+            .insert_next_block_header(*block_1.header(), 0)
+            .unwrap();
+        state
+            .unstable_blocks
+            .insert_next_block_header(*block_2.header(), 0)
+            .unwrap();
+
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+
+        let validation_context =
+            ValidationContext::new_with_next_block_headers(&state, block_3.header()).unwrap();
+
+        assert_eq!(
+            validation_context.chain,
+            vec![
+                (genesis.header(), genesis.block_hash()),
+                (block_0.header(), block_0.block_hash()),
+                (block_1.header(), block_1.block_hash()),
+                (block_2.header(), block_2.block_hash()),
+            ]
+        );
+
+        let not_inserted_1 = BlockBuilder::with_prev_header(genesis.header()).build();
+        let not_inserted_2 = BlockBuilder::with_prev_header(not_inserted_1.header()).build();
+
+        assert!(matches!(
+            ValidationContext::new_with_next_block_headers(&state, not_inserted_2.header()),
+            Err(BlockDoesNotExtendTree(..))
+        ));
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]

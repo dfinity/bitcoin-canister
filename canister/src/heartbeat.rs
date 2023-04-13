@@ -1,16 +1,17 @@
 use crate::{
-    runtime::{call_get_successors, print},
+    runtime::{call_get_successors, print, time},
     state::{self, ResponseToProcess, State},
     types::{
-        Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
-        GetSuccessorsRequestInitial, GetSuccessorsResponse,
+        into_bitcoin_network, Block, BlockHash, BlockHeaderBlob, GetSuccessorsCompleteResponse,
+        GetSuccessorsRequest, GetSuccessorsRequestInitial, GetSuccessorsResponse,
     },
+    validation::ValidationContext,
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::Block as BitcoinBlock;
 use bitcoin::{consensus::Decodable, BlockHeader};
 use ic_btc_interface::Flag;
-
+use ic_btc_validation::{validate_header, ValidateHeaderError};
 /// The heartbeat of the Bitcoin canister.
 ///
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
@@ -142,23 +143,34 @@ fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeade
             }
         };
 
-        let target = block_header.target();
-        if let Err(err) = block_header.validate_pow(&target) {
+        let validation_result =
+            match ValidationContext::new_with_next_block_headers(state, &block_header)
+                .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
+            {
+                Ok(store) => validate_header(
+                    &into_bitcoin_network(state.network()),
+                    &store,
+                    &block_header,
+                    time(),
+                ),
+                Err(err) => Err(err),
+            };
+
+        if let Err(err) = validation_result {
             print(&format!(
                 "ERROR: Failed to validate block header. Err: {:?}, Block header: {:?}",
                 err, block_header,
             ));
+
             return;
         }
-        let block_hash = BlockHash::from(block_header.block_hash());
-        let prev_hash = BlockHash::from(block_header.prev_blockhash);
-        if let Err(err) = state.unstable_blocks.insert_next_block_hash(
-            &prev_hash,
-            &block_hash,
-            state.stable_height(),
-        ) {
+
+        if let Err(err) = state
+            .unstable_blocks
+            .insert_next_block_header(block_header, state.stable_height())
+        {
             print(&format!(
-                "ERROR: Failed to insert next block hash. Err: {:?}, Block header: {:?}",
+                "ERROR: Failed to insert next block header. Err: {:?}, Block header: {:?}",
                 err, block_header,
             ));
             return;

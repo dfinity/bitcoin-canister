@@ -4,12 +4,13 @@ use crate::{
     types::{Address, Block, BlockHash, OutPoint, TxOut},
     UtxoSet,
 };
+use bitcoin::BlockHeader;
 use ic_btc_interface::{Height, Network};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
-mod next_block_hashes;
-use self::next_block_hashes::NextBlockHashes;
+mod next_block_headers;
+use self::next_block_headers::NextBlockHeaders;
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -22,10 +23,10 @@ pub struct UnstableBlocks {
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
     network: Network,
-    /// The hashes of the blocks that are expected to be received.
+    /// The headers of the blocks that are expected to be received.
     // TODO(EXC-1379): remove this directive once it's deployed to production.
     #[serde(default)]
-    next_block_hashes: NextBlockHashes,
+    next_block_headers: NextBlockHeaders,
 }
 
 impl UnstableBlocks {
@@ -41,7 +42,7 @@ impl UnstableBlocks {
             tree: BlockTree::new(anchor.clone()),
             outpoints_cache,
             network,
-            next_block_hashes: NextBlockHashes::default(),
+            next_block_headers: NextBlockHeaders::default(),
         }
     }
 
@@ -87,30 +88,48 @@ impl UnstableBlocks {
         Ok(depth)
     }
 
-    // Inserts the block hash of the block that should be received.
-    pub fn insert_next_block_hash(
+    // Inserts the block header of the block that should be received.
+    pub fn insert_next_block_header(
         &mut self,
-        prev_block_hash: &BlockHash,
-        block_hash: &BlockHash,
+        block_header: BlockHeader,
         stable_height: Height,
     ) -> Result<(), BlockDoesNotExtendTree> {
-        let height = match self.next_block_hashes.get_height(prev_block_hash) {
+        let prev_block_hash = BlockHash::from(block_header.prev_blockhash);
+        let height = match self.next_block_headers.get_height(&prev_block_hash) {
             Some(prev_height) => *prev_height,
             None => {
-                if let Ok(depth) = self.block_depth(prev_block_hash) {
+                if let Ok(depth) = self.block_depth(&prev_block_hash) {
                     stable_height + depth
                 } else {
-                    return Err(BlockDoesNotExtendTree(block_hash.clone()));
+                    return Err(BlockDoesNotExtendTree(BlockHash::from(
+                        block_header.block_hash(),
+                    )));
                 }
             }
         } + 1;
-        self.next_block_hashes.insert(block_hash, height);
+        self.next_block_headers.insert(block_header, height);
         Ok(())
     }
 
     // Public only for testing purpose.
-    pub(crate) fn next_block_hashes_max_height(&self) -> Option<Height> {
-        self.next_block_hashes.get_max_height()
+    pub(crate) fn next_block_headers_max_height(&self) -> Option<Height> {
+        self.next_block_headers.get_max_height()
+    }
+
+    // Returns BlockHeader chain from the tip up to the first block
+    // header outside the main chain in the reverse order.
+    pub fn get_next_block_headers_chain_with_tip(
+        &self,
+        tip_block_hash: BlockHash,
+    ) -> Vec<(&BlockHeader, BlockHash)> {
+        let mut chain = vec![];
+        let mut curr_hash = tip_block_hash;
+        while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
+            chain.push((curr_header, curr_hash));
+            curr_hash = BlockHash::from(curr_header.prev_blockhash);
+        }
+        chain.reverse();
+        chain
     }
 }
 
@@ -133,7 +152,7 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
             // Remove the outpoints of the old anchor from the cache.
             blocks.outpoints_cache.remove(&old_anchor);
 
-            blocks.next_block_hashes.remove_until_height(stable_height);
+            blocks.next_block_headers.remove_until_height(stable_height);
 
             Some(old_anchor)
         }
@@ -162,7 +181,7 @@ pub fn push(
 
     blocktree::extend(parent_block_tree, block)?;
 
-    blocks.next_block_hashes.remove(&block_hash);
+    blocks.next_block_headers.remove(&block_hash);
 
     Ok(())
 }
@@ -707,5 +726,69 @@ mod test {
         let forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
 
         assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+    }
+
+    #[test]
+    fn test_get_next_block_headers_chain_with_tip() {
+        let genesis = BlockBuilder::genesis().build();
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(&utxos, 2, genesis.clone(), network);
+
+        let block_0 = BlockBuilder::with_prev_header(genesis.header()).build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+        let block_x = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_y = BlockBuilder::with_prev_header(block_x.header()).build();
+        let block_z = BlockBuilder::with_prev_header(block_y.header()).build();
+
+        unstable_blocks
+            .insert_next_block_header(*block_0.header(), 0)
+            .unwrap();
+        unstable_blocks
+            .insert_next_block_header(*block_1.header(), 0)
+            .unwrap();
+        unstable_blocks
+            .insert_next_block_header(*block_2.header(), 0)
+            .unwrap();
+        unstable_blocks
+            .insert_next_block_header(*block_3.header(), 0)
+            .unwrap();
+        unstable_blocks
+            .insert_next_block_header(*block_x.header(), 0)
+            .unwrap();
+        unstable_blocks
+            .insert_next_block_header(*block_y.header(), 0)
+            .unwrap();
+        unstable_blocks
+            .insert_next_block_header(*block_z.header(), 0)
+            .unwrap();
+
+        assert_eq!(
+            unstable_blocks.get_next_block_headers_chain_with_tip(
+                BlockBuilder::with_prev_header(block_y.header())
+                    .build()
+                    .block_hash()
+            ),
+            vec![]
+        );
+        assert_eq!(
+            unstable_blocks.get_next_block_headers_chain_with_tip(block_3.block_hash()),
+            vec![
+                (block_0.header(), block_0.block_hash()),
+                (block_1.header(), block_1.block_hash()),
+                (block_2.header(), block_2.block_hash()),
+                (block_3.header(), block_3.block_hash())
+            ]
+        );
+        assert_eq!(
+            unstable_blocks.get_next_block_headers_chain_with_tip(block_y.block_hash()),
+            vec![
+                (block_0.header(), block_0.block_hash()),
+                (block_x.header(), block_x.block_hash()),
+                (block_y.header(), block_y.block_hash()),
+            ]
+        );
     }
 }
