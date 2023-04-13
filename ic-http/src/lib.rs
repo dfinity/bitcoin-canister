@@ -3,13 +3,13 @@
 //!
 //! # Getting Started
 //!
-//! To use `ic-http`, follow these steps:
+//! Usage:
 //! - Add `ic-http` to your `Cargo.toml`
 //! - Create a canister
-//! - Build a request using the `ic_http::create_request` function
-//!   - If necessary, provide a transform function using `ic_http::create_transform_context`
+//! - Build a request using the `ic_http::create_request`
+//!   - If necessary, provide a transform function
 //! - Make an HTTP request using `ic_http::http_request`
-//! - Test with mock data by using `ic_http::mock::mock`, etc.
+//! - Test with mock data by using `ic_http::mock::mock`, `ic_http::mock::mock_err`, etc.
 //!
 //! ## Canister
 //!

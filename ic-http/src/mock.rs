@@ -8,7 +8,8 @@ use std::time::Duration;
 #[derive(Clone)]
 pub(crate) struct Mock {
     pub(crate) request: CanisterHttpRequestArgument,
-    response: HttpResponse,
+    response: Option<HttpResponse>,
+    error: Option<(RejectionCode, String)>,
     delay: Duration,
     times_called: u64,
 }
@@ -30,7 +31,32 @@ pub fn mock_with_delay(
 ) {
     crate::storage::mock_insert(Mock {
         request,
-        response,
+        response: Some(response),
+        error: None,
+        delay,
+        times_called: 0,
+    });
+}
+
+/// Adds a mock error for a given HTTP request and error. The mock will be returned by
+/// subsequent calls to `http_request` that match the same request. The error will be
+/// returned immediately, without any delay.
+pub fn mock_error(request: CanisterHttpRequestArgument, error: (RejectionCode, String)) {
+    mock_error_with_delay(request, error, Duration::from_secs(0));
+}
+
+/// Adds a mock error for a given HTTP request and error. The mock will be returned by
+/// subsequent calls to `http_request` that match the same request. The error will be
+/// returned after a delay specified by the `delay` argument.
+pub fn mock_error_with_delay(
+    request: CanisterHttpRequestArgument,
+    error: (RejectionCode, String),
+    delay: Duration,
+) {
+    crate::storage::mock_insert(Mock {
+        request,
+        response: None,
+        error: Some(error),
         delay,
         times_called: 0,
     });
@@ -54,14 +80,20 @@ pub(crate) async fn http_request(
         tokio::time::sleep(mock.delay).await;
     }
 
+    // Return the error if one is specified.
+    if mock.error.is_some() {
+        return Err(mock.error.unwrap());
+    }
+    let mock_response = mock.response.expect("Mock response is missing.");
+
     // Check if the response body exceeds the maximum allowed size.
     if let Some(max_response_bytes) = mock.request.max_response_bytes {
-        if mock.response.body.len() as u64 > max_response_bytes {
+        if mock_response.body.len() as u64 > max_response_bytes {
             return Err((
                 RejectionCode::SysFatal,
                 format!(
                     "Value of 'Content-length' header exceeds http body size limit, {} > {}.",
-                    mock.response.body.len(),
+                    mock_response.body.len(),
                     max_response_bytes
                 ),
             ));
@@ -75,12 +107,12 @@ pub(crate) async fn http_request(
             crate::storage::transform_function_call(
                 t.function.0.method,
                 TransformArgs {
-                    response: mock.response.clone(),
+                    response: mock_response.clone(),
                     context: vec![],
                 },
             )
         })
-        .unwrap_or(mock.response.clone());
+        .unwrap_or(mock_response);
 
     Ok((transformed_response,))
 }
