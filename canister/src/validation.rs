@@ -5,6 +5,8 @@ use ic_btc_validation::HeaderStore;
 /// A structure passed to the validation crate to validate a specific block header.
 pub struct ValidationContext<'a> {
     state: &'a State,
+    // BlockHash is stored in order to avoid repeatedly calling to
+    // BlockHeader::block_hash() which is expensive.
     chain: Vec<(&'a BlockHeader, crate::types::BlockHash)>,
 }
 
