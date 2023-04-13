@@ -21,7 +21,7 @@ use std::time::Duration;
 const DELAY_BEFORE_FIRST_TICK_SEC: u64 = 1;
 
 /// The number of seconds to wait between the ticks.
-const INTERVAL_BETWEEN_TICKS_SEC: u64 = 5;
+const INTERVAL_BETWEEN_TICKS_SEC: u64 = 60;
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
