@@ -1,7 +1,5 @@
-use ic_cdk::api::{
-    call::RejectionCode,
-    management_canister::http_request::{HttpResponse, TransformArgs},
-};
+use ic_cdk::api::call::RejectionCode;
+use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::time::{Duration, Instant};
 
 const STATUS_CODE_OK: u64 = 200;
