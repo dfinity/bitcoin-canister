@@ -2,15 +2,22 @@ use crate::fetch::BlockInfo;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-/// Status codes for the health of Bitcoin canister.
+/// Status codes for the health of Bitcoin canister compared to other explorers.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StatusCode {
+    /// Not enough data to calculate the health status.
     #[serde(rename = "not_enough_data")]
     NotEnoughData,
+
+    /// Bitcoin canister height is healthy.
     #[serde(rename = "ok")]
     Ok,
+
+    /// Bitcoin canister height is ahead of other explorers, might not be healthy.
     #[serde(rename = "ahead")]
     Ahead,
+
+    /// Bitcoin canister height is behind other explorers, might not be healthy.
     #[serde(rename = "behind")]
     Behind,
 }
@@ -18,11 +25,24 @@ pub enum StatusCode {
 /// The health status of the Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatus {
+    /// The height of the block from the Bitcoin canister.
     pub source_height: Option<u64>,
+
+    /// The number of explorers inspected.
     pub other_number: u64,
+
+    /// The heights of the blocks from the explorers.
     pub other_heights: Vec<u64>,
+
+    /// The target height of the Bitcoin canister calculated
+    /// from the explorers.
     pub target_height: Option<u64>,
+
+    /// The difference between the source height
+    /// and the target height.
     pub height_diff: Option<i64>,
+
+    /// The code of the health status.
     pub status: StatusCode,
 }
 

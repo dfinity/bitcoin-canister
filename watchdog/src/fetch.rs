@@ -3,7 +3,10 @@ use crate::bitcoin_block_apis::BitcoinBlockApi;
 /// The data fetched from the external bitcoin block APIs.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BlockInfo {
+    /// The provider of the bitcoin block data.
     pub provider: BitcoinBlockApi,
+
+    /// The height of the block.
     pub height: Option<u64>,
 }
 

@@ -1,19 +1,45 @@
+/// Status codes for the health of Bitcoin canister
+/// compared to other explorers.
 type status_code = variant {
+    /// Not enough data to calculate the health status.
     not_enough_data;
+
+    /// Bitcoin canister height is healthy.
     ok;
+
+    /// Bitcoin canister height is ahead
+    /// of other explorers, might not be healthy.
     behind;
+
+    /// Bitcoin canister height is behind
+    /// other explorers, might not be healthy.
     ahead;
 };
 
+// The health status of the Bitcoin canister.
 type health_status = record {
+    /// The height of the block from the Bitcoin canister.
     source_height : opt nat64;
+
+    /// The number of explorers inspected.
     other_number : nat64;
+
+    /// The heights of the blocks from the explorers.
     other_heights : vec nat64;
+
+    /// The target height of the Bitcoin canister calculated
+    /// from the explorers.
     target_height : opt nat64;
+
+    /// The difference between the source height
+    /// and the target height.
     height_diff : opt int64;
+
+    /// The code of the health status.
     status : status_code;
 };
 
 service : {
+    // Returns the health status of the Bitcoin canister.
     health_status : () -> (health_status) query;
 };
