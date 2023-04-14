@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 /// Status codes for the health of Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StatusCode {
-    #[serde(rename = "no_data")]
-    NoData,
+    #[serde(rename = "not_enough_data")]
+    NotEnoughData,
     #[serde(rename = "ok")]
     Ok,
     #[serde(rename = "ahead")]
@@ -55,7 +55,7 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
     let height_diff = source_height
         .zip(target_height)
         .map(|(source, target)| source as i64 - target as i64);
-    let status = height_diff.map_or(StatusCode::NoData, |diff| {
+    let status = height_diff.map_or(StatusCode::NotEnoughData, |diff| {
         if diff < crate::config::BLOCKS_BEHIND_THRESHOLD {
             StatusCode::Behind
         } else if diff > crate::config::BLOCKS_AHEAD_THRESHOLD {
@@ -106,7 +106,7 @@ mod test {
                 other_heights: vec![],
                 target_height: None,
                 height_diff: None,
-                status: StatusCode::NoData,
+                status: StatusCode::NotEnoughData,
             }
         );
     }
@@ -126,7 +126,7 @@ mod test {
                 other_heights: vec![],
                 target_height: None,
                 height_diff: None,
-                status: StatusCode::NoData,
+                status: StatusCode::NotEnoughData,
             }
         );
     }
@@ -149,7 +149,7 @@ mod test {
                 other_heights: vec![1_005, 1_005],
                 target_height: None,
                 height_diff: None,
-                status: StatusCode::NoData,
+                status: StatusCode::NotEnoughData,
             }
         );
     }

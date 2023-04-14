@@ -1,5 +1,5 @@
 type status_code = variant {
-    no_data;
+    not_enough_data;
     ok;
     behind;
     ahead;
