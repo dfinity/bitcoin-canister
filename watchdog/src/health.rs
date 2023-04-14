@@ -1,4 +1,3 @@
-use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::fetch::BlockInfo;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -27,19 +26,8 @@ pub struct HealthStatus {
     pub status: StatusCode,
 }
 
-/// Calculates the health status of the Bitcoin canister.
-pub fn get_health_status() -> HealthStatus {
-    compare(
-        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
-        BitcoinBlockApi::explorers()
-            .iter()
-            .filter_map(crate::storage::get)
-            .collect::<Vec<_>>(),
-    )
-}
-
 /// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
+pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
     let source_height = source.and_then(|block| block.height);
     let heights = other
         .iter()
@@ -76,20 +64,41 @@ fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
 }
 
 /// The median of the given values.
-fn median<T: std::cmp::Ord + Clone>(mut values: Vec<T>) -> Option<T> {
-    let n = values.len();
-    if n == 0 {
-        None
-    } else {
-        values.sort();
-        let mid = if n % 2 == 0 { (n - 1) / 2 } else { n / 2 };
-        Some(values[mid].clone())
+fn median(mut values: Vec<u64>) -> Option<u64> {
+    let length = values.len();
+
+    if length == 0 {
+        return None;
     }
+
+    values.sort();
+
+    let mid_index = length / 2;
+    let median_value = if length % 2 == 0 {
+        (values[mid_index - 1] + values[mid_index]) / 2
+    } else {
+        values[mid_index]
+    };
+
+    Some(median_value)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::bitcoin_block_apis::BitcoinBlockApi;
+
+    #[test]
+    fn test_median() {
+        assert_eq!(median(vec![]), None);
+        assert_eq!(median(vec![1]), Some(1));
+        assert_eq!(median(vec![2, 1]), Some(1));
+        assert_eq!(median(vec![3, 2, 1]), Some(2));
+        assert_eq!(median(vec![4, 3, 2, 1]), Some(2));
+        assert_eq!(median(vec![5, 4, 3, 2, 1]), Some(3));
+        assert_eq!(median(vec![20, 20, 10, 10]), Some(15));
+        assert_eq!(median(vec![20, 15, 10]), Some(15));
+    }
 
     #[test]
     fn test_compare_no_source_neither_explorers() {

@@ -55,7 +55,13 @@ async fn fetch_data() {
 /// Returns the health status of the Bitcoin canister.
 #[ic_cdk_macros::query]
 fn health_status() -> HealthStatus {
-    crate::health::get_health_status()
+    crate::health::compare(
+        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
+        BitcoinBlockApi::explorers()
+            .iter()
+            .filter_map(crate::storage::get)
+            .collect::<Vec<_>>(),
+    )
 }
 
 /// Prints a message to the console.
