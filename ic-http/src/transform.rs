@@ -85,11 +85,8 @@ mod test {
         assert_eq!(names, vec!["transform_function_1", "transform_function_2"]);
     }
 
-    /// Transform function which is intentionally creates a new request
-    /// with itself as a transform function.
-    /// This is potentially causing to rewrite the transform function
-    /// in a thread-local storage while it is being executed, which
-    /// leads to a hang.
+    /// Transform function which intentionally creates a new request passing
+    /// itself as the target transform function.
     fn transform_function_with_overwrite(arg: TransformArgs) -> HttpResponse {
         create_request_with_transform();
         arg.response
