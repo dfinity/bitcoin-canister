@@ -31,7 +31,7 @@ pub(crate) fn mock_get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
 pub(crate) fn transform_function_insert(name: String, func: Box<TransformFn>) {
     TRANSFORM_FUNCTIONS.with(|cell| {
         // This is a workaround to prevent the transform function from being
-        // overridden when it might be used by another async call.
+        // overridden while it is being executed.
         if cell.read().unwrap().get(&name).is_none() {
             cell.write().unwrap().insert(name, func);
         }

@@ -62,6 +62,16 @@ pub fn mock_error_with_delay(
     });
 }
 
+/// Calls the transform function if one is specified in the request.
+pub fn call_transform_function(
+    request: CanisterHttpRequestArgument,
+    arg: TransformArgs,
+) -> Option<HttpResponse> {
+    request
+        .transform
+        .and_then(|t| crate::storage::transform_function_call(t.function.0.method, arg))
+}
+
 /// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
@@ -101,18 +111,14 @@ pub(crate) async fn http_request(
     }
 
     // Apply the transform function if one is specified.
-    let transformed_response = request
-        .transform
-        .and_then(|t| {
-            crate::storage::transform_function_call(
-                t.function.0.method,
-                TransformArgs {
-                    response: mock_response.clone(),
-                    context: vec![],
-                },
-            )
-        })
-        .unwrap_or(mock_response);
+    let transformed_response = call_transform_function(
+        mock.request,
+        TransformArgs {
+            response: mock_response.clone(),
+            context: vec![],
+        },
+    )
+    .unwrap_or(mock_response);
 
     Ok((transformed_response,))
 }
