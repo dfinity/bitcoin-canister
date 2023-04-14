@@ -1,3 +1,4 @@
+use ic_cdk::api::call::RejectionCode;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::time::{Duration, Instant};
 
@@ -281,4 +282,42 @@ async fn test_http_request_concurrently() {
     assert_eq!(ic_http::mock::times_called(request_a), 1);
     assert_eq!(ic_http::mock::times_called(request_b), 1);
     assert_eq!(ic_http::mock::times_called(request_c), 1);
+}
+
+#[tokio::test]
+async fn test_http_request_error() {
+    // Arrange
+    let request = ic_http::create_request().get("https://example.com").build();
+    let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+    ic_http::mock::mock_error(request.clone(), mock_error);
+
+    // Act
+    let result = ic_http::http_request(request.clone()).await;
+
+    // Assert
+    assert_eq!(
+        result,
+        Err((RejectionCode::SysFatal, "system fatal error".to_string()))
+    );
+    assert_eq!(ic_http::mock::times_called(request), 1);
+}
+
+#[tokio::test]
+async fn test_http_request_error_with_delay() {
+    // Arrange
+    let request = ic_http::create_request().get("https://example.com").build();
+    let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+    ic_http::mock::mock_error_with_delay(request.clone(), mock_error, Duration::from_millis(200));
+
+    // Act
+    let start = Instant::now();
+    let result = ic_http::http_request(request.clone()).await;
+
+    // Assert
+    assert!(start.elapsed() > Duration::from_millis(100));
+    assert_eq!(
+        result,
+        Err((RejectionCode::SysFatal, "system fatal error".to_string()))
+    );
+    assert_eq!(ic_http::mock::times_called(request), 1);
 }
