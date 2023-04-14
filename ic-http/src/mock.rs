@@ -87,9 +87,9 @@ pub(crate) async fn http_request(
         tokio::time::sleep(mock.delay).await;
     }
 
-    // Return the error if one is specified.
     let mock_response = match mock.result {
         None => panic!("Mock response is missing"),
+        // Return the error if one is specified.
         Some(Err(error)) => return Err(error),
         Some(Ok(response)) => response,
     };
