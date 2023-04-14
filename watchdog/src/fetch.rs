@@ -5,8 +5,6 @@ use crate::bitcoin_block_apis::BitcoinBlockApi;
 pub struct BlockInfo {
     pub provider: BitcoinBlockApi,
     pub height: Option<u64>,
-    hash: Option<String>,
-    previous_hash: Option<String>,
 }
 
 impl BlockInfo {
@@ -15,8 +13,6 @@ impl BlockInfo {
         Self {
             provider,
             height: Some(height),
-            hash: None,
-            previous_hash: None,
         }
     }
 }
@@ -37,8 +33,6 @@ pub async fn fetch_all_data() -> Vec<BlockInfo> {
         .map(|(api, value)| BlockInfo {
             provider: api.clone(),
             height: value["height"].as_u64(),
-            hash: value["hash"].as_str().map(|s| s.to_string()),
-            previous_hash: value["previous_hash"].as_str().map(|s| s.to_string()),
         })
         .collect();
 
@@ -61,68 +55,30 @@ mod test {
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBitapsCom,
                     height: Some(700001),
-                    hash: Some(
-                        "0000000000000000000aaa111111111111111111111111111111111111111111"
-                            .to_string()
-                    ),
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: Some(700002),
-                    hash: Some(
-                        "0000000000000000000aaa222222222222222222222222222222222222222222"
-                            .to_string()
-                    ),
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockcypherCom,
                     height: Some(700003),
-                    hash: Some(
-                        "0000000000000000000aaa333333333333333333333333333333333333333333"
-                            .to_string()
-                    ),
-                    previous_hash: Some(
-                        "0000000000000000000aaa222222222222222222222222222222222222222222"
-                            .to_string()
-                    )
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BitcoinCanister,
                     height: Some(700007),
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfo,
                     height: Some(700004),
-                    hash: Some(
-                        "0000000000000000000aaa444444444444444444444444444444444444444444"
-                            .to_string()
-                    ),
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BlockstreamInfo,
                     height: Some(700005),
-                    hash: Some(
-                        "0000000000000000000aaa555555555555555555555555555555555555555555"
-                            .to_string()
-                    ),
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ChainApiBtcCom,
                     height: Some(700006),
-                    hash: Some(
-                        "0000000000000000000aaa666666666666666666666666666666666666666666"
-                            .to_string()
-                    ),
-                    previous_hash: Some(
-                        "0000000000000000000aaa555555555555555555555555555555555555555555"
-                            .to_string()
-                    )
                 }
             ]
         );
@@ -139,44 +95,30 @@ mod test {
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBitapsCom,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockcypherCom,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BitcoinCanister,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfo,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BlockstreamInfo,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ChainApiBtcCom,
                     height: None,
-                    hash: None,
-                    previous_hash: None
                 }
             ]
         );
