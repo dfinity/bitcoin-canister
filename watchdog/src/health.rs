@@ -28,7 +28,7 @@ pub struct HealthStatus {
 }
 
 /// Calculates the health status of the Bitcoin canister.
-pub fn calculate() -> HealthStatus {
+pub fn get_health_status() -> HealthStatus {
     compare(
         crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
         BitcoinBlockApi::explorers()
