@@ -5,7 +5,7 @@ pub const BLOCKS_BEHIND_THRESHOLD: i64 = -2;
 pub const BLOCKS_AHEAD_THRESHOLD: i64 = 2;
 
 /// The minimum number of explorers to compare against.
-pub const MIN_EXPLORERS: usize = 3;
+pub const MIN_EXPLORERS: u64 = 3;
 
 /// Bitcoin canister endpoint.
 pub const BITCOIN_CANISTER_ENDPOINT: &str =

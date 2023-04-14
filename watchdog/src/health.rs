@@ -35,7 +35,7 @@ pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus
         .collect::<Vec<_>>();
     let other_number = heights.len() as u64;
     let other_heights = heights.clone();
-    let target_height = if heights.len() < crate::config::MIN_EXPLORERS {
+    let target_height = if other_number < crate::config::MIN_EXPLORERS {
         None // Not enough data from explorers.
     } else {
         median(heights)
