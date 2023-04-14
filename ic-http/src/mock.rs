@@ -8,8 +8,7 @@ use std::time::Duration;
 #[derive(Clone)]
 pub(crate) struct Mock {
     pub(crate) request: CanisterHttpRequestArgument,
-    response: Option<HttpResponse>,
-    error: Option<(RejectionCode, String)>,
+    result: Option<Result<HttpResponse, (RejectionCode, String)>>,
     delay: Duration,
     times_called: u64,
 }
@@ -31,8 +30,7 @@ pub fn mock_with_delay(
 ) {
     crate::storage::mock_insert(Mock {
         request,
-        response: Some(response),
-        error: None,
+        result: Some(Ok(response)),
         delay,
         times_called: 0,
     });
@@ -55,8 +53,7 @@ pub fn mock_error_with_delay(
 ) {
     crate::storage::mock_insert(Mock {
         request,
-        response: None,
-        error: Some(error),
+        result: Some(Err(error)),
         delay,
         times_called: 0,
     });
@@ -91,10 +88,11 @@ pub(crate) async fn http_request(
     }
 
     // Return the error if one is specified.
-    if mock.error.is_some() {
-        return Err(mock.error.unwrap());
-    }
-    let mock_response = mock.response.expect("Mock response is missing.");
+    let mock_response = match mock.result {
+        None => panic!("Mock response is missing"),
+        Some(Err(error)) => return Err(error),
+        Some(Ok(response)) => response,
+    };
 
     // Check if the response body exceeds the maximum allowed size.
     if let Some(max_response_bytes) = mock.request.max_response_bytes {
