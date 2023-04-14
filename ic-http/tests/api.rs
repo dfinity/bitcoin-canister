@@ -288,10 +288,8 @@ async fn test_http_request_concurrently() {
 async fn test_http_request_error() {
     // Arrange
     let request = ic_http::create_request().get("https://example.com").build();
-    ic_http::mock::mock_error(
-        request.clone(),
-        (RejectionCode::SysFatal, "system fatal error".to_string()),
-    );
+    let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+    ic_http::mock::mock_error(request.clone(), mock_error);
 
     // Act
     let result = ic_http::http_request(request.clone()).await;
@@ -308,11 +306,8 @@ async fn test_http_request_error() {
 async fn test_http_request_error_with_delay() {
     // Arrange
     let request = ic_http::create_request().get("https://example.com").build();
-    ic_http::mock::mock_error_with_delay(
-        request.clone(),
-        (RejectionCode::SysFatal, "system fatal error".to_string()),
-        Duration::from_millis(200),
-    );
+    let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+    ic_http::mock::mock_error_with_delay(request.clone(), mock_error, Duration::from_millis(200));
 
     // Act
     let start = Instant::now();
