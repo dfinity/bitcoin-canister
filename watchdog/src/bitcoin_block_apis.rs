@@ -8,7 +8,7 @@ pub enum BitcoinBlockApi {
     ApiBitapsCom,
     ApiBlockchairCom,
     ApiBlockcypherCom,
-    BitcoinCanister, // Not an explorer. TODO: refactor, code smell.
+    BitcoinCanister, // Not an explorer.
     BlockchainInfo,
     BlockstreamInfo,
     ChainApiBtcCom,
