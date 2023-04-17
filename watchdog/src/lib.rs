@@ -10,6 +10,7 @@ mod storage;
 mod test_utils;
 
 use crate::bitcoin_block_apis::BitcoinBlockApi;
+use crate::config::Config;
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
@@ -21,18 +22,21 @@ use std::time::Duration;
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
+
+    /// The local storage for the configuration.
+    static CONFIG: RwLock<Config> = RwLock::new(Config::new());
 }
 
 /// This function is called when the canister is created.
 #[ic_cdk_macros::init]
 fn init() {
     ic_cdk_timers::set_timer(
-        Duration::from_secs(crate::config::DELAY_BEFORE_FIRST_FETCH_SEC),
+        Duration::from_secs(crate::storage::config().delay_before_first_fetch_sec),
         || {
             ic_cdk::spawn(async {
                 fetch_data().await;
                 ic_cdk_timers::set_timer_interval(
-                    Duration::from_secs(crate::config::INTERVAL_BETWEEN_FETCHES_SEC),
+                    Duration::from_secs(crate::storage::config().interval_between_fetches_sec),
                     || ic_cdk::spawn(fetch_data()),
                 );
             })
@@ -61,6 +65,7 @@ fn health_status() -> HealthStatus {
             .iter()
             .filter_map(crate::storage::get)
             .collect::<Vec<_>>(),
+        crate::storage::config(),
     )
 }
 

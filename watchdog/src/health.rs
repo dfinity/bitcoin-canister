@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::fetch::BlockInfo;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -47,7 +48,7 @@ pub struct HealthStatus {
 }
 
 /// Compares the source with the other explorers.
-pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
+pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let source_height = source.and_then(|block| block.height);
     let heights = other
         .iter()
@@ -55,7 +56,7 @@ pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus
         .collect::<Vec<_>>();
     let other_number = heights.len() as u64;
     let other_heights = heights.clone();
-    let target_height = if other_number < crate::config::MIN_EXPLORERS {
+    let target_height = if other_number < config.min_explores {
         None // Not enough data from explorers.
     } else {
         median(heights)
@@ -64,9 +65,9 @@ pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus
         .zip(target_height)
         .map(|(source, target)| source as i64 - target as i64);
     let status = height_diff.map_or(StatusCode::NotEnoughData, |diff| {
-        if diff < crate::config::BLOCKS_BEHIND_THRESHOLD {
+        if diff < config.blocks_behind_threshold {
             StatusCode::Behind
-        } else if diff > crate::config::BLOCKS_AHEAD_THRESHOLD {
+        } else if diff > config.blocks_ahead_threshold {
             StatusCode::Ahead
         } else {
             StatusCode::Ok
@@ -128,7 +129,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::config()),
             HealthStatus {
                 source_height: None,
                 other_number: 0,
@@ -148,7 +149,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 0,
@@ -171,7 +172,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 2,
@@ -195,7 +196,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 3,
@@ -219,7 +220,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 3,
