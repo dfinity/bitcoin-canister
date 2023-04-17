@@ -65,12 +65,14 @@ pub fn endpoint_api_blockcypher_com_block() -> HttpRequestConfig {
 /// Applies regex rule to parse bitcoin_canister block height.
 fn regex_height(text: String) -> Result<String, String> {
     const RE_PATTERN: &str = r"\s*main_chain_height (\d+) \d+";
-    let re = Regex::new(RE_PATTERN).expect("Regex: failed to compile.");
-    match re.captures(&text) {
-        None => Err("Regex: no match found.".to_string()),
-        Some(cap) => match cap.len() {
-            2 => Ok(String::from(&cap[1])),
-            x => Err(format!("Regex: expected 1 group exactly, provided {}.", x)),
+    match Regex::new(RE_PATTERN) {
+        Err(e) => Err(format!("Regex: failed to compile: {}", e)),
+        Ok(re) => match re.captures(&text) {
+            None => Err("Regex: no match found.".to_string()),
+            Some(cap) => match cap.len() {
+                2 => Ok(String::from(&cap[1])),
+                x => Err(format!("Regex: expected 1 group exactly, provided {}.", x)),
+            },
         },
     }
 }
@@ -87,7 +89,7 @@ fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
 /// Creates a new HttpRequestConfig for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
+        crate::config::BITCOIN_CANISTER_ENDPOINT,
         Some(transform_bitcoin_canister),
         |raw| {
             apply_to_body(raw, |text| {
@@ -201,10 +203,15 @@ fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpRe
         ..Default::default()
     };
     if response.status == 200 {
-        let original =
-            String::from_utf8(raw.response.body).expect("Raw response is not UTF-8 encoded.");
-        let transformed = f(original);
-        response.body = transformed.into_bytes();
+        match String::from_utf8(raw.response.body) {
+            Err(e) => {
+                print(&format!("Failed to parse response body: err = {:?}", e));
+            }
+            Ok(original) => {
+                let transformed = f(original);
+                response.body = transformed.into_bytes();
+            }
+        }
     } else {
         print(&format!("Received an error: err = {:?}", raw));
     }
@@ -216,10 +223,15 @@ fn apply_to_body_json(
     raw: TransformArgs,
     f: impl FnOnce(serde_json::Value) -> serde_json::Value,
 ) -> HttpResponse {
-    apply_to_body(raw, |text| {
-        let before = serde_json::from_str(&text).expect("Failed to parse JSON from string");
-        let after = f(before);
-        after.to_string()
+    apply_to_body(raw, |text| match serde_json::from_str(&text) {
+        Err(e) => {
+            print(&format!("Failed to parse response body: err = {:?}", e));
+            String::default()
+        }
+        Ok(original) => {
+            let transformed = f(original);
+            transformed.to_string()
+        }
     })
 }
 
@@ -237,14 +249,14 @@ mod test {
 
     async fn run_http_request_test(
         config: HttpRequestConfig,
-        url: &str,
-        response_body: &str,
+        expected_url: &str,
+        mock_response_body: &str,
         expected: serde_json::Value,
     ) {
         let request = config.request();
         let mock_response = ic_http::create_response()
             .status(200)
-            .body(response_body)
+            .body(mock_response_body)
             .build();
         ic_http::mock::mock(request.clone(), mock_response);
 
@@ -252,7 +264,7 @@ mod test {
             .await
             .expect("HTTP request failed");
 
-        assert_eq!(config.url(), url.to_string());
+        assert_eq!(config.url(), expected_url.to_string());
         assert_json_eq!(parse_json(response.body), expected);
         assert_eq!(ic_http::mock::times_called(request), 1);
     }
@@ -432,6 +444,35 @@ mod test {
         for (text, expected) in test_cases {
             let result = parse_bitcoin_canister_height(text.to_string());
             assert_eq!(result, expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_http_response_404() {
+        let expected_status = candid::Nat::from(404);
+        let test_cases = [
+            endpoint_api_bitaps_com_block(),
+            endpoint_api_blockchair_com_block(),
+            endpoint_api_blockcypher_com_block(),
+            endpoint_bitcoin_canister(),
+            endpoint_blockchain_info_hash(),
+            endpoint_blockchain_info_height(),
+            endpoint_blockstream_info_hash(),
+            endpoint_blockstream_info_height(),
+            endpoint_chain_api_btc_com_block(),
+        ];
+        for config in test_cases {
+            // Arrange
+            let request = config.request();
+            let mock_response = ic_http::create_response().status(404).build();
+            ic_http::mock::mock(request.clone(), mock_response);
+
+            // Act
+            let (response,) = ic_http::http_request(request).await.unwrap();
+
+            // Assert
+            assert_eq!(response.status, expected_status, "url: {:?}", config.url());
+            assert_eq!(response.body, Vec::<u8>::new(), "url: {:?}", config.url());
         }
     }
 }

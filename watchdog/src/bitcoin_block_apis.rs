@@ -1,25 +1,45 @@
 use crate::endpoints::*;
+use ic_cdk::api::management_canister::http_request::HttpResponse;
 use serde_json::json;
 
 /// APIs that serve Bitcoin block data.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BitcoinBlockApi {
-    // TODO: investigate why this API is not working.
-    #[allow(dead_code)]
     ApiBitapsCom,
-
     ApiBlockchairCom,
     ApiBlockcypherCom,
-    BitcoinCanister,
+    BitcoinCanister, // Not an explorer.
     BlockchainInfo,
     BlockstreamInfo,
-
-    // TODO: investigate why this API is not working.
-    #[allow(dead_code)]
     ChainApiBtcCom,
 }
 
 impl BitcoinBlockApi {
+    /// Returns the list of all API providers.
+    pub fn all_providers() -> Vec<Self> {
+        vec![
+            BitcoinBlockApi::ApiBitapsCom,
+            BitcoinBlockApi::ApiBlockchairCom,
+            BitcoinBlockApi::ApiBlockcypherCom,
+            BitcoinBlockApi::BitcoinCanister, // Not an explorer.
+            BitcoinBlockApi::BlockchainInfo,
+            BitcoinBlockApi::BlockstreamInfo,
+            BitcoinBlockApi::ChainApiBtcCom,
+        ]
+    }
+
+    /// Returns the list of explorers only.
+    pub fn explorers() -> Vec<Self> {
+        vec![
+            BitcoinBlockApi::ApiBitapsCom,
+            BitcoinBlockApi::ApiBlockchairCom,
+            BitcoinBlockApi::ApiBlockcypherCom,
+            BitcoinBlockApi::BlockchainInfo,
+            BitcoinBlockApi::BlockstreamInfo,
+            BitcoinBlockApi::ChainApiBtcCom,
+        ]
+    }
+
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
@@ -37,10 +57,15 @@ impl BitcoinBlockApi {
                     http_request(endpoint_blockchain_info_hash()),
                 ];
                 let results = futures::future::join_all(futures).await;
-                json!({
-                    "height": results[0]["height"],
-                    "hash": results[1]["hash"],
-                })
+                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                    (Some(height), Some(hash)) => {
+                        json!({
+                            "height": height,
+                            "hash": hash,
+                        })
+                    }
+                    _ => json!({}),
+                }
             }
             BitcoinBlockApi::BlockstreamInfo => {
                 let futures = vec![
@@ -48,10 +73,15 @@ impl BitcoinBlockApi {
                     http_request(endpoint_blockstream_info_hash()),
                 ];
                 let results = futures::future::join_all(futures).await;
-                json!({
-                    "height": results[0]["height"],
-                    "hash": results[1]["hash"],
-                })
+                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                    (Some(height), Some(hash)) => {
+                        json!({
+                            "height": height,
+                            "hash": hash,
+                        })
+                    }
+                    _ => json!({}),
+                }
             }
             BitcoinBlockApi::ChainApiBtcCom => {
                 http_request(endpoint_chain_api_btc_com_block()).await
@@ -62,10 +92,30 @@ impl BitcoinBlockApi {
 
 /// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
 async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Value {
-    let request = config.request();
-    let (response,) = ic_http::http_request(request).await.unwrap();
-    let json_str = String::from_utf8(response.body).expect("Raw response is not UTF-8 encoded.");
-    serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
+    let result = ic_http::http_request(config.request()).await;
+
+    match result {
+        Ok((response,)) if response.status == 200 => parse_response(response),
+        Ok(_) => json!({}),
+        Err(error) => {
+            print!("HTTP request failed: {:?}", error);
+            json!({})
+        }
+    }
+}
+
+/// Parses the given HTTP response into a JSON value.
+fn parse_response(response: HttpResponse) -> serde_json::Value {
+    match String::from_utf8(response.body) {
+        Ok(json_str) => serde_json::from_str(&json_str).unwrap_or_else(|error| {
+            print!("Failed to parse JSON from string: {:?}", error);
+            json!({})
+        }),
+        Err(error) => {
+            print!("Raw response is not UTF-8 encoded: {:?}", error);
+            json!({})
+        }
+    }
 }
 
 #[cfg(test)]
@@ -188,5 +238,15 @@ mod test {
             }),
         )
         .await;
+    }
+
+    #[tokio::test]
+    async fn test_http_request_failed() {
+        test_utils::mock_all_outcalls_404();
+        for provider in BitcoinBlockApi::all_providers() {
+            let response = provider.fetch_data().await;
+
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
     }
 }
