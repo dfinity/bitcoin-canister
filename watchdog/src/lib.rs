@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::Duration;
 
-use ic_cdk_macros::{init, post_upgrade, query, update};
+use ic_cdk_macros::{init, post_upgrade, query};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
@@ -75,12 +75,6 @@ fn health_status() -> HealthStatus {
 #[query]
 pub fn get_config() -> Config {
     crate::storage::get_config()
-}
-
-/// Sets the configuration of the watchdog canister.
-#[update]
-pub fn set_config(config: Config) {
-    crate::storage::set_config(config)
 }
 
 /// Prints a message to the console.

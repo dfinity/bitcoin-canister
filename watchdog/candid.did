@@ -65,7 +65,4 @@ service : {
 
     /// Returns the configuration of the watchdog canister.
     get_config : () -> (config) query;
-
-    /// Sets the configuration of the watchdog canister.
-    set_config : (config) -> ();
 };
