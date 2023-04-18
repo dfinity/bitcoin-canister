@@ -15,7 +15,7 @@ dfx deploy --no-wallet watchdog
 
 # Request health status repeatedly, break when the data is available.
 has_enough_data=0
-for ((i=1; i<=$ITERATIONS; i++))
+for ((i=1; i<=ITERATIONS; i++))
 do
     health_status=$(dfx canister call watchdog health_status --query)
 
