@@ -17,6 +17,11 @@ pub fn get(provider: &BitcoinBlockApi) -> Option<BlockInfo> {
 }
 
 /// Returns the configuration from the local storage.
-pub fn config() -> Config {
+pub fn get_config() -> Config {
     CONFIG.with(|config| config.read().unwrap().clone())
+}
+
+/// Sets the configuration in the local storage.
+pub fn set_config(config: Config) {
+    CONFIG.with(|c| *c.write().unwrap() = config);
 }

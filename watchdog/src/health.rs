@@ -65,9 +65,9 @@ pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>, config: Config)
         .zip(target_height)
         .map(|(source, target)| source as i64 - target as i64);
     let status = height_diff.map_or(StatusCode::NotEnoughData, |diff| {
-        if diff < config.blocks_behind_threshold {
+        if diff < -(config.blocks_behind_threshold as i64) {
             StatusCode::Behind
-        } else if diff > config.blocks_ahead_threshold {
+        } else if diff > config.blocks_ahead_threshold as i64 {
             StatusCode::Ahead
         } else {
             StatusCode::Ok
@@ -129,7 +129,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::config()),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
                 source_height: None,
                 other_number: 0,
@@ -149,7 +149,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::config()),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 0,
@@ -172,7 +172,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::config()),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 2,
@@ -196,7 +196,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::config()),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 3,
@@ -220,7 +220,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::config()),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
                 source_height: Some(1_000),
                 other_number: 3,
