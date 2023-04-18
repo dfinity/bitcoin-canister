@@ -4,6 +4,7 @@ mod endpoints;
 mod fetch;
 mod health;
 mod http;
+mod printer;
 mod storage;
 
 #[cfg(test)]
@@ -13,8 +14,10 @@ use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
+use crate::printer::print;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::collections::HashMap;
+use std::sync::Once;
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -22,6 +25,8 @@ thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
 }
+
+static START: Once = Once::new();
 
 /// This function is called when the canister is created.
 #[ic_cdk_macros::init]
@@ -46,6 +51,13 @@ fn post_upgrade() {
     init()
 }
 
+/// Setup the stdlib hooks.
+pub fn setup() {
+    START.call_once(|| {
+        printer::hook();
+    });
+}
+
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_data() {
     let data = crate::fetch::fetch_all_data().await;
@@ -62,15 +74,6 @@ fn health_status() -> HealthStatus {
             .filter_map(crate::storage::get)
             .collect::<Vec<_>>(),
     )
-}
-
-/// Prints a message to the console.
-pub fn print(msg: &str) {
-    #[cfg(target_arch = "wasm32")]
-    ic_cdk::api::print(msg);
-
-    #[cfg(not(target_arch = "wasm32"))]
-    println!("{}", msg);
 }
 
 // Exposing the endpoints in `lib.rs` (not in `main.rs`) to make them available
