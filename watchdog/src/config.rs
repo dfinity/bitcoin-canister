@@ -28,7 +28,7 @@ pub struct Config {
     pub blocks_ahead_threshold: u64,
 
     /// The minimum number of explorers to compare against.
-    pub min_explores: u64,
+    pub min_explorers: u64,
 
     /// Bitcoin canister endpoint.
     pub bitcoin_canister_endpoint: String,
@@ -45,7 +45,7 @@ impl Config {
         Self {
             blocks_behind_threshold: BLOCKS_BEHIND_THRESHOLD,
             blocks_ahead_threshold: BLOCKS_AHEAD_THRESHOLD,
-            min_explores: MIN_EXPLORERS,
+            min_explorers: MIN_EXPLORERS,
             bitcoin_canister_endpoint: BITCOIN_CANISTER_ENDPOINT.to_string(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,

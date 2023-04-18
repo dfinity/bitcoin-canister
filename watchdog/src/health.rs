@@ -56,7 +56,7 @@ pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>, config: Config)
         .collect::<Vec<_>>();
     let other_number = heights.len() as u64;
     let other_heights = heights.clone();
-    let target_height = if other_number < config.min_explores {
+    let target_height = if other_number < config.min_explorers {
         None // Not enough data from explorers.
     } else {
         median(heights)

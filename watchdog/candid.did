@@ -47,7 +47,7 @@ type config = record {
     blocks_ahead_threshold : nat64;
 
     /// The minimum number of explorers to compare against.
-    min_explores : nat64;
+    min_explorers : nat64;
 
     /// Bitcoin canister endpoint.
     bitcoin_canister_endpoint : text;
