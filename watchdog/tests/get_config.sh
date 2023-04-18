@@ -2,9 +2,6 @@
 #
 # A test that verifies that the `get_config` endpoint works as expected.
 
-ITERATIONS=30
-DELAY_SEC=1
-
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT
 
