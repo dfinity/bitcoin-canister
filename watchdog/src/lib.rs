@@ -31,6 +31,12 @@ static START: Once = Once::new();
 /// This function is called when the canister is created.
 #[ic_cdk_macros::init]
 fn init() {
+    // Setup the stdlib hooks.
+    START.call_once(|| {
+        printer::hook();
+    });
+
+    // Setup the timer to fetch the data from the external APIs.
     ic_cdk_timers::set_timer(
         Duration::from_secs(crate::config::DELAY_BEFORE_FIRST_FETCH_SEC),
         || {
@@ -49,13 +55,6 @@ fn init() {
 #[ic_cdk_macros::post_upgrade]
 fn post_upgrade() {
     init()
-}
-
-/// Setup the stdlib hooks.
-pub fn setup() {
-    START.call_once(|| {
-        printer::hook();
-    });
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
