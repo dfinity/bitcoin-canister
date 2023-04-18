@@ -14,7 +14,7 @@ dfx deploy --no-wallet watchdog
 config=$(dfx canister call watchdog get_config --query)
 
 # Check that the config is correct, eg. by checking the min_explores value.
-if ! [[ $config == *"min_explores = 3"* ]]; then
+if ! [[ $config == *"min_explorers = 3"* ]]; then
   echo "FAIL"
   exit 1
 fi
