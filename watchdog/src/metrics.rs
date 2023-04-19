@@ -1,5 +1,4 @@
 use crate::health::StatusCode;
-use crate::print;
 use crate::types::CandidHttpResponse;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
