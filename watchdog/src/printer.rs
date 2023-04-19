@@ -1,16 +1,7 @@
 use std::panic;
 
-/// Prints a message to the console.
-pub fn print(msg: &str) {
-    #[cfg(target_arch = "wasm32")]
-    ic_cdk::api::print(msg);
-
-    #[cfg(not(target_arch = "wasm32"))]
-    println!("{}", msg);
-}
-
 /// Sets a custom panic hook, uses debug.trace
-pub fn set_panic_hook() {
+fn set_panic_hook() {
     panic::set_hook(Box::new(|info| {
         let file = info.location().unwrap().file();
         let line = info.location().unwrap().line();
@@ -25,7 +16,7 @@ pub fn set_panic_hook() {
         };
 
         let err_info = format!("Panicked at '{}', {}:{}:{}", msg, file, line, col);
-        print(&err_info);
+        ic_cdk::api::print(&err_info);
         ic_cdk::api::trap(&err_info);
     }));
 }

@@ -4,8 +4,10 @@ mod endpoints;
 mod fetch;
 mod health;
 mod http;
-mod printer;
 mod storage;
+
+#[cfg(target_arch = "wasm32")]
+mod printer;
 
 #[cfg(test)]
 mod test_utils;
@@ -14,10 +16,8 @@ use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
-use crate::printer::print;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::collections::HashMap;
-use std::sync::Once;
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -26,15 +26,12 @@ thread_local! {
     static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
 }
 
-static START: Once = Once::new();
-
 /// This function is called when the canister is created.
 #[ic_cdk_macros::init]
 fn init() {
     // Setup the stdlib hooks.
-    START.call_once(|| {
-        printer::hook();
-    });
+    #[cfg(target_arch = "wasm32")]
+    printer::hook();
 
     // Setup the timer to fetch the data from the external APIs.
     ic_cdk_timers::set_timer(
@@ -73,6 +70,15 @@ fn health_status() -> HealthStatus {
             .filter_map(crate::storage::get)
             .collect::<Vec<_>>(),
     )
+}
+
+/// Prints a message to the console.
+pub fn print(msg: &str) {
+    #[cfg(target_arch = "wasm32")]
+    ic_cdk::api::print(msg);
+
+    #[cfg(not(target_arch = "wasm32"))]
+    println!("{}", msg);
 }
 
 // Exposing the endpoints in `lib.rs` (not in `main.rs`) to make them available
