@@ -1,3 +1,4 @@
+use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::config::Config;
 use crate::fetch::BlockInfo;
 use candid::CandidType;
@@ -23,32 +24,42 @@ pub enum StatusCode {
     Behind,
 }
 
-/// The health status of the Bitcoin canister.
+/// Health status of the Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatus {
-    /// The height of the block from the Bitcoin canister.
+    /// Height of the main chain of the Bitcoin canister.
     pub source_height: Option<u64>,
 
-    /// The number of explorers inspected.
+    /// Number of explorers inspected.
     pub other_number: u64,
 
-    /// The heights of the blocks from the explorers.
+    /// Heights of the blocks from the explorers.
     pub other_heights: Vec<u64>,
 
-    /// The target height of the Bitcoin canister calculated
-    /// from the explorers.
+    /// Target height calculated from the explorers.
     pub target_height: Option<u64>,
 
-    /// The difference between the source height
-    /// and the target height.
+    /// Difference between the source and the target heights.
     pub height_diff: Option<i64>,
 
-    /// The code of the health status.
+    /// Status code of the Bitcoin canister health.
     pub status: StatusCode,
 }
 
+/// Calculates the health status of a Bitcoin canister.
+pub fn health_status() -> HealthStatus {
+    compare(
+        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
+        BitcoinBlockApi::explorers()
+            .iter()
+            .filter_map(crate::storage::get)
+            .collect::<Vec<_>>(),
+        crate::storage::get_config(),
+    )
+}
+
 /// Compares the source with the other explorers.
-pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>, config: Config) -> HealthStatus {
+fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let source_height = source.and_then(|block| block.height);
     let heights = other
         .iter()
