@@ -10,7 +10,6 @@ pub fn get_metrics() -> CandidHttpResponse {
     let mut writer = MetricsEncoder::new(vec![], (now / 1_000_000) as i64);
     match encode_metrics(&mut writer) {
         Ok(()) => {
-            print("bla");
             let body = writer.into_inner();
             CandidHttpResponse {
                 status_code: 200,
