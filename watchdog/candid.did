@@ -39,7 +39,30 @@ type health_status = record {
     status : status_code;
 };
 
+type config = record {
+    /// Below this threshold, the canister is considered to be behind.
+    blocks_behind_threshold : nat64;
+
+    /// Above this threshold, the canister is considered to be ahead.
+    blocks_ahead_threshold : nat64;
+
+    /// The minimum number of explorers to compare against.
+    min_explorers : nat64;
+
+    /// Bitcoin canister endpoint.
+    bitcoin_canister_endpoint : text;
+
+    /// The number of seconds to wait before the first data fetch.
+    delay_before_first_fetch_sec : nat64;
+
+    /// The number of seconds to wait between all the other data fetches.
+    interval_between_fetches_sec : nat64;
+};
+
 service : {
-    // Returns the health status of the Bitcoin canister.
+    /// Returns the health status of the Bitcoin canister.
     health_status : () -> (health_status) query;
+
+    /// Returns the configuration of the watchdog canister.
+    get_config : () -> (config) query;
 };
