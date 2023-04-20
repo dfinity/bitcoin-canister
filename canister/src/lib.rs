@@ -25,6 +25,7 @@ use crate::{
 };
 pub use api::send_transaction;
 pub use api::set_config;
+use candid::Principal;
 pub use heartbeat::heartbeat;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest,
@@ -43,6 +44,10 @@ const SYNCED_THRESHOLD: u32 = 2;
 
 thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::new(None);
+
+    static MOCK_CALLER: RefCell<Option<Principal>> = RefCell::new(None);
+
+    static MOCK_CONTROLLERS: RefCell<Option<Vec<Principal>>> = RefCell::new(None);
 }
 
 /// A helper method to read the state.
