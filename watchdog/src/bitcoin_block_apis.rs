@@ -1,17 +1,45 @@
 use crate::endpoints::*;
+use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 /// APIs that serve Bitcoin block data.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize)]
 pub enum BitcoinBlockApi {
+    #[serde(rename = "api_bitaps_com")]
     ApiBitapsCom,
+
+    #[serde(rename = "api_blockchair_com")]
     ApiBlockchairCom,
+
+    #[serde(rename = "api_blockcypher_com")]
     ApiBlockcypherCom,
+
+    #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
+
+    #[serde(rename = "blockchain_info")]
     BlockchainInfo,
+
+    #[serde(rename = "blockstream_info")]
     BlockstreamInfo,
+
+    #[serde(rename = "chain_api_btc_com")]
     ChainApiBtcCom,
+}
+
+impl std::fmt::Display for BitcoinBlockApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Extract the name from the JSON representation provided by serde-rename.
+        let s = serde_json::to_string(&json!(self)).unwrap();
+        let name = s
+            .strip_prefix('\"')
+            .and_then(|s| s.strip_suffix('\"'))
+            .unwrap();
+
+        write!(f, "{}", name)
+    }
 }
 
 impl BitcoinBlockApi {
@@ -247,6 +275,25 @@ mod test {
             let response = provider.fetch_data().await;
 
             assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+    }
+
+    #[test]
+    fn test_names() {
+        let expected: std::collections::HashMap<BitcoinBlockApi, &str> = [
+            (BitcoinBlockApi::ApiBitapsCom, "api_bitaps_com"),
+            (BitcoinBlockApi::ApiBlockchairCom, "api_blockchair_com"),
+            (BitcoinBlockApi::ApiBlockcypherCom, "api_blockcypher_com"),
+            (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),
+            (BitcoinBlockApi::BlockchainInfo, "blockchain_info"),
+            (BitcoinBlockApi::BlockstreamInfo, "blockstream_info"),
+            (BitcoinBlockApi::ChainApiBtcCom, "chain_api_btc_com"),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        for provider in BitcoinBlockApi::all_providers() {
+            assert_eq!(provider.to_string(), expected[&provider].to_string());
         }
     }
 }
