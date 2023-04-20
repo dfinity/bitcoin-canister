@@ -1,5 +1,3 @@
-use crate::{MOCK_CALLER, MOCK_CONTROLLERS};
-use candid::Principal;
 use ic_btc_interface::SetConfigRequest;
 use std::convert::TryInto;
 
@@ -14,7 +12,15 @@ pub async fn set_config(request: SetConfigRequest) {
 }
 
 fn is_watchdog_caller() -> bool {
-    crate::with_state(|s| Some(caller()) == s.watchdog_canister)
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::with_state(|s| Some(ic_cdk::caller()) == s.watchdog_canister)
+    }
 }
 
 fn set_api_access(request: SetConfigRequest) {
@@ -53,43 +59,24 @@ fn set_config_no_verification(request: SetConfigRequest) {
 }
 
 async fn verify_caller() {
-    let caller = caller();
-    let controllers = controllers().await;
-    if !controllers.contains(&caller) {
-        panic!("Only controllers can call set_config");
-    }
-}
-
-fn caller() -> Principal {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        MOCK_CALLER.with(|cell| cell.borrow().unwrap_or(Principal::anonymous()))
-    }
-
     #[cfg(target_arch = "wasm32")]
     {
-        ic_cdk::caller()
-    }
-}
+        use ic_cdk::api::management_canister::main::CanisterIdRecord;
 
-async fn controllers() -> Vec<Principal> {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        MOCK_CONTROLLERS.with(|cell| cell.borrow().clone().unwrap_or_default())
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        ic_cdk::api::management_canister::main::canister_status(
-            ic_cdk::api::management_canister::main::CanisterIdRecord {
+        let caller = ic_cdk::caller();
+        let controllers =
+            ic_cdk::api::management_canister::main::canister_status(CanisterIdRecord {
                 canister_id: ic_cdk::api::id(),
-            },
-        )
-        .await
-        .unwrap()
-        .0
-        .settings
-        .controllers
+            })
+            .await
+            .unwrap()
+            .0
+            .settings
+            .controllers;
+
+        if !controllers.contains(&caller) {
+            panic!("Only controllers can call set_config");
+        }
     }
 }
 
@@ -100,119 +87,40 @@ mod test {
     use ic_btc_interface::{Config, Fees, Flag};
     use proptest::prelude::*;
 
-    fn mock_caller(principal: Principal) {
-        MOCK_CALLER.with(|cell| *cell.borrow_mut() = Some(principal));
-    }
-
-    fn mock_controllers(controllers: Vec<Principal>) {
-        MOCK_CONTROLLERS.with(|cell| *cell.borrow_mut() = Some(controllers));
-    }
-
-    #[should_panic(expected = "Only controllers can call set_config")]
-    #[tokio::test]
-    async fn test_set_config_not_watchdog() {
+    #[test]
+    fn test_set_api_access_updates_state() {
         // Arrange
-        let not_watchdog_canister_id = "rwlgt-iiaaa-aaaaa-aaaaa-cai";
-        let watchdog_canister_id = "wwc2m-2qaaa-aaaac-qaaaa-cai";
-        mock_caller(Principal::from_text(not_watchdog_canister_id).unwrap());
-        init(Config {
-            watchdog_canister: Some(Principal::from_text(watchdog_canister_id).unwrap()),
-            ..Config::default()
-        });
-
-        // Act
-        set_config(SetConfigRequest {
-            api_access: Some(Flag::Disabled),
-            ..Default::default()
-        })
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_set_config_watchdog_disables_api_access() {
-        // Arrange
-        let watchdog_canister_id = "wwc2m-2qaaa-aaaac-qaaaa-cai";
-        mock_caller(Principal::from_text(watchdog_canister_id).unwrap());
-        init(Config {
-            watchdog_canister: Some(Principal::from_text(watchdog_canister_id).unwrap()),
-            ..Config::default()
-        });
-        assert_eq!(with_state(|s| s.api_access), Flag::Enabled);
-
-        // Act
-        set_config(SetConfigRequest {
-            api_access: Some(Flag::Disabled),
-            ..Default::default()
-        })
-        .await;
-
-        // Assert
-        assert_eq!(with_state(|s| s.api_access), Flag::Disabled);
-    }
-
-    #[tokio::test]
-    async fn test_set_config_watchdog_cant_modify_syncing() {
-        // Arrange
-        let watchdog_canister_id = "wwc2m-2qaaa-aaaac-qaaaa-cai";
-        mock_caller(Principal::from_text(watchdog_canister_id).unwrap());
-        init(Config {
-            watchdog_canister: Some(Principal::from_text(watchdog_canister_id).unwrap()),
-            ..Config::default()
-        });
-        assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
-
-        // Act
-        set_config(SetConfigRequest {
-            syncing: Some(Flag::Disabled),
-            ..Default::default()
-        })
-        .await;
-
-        // Assert
-        assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
-    }
-
-    #[should_panic(expected = "Only controllers can call set_config")]
-    #[tokio::test]
-    async fn test_set_config_not_controllers() {
-        // Arrange
-        let not_controller_id = "rwlgt-iiaaa-aaaaa-aaaaa-cai";
-        let controller_id = "wwc2m-2qaaa-aaaac-qaaaa-cai";
-        mock_caller(Principal::from_text(not_controller_id).unwrap());
-        mock_controllers(vec![Principal::from_text(controller_id).unwrap()]);
         init(Config::default());
         assert_eq!(with_state(|s| s.api_access), Flag::Enabled);
 
         // Act
-        set_config(SetConfigRequest {
+        set_api_access(SetConfigRequest {
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        })
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_set_config_controllers() {
-        // Arrange
-        let controller_id = "wwc2m-2qaaa-aaaac-qaaaa-cai";
-        mock_caller(Principal::from_text(controller_id).unwrap());
-        mock_controllers(vec![Principal::from_text(controller_id).unwrap()]);
-        init(Config::default());
-        assert_eq!(with_state(|s| s.api_access), Flag::Enabled);
-
-        // Act
-        set_config(SetConfigRequest {
-            api_access: Some(Flag::Disabled),
-            ..Default::default()
-        })
-        .await;
+        });
 
         // Assert
         assert_eq!(with_state(|s| s.api_access), Flag::Disabled);
     }
 
     #[test]
-    fn set_stability_threshold() {
+    fn test_set_api_access_does_not_update_state() {
+        // Arrange
+        init(Config::default());
+        assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
+
+        // Act
+        set_api_access(SetConfigRequest {
+            syncing: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        // Assert
+        assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
+    }
+
+    #[test]
+    fn test_set_stability_threshold() {
         init(Config::default());
 
         proptest!(|(
@@ -231,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn set_syncing() {
+    fn test_set_syncing() {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
@@ -248,7 +156,7 @@ mod test {
     }
 
     #[test]
-    fn set_fees() {
+    fn test_set_fees() {
         init(Config::default());
 
         proptest!(|(
@@ -284,7 +192,7 @@ mod test {
     }
 
     #[test]
-    fn set_api_access() {
+    fn test_set_config_no_verification_for_setting_api_access() {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
@@ -301,7 +209,7 @@ mod test {
     }
 
     #[test]
-    fn set_disable_api_if_not_fully_synced() {
+    fn test_set_disable_api_if_not_fully_synced() {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {

@@ -34,7 +34,6 @@ ic-btc-test-utils = { path = "../test-utils" }
 maplit = "1.0.2"
 proptest = "0.9.4"
 tempfile = "3.2.0"
-tokio = { version = "1.15.0", features = [ "full" ] }
 
 [features]
 file_memory = []

@@ -1344,7 +1344,6 @@ dependencies = [
  "serde",
  "serde_bytes",
  "tempfile",
- "tokio",
 ]
 
 [[package]]
