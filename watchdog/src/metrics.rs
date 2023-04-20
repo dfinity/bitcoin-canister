@@ -73,17 +73,13 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     for explorer in health.explorers {
         available_explorers.insert(explorer.provider.clone(), explorer);
     }
+    let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     for explorer in BitcoinBlockApi::explorers() {
         let height = match available_explorers.get(&explorer) {
             None => NO_HEIGHT,
             Some(explorer) => explorer.height.map(|x| x as f64).unwrap_or(NO_HEIGHT),
         };
-        let name = explorer.to_string();
-        w.encode_gauge(
-            &format!("explorer_height_{}", name),
-            height,
-            &format!("Height from the {} explorer.", name),
-        )?;
+        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
     }
 
     Ok(())
