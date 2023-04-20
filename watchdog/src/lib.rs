@@ -100,11 +100,6 @@ pub fn print(msg: &str) {
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_api_bitaps_com_block().transform(raw)
-}
-
-#[query]
 fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpResponse {
     endpoint_api_blockchair_com_block().transform(raw)
 }

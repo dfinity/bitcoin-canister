@@ -1,32 +1,14 @@
 use crate::http::HttpRequestConfig;
 use crate::print;
 use crate::{
-    transform_api_bitaps_com_block, transform_api_blockchair_com_block,
-    transform_api_blockcypher_com_block, transform_bitcoin_canister,
-    transform_blockchain_info_hash, transform_blockchain_info_height,
+    transform_api_blockchair_com_block, transform_api_blockcypher_com_block,
+    transform_bitcoin_canister, transform_blockchain_info_hash, transform_blockchain_info_height,
     transform_blockstream_info_hash, transform_blockstream_info_height,
     transform_chain_api_btc_com_block,
 };
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use regex::Regex;
 use serde_json::json;
-
-/// Creates a new HttpRequestConfig for fetching block data from api.bitaps.com.
-pub fn endpoint_api_bitaps_com_block() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.bitaps.com/btc/v1/blockchain/block/last",
-        Some(transform_api_bitaps_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["height"].as_u64(),
-                    "hash": data["hash"].as_str(),
-                })
-            })
-        },
-    )
-}
 
 /// Creates a new HttpRequestConfig for fetching block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block() -> HttpRequestConfig {
@@ -270,20 +252,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_bitaps_com_block() {
-        run_http_request_test(
-            endpoint_api_bitaps_com_block(),
-            "https://api.bitaps.com/btc/v1/blockchain/block/last",
-            test_utils::API_BITAPS_COM_RESPONSE,
-            json!({
-                "height": 700001,
-                "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_api_blockchair_com_block() {
         run_http_request_test(
             endpoint_api_blockchair_com_block(),
@@ -402,7 +370,6 @@ mod test {
         assert_eq!(
             names,
             vec![
-                "transform_api_bitaps_com_block",
                 "transform_api_blockchair_com_block",
                 "transform_api_blockcypher_com_block",
                 "transform_bitcoin_canister",
@@ -451,7 +418,6 @@ mod test {
     async fn test_http_response_404() {
         let expected_status = candid::Nat::from(404);
         let test_cases = [
-            endpoint_api_bitaps_com_block(),
             endpoint_api_blockchair_com_block(),
             endpoint_api_blockcypher_com_block(),
             endpoint_bitcoin_canister(),
