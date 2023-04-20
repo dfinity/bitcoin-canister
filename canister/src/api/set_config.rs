@@ -2,8 +2,33 @@ use ic_btc_interface::SetConfigRequest;
 use std::convert::TryInto;
 
 pub async fn set_config(request: SetConfigRequest) {
-    verify_caller().await;
-    set_config_no_verification(request);
+    if is_watchdog_caller() {
+        // The watchdog canister can only set the API access flag.
+        set_api_access(request);
+    } else {
+        verify_caller().await;
+        set_config_no_verification(request);
+    }
+}
+
+fn is_watchdog_caller() -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::with_state(|s| Some(ic_cdk::caller()) == s.watchdog_canister)
+    }
+}
+
+fn set_api_access(request: SetConfigRequest) {
+    crate::with_state_mut(|s| {
+        if let Some(api_access) = request.api_access {
+            s.api_access = api_access;
+        }
+    });
 }
 
 fn set_config_no_verification(request: SetConfigRequest) {
