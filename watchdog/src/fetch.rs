@@ -1,7 +1,10 @@
+use candid::CandidType;
+use serde::{Deserialize, Serialize};
+
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 
 /// The data fetched from the external bitcoin block APIs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct BlockInfo {
     /// The provider of the bitcoin block data.
     pub provider: BitcoinBlockApi,

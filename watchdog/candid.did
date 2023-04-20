@@ -1,7 +1,6 @@
-/// Status codes for the health of Bitcoin canister
-/// compared to other explorers.
-type status_code = variant {
-    /// Not enough data to calculate the health status.
+/// Bitcoin canister height status compared to other explorers.
+type height_status = variant {
+    /// Not enough data to calculate the status.
     not_enough_data;
 
     /// Bitcoin canister height is healthy.
@@ -16,25 +15,42 @@ type status_code = variant {
     ahead;
 };
 
+/// Bitcoin block API providers.
+type bitcoin_block_api = variant {
+    api_bitaps_com;
+    api_blockchair_com;
+    api_blockcypher_com;
+    bitcoin_canister;
+    blockchain_info;
+    blockstream_info;
+    chain_api_btc_com;
+};
+
+/// Information about a Bitcoin block from a specific API provider.
+type block_info = record {
+    /// Bitcoin block API provider.
+    provider : bitcoin_block_api;
+
+    /// Block height.
+    height : opt nat64;
+};
+
 // The health status of the Bitcoin canister.
 type health_status = record {
-    /// Height of the block from the Bitcoin canister.
-    source_height : opt nat64;
+    /// Main chain height of the Bitcoin canister.
+    height_source : opt nat64;
 
-    /// Number of explorers inspected.
-    other_number : nat64;
+    /// Height target derived from explorer heights.
+    height_target : opt nat64;
 
-    /// Heights of the blocks from the explorers.
-    other_heights : vec nat64;
-
-    /// Target height calculated from the explorers.
-    target_height : opt nat64;
-
-    /// Difference between the source and the target heights.
+    /// Difference between Bitcoin canister height and target height.
     height_diff : opt int64;
 
-    /// Status code of the Bitcoin canister health.
-    status : status_code;
+    /// Bitcoin canister height status.
+    height_status : height_status;
+
+    /// Block info from the explorers.
+    explorers : vec block_info;
 };
 
 type config = record {
