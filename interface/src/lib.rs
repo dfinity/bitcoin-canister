@@ -332,6 +332,11 @@ pub struct Config {
     /// Flag to determine if the API should be automatically disabled if
     /// the canister isn't fully synced.
     pub disable_api_if_not_fully_synced: Flag,
+
+    /// The principal of the watchdog canister.
+    /// The watchdog canister has the authority to disable the Bitcoin canister's API
+    /// if it suspects that there is a problem.
+    pub watchdog_canister: Option<Principal>,
 }
 
 impl Default for Config {
@@ -344,6 +349,7 @@ impl Default for Config {
             fees: Fees::default(),
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
+            watchdog_canister: None,
         }
     }
 }

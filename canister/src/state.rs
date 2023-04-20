@@ -55,6 +55,11 @@ pub struct State {
     // TODO(EXC-1379): Remove this code once it's deployed to production.
     #[serde(default)]
     pub disable_api_if_not_fully_synced: Flag,
+
+    /// The principal of the watchdog canister.
+    /// The watchdog canister has the authority to disable the Bitcoin canister's API
+    /// if it suspects that there is a problem.
+    pub watchdog_canister: Option<Principal>,
 }
 
 impl State {
@@ -79,6 +84,7 @@ impl State {
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
+            watchdog_canister: None,
         }
     }
 
