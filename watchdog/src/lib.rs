@@ -4,7 +4,9 @@ mod endpoints;
 mod fetch;
 mod health;
 mod http;
+mod metrics;
 mod storage;
+mod types;
 
 #[cfg(test)]
 mod test_utils;
@@ -14,12 +16,13 @@ use crate::config::Config;
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
+use crate::types::{CandidHttpRequest, CandidHttpResponse};
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk_macros::{init, post_upgrade, query};
+use serde_bytes::ByteBuf;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::Duration;
-
-use ic_cdk_macros::{init, post_upgrade, query};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
@@ -61,20 +64,27 @@ async fn fetch_data() {
 /// Returns the health status of the Bitcoin canister.
 #[query]
 fn health_status() -> HealthStatus {
-    crate::health::compare(
-        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
-        BitcoinBlockApi::explorers()
-            .iter()
-            .filter_map(crate::storage::get)
-            .collect::<Vec<_>>(),
-        crate::storage::get_config(),
-    )
+    crate::health::health_status()
 }
 
 /// Returns the configuration of the watchdog canister.
 #[query]
 pub fn get_config() -> Config {
     crate::storage::get_config()
+}
+
+/// Processes external HTTP requests.
+#[query]
+pub fn http_request(request: CandidHttpRequest) -> CandidHttpResponse {
+    let parts: Vec<&str> = request.url.split('?').collect();
+    match parts[0] {
+        "/metrics" => crate::metrics::get_metrics(),
+        _ => CandidHttpResponse {
+            status_code: 404,
+            headers: vec![],
+            body: ByteBuf::from(String::from("Not found.")),
+        },
+    }
 }
 
 /// Prints a message to the console.

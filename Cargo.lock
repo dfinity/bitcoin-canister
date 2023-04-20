@@ -3244,8 +3244,10 @@ dependencies = [
  "ic-cdk-macros 0.6.10",
  "ic-cdk-timers",
  "ic-http",
+ "ic-metrics-encoder",
  "regex",
  "serde",
+ "serde_bytes",
  "serde_json",
  "tokio",
 ]
