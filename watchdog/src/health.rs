@@ -1,11 +1,13 @@
+use crate::bitcoin_block_apis::BitcoinBlockApi;
+use crate::config::Config;
 use crate::fetch::BlockInfo;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-/// Status codes for the health of Bitcoin canister compared to other explorers.
+/// Bitcoin canister height status compared to other explorers.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub enum StatusCode {
-    /// Not enough data to calculate the health status.
+pub enum HeightStatus {
+    /// Not enough data to calculate the status.
     #[serde(rename = "not_enough_data")]
     NotEnoughData,
 
@@ -22,64 +24,68 @@ pub enum StatusCode {
     Behind,
 }
 
-/// The health status of the Bitcoin canister.
+/// Health status of the Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatus {
-    /// The height of the block from the Bitcoin canister.
-    pub source_height: Option<u64>,
+    /// Main chain height of the Bitcoin canister.
+    pub height_source: Option<u64>,
 
-    /// The number of explorers inspected.
-    pub other_number: u64,
+    /// Height target derived from explorer heights.
+    pub height_target: Option<u64>,
 
-    /// The heights of the blocks from the explorers.
-    pub other_heights: Vec<u64>,
-
-    /// The target height of the Bitcoin canister calculated
-    /// from the explorers.
-    pub target_height: Option<u64>,
-
-    /// The difference between the source height
-    /// and the target height.
+    /// Difference between Bitcoin canister height and target height.
     pub height_diff: Option<i64>,
 
-    /// The code of the health status.
-    pub status: StatusCode,
+    /// Bitcoin canister height status.
+    pub height_status: HeightStatus,
+
+    /// Block info from the explorers.
+    pub explorers: Vec<BlockInfo>,
+}
+
+/// Calculates the health status of a Bitcoin canister.
+pub fn health_status() -> HealthStatus {
+    compare(
+        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
+        BitcoinBlockApi::explorers()
+            .iter()
+            .filter_map(crate::storage::get)
+            .collect::<Vec<_>>(),
+        crate::storage::get_config(),
+    )
 }
 
 /// Compares the source with the other explorers.
-pub fn compare(source: Option<BlockInfo>, other: Vec<BlockInfo>) -> HealthStatus {
-    let source_height = source.and_then(|block| block.height);
-    let heights = other
+fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
+    let height_source = source.and_then(|block| block.height);
+    let heights = explorers
         .iter()
         .filter_map(|block| block.height)
         .collect::<Vec<_>>();
-    let other_number = heights.len() as u64;
-    let other_heights = heights.clone();
-    let target_height = if other_number < crate::config::MIN_EXPLORERS {
+    let height_target = if heights.len() < config.min_explorers as usize {
         None // Not enough data from explorers.
     } else {
         median(heights)
     };
-    let height_diff = source_height
-        .zip(target_height)
+    let height_diff = height_source
+        .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
-    let status = height_diff.map_or(StatusCode::NotEnoughData, |diff| {
-        if diff < crate::config::BLOCKS_BEHIND_THRESHOLD {
-            StatusCode::Behind
-        } else if diff > crate::config::BLOCKS_AHEAD_THRESHOLD {
-            StatusCode::Ahead
+    let height_status = height_diff.map_or(HeightStatus::NotEnoughData, |diff| {
+        if diff < -(config.blocks_behind_threshold as i64) {
+            HeightStatus::Behind
+        } else if diff > config.blocks_ahead_threshold as i64 {
+            HeightStatus::Ahead
         } else {
-            StatusCode::Ok
+            HeightStatus::Ok
         }
     });
 
     HealthStatus {
-        source_height,
-        other_number,
-        other_heights,
-        target_height,
+        height_source,
+        height_target,
         height_diff,
-        status,
+        height_status,
+        explorers,
     }
 }
 
@@ -128,14 +134,13 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
-                source_height: None,
-                other_number: 0,
-                other_heights: vec![],
-                target_height: None,
+                height_source: None,
+                height_target: None,
                 height_diff: None,
-                status: StatusCode::NotEnoughData,
+                height_status: HeightStatus::NotEnoughData,
+                explorers: vec![],
             }
         );
     }
@@ -148,14 +153,13 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
-                source_height: Some(1_000),
-                other_number: 0,
-                other_heights: vec![],
-                target_height: None,
+                height_source: Some(1_000),
+                height_target: None,
                 height_diff: None,
-                status: StatusCode::NotEnoughData,
+                height_status: HeightStatus::NotEnoughData,
+                explorers: vec![],
             }
         );
     }
@@ -171,14 +175,16 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
-                source_height: Some(1_000),
-                other_number: 2,
-                other_heights: vec![1_005, 1_005],
-                target_height: None,
+                height_source: Some(1_000),
+                height_target: None,
                 height_diff: None,
-                status: StatusCode::NotEnoughData,
+                height_status: HeightStatus::NotEnoughData,
+                explorers: vec![
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
+                ],
             }
         );
     }
@@ -195,14 +201,17 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
-                source_height: Some(1_000),
-                other_number: 3,
-                other_heights: vec![1_006, 1_005, 1_004],
-                target_height: Some(1_005),
+                height_source: Some(1_000),
+                height_target: Some(1_005),
                 height_diff: Some(-5),
-                status: StatusCode::Behind,
+                height_status: HeightStatus::Behind,
+                explorers: vec![
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_006),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_004),
+                ],
             }
         );
     }
@@ -219,14 +228,17 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other),
+            compare(source, other, crate::storage::get_config()),
             HealthStatus {
-                source_height: Some(1_000),
-                other_number: 3,
-                other_heights: vec![996, 995, 994],
-                target_height: Some(995),
+                height_source: Some(1_000),
+                height_target: Some(995),
                 height_diff: Some(5),
-                status: StatusCode::Ahead,
+                height_status: HeightStatus::Ahead,
+                explorers: vec![
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 996),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 995),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 994),
+                ],
             }
         );
     }

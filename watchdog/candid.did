@@ -1,7 +1,6 @@
-/// Status codes for the health of Bitcoin canister
-/// compared to other explorers.
-type status_code = variant {
-    /// Not enough data to calculate the health status.
+/// Bitcoin canister height status compared to other explorers.
+type height_status = variant {
+    /// Not enough data to calculate the status.
     not_enough_data;
 
     /// Bitcoin canister height is healthy.
@@ -16,30 +15,68 @@ type status_code = variant {
     ahead;
 };
 
+/// Bitcoin block API providers.
+type bitcoin_block_api = variant {
+    api_bitaps_com;
+    api_blockchair_com;
+    api_blockcypher_com;
+    bitcoin_canister;
+    blockchain_info;
+    blockstream_info;
+    chain_api_btc_com;
+};
+
+/// Information about a Bitcoin block from a specific API provider.
+type block_info = record {
+    /// Bitcoin block API provider.
+    provider : bitcoin_block_api;
+
+    /// Block height.
+    height : opt nat64;
+};
+
 // The health status of the Bitcoin canister.
 type health_status = record {
-    /// The height of the block from the Bitcoin canister.
-    source_height : opt nat64;
+    /// Main chain height of the Bitcoin canister.
+    height_source : opt nat64;
 
-    /// The number of explorers inspected.
-    other_number : nat64;
+    /// Height target derived from explorer heights.
+    height_target : opt nat64;
 
-    /// The heights of the blocks from the explorers.
-    other_heights : vec nat64;
-
-    /// The target height of the Bitcoin canister calculated
-    /// from the explorers.
-    target_height : opt nat64;
-
-    /// The difference between the source height
-    /// and the target height.
+    /// Difference between Bitcoin canister height and target height.
     height_diff : opt int64;
 
-    /// The code of the health status.
-    status : status_code;
+    /// Bitcoin canister height status.
+    height_status : height_status;
+
+    /// Block info from the explorers.
+    explorers : vec block_info;
+};
+
+type config = record {
+    /// Below this threshold, the canister is considered to be behind.
+    blocks_behind_threshold : nat64;
+
+    /// Above this threshold, the canister is considered to be ahead.
+    blocks_ahead_threshold : nat64;
+
+    /// The minimum number of explorers to compare against.
+    min_explorers : nat64;
+
+    /// Bitcoin canister endpoint.
+    bitcoin_canister_endpoint : text;
+
+    /// The number of seconds to wait before the first data fetch.
+    delay_before_first_fetch_sec : nat64;
+
+    /// The number of seconds to wait between all the other data fetches.
+    interval_between_fetches_sec : nat64;
 };
 
 service : {
-    // Returns the health status of the Bitcoin canister.
+    /// Returns the health status of the Bitcoin canister.
     health_status : () -> (health_status) query;
+
+    /// Returns the configuration of the watchdog canister.
+    get_config : () -> (config) query;
 };

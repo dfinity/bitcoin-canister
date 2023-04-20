@@ -3,7 +3,6 @@ use crate::endpoints::*;
 /// Mocks all the outcalls to be successful.
 pub fn mock_all_outcalls() {
     let mocks = [
-        (endpoint_api_bitaps_com_block(), API_BITAPS_COM_RESPONSE),
         (
             endpoint_api_blockchair_com_block(),
             API_BLOCKCHAIR_COM_RESPONSE,
@@ -47,7 +46,6 @@ pub fn mock_all_outcalls() {
 /// Mocks all the outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
     let mocks = [
-        endpoint_api_bitaps_com_block(),
         endpoint_api_blockchair_com_block(),
         endpoint_api_blockcypher_com_block(),
         endpoint_bitcoin_canister(),
@@ -63,17 +61,6 @@ pub fn mock_all_outcalls_404() {
         ic_http::mock::mock(request, mock_response);
     }
 }
-
-// https://api.bitaps.com/btc/v1/blockchain/block/last
-pub const API_BITAPS_COM_RESPONSE: &str = r#"{
-    "data": {
-        "height": 700001,
-        "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
-        "adjustedTimestamp": 1678294552
-    },
-    "time": 0.0018
-}"#;
 
 // https://api.blockchair.com/bitcoin/stats
 pub const API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{

@@ -1,7 +1,10 @@
+use candid::CandidType;
+use serde::{Deserialize, Serialize};
+
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 
 /// The data fetched from the external bitcoin block APIs.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct BlockInfo {
     /// The provider of the bitcoin block data.
     pub provider: BitcoinBlockApi,
@@ -56,10 +59,6 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsCom,
-                    height: Some(700001),
-                },
-                BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: Some(700002),
                 },
@@ -95,10 +94,6 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsCom,
-                    height: None,
-                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: None,
