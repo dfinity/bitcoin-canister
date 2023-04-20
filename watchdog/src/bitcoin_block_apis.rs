@@ -1,24 +1,48 @@
 use crate::endpoints::*;
+use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 /// APIs that serve Bitcoin block data.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize)]
 pub enum BitcoinBlockApi {
-    ApiBitapsCom,
+    #[serde(rename = "api_blockchair_com")]
     ApiBlockchairCom,
+
+    #[serde(rename = "api_blockcypher_com")]
     ApiBlockcypherCom,
+
+    #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
+
+    #[serde(rename = "blockchain_info")]
     BlockchainInfo,
+
+    #[serde(rename = "blockstream_info")]
     BlockstreamInfo,
+
+    #[serde(rename = "chain_api_btc_com")]
     ChainApiBtcCom,
+}
+
+impl std::fmt::Display for BitcoinBlockApi {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Extract the name from the JSON representation provided by serde-rename.
+        let s = serde_json::to_string(&json!(self)).unwrap();
+        let name = s
+            .strip_prefix('\"')
+            .and_then(|s| s.strip_suffix('\"'))
+            .unwrap();
+
+        write!(f, "{}", name)
+    }
 }
 
 impl BitcoinBlockApi {
     /// Returns the list of all API providers.
     pub fn all_providers() -> Vec<Self> {
         vec![
-            BitcoinBlockApi::ApiBitapsCom,
             BitcoinBlockApi::ApiBlockchairCom,
             BitcoinBlockApi::ApiBlockcypherCom,
             BitcoinBlockApi::BitcoinCanister, // Not an explorer.
@@ -31,7 +55,6 @@ impl BitcoinBlockApi {
     /// Returns the list of explorers only.
     pub fn explorers() -> Vec<Self> {
         vec![
-            BitcoinBlockApi::ApiBitapsCom,
             BitcoinBlockApi::ApiBlockchairCom,
             BitcoinBlockApi::ApiBlockcypherCom,
             BitcoinBlockApi::BlockchainInfo,
@@ -43,7 +66,6 @@ impl BitcoinBlockApi {
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            BitcoinBlockApi::ApiBitapsCom => http_request(endpoint_api_bitaps_com_block()).await,
             BitcoinBlockApi::ApiBlockchairCom => {
                 http_request(endpoint_api_blockchair_com_block()).await
             }
@@ -143,19 +165,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_bitaps_com() {
-        run_test(
-            BitcoinBlockApi::ApiBitapsCom,
-            vec![(endpoint_api_bitaps_com_block(), 1)],
-            json!({
-                "height": 700001,
-                "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_api_blockchair_com() {
         run_test(
             BitcoinBlockApi::ApiBlockchairCom,
@@ -247,6 +256,24 @@ mod test {
             let response = provider.fetch_data().await;
 
             assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+    }
+
+    #[test]
+    fn test_names() {
+        let expected: std::collections::HashMap<BitcoinBlockApi, &str> = [
+            (BitcoinBlockApi::ApiBlockchairCom, "api_blockchair_com"),
+            (BitcoinBlockApi::ApiBlockcypherCom, "api_blockcypher_com"),
+            (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),
+            (BitcoinBlockApi::BlockchainInfo, "blockchain_info"),
+            (BitcoinBlockApi::BlockstreamInfo, "blockstream_info"),
+            (BitcoinBlockApi::ChainApiBtcCom, "chain_api_btc_com"),
+        ]
+        .iter()
+        .cloned()
+        .collect();
+        for provider in BitcoinBlockApi::all_providers() {
+            assert_eq!(provider.to_string(), expected[&provider].to_string());
         }
     }
 }

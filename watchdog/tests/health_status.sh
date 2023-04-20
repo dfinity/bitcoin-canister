@@ -19,7 +19,7 @@ for ((i=1; i<=ITERATIONS; i++))
 do
     health_status=$(dfx canister call watchdog health_status --query)
 
-    if ! [[ $health_status == *"status = variant { not_enough_data }"* ]]; then
+    if ! [[ $health_status == *"height_status = variant { not_enough_data }"* ]]; then
         has_enough_data=1
         break
     fi

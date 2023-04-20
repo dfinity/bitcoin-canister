@@ -1,7 +1,9 @@
-use crate::health::StatusCode;
+use crate::bitcoin_block_apis::BitcoinBlockApi;
+use crate::health::HeightStatus;
 use crate::types::CandidHttpResponse;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
+use std::collections::HashMap;
 
 /// Returns the metrics in the Prometheus format.
 pub fn get_metrics() -> CandidHttpResponse {
@@ -38,18 +40,13 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     let health = crate::health::health_status();
     w.encode_gauge(
         "bitcoin_canister_height",
-        health.source_height.map(|x| x as f64).unwrap_or(NO_HEIGHT),
-        "Height of the main chain of the Bitcoin canister.",
+        health.height_source.map(|x| x as f64).unwrap_or(NO_HEIGHT),
+        "Main chain height of the Bitcoin canister.",
     )?;
     w.encode_gauge(
-        "explorers_number",
-        health.other_number as f64,
-        "Number of explorers inspected.",
-    )?;
-    w.encode_gauge(
-        "target_height",
-        health.target_height.map(|x| x as f64).unwrap_or(NO_HEIGHT),
-        "Target height calculated from the explorers.",
+        "height_target",
+        health.height_target.map(|x| x as f64).unwrap_or(NO_HEIGHT),
+        "Height target derived from explorer heights.",
     )?;
     w.encode_gauge(
         "height_diff",
@@ -57,20 +54,33 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             .height_diff
             .map(|x| x as f64)
             .unwrap_or(NO_HEIGHT_DIFF),
-        "Difference between the source and the target heights.",
+        "Difference between Bitcoin canister height and target height.",
     )?;
 
-    let (not_enough_data, ok, ahead, behind) = match health.status {
-        StatusCode::NotEnoughData => (1.0, 0.0, 0.0, 0.0),
-        StatusCode::Ok => (0.0, 1.0, 0.0, 0.0),
-        StatusCode::Ahead => (0.0, 0.0, 1.0, 0.0),
-        StatusCode::Behind => (0.0, 0.0, 0.0, 1.0),
+    let (not_enough_data, ok, ahead, behind) = match health.height_status {
+        HeightStatus::NotEnoughData => (1.0, 0.0, 0.0, 0.0),
+        HeightStatus::Ok => (0.0, 1.0, 0.0, 0.0),
+        HeightStatus::Ahead => (0.0, 0.0, 1.0, 0.0),
+        HeightStatus::Behind => (0.0, 0.0, 0.0, 1.0),
     };
-    w.gauge_vec("status", "Status code of the Bitcoin canister health.")?
-        .value(&[("height", "not_enough_data")], not_enough_data)?
-        .value(&[("height", "ok")], ok)?
-        .value(&[("height", "ahead")], ahead)?
-        .value(&[("height", "behind")], behind)?;
+    w.gauge_vec("height_status", "Bitcoin canister height status.")?
+        .value(&[("code", "not_enough_data")], not_enough_data)?
+        .value(&[("code", "ok")], ok)?
+        .value(&[("code", "ahead")], ahead)?
+        .value(&[("code", "behind")], behind)?;
+
+    let mut available_explorers = HashMap::new();
+    for explorer in health.explorers {
+        available_explorers.insert(explorer.provider.clone(), explorer);
+    }
+    let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
+    for explorer in BitcoinBlockApi::explorers() {
+        let height = match available_explorers.get(&explorer) {
+            None => NO_HEIGHT,
+            Some(explorer) => explorer.height.map(|x| x as f64).unwrap_or(NO_HEIGHT),
+        };
+        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
+    }
 
     Ok(())
 }
