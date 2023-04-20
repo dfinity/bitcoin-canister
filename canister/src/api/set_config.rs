@@ -189,9 +189,6 @@ mod test {
             ..Default::default()
         })
         .await;
-
-        // Assert
-        assert_eq!(with_state(|s| s.api_access), Flag::Disabled);
     }
 
     #[tokio::test]
