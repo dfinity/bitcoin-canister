@@ -57,6 +57,8 @@ pub struct State {
     pub disable_api_if_not_fully_synced: Flag,
 
     /// The principal of the watchdog canister.
+    /// The watchdog canister has the authority to disable the Bitcoin canister's API
+    /// if it suspects that there is a problem.
     pub watchdog_canister: Option<Principal>,
 }
 
