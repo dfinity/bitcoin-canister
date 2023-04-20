@@ -18,24 +18,22 @@ type status_code = variant {
 
 // The health status of the Bitcoin canister.
 type health_status = record {
-    /// The height of the block from the Bitcoin canister.
+    /// Height of the block from the Bitcoin canister.
     source_height : opt nat64;
 
-    /// The number of explorers inspected.
+    /// Number of explorers inspected.
     other_number : nat64;
 
-    /// The heights of the blocks from the explorers.
+    /// Heights of the blocks from the explorers.
     other_heights : vec nat64;
 
-    /// The target height of the Bitcoin canister calculated
-    /// from the explorers.
+    /// Target height calculated from the explorers.
     target_height : opt nat64;
 
-    /// The difference between the source height
-    /// and the target height.
+    /// Difference between the source and the target heights.
     height_diff : opt int64;
 
-    /// The code of the health status.
+    /// Status code of the Bitcoin canister health.
     status : status_code;
 };
 
