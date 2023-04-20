@@ -7,9 +7,6 @@ use serde_json::json;
 /// APIs that serve Bitcoin block data.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize)]
 pub enum BitcoinBlockApi {
-    #[serde(rename = "api_bitaps_com")]
-    ApiBitapsCom,
-
     #[serde(rename = "api_blockchair_com")]
     ApiBlockchairCom,
 
@@ -46,7 +43,6 @@ impl BitcoinBlockApi {
     /// Returns the list of all API providers.
     pub fn all_providers() -> Vec<Self> {
         vec![
-            BitcoinBlockApi::ApiBitapsCom,
             BitcoinBlockApi::ApiBlockchairCom,
             BitcoinBlockApi::ApiBlockcypherCom,
             BitcoinBlockApi::BitcoinCanister, // Not an explorer.
@@ -59,7 +55,6 @@ impl BitcoinBlockApi {
     /// Returns the list of explorers only.
     pub fn explorers() -> Vec<Self> {
         vec![
-            BitcoinBlockApi::ApiBitapsCom,
             BitcoinBlockApi::ApiBlockchairCom,
             BitcoinBlockApi::ApiBlockcypherCom,
             BitcoinBlockApi::BlockchainInfo,
@@ -71,7 +66,6 @@ impl BitcoinBlockApi {
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            BitcoinBlockApi::ApiBitapsCom => http_request(endpoint_api_bitaps_com_block()).await,
             BitcoinBlockApi::ApiBlockchairCom => {
                 http_request(endpoint_api_blockchair_com_block()).await
             }
@@ -168,19 +162,6 @@ mod test {
             let request = config.request();
             assert_eq!(ic_http::mock::times_called(request), count);
         }
-    }
-
-    #[tokio::test]
-    async fn test_api_bitaps_com() {
-        run_test(
-            BitcoinBlockApi::ApiBitapsCom,
-            vec![(endpoint_api_bitaps_com_block(), 1)],
-            json!({
-                "height": 700001,
-                "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-            }),
-        )
-        .await;
     }
 
     #[tokio::test]
@@ -281,7 +262,6 @@ mod test {
     #[test]
     fn test_names() {
         let expected: std::collections::HashMap<BitcoinBlockApi, &str> = [
-            (BitcoinBlockApi::ApiBitapsCom, "api_bitaps_com"),
             (BitcoinBlockApi::ApiBlockchairCom, "api_blockchair_com"),
             (BitcoinBlockApi::ApiBlockcypherCom, "api_blockcypher_com"),
             (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),

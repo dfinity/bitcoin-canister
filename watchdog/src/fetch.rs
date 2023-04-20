@@ -59,10 +59,6 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsCom,
-                    height: Some(700001),
-                },
-                BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: Some(700002),
                 },
@@ -98,10 +94,6 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsCom,
-                    height: None,
-                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairCom,
                     height: None,
