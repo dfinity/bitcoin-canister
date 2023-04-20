@@ -1340,8 +1340,12 @@ mod test {
         //  \-> B'-> C'-> D'-> E'-> F'
         //
         // Now that one fork is longer, the tip of that fork is considered the tip
-        // at zero confirmations.
+        // at zero and one confirmations.
         assert_tip_at_confirmations(0, chain_6.block_hash());
+        assert_tip_at_confirmations(1, chain_6.block_hash());
+
+        // A is the tip at 2+ confirmations.
+        assert_tip_at_confirmations(2, chain[0].block_hash());
     }
 
     // Asserts that the given block hash is the tip at the given number of confirmations.
