@@ -1,4 +1,5 @@
 use crate::endpoints::*;
+use crate::print;
 use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
 use serde::{Deserialize, Serialize};
@@ -120,7 +121,7 @@ async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Val
         Ok((response,)) if response.status == 200 => parse_response(response),
         Ok(_) => json!({}),
         Err(error) => {
-            print!("HTTP request failed: {:?}", error);
+            print(&format!("HTTP request failed: {:?}", error));
             json!({})
         }
     }
@@ -130,11 +131,13 @@ async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Val
 fn parse_response(response: HttpResponse) -> serde_json::Value {
     match String::from_utf8(response.body) {
         Ok(json_str) => serde_json::from_str(&json_str).unwrap_or_else(|error| {
-            print!("Failed to parse JSON from string: {:?}", error);
+            print(&format!(
+                "Failed to parse JSON from string, error: {error:?}, text: {json_str:?}"
+            ));
             json!({})
         }),
         Err(error) => {
-            print!("Raw response is not UTF-8 encoded: {:?}", error);
+            print(&format!("Raw response is not UTF-8 encoded: {:?}", error));
             json!({})
         }
     }
@@ -250,8 +253,18 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_http_request_failed() {
+    async fn test_http_request_failed_with_404() {
         test_utils::mock_all_outcalls_404();
+        for provider in BitcoinBlockApi::all_providers() {
+            let response = provider.fetch_data().await;
+
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_http_request_abusing_api() {
+        test_utils::mock_all_outcalls_abusing_api();
         for provider in BitcoinBlockApi::all_providers() {
             let response = provider.fetch_data().await;
 

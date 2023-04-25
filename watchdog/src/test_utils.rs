@@ -62,6 +62,30 @@ pub fn mock_all_outcalls_404() {
     }
 }
 
+/// Mocks all the outcalls to abuse the API.
+pub fn mock_all_outcalls_abusing_api() {
+    let mocks = [
+        endpoint_api_blockchair_com_block(),
+        endpoint_api_blockcypher_com_block(),
+        endpoint_bitcoin_canister(),
+        endpoint_blockchain_info_hash(),
+        endpoint_blockchain_info_height(),
+        endpoint_blockstream_info_hash(),
+        endpoint_blockstream_info_height(),
+        endpoint_chain_api_btc_com_block(),
+    ];
+    for config in mocks {
+        let request = config.request();
+        let mock_response = ic_http::create_response()
+            .status(200)
+            .body(DONT_ABUSE_THE_API)
+            .build();
+        ic_http::mock::mock(request, mock_response);
+    }
+}
+
+pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
+
 // https://api.blockchair.com/bitcoin/stats
 pub const API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
     "data":

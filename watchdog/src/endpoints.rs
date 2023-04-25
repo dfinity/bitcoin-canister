@@ -207,7 +207,9 @@ fn apply_to_body_json(
 ) -> HttpResponse {
     apply_to_body(raw, |text| match serde_json::from_str(&text) {
         Err(e) => {
-            print(&format!("Failed to parse response body: err = {:?}", e));
+            print(&format!(
+                "Failed to parse JSON in response body, error: {e:?}, text: {text:?}"
+            ));
             String::default()
         }
         Ok(original) => {
