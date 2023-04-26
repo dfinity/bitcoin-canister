@@ -15,5 +15,5 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 /// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
 #[cfg(target_arch = "wasm32")]
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
-    ic_cdk::api::management_canister::http_request::http_request(arg).await
+    ic_cdk::api::management_canister::http_request::http_request_with_cycles(arg, 0).await
 }

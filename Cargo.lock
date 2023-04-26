@@ -502,7 +502,7 @@ version = "0.1.0"
 dependencies = [
  "candid 0.8.4",
  "futures",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "ic-http",
  "serde",
@@ -1457,7 +1457,7 @@ version = "0.1.0"
 dependencies = [
  "candid 0.8.4",
  "futures",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "serde_json",
  "tokio",
@@ -3240,7 +3240,7 @@ dependencies = [
  "candid 0.8.4",
  "futures",
  "hex",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "ic-cdk-timers",
  "ic-http",
