@@ -2,7 +2,7 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
 /// The Bitcoin network to use.
-const BITCOIN_NETWORK: BitcoinNetwork = BitcoinNetwork::Mainnet;
+const BITCOIN_NETWORK: BitcoinNetwork = BitcoinNetwork::Testnet;
 
 /// Below this threshold, the canister is considered to be behind.
 const BLOCKS_BEHIND_THRESHOLD: u64 = 2;
@@ -28,7 +28,10 @@ const INTERVAL_BETWEEN_FETCHES_SEC: u64 = 120;
 
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BitcoinNetwork {
+    #[serde(rename = "mainnet")]
     Mainnet,
+
+    #[serde(rename = "testnet")]
     Testnet,
 }
 

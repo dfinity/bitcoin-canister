@@ -19,10 +19,13 @@ type height_status = variant {
 type bitcoin_block_api = variant {
     api_bitaps_com_mainnet;
     api_blockchair_com_mainnet;
+    api_blockchair_com_testnet;
     api_blockcypher_com_mainnet;
+    api_blockcypher_com_testnet;
     bitcoin_canister;
     blockchain_info_mainnet;
     blockstream_info_mainnet;
+    blockstream_info_testnet;
     chain_api_btc_com_mainnet;
 };
 
@@ -53,7 +56,15 @@ type health_status = record {
     explorers : vec block_info;
 };
 
+type bitcoin_network = variant {
+    mainnet;
+    testnet;
+};
+
 type config = record {
+    /// The Bitcoin network to use.
+    bitcoin_network : bitcoin_network;
+
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold : nat64;
 
