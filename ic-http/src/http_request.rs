@@ -24,6 +24,7 @@ pub async fn http_request_with_cycles(
     arg: CanisterHttpRequestArgument,
     _cycles: u128,
 ) -> CallResult<(HttpResponse,)> {
+    // Mocking cycles is not implemented at the moment.
     crate::mock::http_request(arg).await
 }
 
