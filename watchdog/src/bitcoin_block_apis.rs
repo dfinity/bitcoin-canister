@@ -1,3 +1,4 @@
+use crate::config::BitcoinNetwork;
 use crate::endpoints::*;
 use crate::print;
 use candid::CandidType;
@@ -11,8 +12,14 @@ pub enum BitcoinBlockApi {
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
+    #[serde(rename = "api_blockchair_com_testnet")]
+    ApiBlockchairComTestnet,
+
     #[serde(rename = "api_blockcypher_com_mainnet")]
     ApiBlockcypherComMainnet,
+
+    #[serde(rename = "api_blockcypher_com_testnet")]
+    ApiBlockcypherComTestnet,
 
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
@@ -22,6 +29,9 @@ pub enum BitcoinBlockApi {
 
     #[serde(rename = "blockstream_info_mainnet")]
     BlockstreamInfoMainnet,
+
+    #[serde(rename = "blockstream_info_testnet")]
+    BlockstreamInfoTestnet,
 
     #[serde(rename = "chain_api_btc_com_mainnet")]
     ChainApiBtcComMainnet,
@@ -42,7 +52,23 @@ impl std::fmt::Display for BitcoinBlockApi {
 
 impl BitcoinBlockApi {
     /// Returns the list of all API providers.
-    pub fn all_providers_mainnet() -> Vec<Self> {
+    pub fn network_providers(bitcoin_network: BitcoinNetwork) -> Vec<Self> {
+        match bitcoin_network {
+            BitcoinNetwork::Mainnet => Self::providers_mainnet(),
+            BitcoinNetwork::Testnet => Self::providers_testnet(),
+        }
+    }
+
+    /// Returns the list of explorers only.
+    pub fn network_explorers(bitcoin_network: BitcoinNetwork) -> Vec<Self> {
+        match bitcoin_network {
+            BitcoinNetwork::Mainnet => Self::explorers_mainnet(),
+            BitcoinNetwork::Testnet => Self::explorers_testnet(),
+        }
+    }
+
+    /// Returns the list of all mainnet API providers.
+    fn providers_mainnet() -> Vec<Self> {
         vec![
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
@@ -53,8 +79,18 @@ impl BitcoinBlockApi {
         ]
     }
 
-    /// Returns the list of explorers only.
-    pub fn explorers_mainnet() -> Vec<Self> {
+    /// Returns the list of all testnet API providers.
+    fn providers_testnet() -> Vec<Self> {
+        vec![
+            BitcoinBlockApi::ApiBlockchairComTestnet,
+            BitcoinBlockApi::ApiBlockcypherComTestnet,
+            BitcoinBlockApi::BitcoinCanister, // Not an explorer.
+            BitcoinBlockApi::BlockstreamInfoTestnet,
+        ]
+    }
+
+    /// Returns the list of mainnet explorers only.
+    fn explorers_mainnet() -> Vec<Self> {
         vec![
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
@@ -64,14 +100,29 @@ impl BitcoinBlockApi {
         ]
     }
 
+    /// Returns the list of testnet explorers only.
+    fn explorers_testnet() -> Vec<Self> {
+        vec![
+            BitcoinBlockApi::ApiBlockchairComTestnet,
+            BitcoinBlockApi::ApiBlockcypherComTestnet,
+            BitcoinBlockApi::BlockstreamInfoTestnet,
+        ]
+    }
+
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
             BitcoinBlockApi::ApiBlockchairComMainnet => {
                 http_request(endpoint_api_blockchair_com_block_mainnet()).await
             }
+            BitcoinBlockApi::ApiBlockchairComTestnet => {
+                http_request(endpoint_api_blockchair_com_block_testnet()).await
+            }
             BitcoinBlockApi::ApiBlockcypherComMainnet => {
                 http_request(endpoint_api_blockcypher_com_block_mainnet()).await
+            }
+            BitcoinBlockApi::ApiBlockcypherComTestnet => {
+                http_request(endpoint_api_blockcypher_com_block_testnet()).await
             }
             BitcoinBlockApi::BitcoinCanister => http_request(endpoint_bitcoin_canister()).await,
             BitcoinBlockApi::BlockchainInfoMainnet => {
@@ -94,6 +145,22 @@ impl BitcoinBlockApi {
                 let futures = vec![
                     http_request(endpoint_blockstream_info_height_mainnet()),
                     http_request(endpoint_blockstream_info_hash_mainnet()),
+                ];
+                let results = futures::future::join_all(futures).await;
+                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                    (Some(height), Some(hash)) => {
+                        json!({
+                            "height": height,
+                            "hash": hash,
+                        })
+                    }
+                    _ => json!({}),
+                }
+            }
+            BitcoinBlockApi::BlockstreamInfoTestnet => {
+                let futures = vec![
+                    http_request(endpoint_blockstream_info_height_testnet()),
+                    http_request(endpoint_blockstream_info_hash_testnet()),
                 ];
                 let results = futures::future::join_all(futures).await;
                 match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
@@ -159,8 +226,6 @@ mod test {
         times_called: Vec<(crate::http::HttpRequestConfig, u64)>,
         expected: serde_json::Value,
     ) {
-        test_utils::mock_all_outcalls();
-
         let response = api.fetch_data().await;
         assert_json_eq!(response, expected);
 
@@ -171,7 +236,8 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_blockchair_com() {
+    async fn test_api_blockchair_com_mainnet() {
+        test_utils::mock_mainnet_outcalls();
         run_test(
             BitcoinBlockApi::ApiBlockchairComMainnet,
             vec![(endpoint_api_blockchair_com_block_mainnet(), 1)],
@@ -184,7 +250,22 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_blockcypher_com() {
+    async fn test_api_blockchair_com_testnet() {
+        test_utils::mock_testnet_outcalls();
+        run_test(
+            BitcoinBlockApi::ApiBlockchairComTestnet,
+            vec![(endpoint_api_blockchair_com_block_testnet(), 1)],
+            json!({
+                "height": 2000001,
+                "hash": "0000000000000000000fff222222222222222222222222222222222222222222",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_api_blockcypher_com_mainnet() {
+        test_utils::mock_mainnet_outcalls();
         run_test(
             BitcoinBlockApi::ApiBlockcypherComMainnet,
             vec![(endpoint_api_blockcypher_com_block_mainnet(), 1)],
@@ -198,7 +279,23 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_bitcoin_canister() {
+    async fn test_api_blockcypher_com_testnet() {
+        test_utils::mock_testnet_outcalls();
+        run_test(
+            BitcoinBlockApi::ApiBlockcypherComTestnet,
+            vec![(endpoint_api_blockcypher_com_block_testnet(), 1)],
+            json!({
+                "height": 2000002,
+                "hash": "0000000000000000000fff333333333333333333333333333333333333333333",
+                "previous_hash": "0000000000000000000fff222222222222222222222222222222222222222222",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_bitcoin_canister_mainnet() {
+        test_utils::mock_mainnet_outcalls();
         run_test(
             BitcoinBlockApi::BitcoinCanister,
             vec![(endpoint_bitcoin_canister(), 1)],
@@ -210,7 +307,8 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_blockchain_info() {
+    async fn test_blockchain_info_mainnet() {
+        test_utils::mock_mainnet_outcalls();
         run_test(
             BitcoinBlockApi::BlockchainInfoMainnet,
             vec![
@@ -226,7 +324,8 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_blockstream_info() {
+    async fn test_blockstream_info_mainnet() {
+        test_utils::mock_mainnet_outcalls();
         run_test(
             BitcoinBlockApi::BlockstreamInfoMainnet,
             vec![
@@ -242,7 +341,25 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_chain_api_btc_com() {
+    async fn test_blockstream_info_testnet() {
+        test_utils::mock_testnet_outcalls();
+        run_test(
+            BitcoinBlockApi::BlockstreamInfoTestnet,
+            vec![
+                (endpoint_blockstream_info_hash_testnet(), 1),
+                (endpoint_blockstream_info_height_testnet(), 1),
+            ],
+            json!({
+                "height": 2000003,
+                "hash": "0000000000000000000fff555555555555555555555555555555555555555555",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_chain_api_btc_com_mainnet() {
+        test_utils::mock_mainnet_outcalls();
         run_test(
             BitcoinBlockApi::ChainApiBtcComMainnet,
             vec![(endpoint_chain_api_btc_com_block_mainnet(), 1)],
@@ -258,7 +375,11 @@ mod test {
     #[tokio::test]
     async fn test_http_request_failed_with_404() {
         test_utils::mock_all_outcalls_404();
-        for provider in BitcoinBlockApi::all_providers_mainnet() {
+        let all_providers = BitcoinBlockApi::providers_mainnet()
+            .into_iter()
+            .chain(BitcoinBlockApi::providers_testnet().into_iter())
+            .collect::<Vec<_>>();
+        for provider in all_providers {
             let response = provider.fetch_data().await;
 
             assert_eq!(response, json!({}), "provider: {:?}", provider);
@@ -268,7 +389,7 @@ mod test {
     #[tokio::test]
     async fn test_http_request_abusing_api() {
         test_utils::mock_all_outcalls_abusing_api();
-        for provider in BitcoinBlockApi::all_providers_mainnet() {
+        for provider in BitcoinBlockApi::providers_mainnet() {
             let response = provider.fetch_data().await;
 
             assert_eq!(response, json!({}), "provider: {:?}", provider);
@@ -283,8 +404,16 @@ mod test {
                 "api_blockchair_com_mainnet",
             ),
             (
+                BitcoinBlockApi::ApiBlockchairComTestnet,
+                "api_blockchair_com_testnet",
+            ),
+            (
                 BitcoinBlockApi::ApiBlockcypherComMainnet,
                 "api_blockcypher_com_mainnet",
+            ),
+            (
+                BitcoinBlockApi::ApiBlockcypherComTestnet,
+                "api_blockcypher_com_testnet",
             ),
             (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),
             (
@@ -296,6 +425,10 @@ mod test {
                 "blockstream_info_mainnet",
             ),
             (
+                BitcoinBlockApi::BlockstreamInfoTestnet,
+                "blockstream_info_testnet",
+            ),
+            (
                 BitcoinBlockApi::ChainApiBtcComMainnet,
                 "chain_api_btc_com_mainnet",
             ),
@@ -303,7 +436,11 @@ mod test {
         .iter()
         .cloned()
         .collect();
-        for provider in BitcoinBlockApi::all_providers_mainnet() {
+        let all_providers = BitcoinBlockApi::providers_mainnet()
+            .into_iter()
+            .chain(BitcoinBlockApi::providers_testnet().into_iter())
+            .collect::<Vec<_>>();
+        for provider in all_providers {
             assert_eq!(provider.to_string(), expected[&provider].to_string());
         }
     }

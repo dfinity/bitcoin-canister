@@ -328,7 +328,7 @@ mod test {
         run_http_request_test(
             endpoint_api_blockchair_com_block_mainnet(),
             "https://api.blockchair.com/bitcoin/stats",
-            test_utils::API_BLOCKCHAIR_COM_RESPONSE,
+            test_utils::API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
             json!({
                 "height": 700002,
                 "hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
@@ -342,7 +342,7 @@ mod test {
         run_http_request_test(
             endpoint_api_blockcypher_com_block_mainnet(),
             "https://api.blockcypher.com/v1/btc/main",
-            test_utils::API_BLOCKCYPHER_COM_RESPONSE,
+            test_utils::API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
             json!({
                 "height": 700003,
                 "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
@@ -357,7 +357,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
-            test_utils::BITCOIN_CANISTER_RESPONSE,
+            test_utils::BITCOIN_CANISTER_MAINNET_RESPONSE,
             json!({
                 "height": 700007,
             }),
@@ -370,7 +370,7 @@ mod test {
         run_http_request_test(
             endpoint_blockchain_info_hash_mainnet(),
             "https://blockchain.info/q/latesthash",
-            test_utils::BLOCKCHAIN_INFO_HASH_RESPONSE,
+            test_utils::BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE,
             json!({
                 "hash": "0000000000000000000aaa444444444444444444444444444444444444444444",
             }),
@@ -383,7 +383,7 @@ mod test {
         run_http_request_test(
             endpoint_blockchain_info_height_mainnet(),
             "https://blockchain.info/q/getblockcount",
-            test_utils::BLOCKCHAIN_INFO_HEIGHT_RESPONSE,
+            test_utils::BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
             json!({
                 "height": 700004,
             }),
@@ -396,7 +396,7 @@ mod test {
         run_http_request_test(
             endpoint_blockstream_info_hash_mainnet(),
             "https://blockstream.info/api/blocks/tip/hash",
-            test_utils::BLOCKSTREAM_INFO_HASH_RESPONSE,
+            test_utils::BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE,
             json!({
                 "hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
             }),
@@ -409,7 +409,7 @@ mod test {
         run_http_request_test(
             endpoint_blockstream_info_height_mainnet(),
             "https://blockstream.info/api/blocks/tip/height",
-            test_utils::BLOCKSTREAM_INFO_HEIGHT_RESPONSE,
+            test_utils::BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
             json!({
                 "height": 700005,
             }),
@@ -422,7 +422,7 @@ mod test {
         run_http_request_test(
             endpoint_chain_api_btc_com_block_mainnet(),
             "https://chain.api.btc.com/v3/block/latest",
-            test_utils::CHAIN_API_BTC_COM_RESPONSE,
+            test_utils::CHAIN_API_BTC_COM_MAINNET_RESPONSE,
             json!({
                 "height": 700006,
                 "hash": "0000000000000000000aaa666666666666666666666666666666666666666666",
@@ -434,7 +434,7 @@ mod test {
 
     #[test]
     fn test_transform_function_names() {
-        test_utils::mock_all_outcalls();
+        test_utils::mock_mainnet_outcalls();
 
         let names = ic_http::mock::registered_transform_function_names();
         let names = names.iter().map(|s| s.as_str()).collect::<Vec<_>>();
