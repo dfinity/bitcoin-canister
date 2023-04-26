@@ -126,5 +126,6 @@ pub mod mock;
 
 // Re-export.
 pub use crate::http_request::http_request;
+pub use crate::http_request::http_request_with_cycles;
 pub use crate::request::create_request;
 pub use crate::response::create_response;

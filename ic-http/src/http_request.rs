@@ -17,3 +17,22 @@ pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpR
 pub async fn http_request(arg: CanisterHttpRequestArgument) -> CallResult<(HttpResponse,)> {
     ic_cdk::api::management_canister::http_request::http_request(arg).await
 }
+
+/// Make a HTTP request to a given URL and return HTTP response, possibly after a transformation.
+#[cfg(not(target_arch = "wasm32"))]
+pub async fn http_request_with_cycles(
+    arg: CanisterHttpRequestArgument,
+    _cycles: u128,
+) -> CallResult<(HttpResponse,)> {
+    // Mocking cycles is not implemented at the moment.
+    crate::mock::http_request(arg).await
+}
+
+/// Make an HTTP request to a given URL and return the HTTP response, possibly after a transformation.
+#[cfg(target_arch = "wasm32")]
+pub async fn http_request_with_cycles(
+    arg: CanisterHttpRequestArgument,
+    cycles: u128,
+) -> CallResult<(HttpResponse,)> {
+    ic_cdk::api::management_canister::http_request::http_request_with_cycles(arg, cycles).await
+}
