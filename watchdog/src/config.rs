@@ -2,7 +2,7 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
 /// The Bitcoin network to use.
-const BITCOIN_NETWORK: BitcoinNetwork = BitcoinNetwork::Testnet;
+const BITCOIN_NETWORK: BitcoinNetwork = BitcoinNetwork::Mainnet;
 
 /// Below this threshold, the canister is considered to be behind.
 const BLOCKS_BEHIND_THRESHOLD: u64 = 2;

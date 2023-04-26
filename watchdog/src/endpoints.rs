@@ -1,14 +1,49 @@
 use crate::http::HttpRequestConfig;
 use crate::print;
 use crate::{
-    transform_api_blockchair_com_block, transform_api_blockcypher_com_block,
-    transform_bitcoin_canister, transform_blockchain_info_hash, transform_blockchain_info_height,
+    transform_api_bitaps_com_block, transform_api_blockchair_com_block,
+    transform_api_blockcypher_com_block, transform_bitcoin_canister,
+    transform_blockchain_info_hash, transform_blockchain_info_height,
     transform_blockstream_info_hash, transform_blockstream_info_height,
     transform_chain_api_btc_com_block,
 };
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use regex::Regex;
 use serde_json::json;
+
+/// Creates a config for fetching mainnet block data from api.bitaps.com.
+pub fn endpoint_api_bitaps_com_block_mainnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.bitaps.com/btc/v1/blockchain/block/last",
+        Some(transform_api_bitaps_com_block),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["height"].as_u64(),
+                    "hash": data["hash"].as_str(),
+                })
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching testnet block data from api.bitaps.com.
+pub fn endpoint_api_bitaps_com_block_testnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.bitaps.com/testnet/btc/v1/blockchain/block/last",
+        Some(transform_api_bitaps_com_block),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["height"].as_u64(),
+                    "hash": data["hash"].as_str(),
+                })
+            })
+        },
+    )
+}
 
 /// Creates a config for fetching mainnet block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
@@ -324,6 +359,34 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_api_bitaps_com_block_mainnet() {
+        run_http_request_test(
+            endpoint_api_bitaps_com_block_mainnet(),
+            "https://api.bitaps.com/btc/v1/blockchain/block/last",
+            test_utils::API_BITAPS_COM_MAINNET_RESPONSE,
+            json!({
+                "height": 700001,
+                "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_api_bitaps_com_block_testnet() {
+        run_http_request_test(
+            endpoint_api_bitaps_com_block_testnet(),
+            "https://api.bitaps.com/testnet/btc/v1/blockchain/block/last",
+            test_utils::API_BITAPS_COM_TESTNET_RESPONSE,
+            json!({
+                "height": 2000001,
+                "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
     async fn test_api_blockchair_com_block() {
         run_http_request_test(
             endpoint_api_blockchair_com_block_mainnet(),
@@ -353,13 +416,28 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_bitcoin_canister() {
+    async fn test_bitcoin_canister_mainnet() {
+        crate::storage::set_config(crate::config::Config::mainnet());
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
             test_utils::BITCOIN_CANISTER_MAINNET_RESPONSE,
             json!({
                 "height": 700007,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_bitcoin_canister_testnet() {
+        crate::storage::set_config(crate::config::Config::testnet());
+        run_http_request_test(
+            endpoint_bitcoin_canister(),
+            "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
+            test_utils::BITCOIN_CANISTER_TESTNET_RESPONSE,
+            json!({
+                "height": 2000007,
             }),
         )
         .await;
@@ -435,6 +513,7 @@ mod test {
     #[test]
     fn test_transform_function_names() {
         test_utils::mock_mainnet_outcalls();
+        test_utils::mock_testnet_outcalls();
 
         let names = ic_http::mock::registered_transform_function_names();
         let names = names.iter().map(|s| s.as_str()).collect::<Vec<_>>();
@@ -442,6 +521,7 @@ mod test {
         assert_eq!(
             names,
             vec![
+                "transform_api_bitaps_com_block",
                 "transform_api_blockchair_com_block",
                 "transform_api_blockcypher_com_block",
                 "transform_bitcoin_canister",

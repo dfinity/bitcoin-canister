@@ -4,6 +4,10 @@ use crate::endpoints::*;
 pub fn mock_mainnet_outcalls() {
     let mocks = [
         (
+            endpoint_api_bitaps_com_block_mainnet(),
+            API_BITAPS_COM_MAINNET_RESPONSE,
+        ),
+        (
             endpoint_api_blockchair_com_block_mainnet(),
             API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
         ),
@@ -49,6 +53,10 @@ pub fn mock_mainnet_outcalls() {
 /// Mocks all the testnet outcalls to be successful.
 pub fn mock_testnet_outcalls() {
     let mocks = [
+        (
+            endpoint_api_bitaps_com_block_testnet(),
+            API_BITAPS_COM_TESTNET_RESPONSE,
+        ),
         (
             endpoint_api_blockchair_com_block_testnet(),
             API_BLOCKCHAIR_COM_TESTNET_RESPONSE,
@@ -131,6 +139,28 @@ pub fn mock_all_outcalls_abusing_api() {
 
 pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
 
+// https://api.bitaps.com/btc/v1/blockchain/block/last
+pub const API_BITAPS_COM_MAINNET_RESPONSE: &str = r#"{
+    "data": {
+        "height": 700001,
+        "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
+        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
+        "adjustedTimestamp": 1678294552
+    },
+    "time": 0.0018
+}"#;
+
+// https://api.bitaps.com/testnet/btc/v1/blockchain/block/last
+pub const API_BITAPS_COM_TESTNET_RESPONSE: &str = r#"{
+    "data": {
+        "height": 2000001,
+        "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
+        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
+        "adjustedTimestamp": 1678294552
+    },
+    "time": 0.0018
+}"#;
+
 // https://api.blockchair.com/bitcoin/stats
 pub const API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
     "data":
@@ -195,7 +225,7 @@ pub const API_BLOCKCHAIR_COM_TESTNET_RESPONSE: &str = r#"{
         "mempool_size":39045,
         "mempool_tps":0.06666666666666667,
         "mempool_total_fee_usd":0,
-        "best_block_height":2000001,
+        "best_block_height":2000002,
         "best_block_hash":"0000000000000000000fff222222222222222222222222222222222222222222",
         "best_block_time":"2023-04-26 17:12:02",
         "blockchain_size":28774784525,
@@ -274,7 +304,7 @@ pub const API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
 // https://api.blockcypher.com/v1/btc/test3
 pub const API_BLOCKCYPHER_COM_TESTNET_RESPONSE: &str = r#"{
     "name": "BTC.test3",
-    "height": 2000002,
+    "height": 2000003,
     "hash": "0000000000000000000fff333333333333333333333333333333333333333333",
     "time": "2023-04-26T17:12:11.044585287Z",
     "latest_url": "https://api.blockcypher.com/v1/btc/test3/blocks/0000000000008d9497a398933d6618c6a39a6c818c22e82ef864f0a53c7bc4c1",
@@ -340,7 +370,7 @@ pub const BLOCKSTREAM_INFO_HASH_TESTNET_RESPONSE: &str =
     r#"0000000000000000000fff555555555555555555555555555555555555555555"#;
 
 // https://blockstream.info/testnet/api/blocks/tip/height
-pub const BLOCKSTREAM_INFO_HEIGHT_TESTNET_RESPONSE: &str = r#"2000003"#;
+pub const BLOCKSTREAM_INFO_HEIGHT_TESTNET_RESPONSE: &str = r#"2000004"#;
 
 // https://chain.api.btc.com/v3/block/latest
 pub const CHAIN_API_BTC_COM_MAINNET_RESPONSE: &str = r#"{

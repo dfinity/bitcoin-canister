@@ -59,6 +59,10 @@ mod test {
             result,
             vec![
                 BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsComMainnet,
+                    height: Some(700001),
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairComMainnet,
                     height: Some(700002),
                 },
@@ -95,12 +99,16 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairComTestnet,
+                    provider: BitcoinBlockApi::ApiBitapsComTestnet,
                     height: Some(2000001),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherComTestnet,
+                    provider: BitcoinBlockApi::ApiBlockchairComTestnet,
                     height: Some(2000002),
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::ApiBlockcypherComTestnet,
+                    height: Some(2000003),
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BitcoinCanister,
@@ -108,7 +116,7 @@ mod test {
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BlockstreamInfoTestnet,
-                    height: Some(2000003),
+                    height: Some(2000004),
                 },
             ]
         );
@@ -122,6 +130,10 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsComMainnet,
+                    height: None,
+                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairComMainnet,
                     height: None,
@@ -158,6 +170,10 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsComTestnet,
+                    height: None,
+                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairComTestnet,
                     height: None,

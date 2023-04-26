@@ -9,6 +9,12 @@ use serde_json::json;
 /// APIs that serve Bitcoin block data.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize)]
 pub enum BitcoinBlockApi {
+    #[serde(rename = "api_bitaps_com_mainnet")]
+    ApiBitapsComMainnet,
+
+    #[serde(rename = "api_bitaps_com_testnet")]
+    ApiBitapsComTestnet,
+
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
@@ -70,6 +76,7 @@ impl BitcoinBlockApi {
     /// Returns the list of all mainnet API providers.
     fn providers_mainnet() -> Vec<Self> {
         vec![
+            BitcoinBlockApi::ApiBitapsComMainnet,
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
             BitcoinBlockApi::BitcoinCanister, // Not an explorer.
@@ -82,6 +89,7 @@ impl BitcoinBlockApi {
     /// Returns the list of all testnet API providers.
     fn providers_testnet() -> Vec<Self> {
         vec![
+            BitcoinBlockApi::ApiBitapsComTestnet,
             BitcoinBlockApi::ApiBlockchairComTestnet,
             BitcoinBlockApi::ApiBlockcypherComTestnet,
             BitcoinBlockApi::BitcoinCanister, // Not an explorer.
@@ -92,6 +100,7 @@ impl BitcoinBlockApi {
     /// Returns the list of mainnet explorers only.
     fn explorers_mainnet() -> Vec<Self> {
         vec![
+            BitcoinBlockApi::ApiBitapsComMainnet,
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
             BitcoinBlockApi::BlockchainInfoMainnet,
@@ -103,6 +112,7 @@ impl BitcoinBlockApi {
     /// Returns the list of testnet explorers only.
     fn explorers_testnet() -> Vec<Self> {
         vec![
+            BitcoinBlockApi::ApiBitapsComTestnet,
             BitcoinBlockApi::ApiBlockchairComTestnet,
             BitcoinBlockApi::ApiBlockcypherComTestnet,
             BitcoinBlockApi::BlockstreamInfoTestnet,
@@ -112,6 +122,12 @@ impl BitcoinBlockApi {
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
+            BitcoinBlockApi::ApiBitapsComMainnet => {
+                http_request(endpoint_api_bitaps_com_block_mainnet()).await
+            }
+            BitcoinBlockApi::ApiBitapsComTestnet => {
+                http_request(endpoint_api_bitaps_com_block_testnet()).await
+            }
             BitcoinBlockApi::ApiBlockchairComMainnet => {
                 http_request(endpoint_api_blockchair_com_block_mainnet()).await
             }
@@ -236,6 +252,34 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_api_bitaps_com_mainnet() {
+        test_utils::mock_mainnet_outcalls();
+        run_test(
+            BitcoinBlockApi::ApiBitapsComMainnet,
+            vec![(endpoint_api_bitaps_com_block_mainnet(), 1)],
+            json!({
+                "height": 700001,
+                "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_api_bitaps_com_testnet() {
+        test_utils::mock_testnet_outcalls();
+        run_test(
+            BitcoinBlockApi::ApiBitapsComTestnet,
+            vec![(endpoint_api_bitaps_com_block_testnet(), 1)],
+            json!({
+                "height": 2000001,
+                "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
     async fn test_api_blockchair_com_mainnet() {
         test_utils::mock_mainnet_outcalls();
         run_test(
@@ -256,7 +300,7 @@ mod test {
             BitcoinBlockApi::ApiBlockchairComTestnet,
             vec![(endpoint_api_blockchair_com_block_testnet(), 1)],
             json!({
-                "height": 2000001,
+                "height": 2000002,
                 "hash": "0000000000000000000fff222222222222222222222222222222222222222222",
             }),
         )
@@ -285,7 +329,7 @@ mod test {
             BitcoinBlockApi::ApiBlockcypherComTestnet,
             vec![(endpoint_api_blockcypher_com_block_testnet(), 1)],
             json!({
-                "height": 2000002,
+                "height": 2000003,
                 "hash": "0000000000000000000fff333333333333333333333333333333333333333333",
                 "previous_hash": "0000000000000000000fff222222222222222222222222222222222222222222",
             }),
@@ -350,7 +394,7 @@ mod test {
                 (endpoint_blockstream_info_height_testnet(), 1),
             ],
             json!({
-                "height": 2000003,
+                "height": 2000004,
                 "hash": "0000000000000000000fff555555555555555555555555555555555555555555",
             }),
         )
@@ -399,6 +443,14 @@ mod test {
     #[test]
     fn test_names() {
         let expected: std::collections::HashMap<BitcoinBlockApi, &str> = [
+            (
+                BitcoinBlockApi::ApiBitapsComMainnet,
+                "api_bitaps_com_mainnet",
+            ),
+            (
+                BitcoinBlockApi::ApiBitapsComTestnet,
+                "api_bitaps_com_testnet",
+            ),
             (
                 BitcoinBlockApi::ApiBlockchairComMainnet,
                 "api_blockchair_com_mainnet",
