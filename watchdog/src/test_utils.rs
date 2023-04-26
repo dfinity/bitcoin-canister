@@ -150,7 +150,7 @@ pub const API_BITAPS_COM_MAINNET_RESPONSE: &str = r#"{
     "time": 0.0018
 }"#;
 
-// https://api.bitaps.com/testnet/btc/v1/blockchain/block/last
+// https://api.bitaps.com/btc/testnet/v1/blockchain/block/last
 pub const API_BITAPS_COM_TESTNET_RESPONSE: &str = r#"{
     "data": {
         "height": 2000001,

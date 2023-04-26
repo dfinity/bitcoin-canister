@@ -31,7 +31,7 @@ pub fn endpoint_api_bitaps_com_block_mainnet() -> HttpRequestConfig {
 /// Creates a config for fetching testnet block data from api.bitaps.com.
 pub fn endpoint_api_bitaps_com_block_testnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        "https://api.bitaps.com/testnet/btc/v1/blockchain/block/last",
+        "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
         Some(transform_api_bitaps_com_block),
         |raw| {
             apply_to_body_json(raw, |json| {
@@ -376,7 +376,7 @@ mod test {
     async fn test_api_bitaps_com_block_testnet() {
         run_http_request_test(
             endpoint_api_bitaps_com_block_testnet(),
-            "https://api.bitaps.com/testnet/btc/v1/blockchain/block/last",
+            "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
             test_utils::API_BITAPS_COM_TESTNET_RESPONSE,
             json!({
                 "height": 2000001,
