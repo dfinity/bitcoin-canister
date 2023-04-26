@@ -115,7 +115,7 @@ impl BitcoinBlockApi {
 
 /// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
 async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Value {
-    let result = ic_http::http_request(config.request()).await;
+    let result = ic_http::http_request_with_cycles(config.request(), 0).await;
 
     match result {
         Ok((response,)) if response.status == 200 => parse_response(response),
