@@ -10,7 +10,7 @@ use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs
 use regex::Regex;
 use serde_json::json;
 
-/// Creates a new HttpRequestConfig for fetching block data from api.blockchair.com.
+/// Creates a config for fetching mainnet block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockchair.com/bitcoin/stats",
@@ -27,10 +27,44 @@ pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
     )
 }
 
-/// Creates a new HttpRequestConfig for fetching block data from api.blockcypher.com.
+/// Creates a config for fetching testnet block data from api.blockchair.com.
+pub fn endpoint_api_blockchair_com_block_testnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.blockchair.com/bitcoin/testnet/stats",
+        Some(transform_api_blockchair_com_block),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["best_block_height"].as_u64(),
+                    "hash": data["best_block_hash"].as_str(),
+                })
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet block data from api.blockcypher.com.
 pub fn endpoint_api_blockcypher_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockcypher.com/v1/btc/main",
+        Some(transform_api_blockcypher_com_block),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                json!({
+                    "height": json["height"].as_u64(),
+                    "hash": json["hash"].as_str(),
+                    "previous_hash": json["previous_hash"].as_str(),
+                })
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching testnet block data from api.blockcypher.com.
+pub fn endpoint_api_blockcypher_com_block_testnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.blockcypher.com/v1/btc/test3",
         Some(transform_api_blockcypher_com_block),
         |raw| {
             apply_to_body_json(raw, |json| {
@@ -68,7 +102,7 @@ fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
     }
 }
 
-/// Creates a new HttpRequestConfig for fetching block data from bitcoin_canister.
+/// Creates a config for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
         &crate::storage::get_config().bitcoin_canister_endpoint,
@@ -88,7 +122,7 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     )
 }
 
-/// Creates a new HttpRequestConfig for fetching hash data from blockchain.info.
+/// Creates a config for fetching mainnet hash data from blockchain.info.
 pub fn endpoint_blockchain_info_hash_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/latesthash",
@@ -104,7 +138,7 @@ pub fn endpoint_blockchain_info_hash_mainnet() -> HttpRequestConfig {
     )
 }
 
-/// Creates a new HttpRequestConfig for fetching height data from blockchain.info.
+/// Creates a config for fetching mainnet height data from blockchain.info.
 pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/getblockcount",
@@ -124,7 +158,7 @@ pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
     )
 }
 
-/// Creates a new HttpRequestConfig for fetching hash data from blockstream.info.
+/// Creates a config for fetching mainnet hash data from blockstream.info.
 pub fn endpoint_blockstream_info_hash_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/hash",
@@ -140,7 +174,23 @@ pub fn endpoint_blockstream_info_hash_mainnet() -> HttpRequestConfig {
     )
 }
 
-/// Creates a new HttpRequestConfig for fetching height data from blockstream.info.
+/// Creates a config for fetching testnet hash data from blockstream.info.
+pub fn endpoint_blockstream_info_hash_testnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://blockstream.info/testnet/api/blocks/tip/hash",
+        Some(transform_blockstream_info_hash),
+        |raw| {
+            apply_to_body(raw, |text| {
+                json!({
+                    "hash": text,
+                })
+                .to_string()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet height data from blockstream.info.
 pub fn endpoint_blockstream_info_height_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/height",
@@ -160,7 +210,27 @@ pub fn endpoint_blockstream_info_height_mainnet() -> HttpRequestConfig {
     )
 }
 
-/// Creates a new HttpRequestConfig for fetching block data from chain.api.btc.com.
+/// Creates a config for fetching testnet height data from blockstream.info.
+pub fn endpoint_blockstream_info_height_testnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://blockstream.info/testnet/api/blocks/tip/height",
+        Some(transform_blockstream_info_height),
+        |raw| {
+            apply_to_body(raw, |text| {
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet block data from chain.api.btc.com.
 pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://chain.api.btc.com/v3/block/latest",
@@ -421,12 +491,16 @@ mod test {
         let expected_status = candid::Nat::from(404);
         let test_cases = [
             endpoint_api_blockchair_com_block_mainnet(),
+            endpoint_api_blockchair_com_block_testnet(),
             endpoint_api_blockcypher_com_block_mainnet(),
+            endpoint_api_blockcypher_com_block_testnet(),
             endpoint_bitcoin_canister(),
             endpoint_blockchain_info_hash_mainnet(),
             endpoint_blockchain_info_height_mainnet(),
             endpoint_blockstream_info_hash_mainnet(),
+            endpoint_blockstream_info_hash_testnet(),
             endpoint_blockstream_info_height_mainnet(),
+            endpoint_blockstream_info_height_testnet(),
             endpoint_chain_api_btc_com_block_mainnet(),
         ];
         for config in test_cases {
