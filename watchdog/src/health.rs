@@ -47,7 +47,7 @@ pub struct HealthStatus {
 pub fn health_status() -> HealthStatus {
     compare(
         crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
-        BitcoinBlockApi::explorers()
+        BitcoinBlockApi::explorers_mainnet()
             .iter()
             .filter_map(crate::storage::get)
             .collect::<Vec<_>>(),
@@ -169,8 +169,8 @@ mod test {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
         ];
 
         // Assert
@@ -182,8 +182,8 @@ mod test {
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
                 ],
             }
         );
@@ -194,9 +194,9 @@ mod test {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_006),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_004),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_004),
         ];
 
         // Assert
@@ -208,9 +208,9 @@ mod test {
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_006),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_004),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_004),
                 ],
             }
         );
@@ -221,9 +221,9 @@ mod test {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 996),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 995),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 994),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 996),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 995),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 994),
         ];
 
         // Assert
@@ -235,9 +235,9 @@ mod test {
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 996),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 995),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 994),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 996),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 995),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 994),
                 ],
             }
         );

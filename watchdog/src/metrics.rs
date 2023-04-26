@@ -74,7 +74,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         available_explorers.insert(explorer.provider.clone(), explorer);
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
-    for explorer in BitcoinBlockApi::explorers() {
+    for explorer in BitcoinBlockApi::explorers_mainnet() {
         let height = match available_explorers.get(&explorer) {
             None => NO_HEIGHT,
             Some(explorer) => explorer.height.map(|x| x as f64).unwrap_or(NO_HEIGHT),

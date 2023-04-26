@@ -4,32 +4,32 @@ use crate::endpoints::*;
 pub fn mock_all_outcalls() {
     let mocks = [
         (
-            endpoint_api_blockchair_com_block(),
+            endpoint_api_blockchair_com_block_mainnet(),
             API_BLOCKCHAIR_COM_RESPONSE,
         ),
         (
-            endpoint_api_blockcypher_com_block(),
+            endpoint_api_blockcypher_com_block_mainnet(),
             API_BLOCKCYPHER_COM_RESPONSE,
         ),
         (endpoint_bitcoin_canister(), BITCOIN_CANISTER_RESPONSE),
         (
-            endpoint_blockchain_info_hash(),
+            endpoint_blockchain_info_hash_mainnet(),
             BLOCKCHAIN_INFO_HASH_RESPONSE,
         ),
         (
-            endpoint_blockchain_info_height(),
+            endpoint_blockchain_info_height_mainnet(),
             BLOCKCHAIN_INFO_HEIGHT_RESPONSE,
         ),
         (
-            endpoint_blockstream_info_hash(),
+            endpoint_blockstream_info_hash_mainnet(),
             BLOCKSTREAM_INFO_HASH_RESPONSE,
         ),
         (
-            endpoint_blockstream_info_height(),
+            endpoint_blockstream_info_height_mainnet(),
             BLOCKSTREAM_INFO_HEIGHT_RESPONSE,
         ),
         (
-            endpoint_chain_api_btc_com_block(),
+            endpoint_chain_api_btc_com_block_mainnet(),
             CHAIN_API_BTC_COM_RESPONSE,
         ),
     ];
@@ -46,14 +46,14 @@ pub fn mock_all_outcalls() {
 /// Mocks all the outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
     let mocks = [
-        endpoint_api_blockchair_com_block(),
-        endpoint_api_blockcypher_com_block(),
+        endpoint_api_blockchair_com_block_mainnet(),
+        endpoint_api_blockcypher_com_block_mainnet(),
         endpoint_bitcoin_canister(),
-        endpoint_blockchain_info_hash(),
-        endpoint_blockchain_info_height(),
-        endpoint_blockstream_info_hash(),
-        endpoint_blockstream_info_height(),
-        endpoint_chain_api_btc_com_block(),
+        endpoint_blockchain_info_hash_mainnet(),
+        endpoint_blockchain_info_height_mainnet(),
+        endpoint_blockstream_info_hash_mainnet(),
+        endpoint_blockstream_info_height_mainnet(),
+        endpoint_chain_api_btc_com_block_mainnet(),
     ];
     for config in mocks {
         let request = config.request();
@@ -65,14 +65,14 @@ pub fn mock_all_outcalls_404() {
 /// Mocks all the outcalls to abuse the API.
 pub fn mock_all_outcalls_abusing_api() {
     let mocks = [
-        endpoint_api_blockchair_com_block(),
-        endpoint_api_blockcypher_com_block(),
+        endpoint_api_blockchair_com_block_mainnet(),
+        endpoint_api_blockcypher_com_block_mainnet(),
         endpoint_bitcoin_canister(),
-        endpoint_blockchain_info_hash(),
-        endpoint_blockchain_info_height(),
-        endpoint_blockstream_info_hash(),
-        endpoint_blockstream_info_height(),
-        endpoint_chain_api_btc_com_block(),
+        endpoint_blockchain_info_hash_mainnet(),
+        endpoint_blockchain_info_height_mainnet(),
+        endpoint_blockstream_info_hash_mainnet(),
+        endpoint_blockstream_info_height_mainnet(),
+        endpoint_chain_api_btc_com_block_mainnet(),
     ];
     for config in mocks {
         let request = config.request();

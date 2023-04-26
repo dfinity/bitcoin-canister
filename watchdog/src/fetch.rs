@@ -25,7 +25,7 @@ impl BlockInfo {
 
 /// Fetches the data from the external APIs.
 pub async fn fetch_all_data() -> Vec<BlockInfo> {
-    let api_providers = BitcoinBlockApi::all_providers();
+    let api_providers = BitcoinBlockApi::all_providers_mainnet();
 
     let futures = api_providers
         .iter()
@@ -59,11 +59,11 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairCom,
+                    provider: BitcoinBlockApi::ApiBlockchairComMainnet,
                     height: Some(700002),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherCom,
+                    provider: BitcoinBlockApi::ApiBlockcypherComMainnet,
                     height: Some(700003),
                 },
                 BlockInfo {
@@ -71,15 +71,15 @@ mod test {
                     height: Some(700007),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockchainInfo,
+                    provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: Some(700004),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfo,
+                    provider: BitcoinBlockApi::BlockstreamInfoMainnet,
                     height: Some(700005),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ChainApiBtcCom,
+                    provider: BitcoinBlockApi::ChainApiBtcComMainnet,
                     height: Some(700006),
                 }
             ]
@@ -95,11 +95,11 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairCom,
+                    provider: BitcoinBlockApi::ApiBlockchairComMainnet,
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherCom,
+                    provider: BitcoinBlockApi::ApiBlockcypherComMainnet,
                     height: None,
                 },
                 BlockInfo {
@@ -107,15 +107,15 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockchainInfo,
+                    provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfo,
+                    provider: BitcoinBlockApi::BlockstreamInfoMainnet,
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ChainApiBtcCom,
+                    provider: BitcoinBlockApi::ChainApiBtcComMainnet,
                     height: None,
                 }
             ]

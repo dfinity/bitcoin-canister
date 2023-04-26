@@ -11,7 +11,7 @@ use regex::Regex;
 use serde_json::json;
 
 /// Creates a new HttpRequestConfig for fetching block data from api.blockchair.com.
-pub fn endpoint_api_blockchair_com_block() -> HttpRequestConfig {
+pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockchair.com/bitcoin/stats",
         Some(transform_api_blockchair_com_block),
@@ -28,7 +28,7 @@ pub fn endpoint_api_blockchair_com_block() -> HttpRequestConfig {
 }
 
 /// Creates a new HttpRequestConfig for fetching block data from api.blockcypher.com.
-pub fn endpoint_api_blockcypher_com_block() -> HttpRequestConfig {
+pub fn endpoint_api_blockcypher_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockcypher.com/v1/btc/main",
         Some(transform_api_blockcypher_com_block),
@@ -89,7 +89,7 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
 }
 
 /// Creates a new HttpRequestConfig for fetching hash data from blockchain.info.
-pub fn endpoint_blockchain_info_hash() -> HttpRequestConfig {
+pub fn endpoint_blockchain_info_hash_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/latesthash",
         Some(transform_blockchain_info_hash),
@@ -105,7 +105,7 @@ pub fn endpoint_blockchain_info_hash() -> HttpRequestConfig {
 }
 
 /// Creates a new HttpRequestConfig for fetching height data from blockchain.info.
-pub fn endpoint_blockchain_info_height() -> HttpRequestConfig {
+pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/getblockcount",
         Some(transform_blockchain_info_height),
@@ -125,7 +125,7 @@ pub fn endpoint_blockchain_info_height() -> HttpRequestConfig {
 }
 
 /// Creates a new HttpRequestConfig for fetching hash data from blockstream.info.
-pub fn endpoint_blockstream_info_hash() -> HttpRequestConfig {
+pub fn endpoint_blockstream_info_hash_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/hash",
         Some(transform_blockstream_info_hash),
@@ -141,7 +141,7 @@ pub fn endpoint_blockstream_info_hash() -> HttpRequestConfig {
 }
 
 /// Creates a new HttpRequestConfig for fetching height data from blockstream.info.
-pub fn endpoint_blockstream_info_height() -> HttpRequestConfig {
+pub fn endpoint_blockstream_info_height_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/height",
         Some(transform_blockstream_info_height),
@@ -161,7 +161,7 @@ pub fn endpoint_blockstream_info_height() -> HttpRequestConfig {
 }
 
 /// Creates a new HttpRequestConfig for fetching block data from chain.api.btc.com.
-pub fn endpoint_chain_api_btc_com_block() -> HttpRequestConfig {
+pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://chain.api.btc.com/v3/block/latest",
         Some(transform_chain_api_btc_com_block),
@@ -256,7 +256,7 @@ mod test {
     #[tokio::test]
     async fn test_api_blockchair_com_block() {
         run_http_request_test(
-            endpoint_api_blockchair_com_block(),
+            endpoint_api_blockchair_com_block_mainnet(),
             "https://api.blockchair.com/bitcoin/stats",
             test_utils::API_BLOCKCHAIR_COM_RESPONSE,
             json!({
@@ -270,7 +270,7 @@ mod test {
     #[tokio::test]
     async fn test_api_blockcypher_com_block() {
         run_http_request_test(
-            endpoint_api_blockcypher_com_block(),
+            endpoint_api_blockcypher_com_block_mainnet(),
             "https://api.blockcypher.com/v1/btc/main",
             test_utils::API_BLOCKCYPHER_COM_RESPONSE,
             json!({
@@ -298,7 +298,7 @@ mod test {
     #[tokio::test]
     async fn test_blockchain_info_hash() {
         run_http_request_test(
-            endpoint_blockchain_info_hash(),
+            endpoint_blockchain_info_hash_mainnet(),
             "https://blockchain.info/q/latesthash",
             test_utils::BLOCKCHAIN_INFO_HASH_RESPONSE,
             json!({
@@ -311,7 +311,7 @@ mod test {
     #[tokio::test]
     async fn test_blockchain_info_height() {
         run_http_request_test(
-            endpoint_blockchain_info_height(),
+            endpoint_blockchain_info_height_mainnet(),
             "https://blockchain.info/q/getblockcount",
             test_utils::BLOCKCHAIN_INFO_HEIGHT_RESPONSE,
             json!({
@@ -324,7 +324,7 @@ mod test {
     #[tokio::test]
     async fn test_blockstream_info_hash() {
         run_http_request_test(
-            endpoint_blockstream_info_hash(),
+            endpoint_blockstream_info_hash_mainnet(),
             "https://blockstream.info/api/blocks/tip/hash",
             test_utils::BLOCKSTREAM_INFO_HASH_RESPONSE,
             json!({
@@ -337,7 +337,7 @@ mod test {
     #[tokio::test]
     async fn test_blockstream_info_height() {
         run_http_request_test(
-            endpoint_blockstream_info_height(),
+            endpoint_blockstream_info_height_mainnet(),
             "https://blockstream.info/api/blocks/tip/height",
             test_utils::BLOCKSTREAM_INFO_HEIGHT_RESPONSE,
             json!({
@@ -350,7 +350,7 @@ mod test {
     #[tokio::test]
     async fn test_chain_api_btc_com_block() {
         run_http_request_test(
-            endpoint_chain_api_btc_com_block(),
+            endpoint_chain_api_btc_com_block_mainnet(),
             "https://chain.api.btc.com/v3/block/latest",
             test_utils::CHAIN_API_BTC_COM_RESPONSE,
             json!({
@@ -420,14 +420,14 @@ mod test {
     async fn test_http_response_404() {
         let expected_status = candid::Nat::from(404);
         let test_cases = [
-            endpoint_api_blockchair_com_block(),
-            endpoint_api_blockcypher_com_block(),
+            endpoint_api_blockchair_com_block_mainnet(),
+            endpoint_api_blockcypher_com_block_mainnet(),
             endpoint_bitcoin_canister(),
-            endpoint_blockchain_info_hash(),
-            endpoint_blockchain_info_height(),
-            endpoint_blockstream_info_hash(),
-            endpoint_blockstream_info_height(),
-            endpoint_chain_api_btc_com_block(),
+            endpoint_blockchain_info_hash_mainnet(),
+            endpoint_blockchain_info_height_mainnet(),
+            endpoint_blockstream_info_hash_mainnet(),
+            endpoint_blockstream_info_height_mainnet(),
+            endpoint_chain_api_btc_com_block_mainnet(),
         ];
         for config in test_cases {
             // Arrange
