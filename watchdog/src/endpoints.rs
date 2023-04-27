@@ -183,6 +183,7 @@ pub fn endpoint_blockstream_info_hash_testnet() -> HttpRequestConfig {
     endpoint_blockstream_info_hash(BitcoinNetwork::Testnet)
 }
 
+/// Creates a config for fetching hash data from blockstream.info.
 fn endpoint_blockstream_info_hash(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
     let url = match bitcoin_network {
         BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/hash",
@@ -208,6 +209,7 @@ pub fn endpoint_blockstream_info_height_testnet() -> HttpRequestConfig {
     endpoint_blockstream_info_height(BitcoinNetwork::Testnet)
 }
 
+/// Creates a config for fetching height data from blockstream.info.
 fn endpoint_blockstream_info_height(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
     let url = match bitcoin_network {
         BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/height",
