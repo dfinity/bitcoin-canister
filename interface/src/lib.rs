@@ -284,7 +284,7 @@ impl std::fmt::Display for SendTransactionError {
 }
 
 /// A request to update the canister's config.
-#[derive(CandidType, Deserialize, Default)]
+#[derive(CandidType, Deserialize, Default, Serialize)]
 pub struct SetConfigRequest {
     pub stability_threshold: Option<u128>,
 
