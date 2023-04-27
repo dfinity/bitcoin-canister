@@ -1,3 +1,4 @@
+use crate::config::BitcoinNetwork;
 use crate::http::HttpRequestConfig;
 use crate::print;
 use crate::{
@@ -13,104 +14,83 @@ use serde_json::json;
 
 /// Creates a config for fetching mainnet block data from api.bitaps.com.
 pub fn endpoint_api_bitaps_com_block_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.bitaps.com/btc/v1/blockchain/block/last",
-        Some(transform_api_bitaps_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["height"].as_u64(),
-                    "hash": data["hash"].as_str(),
-                })
-            })
-        },
-    )
+    endpoint_api_bitaps_com_block(BitcoinNetwork::Mainnet)
 }
 
 /// Creates a config for fetching testnet block data from api.bitaps.com.
 pub fn endpoint_api_bitaps_com_block_testnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
-        Some(transform_api_bitaps_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["height"].as_u64(),
-                    "hash": data["hash"].as_str(),
-                })
+    endpoint_api_bitaps_com_block(BitcoinNetwork::Testnet)
+}
+
+/// Creates a config for fetching block data from api.bitaps.com.
+fn endpoint_api_bitaps_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://api.bitaps.com/btc/v1/blockchain/block/last",
+        BitcoinNetwork::Testnet => "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
+    };
+    HttpRequestConfig::new(url, Some(transform_api_bitaps_com_block), |raw| {
+        apply_to_body_json(raw, |json| {
+            let data = json["data"].clone();
+            json!({
+                "height": data["height"].as_u64(),
+                "hash": data["hash"].as_str(),
             })
-        },
-    )
+        })
+    })
 }
 
 /// Creates a config for fetching mainnet block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.blockchair.com/bitcoin/stats",
-        Some(transform_api_blockchair_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["best_block_height"].as_u64(),
-                    "hash": data["best_block_hash"].as_str(),
-                })
-            })
-        },
-    )
+    endpoint_api_blockchair_com_block(BitcoinNetwork::Mainnet)
 }
 
 /// Creates a config for fetching testnet block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block_testnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.blockchair.com/bitcoin/testnet/stats",
-        Some(transform_api_blockchair_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["best_block_height"].as_u64(),
-                    "hash": data["best_block_hash"].as_str(),
-                })
+    endpoint_api_blockchair_com_block(BitcoinNetwork::Testnet)
+}
+
+/// Creates a config for fetching block data from api.blockchair.com.
+fn endpoint_api_blockchair_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://api.blockchair.com/bitcoin/stats",
+        BitcoinNetwork::Testnet => "https://api.blockchair.com/bitcoin/testnet/stats",
+    };
+    HttpRequestConfig::new(url, Some(transform_api_blockchair_com_block), |raw| {
+        apply_to_body_json(raw, |json| {
+            let data = json["data"].clone();
+            json!({
+                "height": data["best_block_height"].as_u64(),
+                "hash": data["best_block_hash"].as_str(),
             })
-        },
-    )
+        })
+    })
 }
 
 /// Creates a config for fetching mainnet block data from api.blockcypher.com.
 pub fn endpoint_api_blockcypher_com_block_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.blockcypher.com/v1/btc/main",
-        Some(transform_api_blockcypher_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                json!({
-                    "height": json["height"].as_u64(),
-                    "hash": json["hash"].as_str(),
-                    "previous_hash": json["previous_hash"].as_str(),
-                })
-            })
-        },
-    )
+    endpoint_api_blockcypher_com_block(BitcoinNetwork::Mainnet)
 }
 
 /// Creates a config for fetching testnet block data from api.blockcypher.com.
 pub fn endpoint_api_blockcypher_com_block_testnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.blockcypher.com/v1/btc/test3",
-        Some(transform_api_blockcypher_com_block),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                json!({
-                    "height": json["height"].as_u64(),
-                    "hash": json["hash"].as_str(),
-                    "previous_hash": json["previous_hash"].as_str(),
-                })
+    endpoint_api_blockcypher_com_block(BitcoinNetwork::Testnet)
+}
+
+/// Creates a config for fetching block data from api.blockcypher.com.
+fn endpoint_api_blockcypher_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://api.blockcypher.com/v1/btc/main",
+        BitcoinNetwork::Testnet => "https://api.blockcypher.com/v1/btc/test3",
+    };
+    HttpRequestConfig::new(url, Some(transform_api_blockcypher_com_block), |raw| {
+        apply_to_body_json(raw, |json| {
+            json!({
+                "height": json["height"].as_u64(),
+                "hash": json["hash"].as_str(),
+                "previous_hash": json["previous_hash"].as_str(),
             })
-        },
-    )
+        })
+    })
 }
 
 /// Applies regex rule to parse bitcoin_canister block height.
@@ -195,74 +175,56 @@ pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
 
 /// Creates a config for fetching mainnet hash data from blockstream.info.
 pub fn endpoint_blockstream_info_hash_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://blockstream.info/api/blocks/tip/hash",
-        Some(transform_blockstream_info_hash),
-        |raw| {
-            apply_to_body(raw, |text| {
-                json!({
-                    "hash": text,
-                })
-                .to_string()
-            })
-        },
-    )
+    endpoint_blockstream_info_hash(BitcoinNetwork::Mainnet)
 }
 
 /// Creates a config for fetching testnet hash data from blockstream.info.
 pub fn endpoint_blockstream_info_hash_testnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://blockstream.info/testnet/api/blocks/tip/hash",
-        Some(transform_blockstream_info_hash),
-        |raw| {
-            apply_to_body(raw, |text| {
-                json!({
-                    "hash": text,
-                })
-                .to_string()
+    endpoint_blockstream_info_hash(BitcoinNetwork::Testnet)
+}
+
+fn endpoint_blockstream_info_hash(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/hash",
+        BitcoinNetwork::Testnet => "https://blockstream.info/testnet/api/blocks/tip/hash",
+    };
+    HttpRequestConfig::new(url, Some(transform_blockstream_info_hash), |raw| {
+        apply_to_body(raw, |text| {
+            json!({
+                "hash": text,
             })
-        },
-    )
+            .to_string()
+        })
+    })
 }
 
 /// Creates a config for fetching mainnet height data from blockstream.info.
 pub fn endpoint_blockstream_info_height_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://blockstream.info/api/blocks/tip/height",
-        Some(transform_blockstream_info_height),
-        |raw| {
-            apply_to_body(raw, |text| {
-                text.parse::<u64>()
-                    .map(|height| {
-                        json!({
-                            "height": height,
-                        })
-                        .to_string()
-                    })
-                    .unwrap_or_default()
-            })
-        },
-    )
+    endpoint_blockstream_info_height(BitcoinNetwork::Mainnet)
 }
 
 /// Creates a config for fetching testnet height data from blockstream.info.
 pub fn endpoint_blockstream_info_height_testnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://blockstream.info/testnet/api/blocks/tip/height",
-        Some(transform_blockstream_info_height),
-        |raw| {
-            apply_to_body(raw, |text| {
-                text.parse::<u64>()
-                    .map(|height| {
-                        json!({
-                            "height": height,
-                        })
-                        .to_string()
+    endpoint_blockstream_info_height(BitcoinNetwork::Testnet)
+}
+
+fn endpoint_blockstream_info_height(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/height",
+        BitcoinNetwork::Testnet => "https://blockstream.info/testnet/api/blocks/tip/height",
+    };
+    HttpRequestConfig::new(url, Some(transform_blockstream_info_height), |raw| {
+        apply_to_body(raw, |text| {
+            text.parse::<u64>()
+                .map(|height| {
+                    json!({
+                        "height": height,
                     })
-                    .unwrap_or_default()
-            })
-        },
-    )
+                    .to_string()
+                })
+                .unwrap_or_default()
+        })
+    })
 }
 
 /// Creates a config for fetching mainnet block data from chain.api.btc.com.
