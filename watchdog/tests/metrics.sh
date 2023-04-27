@@ -15,7 +15,7 @@ CANISTER_ID=$(dfx canister id watchdog)
 METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$CANISTER_ID")
 
 # Check that metrics report contains some information.
-if ! [[ "$METRICS" == *"bitcoin_canister_height"* ]]; then
+if ! [[ "$METRICS" == *"bitcoin_network"* ]]; then
   echo "FAIL"
   exit 1
 fi
