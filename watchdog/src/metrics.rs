@@ -35,9 +35,6 @@ pub fn get_metrics() -> CandidHttpResponse {
 
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
-    const NO_HEIGHT: f64 = -1.0;
-    const NO_HEIGHT_DIFF: f64 = -1_000.0;
-
     let bitcoin_network = crate::storage::get_config().bitcoin_network;
     let (mainnet, testnet) = match bitcoin_network {
         BitcoinNetwork::Mainnet => (1.0, 0.0),
@@ -48,24 +45,27 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("network", "testnet")], testnet)?;
 
     let health = crate::health::health_status();
-    w.encode_gauge(
-        "bitcoin_canister_height",
-        health.height_source.map(|x| x as f64).unwrap_or(NO_HEIGHT),
-        "Main chain height of the Bitcoin canister.",
-    )?;
-    w.encode_gauge(
-        "height_target",
-        health.height_target.map(|x| x as f64).unwrap_or(NO_HEIGHT),
-        "Height target derived from explorer heights.",
-    )?;
-    w.encode_gauge(
-        "height_diff",
-        health
-            .height_diff
-            .map(|x| x as f64)
-            .unwrap_or(NO_HEIGHT_DIFF),
-        "Difference between Bitcoin canister height and target height.",
-    )?;
+    if let Some(height) = health.height_source {
+        w.encode_gauge(
+            "bitcoin_canister_height",
+            height as f64,
+            "Main chain height of the Bitcoin canister.",
+        )?;
+    }
+    if let Some(height) = health.height_target {
+        w.encode_gauge(
+            "height_target",
+            height as f64,
+            "Height target derived from explorer heights.",
+        )?;
+    }
+    if let Some(height_diff) = health.height_diff {
+        w.encode_gauge(
+            "height_diff",
+            height_diff as f64,
+            "Difference between Bitcoin canister height and target height.",
+        )?;
+    }
 
     let (not_enough_data, ok, ahead, behind) = match health.height_status {
         HeightStatus::NotEnoughData => (1.0, 0.0, 0.0, 0.0),
@@ -85,11 +85,11 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     for explorer in BitcoinBlockApi::network_explorers(bitcoin_network) {
-        let height = match available_explorers.get(&explorer) {
-            None => NO_HEIGHT,
-            Some(explorer) => explorer.height.map(|x| x as f64).unwrap_or(NO_HEIGHT),
-        };
-        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
+        if let Some(block_info) = available_explorers.get(&explorer) {
+            if let Some(height) = block_info.height {
+                gauge = gauge.value(&[("explorer", &explorer.to_string())], height as f64)?;
+            }
+        }
     }
 
     Ok(())
