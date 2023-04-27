@@ -38,7 +38,8 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     const NO_HEIGHT: f64 = -1.0;
     const NO_HEIGHT_DIFF: f64 = -1_000.0;
 
-    let (mainnet, testnet) = match crate::storage::get_config().bitcoin_network {
+    let bitcoin_network = crate::storage::get_config().bitcoin_network;
+    let (mainnet, testnet) = match bitcoin_network {
         BitcoinNetwork::Mainnet => (1.0, 0.0),
         BitcoinNetwork::Testnet => (0.0, 1.0),
     };
@@ -83,7 +84,6 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         available_explorers.insert(explorer.provider.clone(), explorer);
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
-    let bitcoin_network = crate::storage::get_config().bitcoin_network;
     for explorer in BitcoinBlockApi::network_explorers(bitcoin_network) {
         let height = match available_explorers.get(&explorer) {
             None => NO_HEIGHT,
