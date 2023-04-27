@@ -18,5 +18,11 @@ pub fn get(provider: &BitcoinBlockApi) -> Option<BlockInfo> {
 
 /// Returns the configuration from the local storage.
 pub fn get_config() -> Config {
-    CONFIG.with(|config| config.read().unwrap().clone())
+    CONFIG.with(|cell: &std::sync::RwLock<Config>| cell.read().unwrap().clone())
+}
+
+/// Sets the configuration in the local storage.
+#[cfg(test)]
+pub fn set_config(config: Config) {
+    CONFIG.with(|cell| *cell.write().unwrap() = config);
 }

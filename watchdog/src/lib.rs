@@ -57,7 +57,8 @@ fn post_upgrade() {
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_data() {
-    let data = crate::fetch::fetch_all_data().await;
+    let bitcoin_network = crate::storage::get_config().bitcoin_network;
+    let data = crate::fetch::fetch_all_data(bitcoin_network).await;
     data.into_iter().for_each(crate::storage::insert);
 }
 
@@ -100,13 +101,18 @@ pub fn print(msg: &str) {
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
+fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpResponse {
+    endpoint_api_bitaps_com_block_mainnet().transform(raw)
+}
+
+#[query]
 fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_api_blockchair_com_block().transform(raw)
+    endpoint_api_blockchair_com_block_mainnet().transform(raw)
 }
 
 #[query]
 fn transform_api_blockcypher_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_api_blockcypher_com_block().transform(raw)
+    endpoint_api_blockcypher_com_block_mainnet().transform(raw)
 }
 
 #[query]
@@ -116,25 +122,25 @@ fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
 
 #[query]
 fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockchain_info_hash().transform(raw)
+    endpoint_blockchain_info_hash_mainnet().transform(raw)
 }
 
 #[query]
 fn transform_blockchain_info_height(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockchain_info_height().transform(raw)
+    endpoint_blockchain_info_height_mainnet().transform(raw)
 }
 
 #[query]
 fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockstream_info_hash().transform(raw)
+    endpoint_blockstream_info_hash_mainnet().transform(raw)
 }
 
 #[query]
 fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockstream_info_height().transform(raw)
+    endpoint_blockstream_info_height_mainnet().transform(raw)
 }
 
 #[query]
 fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_chain_api_btc_com_block().transform(raw)
+    endpoint_chain_api_btc_com_block_mainnet().transform(raw)
 }

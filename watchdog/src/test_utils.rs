@@ -1,36 +1,81 @@
 use crate::endpoints::*;
 
-/// Mocks all the outcalls to be successful.
-pub fn mock_all_outcalls() {
+/// Mocks all the mainnet outcalls to be successful.
+pub fn mock_mainnet_outcalls() {
     let mocks = [
         (
-            endpoint_api_blockchair_com_block(),
-            API_BLOCKCHAIR_COM_RESPONSE,
+            endpoint_api_bitaps_com_block_mainnet(),
+            API_BITAPS_COM_MAINNET_RESPONSE,
         ),
         (
-            endpoint_api_blockcypher_com_block(),
-            API_BLOCKCYPHER_COM_RESPONSE,
-        ),
-        (endpoint_bitcoin_canister(), BITCOIN_CANISTER_RESPONSE),
-        (
-            endpoint_blockchain_info_hash(),
-            BLOCKCHAIN_INFO_HASH_RESPONSE,
+            endpoint_api_blockchair_com_block_mainnet(),
+            API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
         ),
         (
-            endpoint_blockchain_info_height(),
-            BLOCKCHAIN_INFO_HEIGHT_RESPONSE,
+            endpoint_api_blockcypher_com_block_mainnet(),
+            API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
         ),
         (
-            endpoint_blockstream_info_hash(),
-            BLOCKSTREAM_INFO_HASH_RESPONSE,
+            endpoint_bitcoin_canister(),
+            BITCOIN_CANISTER_MAINNET_RESPONSE,
         ),
         (
-            endpoint_blockstream_info_height(),
-            BLOCKSTREAM_INFO_HEIGHT_RESPONSE,
+            endpoint_blockchain_info_hash_mainnet(),
+            BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE,
         ),
         (
-            endpoint_chain_api_btc_com_block(),
-            CHAIN_API_BTC_COM_RESPONSE,
+            endpoint_blockchain_info_height_mainnet(),
+            BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
+        ),
+        (
+            endpoint_blockstream_info_hash_mainnet(),
+            BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE,
+        ),
+        (
+            endpoint_blockstream_info_height_mainnet(),
+            BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
+        ),
+        (
+            endpoint_chain_api_btc_com_block_mainnet(),
+            CHAIN_API_BTC_COM_MAINNET_RESPONSE,
+        ),
+    ];
+    for (config, response_body) in mocks {
+        let request = config.request();
+        let mock_response = ic_http::create_response()
+            .status(200)
+            .body(response_body)
+            .build();
+        ic_http::mock::mock(request, mock_response);
+    }
+}
+
+/// Mocks all the testnet outcalls to be successful.
+pub fn mock_testnet_outcalls() {
+    let mocks = [
+        (
+            endpoint_api_bitaps_com_block_testnet(),
+            API_BITAPS_COM_TESTNET_RESPONSE,
+        ),
+        (
+            endpoint_api_blockchair_com_block_testnet(),
+            API_BLOCKCHAIR_COM_TESTNET_RESPONSE,
+        ),
+        (
+            endpoint_api_blockcypher_com_block_testnet(),
+            API_BLOCKCYPHER_COM_TESTNET_RESPONSE,
+        ),
+        (
+            endpoint_bitcoin_canister(),
+            BITCOIN_CANISTER_TESTNET_RESPONSE,
+        ),
+        (
+            endpoint_blockstream_info_hash_testnet(),
+            BLOCKSTREAM_INFO_HASH_TESTNET_RESPONSE,
+        ),
+        (
+            endpoint_blockstream_info_height_testnet(),
+            BLOCKSTREAM_INFO_HEIGHT_TESTNET_RESPONSE,
         ),
     ];
     for (config, response_body) in mocks {
@@ -46,14 +91,18 @@ pub fn mock_all_outcalls() {
 /// Mocks all the outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
     let mocks = [
-        endpoint_api_blockchair_com_block(),
-        endpoint_api_blockcypher_com_block(),
+        endpoint_api_blockchair_com_block_mainnet(),
+        endpoint_api_blockchair_com_block_testnet(),
+        endpoint_api_blockcypher_com_block_mainnet(),
+        endpoint_api_blockcypher_com_block_testnet(),
         endpoint_bitcoin_canister(),
-        endpoint_blockchain_info_hash(),
-        endpoint_blockchain_info_height(),
-        endpoint_blockstream_info_hash(),
-        endpoint_blockstream_info_height(),
-        endpoint_chain_api_btc_com_block(),
+        endpoint_blockchain_info_hash_mainnet(),
+        endpoint_blockchain_info_height_mainnet(),
+        endpoint_blockstream_info_hash_mainnet(),
+        endpoint_blockstream_info_hash_testnet(),
+        endpoint_blockstream_info_height_mainnet(),
+        endpoint_blockstream_info_height_testnet(),
+        endpoint_chain_api_btc_com_block_mainnet(),
     ];
     for config in mocks {
         let request = config.request();
@@ -65,14 +114,18 @@ pub fn mock_all_outcalls_404() {
 /// Mocks all the outcalls to abuse the API.
 pub fn mock_all_outcalls_abusing_api() {
     let mocks = [
-        endpoint_api_blockchair_com_block(),
-        endpoint_api_blockcypher_com_block(),
+        endpoint_api_blockchair_com_block_mainnet(),
+        endpoint_api_blockchair_com_block_testnet(),
+        endpoint_api_blockcypher_com_block_mainnet(),
+        endpoint_api_blockcypher_com_block_testnet(),
         endpoint_bitcoin_canister(),
-        endpoint_blockchain_info_hash(),
-        endpoint_blockchain_info_height(),
-        endpoint_blockstream_info_hash(),
-        endpoint_blockstream_info_height(),
-        endpoint_chain_api_btc_com_block(),
+        endpoint_blockchain_info_hash_mainnet(),
+        endpoint_blockchain_info_height_mainnet(),
+        endpoint_blockstream_info_hash_mainnet(),
+        endpoint_blockstream_info_hash_testnet(),
+        endpoint_blockstream_info_height_mainnet(),
+        endpoint_blockstream_info_height_testnet(),
+        endpoint_chain_api_btc_com_block_mainnet(),
     ];
     for config in mocks {
         let request = config.request();
@@ -86,8 +139,30 @@ pub fn mock_all_outcalls_abusing_api() {
 
 pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
 
+// https://api.bitaps.com/btc/v1/blockchain/block/last
+pub const API_BITAPS_COM_MAINNET_RESPONSE: &str = r#"{
+    "data": {
+        "height": 700001,
+        "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
+        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
+        "adjustedTimestamp": 1678294552
+    },
+    "time": 0.0018
+}"#;
+
+// https://api.bitaps.com/btc/testnet/v1/blockchain/block/last
+pub const API_BITAPS_COM_TESTNET_RESPONSE: &str = r#"{
+    "data": {
+        "height": 2000001,
+        "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
+        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
+        "adjustedTimestamp": 1678294552
+    },
+    "time": 0.0018
+}"#;
+
 // https://api.blockchair.com/bitcoin/stats
-pub const API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
+pub const API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
     "data":
     {
         "blocks":783771,
@@ -134,8 +209,82 @@ pub const API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
     }    
 }"#;
 
+// https://api.blockchair.com/bitcoin/testnet/stats
+pub const API_BLOCKCHAIR_COM_TESTNET_RESPONSE: &str = r#"{
+    "data":
+    {
+        "blocks":2431136,
+        "transactions":65448595,
+        "outputs":173565382,
+        "circulation":2099216984092285,
+        "blocks_24h":96,
+        "transactions_24h":9427,
+        "difficulty":1,
+        "volume_24h":5268257522789,
+        "mempool_transactions":112,
+        "mempool_size":39045,
+        "mempool_tps":0.06666666666666667,
+        "mempool_total_fee_usd":0,
+        "best_block_height":2000002,
+        "best_block_hash":"0000000000000000000fff222222222222222222222222222222222222222222",
+        "best_block_time":"2023-04-26 17:12:02",
+        "blockchain_size":28774784525,
+        "average_transaction_fee_24h":4780,
+        "inflation_24h":234374976,
+        "median_transaction_fee_24h":247,
+        "cdd_24h":132168.45577533677,
+        "mempool_outputs":453,
+        "largest_transaction_24h":
+        {
+            "hash":"6b50cb5842a049a8aa148f40acad0d20970e5100ed7659938f5f0f95ca2c5d4f",
+            "value_usd":0
+        },
+        "hashrate_24h":"4772185",
+        "inflation_usd_24h":0,
+        "average_transaction_fee_usd_24h":0,
+        "median_transaction_fee_usd_24h":0,
+        "market_price_usd":0,
+        "market_price_btc":0,
+        "market_price_usd_change_24h_percentage":0,
+        "market_cap_usd":0,
+        "market_dominance_percentage":0,
+        "next_retarget_time_estimate":"2023-04-27 12:46:52",
+        "next_difficulty_estimate":139532120,
+        "suggested_transaction_fee_per_byte_sat":1,
+        "hodling_addresses":10038668
+    },
+    "context":
+    {
+        "code":200,
+        "source":"A",
+        "state":2431135,
+        "market_price_usd":29794,
+        "cache":
+        {
+            "live":false,
+            "duration":"Ignore",
+            "since":"2023-04-26 17:24:41",
+            "until":"2023-04-26 17:25:52",
+            "time":1.9073486328125e-6
+        },
+        "api":
+        {
+            "version":"2.0.95-ie",
+            "last_major_update":"2022-11-07 02:00:00",
+            "next_major_update":null,
+            "documentation":"https:\/\/blockchair.com\/api\/docs",
+            "notice":"Please note that on November 7th, 2022 public support for the following blockchains was dropped: EOS, Bitcoin SV"
+        },
+        "servers":"API4,TBTC0",
+        "time":1.7573418617248535,
+        "render_time":0.0011322498321533203,
+        "full_time":0.0011341571807861328,
+        "request_cost":1
+    }
+}"#;
+
 // https://api.blockcypher.com/v1/btc/main
-pub const API_BLOCKCYPHER_COM_RESPONSE: &str = r#"{
+pub const API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
     "name": "BTC.main",
     "height": 700003,
     "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
@@ -152,8 +301,26 @@ pub const API_BLOCKCYPHER_COM_RESPONSE: &str = r#"{
     "last_fork_hash": "0000000000000000000388f42000fa901c01f2bfae36042bbae133ee430e6485"
 }"#;
 
+// https://api.blockcypher.com/v1/btc/test3
+pub const API_BLOCKCYPHER_COM_TESTNET_RESPONSE: &str = r#"{
+    "name": "BTC.test3",
+    "height": 2000003,
+    "hash": "0000000000000000000fff333333333333333333333333333333333333333333",
+    "time": "2023-04-26T17:12:11.044585287Z",
+    "latest_url": "https://api.blockcypher.com/v1/btc/test3/blocks/0000000000008d9497a398933d6618c6a39a6c818c22e82ef864f0a53c7bc4c1",
+    "previous_hash": "0000000000000000000fff222222222222222222222222222222222222222222",
+    "previous_url": "https://api.blockcypher.com/v1/btc/test3/blocks/00000000000000150d0869032cacc4af7b72a70a60e6d41805543a471e17050e",
+    "peer_count": 284,
+    "unconfirmed_count": 62,
+    "high_fee_per_kb": 44424,
+    "medium_fee_per_kb": 29773,
+    "low_fee_per_kb": 16199,
+    "last_fork_height": 2428426,
+    "last_fork_hash": "00000000000011f558264dc907379ec11e62420f6224f0b081dc6155e9a6e239"
+}"#;
+
 // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-pub const BITCOIN_CANISTER_RESPONSE: &str = r#"{
+pub const BITCOIN_CANISTER_MAINNET_RESPONSE: &str = r#"{
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
     main_chain_height 700007 1680014894644
@@ -168,22 +335,45 @@ pub const BITCOIN_CANISTER_RESPONSE: &str = r#"{
     address_utxos_length 86294218 1680014894644
 }"#;
 
+// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
+pub const BITCOIN_CANISTER_TESTNET_RESPONSE: &str = r#"{
+    # HELP main_chain_height Height of the main chain.
+    # TYPE main_chain_height gauge
+    main_chain_height 2000007 1682533330541
+    # HELP stable_height The height of the latest stable block.
+    # TYPE stable_height gauge
+    stable_height 2430866 1682533330541
+    # HELP utxos_length The number of UTXOs in the set.
+    # TYPE utxos_length gauge
+    utxos_length 28755498 1682533330541
+    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
+    # TYPE address_utxos_length gauge
+    address_utxos_length 28388537 1682533330541
+}"#;
+
 // https://blockchain.info/q/latesthash
-pub const BLOCKCHAIN_INFO_HASH_RESPONSE: &str =
+pub const BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE: &str =
     r#"0000000000000000000aaa444444444444444444444444444444444444444444"#;
 
 // https://blockchain.info/q/getblockcount
-pub const BLOCKCHAIN_INFO_HEIGHT_RESPONSE: &str = r#"700004"#;
+pub const BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700004"#;
 
 // https://blockstream.info/api/blocks/tip/hash
-pub const BLOCKSTREAM_INFO_HASH_RESPONSE: &str =
+pub const BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE: &str =
     r#"0000000000000000000aaa555555555555555555555555555555555555555555"#;
 
 // https://blockstream.info/api/blocks/tip/height
-pub const BLOCKSTREAM_INFO_HEIGHT_RESPONSE: &str = r#"700005"#;
+pub const BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700005"#;
+
+// https://blockstream.info/testnet/api/blocks/tip/hash
+pub const BLOCKSTREAM_INFO_HASH_TESTNET_RESPONSE: &str =
+    r#"0000000000000000000fff555555555555555555555555555555555555555555"#;
+
+// https://blockstream.info/testnet/api/blocks/tip/height
+pub const BLOCKSTREAM_INFO_HEIGHT_TESTNET_RESPONSE: &str = r#"2000004"#;
 
 // https://chain.api.btc.com/v3/block/latest
-pub const CHAIN_API_BTC_COM_RESPONSE: &str = r#"{
+pub const CHAIN_API_BTC_COM_MAINNET_RESPONSE: &str = r#"{
     "data": {
         "height":700006,
         "version":538968064,

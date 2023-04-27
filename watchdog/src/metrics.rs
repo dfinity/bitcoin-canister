@@ -1,4 +1,5 @@
 use crate::bitcoin_block_apis::BitcoinBlockApi;
+use crate::config::BitcoinNetwork;
 use crate::health::HeightStatus;
 use crate::types::CandidHttpResponse;
 use ic_metrics_encoder::MetricsEncoder;
@@ -37,6 +38,15 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     const NO_HEIGHT: f64 = -1.0;
     const NO_HEIGHT_DIFF: f64 = -1_000.0;
 
+    let bitcoin_network = crate::storage::get_config().bitcoin_network;
+    let (mainnet, testnet) = match bitcoin_network {
+        BitcoinNetwork::Mainnet => (1.0, 0.0),
+        BitcoinNetwork::Testnet => (0.0, 1.0),
+    };
+    w.gauge_vec("bitcoin_network", "Bitcoin network.")?
+        .value(&[("network", "mainnet")], mainnet)?
+        .value(&[("network", "testnet")], testnet)?;
+
     let health = crate::health::health_status();
     w.encode_gauge(
         "bitcoin_canister_height",
@@ -74,7 +84,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         available_explorers.insert(explorer.provider.clone(), explorer);
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
-    for explorer in BitcoinBlockApi::explorers() {
+    for explorer in BitcoinBlockApi::network_explorers(bitcoin_network) {
         let height = match available_explorers.get(&explorer) {
             None => NO_HEIGHT,
             Some(explorer) => explorer.height.map(|x| x as f64).unwrap_or(NO_HEIGHT),

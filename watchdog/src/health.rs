@@ -45,9 +45,10 @@ pub struct HealthStatus {
 
 /// Calculates the health status of a Bitcoin canister.
 pub fn health_status() -> HealthStatus {
+    let bitcoin_network = crate::storage::get_config().bitcoin_network;
     compare(
         crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
-        BitcoinBlockApi::explorers()
+        BitcoinBlockApi::network_explorers(bitcoin_network)
             .iter()
             .filter_map(crate::storage::get)
             .collect::<Vec<_>>(),
@@ -168,10 +169,10 @@ mod test {
     fn test_compare_not_enough_explorers() {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
-        let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-        ];
+        let other = vec![BlockInfo::new(
+            BitcoinBlockApi::ApiBlockchairComMainnet,
+            1_005,
+        )];
 
         // Assert
         assert_eq!(
@@ -181,10 +182,10 @@ mod test {
                 height_target: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
-                explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-                ],
+                explorers: vec![BlockInfo::new(
+                    BitcoinBlockApi::ApiBlockchairComMainnet,
+                    1_005
+                ),],
             }
         );
     }
@@ -194,9 +195,9 @@ mod test {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_006),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_004),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_004),
         ];
 
         // Assert
@@ -208,9 +209,9 @@ mod test {
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_006),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_005),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 1_004),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_004),
                 ],
             }
         );
@@ -221,9 +222,9 @@ mod test {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 996),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 995),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 994),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 996),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 995),
+            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 994),
         ];
 
         // Assert
@@ -235,9 +236,9 @@ mod test {
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 996),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 995),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairCom, 994),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 996),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 995),
+                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 994),
                 ],
             }
         );
