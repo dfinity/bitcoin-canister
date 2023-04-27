@@ -57,11 +57,13 @@ type health_status = record {
     explorers : vec block_info;
 };
 
+/// Bitcoin network.
 type bitcoin_network = variant {
     mainnet;
     testnet;
 };
 
+/// Watchdog canister configuration.
 type config = record {
     /// The Bitcoin network to use.
     bitcoin_network : bitcoin_network;

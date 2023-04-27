@@ -13,10 +13,11 @@ const BLOCKS_AHEAD_THRESHOLD: u64 = 2;
 /// The minimum number of explorers to compare against.
 const MIN_EXPLORERS: u64 = 2;
 
-/// Bitcoin canister endpoint.
+/// Mainnet bitcoin canister endpoint.
 const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
     "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics";
 
+/// Testnet bitcoin canister endpoint.
 const TESTNET_BITCOIN_CANISTER_ENDPOINT: &str =
     "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics";
 
@@ -26,6 +27,7 @@ const DELAY_BEFORE_FIRST_FETCH_SEC: u64 = 1;
 /// The number of seconds to wait between all the other data fetches.
 const INTERVAL_BETWEEN_FETCHES_SEC: u64 = 120;
 
+/// Bitcoin network.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BitcoinNetwork {
     #[serde(rename = "mainnet")]
@@ -35,6 +37,7 @@ pub enum BitcoinNetwork {
     Testnet,
 }
 
+/// Watchdog canister configuration.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     /// The Bitcoin network to use.
@@ -60,6 +63,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Creates a new configuration depending on the Bitcoin network.
     pub fn new() -> Self {
         match BITCOIN_NETWORK {
             BitcoinNetwork::Mainnet => Self::mainnet(),
@@ -67,6 +71,7 @@ impl Config {
         }
     }
 
+    /// Creates a new configuration for the mainnet.
     pub fn mainnet() -> Self {
         Self {
             bitcoin_network: BitcoinNetwork::Mainnet,
@@ -79,6 +84,7 @@ impl Config {
         }
     }
 
+    /// Creates a new configuration for the testnet.
     pub fn testnet() -> Self {
         Self {
             bitcoin_network: BitcoinNetwork::Testnet,
