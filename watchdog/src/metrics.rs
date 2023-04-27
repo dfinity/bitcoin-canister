@@ -1,4 +1,5 @@
 use crate::bitcoin_block_apis::BitcoinBlockApi;
+use crate::config::BitcoinNetwork;
 use crate::health::HeightStatus;
 use crate::types::CandidHttpResponse;
 use ic_metrics_encoder::MetricsEncoder;
@@ -36,6 +37,14 @@ pub fn get_metrics() -> CandidHttpResponse {
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     const NO_HEIGHT: f64 = -1.0;
     const NO_HEIGHT_DIFF: f64 = -1_000.0;
+
+    let (mainnet, testnet) = match crate::storage::get_config().bitcoin_network {
+        BitcoinNetwork::Mainnet => (1.0, 0.0),
+        BitcoinNetwork::Testnet => (0.0, 1.0),
+    };
+    w.gauge_vec("bitcoin_network", "Bitcoin network.")?
+        .value(&[("network", "mainnet")], mainnet)?
+        .value(&[("network", "testnet")], testnet)?;
 
     let health = crate::health::health_status();
     w.encode_gauge(
