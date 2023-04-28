@@ -27,7 +27,14 @@ STABILITY_THRESHOLD=<desired stability threshold>
 NETWORK=<mainnet or testnet>
 ```
 
-## 3. Download the Bitcoin state
+## 3. Checkout the working revision
+See [Proposal](https://dashboard.internetcomputer.org/proposal/94253)
+
+```
+git checkout fdfced51d002d7f16908642f29216a869ecd3627
+```
+
+## 4. Download the Bitcoin state
 
 Run `1_download_state.sh`, which downloads the bitcoin state. This can several hours.
 
@@ -56,7 +63,7 @@ Make sure that the output of the above command specifies that you have a chain t
 
 If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh $BITCOIN_DIR $NETWORK` for a minute or two, which downloads more Bitcoin blocks, and try again.
 
-## 4. Compute the Bitcoin Canister's State
+## 5. Compute the Bitcoin Canister's State
 
 ```
 ./2_compute_unstable_blocks.sh $BITCOIN_DIR $HEIGHT $NETWORK
@@ -68,7 +75,7 @@ If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_re
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
 
-## 5. Compute the State's Hashes.
+## 6. Compute the State's Hashes
 
 A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
 
@@ -77,3 +84,59 @@ cargo run --release --example compute_hashes -- --file ./canister_state.bin > ch
 ```
 
 The hash of each chunk is saved in `chunk_hashes.txt`.
+
+## 7. Hardcode the caches into the uploader canister
+
+```
+cp bootstrap/chunk_hashes.txt bootstrap/uploader/src/chunk_hashes.txt
+```
+
+Update the `state_size` in `bootstrap/uploader/src/main.rs` to be equal to the state size in 64k blocks, i.e. `echo $(( $(stat -c %s bootstrap/canister_state.bin) / 65536 ))`
+
+## 8. Deploy the uploader canister
+
+`dfx` version `0.12.1` is known to work
+
+Add desired network to the `dfx.json` and set `NETWORK` to match it.
+
+Create, build and install:
+
+```
+dfx canister --network=$NETWORK create uploader --no-wallet
+dfx build $uploader --network=$NETWORK
+dfx canister install uploader --network=$NETWORK
+```
+
+## 9. Upload the state
+
+Set `CANISTER` to match canister id, `IP` to match one of the nodes.
+
+```
+cd uploader
+cargo run --example upload -- --canister-id $CANISTER --state ../canister_state.bin --ic-network http://[${IP}]:8080  --fetch-root-key
+```
+
+If the desired node gets unhealthy, the uploader crashes but it continues to upload on restart. Takes few hours to few days.
+
+## 10. Hardcode the canister id into the replica binary
+
+Set the bitcoin canister id(s) in `rs/config/src/execution_environment.rs` to match the uploader canister id. Build image and upgrade the subnet.
+
+## 11. Substitute uploader canister binary with bitcoin canister
+
+Edit `canister_ids.json`: rename "uploader" to "bitcoin"
+
+Upgrade binary, e.g.
+
+```
+dfx build bitcoin --network=$NETWORK
+dfx canister --network $NETWORK install bitcoin --argument '(record {network = (variant {mainnet}); api_access = (variant {enabled}); blocks_source = (principal "aaaaa-aa"); fees = (record { get_current_fee_percentiles = 0; get_utxos_maximum = 0; get_current_fee_percentiles_maximum = 0; send_transaction_per_byte = 0; get_balance = 0; get_utxos_cycles_per_ten_instructions = 0; get_utxos_base = 0; get_balance_maximum = 0; send_transaction_base = 0}); stability_threshold = 100; syncing = (variant {enabled})})' --mode=upgrade
+```
+
+## 12. Check if the bitcoin canister is syncing
+
+```
+dfx canister call bitcoin --network=$NETWORK http_request '(record { url = "/metrics"; body = vec{0:nat8}; headers = vec{}; method = "GET" })' | sed 's/\\0a#/\n/g' | sed 's/\\0a/\t/g ' | grep chain_height
+```
+
+The chain height should increase after the bitcoin canister manages to connect to the bitcoin network, which can take couple of minutes.
