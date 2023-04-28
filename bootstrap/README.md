@@ -1,4 +1,4 @@
-# Computing the Bitcoin State
+# Uploading the Bitcoin State
 
 Rather than syncing the Bitcoin canister from genesis, which can take several weeks, the state of the canister can be computed offline much more quickly with the help of `bitcoind`.
 
