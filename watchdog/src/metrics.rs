@@ -35,6 +35,8 @@ pub fn get_metrics() -> CandidHttpResponse {
 
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
+    const NO_VALUE: f64 = f64::NAN;
+
     let bitcoin_network = crate::storage::get_config().bitcoin_network;
     let (mainnet, testnet) = match bitcoin_network {
         BitcoinNetwork::Mainnet => (1.0, 0.0),
@@ -45,27 +47,21 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("network", "testnet")], testnet)?;
 
     let health = crate::health::health_status();
-    if let Some(height) = health.height_source {
-        w.encode_gauge(
-            "bitcoin_canister_height",
-            height as f64,
-            "Main chain height of the Bitcoin canister.",
-        )?;
-    }
-    if let Some(height) = health.height_target {
-        w.encode_gauge(
-            "height_target",
-            height as f64,
-            "Height target derived from explorer heights.",
-        )?;
-    }
-    if let Some(height_diff) = health.height_diff {
-        w.encode_gauge(
-            "height_diff",
-            height_diff as f64,
-            "Difference between Bitcoin canister height and target height.",
-        )?;
-    }
+    w.encode_gauge(
+        "bitcoin_canister_height",
+        health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),
+        "Main chain height of the Bitcoin canister.",
+    )?;
+    w.encode_gauge(
+        "height_target",
+        health.height_target.map(|x| x as f64).unwrap_or(NO_VALUE),
+        "Height target derived from explorer heights.",
+    )?;
+    w.encode_gauge(
+        "height_diff",
+        health.height_diff.map(|x| x as f64).unwrap_or(NO_VALUE),
+        "Difference between Bitcoin canister height and target height.",
+    )?;
 
     let (not_enough_data, ok, ahead, behind) = match health.height_status {
         HeightStatus::NotEnoughData => (1.0, 0.0, 0.0, 0.0),
@@ -85,11 +81,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     for explorer in BitcoinBlockApi::network_explorers(bitcoin_network) {
-        if let Some(block_info) = available_explorers.get(&explorer) {
-            if let Some(height) = block_info.height {
-                gauge = gauge.value(&[("explorer", &explorer.to_string())], height as f64)?;
-            }
-        }
+        let height = available_explorers
+            .get(&explorer)
+            .map_or(NO_VALUE, |block_info| {
+                block_info.height.map_or(NO_VALUE, |x| x as f64)
+            });
+        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
     }
 
     Ok(())
