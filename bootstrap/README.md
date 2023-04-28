@@ -120,7 +120,7 @@ If the desired node gets unhealthy, the uploader crashes but it continues to upl
 
 ## 10. Hardcode the canister id into the replica binary
 
-Set the bitcoin canister id(s) in `rs/config/src/execution_environment.rs` to match the uploader canister id. Build image and upgrade the subnet.
+Set the bitcoin canister id in `rs/config/src/execution_environment.rs` to match the uploader canister id. Note that "mainnet" and "testnet" stand for the BTC netwrok version, not IC. Build image and upgrade the subnet.
 
 ## 11. Substitute uploader canister binary with bitcoin canister
 
