@@ -86,6 +86,12 @@ pub fn get_config() -> Config {
     crate::storage::get_config()
 }
 
+/// Returns the API access of the Bitcoin canister.
+#[query]
+pub fn get_api_access() -> ApiAccess {
+    crate::storage::get_api_access()
+}
+
 /// Processes external HTTP requests.
 #[query]
 pub fn http_request(request: CandidHttpRequest) -> CandidHttpResponse {

@@ -87,10 +87,28 @@ type config = record {
     interval_between_fetches_sec : nat64;
 };
 
+type flag = variant {
+    enabled;
+    disabled;
+};
+
+/// Captures the expected and the actual value of the Bitcoin canister API access flag.
+/// They might be different if the Bitcoin canister is not reachable.
+type api_access = record {
+    /// Expected value of the Bitcoin canister API access flag.
+    target : opt flag;
+
+    /// Actual value of the Bitcoin canister API access flag.
+    actual : opt flag;
+};
+
 service : {
     /// Returns the health status of the Bitcoin canister.
     health_status : () -> (health_status) query;
 
     /// Returns the configuration of the watchdog canister.
     get_config : () -> (config) query;
+
+    /// Returns the API access information for the Bitcoin canister.
+    get_api_access : () -> (api_access) query;
 };

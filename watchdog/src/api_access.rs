@@ -1,10 +1,11 @@
 use crate::health::{HealthStatus, HeightStatus};
 use crate::print;
+use candid::CandidType;
 use ic_btc_interface::{Config as BitcoinCanisterConfig, Flag, SetConfigRequest};
 
 /// Captures the expected and the actual value of the Bitcoin canister API access flag.
 /// They might be different if the Bitcoin canister is not reachable.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, CandidType)]
 pub struct ApiAccess {
     /// Expected value of the Bitcoin canister API access flag.
     pub target: Option<Flag>,
@@ -57,6 +58,9 @@ pub async fn fetch_api_access() {
 
     let bitcoin_canister_config = get_bitcoin_canister_config().await;
     let actual = bitcoin_canister_config.map(|config| config.api_access);
+    if actual.is_none() {
+        print("Error getting Bitcoin canister config: api_access is None");
+    }
 
     let api_access = ApiAccess { target, actual };
 
