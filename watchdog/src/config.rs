@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 const BITCOIN_NETWORK: BitcoinNetwork = BitcoinNetwork::Mainnet;
 
 /// Below this threshold, the canister is considered to be behind.
+/// This value is positive, but it will be converted to negative.
 const BLOCKS_BEHIND_THRESHOLD: u64 = 2;
 
 /// Above this threshold, the canister is considered to be ahead.
@@ -51,6 +52,7 @@ pub struct Config {
     pub bitcoin_network: BitcoinNetwork,
 
     /// Below this threshold, the canister is considered to be behind.
+    /// This value is positive, but it must be converted to negative on every usage.
     pub blocks_behind_threshold: u64,
 
     /// Above this threshold, the canister is considered to be ahead.
@@ -130,5 +132,33 @@ mod test {
     #[test]
     fn test_bitcoin_canister_endpoint_contains_principal_testnet() {
         assert!(TESTNET_BITCOIN_CANISTER_ENDPOINT.contains(TESTNET_BITCOIN_CANISTER_PRINCIPAL));
+    }
+
+    #[test]
+    fn test_config_mainnet() {
+        let config = Config::mainnet();
+        assert_eq!(config.bitcoin_network, BitcoinNetwork::Mainnet);
+        assert_eq!(
+            config.bitcoin_canister_principal,
+            Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
+        );
+        assert_eq!(
+            config.bitcoin_canister_endpoint,
+            MAINNET_BITCOIN_CANISTER_ENDPOINT
+        );
+    }
+
+    #[test]
+    fn test_config_testnet() {
+        let config = Config::testnet();
+        assert_eq!(config.bitcoin_network, BitcoinNetwork::Testnet);
+        assert_eq!(
+            config.bitcoin_canister_principal,
+            Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
+        );
+        assert_eq!(
+            config.bitcoin_canister_endpoint,
+            TESTNET_BITCOIN_CANISTER_ENDPOINT
+        );
     }
 }
