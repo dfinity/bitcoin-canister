@@ -1,5 +1,6 @@
 use crate::health::{HealthStatus, HeightStatus};
-use ic_btc_interface::{Config as BitcoinCanisterConfig, Flag};
+use crate::print;
+use ic_btc_interface::{Config as BitcoinCanisterConfig, Flag, SetConfigRequest};
 
 #[derive(Clone, Debug)]
 pub struct ApiAccess {
@@ -35,8 +36,15 @@ fn calculate_target(health: HealthStatus) -> Option<Flag> {
 }
 
 async fn get_bitcoin_canister_config() -> Option<BitcoinCanisterConfig> {
-    // TODO: read the configuration from the Bitcoin canister.
-    Some(BitcoinCanisterConfig::default())
+    let id = crate::storage::get_config().bitcoin_canister_principal;
+    let result = ic_cdk::api::call::call(id, "get_config", ()).await;
+    match result {
+        Ok((config,)) => config,
+        Err(err) => {
+            print(&format!("Error getting Bitcoin canister config: {:?}", err));
+            None
+        }
+    }
 }
 
 /// Fetches the API access flag from the Bitcoin canister.
@@ -59,7 +67,18 @@ pub async fn set_api_access() {
         (None, _) => (),
         (Some(target), actual) => {
             if Some(target) != actual {
-                // TODO: set the API access in the Bitcoin canister.
+                let id = crate::storage::get_config().bitcoin_canister_principal;
+                let set_config_request = SetConfigRequest {
+                    api_access: Some(target),
+                    ..Default::default()
+                };
+                let result = ic_cdk::api::call::call(id, "set_config", (set_config_request,)).await;
+                match result {
+                    Ok(()) => (),
+                    Err(err) => {
+                        print(&format!("Error setting Bitcoin canister config: {:?}", err));
+                    }
+                }
             }
         }
     }
