@@ -448,7 +448,21 @@ jobs:
           bash watchdog/tests/metrics.sh
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-disable-api-if-not-fully-synced-flag", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "charge-cycles-on-reject", "upgradability", "set_config"]
+    needs:
+      - cargo-tests
+      - shell-checks
+      - cargo-clippy
+      - rustfmt
+      - e2e-disable-api-if-not-fully-synced-flag
+      - e2e-scenario-1
+      - e2e-scenario-2
+      - e2e-scenario-3
+      - charge-cycles-on-reject
+      - upgradability
+      - set_config
+      - watchdog_health_status
+      - watchdog_get_config
+      - watchdog_metrics
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
