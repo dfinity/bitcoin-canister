@@ -1,3 +1,4 @@
+mod api_access;
 mod bitcoin_block_apis;
 mod config;
 mod endpoints;
@@ -11,6 +12,7 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
+use crate::api_access::ApiAccess;
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::config::Config;
 use crate::endpoints::*;
@@ -28,6 +30,9 @@ thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
 
+    /// The local storage for the API access.
+    static API_ACCESS: RwLock<ApiAccess> = RwLock::new(ApiAccess::new());
+
     /// The local storage for the configuration.
     static CONFIG: RwLock<Config> = RwLock::new(Config::new());
 }
@@ -39,10 +44,10 @@ fn init() {
         Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
         || {
             ic_cdk::spawn(async {
-                fetch_data().await;
+                tick().await;
                 ic_cdk_timers::set_timer_interval(
                     Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::spawn(fetch_data()),
+                    || ic_cdk::spawn(tick()),
                 );
             })
         },
@@ -56,10 +61,17 @@ fn post_upgrade() {
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
-async fn fetch_data() {
+async fn fetch_block_info_data() {
     let bitcoin_network = crate::storage::get_config().bitcoin_network;
     let data = crate::fetch::fetch_all_data(bitcoin_network).await;
-    data.into_iter().for_each(crate::storage::insert);
+    data.into_iter().for_each(crate::storage::insert_block_info);
+}
+
+/// Periodically fetches data and sets the API access to the Bitcoin canister.
+async fn tick() {
+    fetch_block_info_data().await;
+    crate::api_access::fetch_api_access().await;
+    crate::api_access::set_api_access().await;
 }
 
 /// Returns the health status of the Bitcoin canister.

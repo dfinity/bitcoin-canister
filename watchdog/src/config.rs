@@ -1,4 +1,5 @@
 use candid::CandidType;
+use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 
 /// The Bitcoin network to use.
@@ -12,6 +13,12 @@ const BLOCKS_AHEAD_THRESHOLD: u64 = 2;
 
 /// The minimum number of explorers to compare against.
 const MIN_EXPLORERS: u64 = 2;
+
+/// Mainnet bitcoin canister principal.
+const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
+
+/// Testnet bitcoin canister principal.
+const TESTNET_BITCOIN_CANISTER_PRINCIPAL: &str = "g4xu7-jiaaa-aaaan-aaaaq-cai";
 
 /// Mainnet bitcoin canister endpoint.
 const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
@@ -52,6 +59,9 @@ pub struct Config {
     /// The minimum number of explorers to compare against.
     pub min_explorers: u64,
 
+    /// Bitcoin canister principal.
+    pub bitcoin_canister_principal: Principal,
+
     /// Bitcoin canister endpoint.
     pub bitcoin_canister_endpoint: String,
 
@@ -78,6 +88,8 @@ impl Config {
             blocks_behind_threshold: BLOCKS_BEHIND_THRESHOLD,
             blocks_ahead_threshold: BLOCKS_AHEAD_THRESHOLD,
             min_explorers: MIN_EXPLORERS,
+            bitcoin_canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
+                .unwrap(),
             bitcoin_canister_endpoint: MAINNET_BITCOIN_CANISTER_ENDPOINT.to_string(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
@@ -91,6 +103,8 @@ impl Config {
             blocks_behind_threshold: BLOCKS_BEHIND_THRESHOLD,
             blocks_ahead_threshold: BLOCKS_AHEAD_THRESHOLD,
             min_explorers: MIN_EXPLORERS,
+            bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
+                .unwrap(),
             bitcoin_canister_endpoint: TESTNET_BITCOIN_CANISTER_ENDPOINT.to_string(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
@@ -101,5 +115,20 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_bitcoin_canister_endpoint_contains_principal_mainnet() {
+        assert!(MAINNET_BITCOIN_CANISTER_ENDPOINT.contains(MAINNET_BITCOIN_CANISTER_PRINCIPAL));
+    }
+
+    #[test]
+    fn test_bitcoin_canister_endpoint_contains_principal_testnet() {
+        assert!(TESTNET_BITCOIN_CANISTER_ENDPOINT.contains(TESTNET_BITCOIN_CANISTER_PRINCIPAL));
     }
 }

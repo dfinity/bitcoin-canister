@@ -47,10 +47,10 @@ pub struct HealthStatus {
 pub fn health_status() -> HealthStatus {
     let bitcoin_network = crate::storage::get_config().bitcoin_network;
     compare(
-        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
+        crate::storage::get_block_info(&BitcoinBlockApi::BitcoinCanister),
         BitcoinBlockApi::network_explorers(bitcoin_network)
             .iter()
-            .filter_map(crate::storage::get)
+            .filter_map(crate::storage::get_block_info)
             .collect::<Vec<_>>(),
         crate::storage::get_config(),
     )

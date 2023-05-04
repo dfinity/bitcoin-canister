@@ -23,6 +23,7 @@ futures = "0.3.27"
 ic-http = {path = "../ic-http"}
 serde_bytes = "0.11"
 ic-metrics-encoder = "1.0.0"
+ic-btc-interface = { path = "../interface" }
 
 [dev-dependencies]
 tokio = { version = "1.15.0", features = [ "full" ] }
