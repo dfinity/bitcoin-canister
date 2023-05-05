@@ -70,8 +70,7 @@ async fn fetch_block_info_data() {
 /// Periodically fetches data and sets the API access to the Bitcoin canister.
 async fn tick() {
     fetch_block_info_data().await;
-    crate::api_access::fetch_api_access().await;
-    crate::api_access::set_api_access().await;
+    crate::api_access::synchronise_api_access().await;
 }
 
 /// Returns the health status of the Bitcoin canister.
