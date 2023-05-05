@@ -112,6 +112,11 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         flag_to_gauge(api_access.actual),
         "Actual value of the Bitcoin canister API access flag.",
     )?;
+    w.encode_gauge(
+        "api_access_is_in_sync",
+        if api_access.is_in_sync() { 1.0 } else { 0.0 },
+        "Whether the actual and target values of the Bitcoin canister API access flag are in sync.",
+    )?;
 
     let mut available_explorers = HashMap::new();
     for explorer in health.explorers {
