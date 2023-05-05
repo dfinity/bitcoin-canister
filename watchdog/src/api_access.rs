@@ -88,8 +88,11 @@ pub async fn synchronise_api_access() {
         fetch_actual_and_calculate_target_api_access().await;
         let api_access = crate::storage::get_api_access();
         if api_access.target.is_none() || api_access.is_in_sync() {
+            // If the target is None, it means there's not enough data to calculate it.
+            // If the target and actual are in sync, there's no need to update the flag.
             return;
         }
+        // Target is not None and actual is not in sync, so update the flag.
         update_api_access(api_access.target).await;
     }
     print(&format!(
