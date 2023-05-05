@@ -4,6 +4,7 @@ use candid::CandidType;
 use ic_btc_interface::{Config as BitcoinCanisterConfig, Flag, SetConfigRequest};
 
 /// Captures the expected and the actual value of the Bitcoin canister API access flag.
+/// They might be different if the Bitcoin canister is not reachable.
 #[derive(Clone, Debug, CandidType)]
 pub struct ApiAccess {
     /// Expected value of the Bitcoin canister API access flag.
