@@ -110,6 +110,7 @@ impl Config {
         self.blocks_ahead_threshold as i64
     }
 
+    /// Returns the Bitcoin canister metrics endpoint.
     pub fn get_bitcoin_canister_endpoint(&self) -> String {
         let principal = self.bitcoin_canister_principal.to_text();
         format!("https://{principal}.raw.ic0.app/metrics")
