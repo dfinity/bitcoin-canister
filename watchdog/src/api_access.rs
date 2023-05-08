@@ -21,6 +21,7 @@ async fn get_bitcoin_canister_config() -> Option<BitcoinCanisterConfig> {
         .ok()
 }
 
+/// Fetches the actual API access flag from the Bitcoin canister.
 async fn fetch_actual_api_access() -> Option<Flag> {
     let bitcoin_canister_config = get_bitcoin_canister_config().await;
 
@@ -56,6 +57,8 @@ pub async fn synchronise_api_access() {
     if target.is_some() {
         let actual = fetch_actual_api_access().await;
         if target != actual {
+            // Only update the API access flag if the target is not None
+            // and it is different from the actual value.
             update_api_access(target).await;
         }
     }
