@@ -44,7 +44,6 @@ pub struct Config {
     pub bitcoin_network: BitcoinNetwork,
 
     /// Below this threshold, the canister is considered to be behind.
-    /// This value is positive, but it must be converted to negative on every usage.
     blocks_behind_threshold: u64,
 
     /// Above this threshold, the canister is considered to be ahead.
