@@ -77,8 +77,8 @@ type config = record {
     /// The minimum number of explorers to compare against.
     min_explorers : nat64;
 
-    /// Bitcoin canister endpoint.
-    bitcoin_canister_endpoint : text;
+    /// Bitcoin canister principal.
+    bitcoin_canister_principal : principal;
 
     /// The number of seconds to wait before the first data fetch.
     delay_before_first_fetch_sec : nat64;
