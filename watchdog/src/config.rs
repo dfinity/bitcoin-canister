@@ -21,14 +21,6 @@ const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
 /// Testnet bitcoin canister principal.
 const TESTNET_BITCOIN_CANISTER_PRINCIPAL: &str = "g4xu7-jiaaa-aaaan-aaaaq-cai";
 
-/// Mainnet bitcoin canister endpoint.
-const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
-    "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics";
-
-/// Testnet bitcoin canister endpoint.
-const TESTNET_BITCOIN_CANISTER_ENDPOINT: &str =
-    "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics";
-
 /// The number of seconds to wait before the first data fetch.
 const DELAY_BEFORE_FIRST_FETCH_SEC: u64 = 1;
 
@@ -64,9 +56,6 @@ pub struct Config {
     /// Bitcoin canister principal.
     pub bitcoin_canister_principal: Principal,
 
-    /// Bitcoin canister endpoint.
-    pub bitcoin_canister_endpoint: String,
-
     /// The number of seconds to wait before the first data fetch.
     pub delay_before_first_fetch_sec: u64,
 
@@ -92,7 +81,6 @@ impl Config {
             min_explorers: MIN_EXPLORERS,
             bitcoin_canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
-            bitcoin_canister_endpoint: MAINNET_BITCOIN_CANISTER_ENDPOINT.to_string(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
         }
@@ -107,7 +95,6 @@ impl Config {
             min_explorers: MIN_EXPLORERS,
             bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
-            bitcoin_canister_endpoint: TESTNET_BITCOIN_CANISTER_ENDPOINT.to_string(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
         }
@@ -122,6 +109,11 @@ impl Config {
     pub fn get_blocks_ahead_threshold(&self) -> i64 {
         self.blocks_ahead_threshold as i64
     }
+
+    pub fn get_bitcoin_canister_endpoint(&self) -> String {
+        let principal = self.bitcoin_canister_principal.to_text();
+        format!("https://{principal}.raw.ic0.app/metrics")
+    }
 }
 
 impl Default for Config {
@@ -133,6 +125,14 @@ impl Default for Config {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    /// Mainnet bitcoin canister endpoint.
+    const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
+        "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics";
+
+    /// Testnet bitcoin canister endpoint.
+    const TESTNET_BITCOIN_CANISTER_ENDPOINT: &str =
+        "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics";
 
     #[test]
     fn test_bitcoin_canister_endpoint_contains_principal_mainnet() {
@@ -153,7 +153,7 @@ mod test {
             Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
-            config.bitcoin_canister_endpoint,
+            config.get_bitcoin_canister_endpoint(),
             MAINNET_BITCOIN_CANISTER_ENDPOINT
         );
     }
@@ -167,7 +167,7 @@ mod test {
             Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
-            config.bitcoin_canister_endpoint,
+            config.get_bitcoin_canister_endpoint(),
             TESTNET_BITCOIN_CANISTER_ENDPOINT
         );
     }
