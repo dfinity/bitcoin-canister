@@ -72,10 +72,9 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
     let height_status = height_diff.map_or(HeightStatus::NotEnoughData, |diff| {
-        // blocks_behind_threshold must be converted to negative.
-        if diff < -(config.blocks_behind_threshold as i64) {
+        if diff < config.get_blocks_behind_threshold() {
             HeightStatus::Behind
-        } else if diff > config.blocks_ahead_threshold as i64 {
+        } else if diff > config.get_blocks_ahead_threshold() {
             HeightStatus::Ahead
         } else {
             HeightStatus::Ok

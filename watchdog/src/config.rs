@@ -53,10 +53,10 @@ pub struct Config {
 
     /// Below this threshold, the canister is considered to be behind.
     /// This value is positive, but it must be converted to negative on every usage.
-    pub blocks_behind_threshold: u64,
+    blocks_behind_threshold: u64,
 
     /// Above this threshold, the canister is considered to be ahead.
-    pub blocks_ahead_threshold: u64,
+    blocks_ahead_threshold: u64,
 
     /// The minimum number of explorers to compare against.
     pub min_explorers: u64,
@@ -111,6 +111,16 @@ impl Config {
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
         }
+    }
+
+    /// Returns the number of blocks behind threshold as a negative number.
+    pub fn get_blocks_behind_threshold(&self) -> i64 {
+        -(self.blocks_behind_threshold as i64)
+    }
+
+    /// Returns the number of blocks ahead threshold as a positive number.
+    pub fn get_blocks_ahead_threshold(&self) -> i64 {
+        self.blocks_ahead_threshold as i64
     }
 }
 

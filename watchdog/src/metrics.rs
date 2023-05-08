@@ -57,13 +57,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("network", "testnet")], testnet)?;
     w.encode_gauge(
         "blocks_behind_threshold",
-        // blocks_behind_threshold must be converted to negative.
-        -1.0 * config.blocks_behind_threshold as f64,
+        config.get_blocks_behind_threshold() as f64,
         "Below this threshold, the canister is considered to be behind.",
     )?;
     w.encode_gauge(
         "blocks_ahead_threshold",
-        config.blocks_ahead_threshold as f64,
+        config.get_blocks_ahead_threshold() as f64,
         "Above this threshold, the canister is considered to be ahead.",
     )?;
     w.encode_gauge(
