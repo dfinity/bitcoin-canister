@@ -85,7 +85,7 @@ pub fn get_config() -> Config {
     crate::storage::get_config()
 }
 
-/// Returns the API access of the Bitcoin canister.
+/// Returns the API access of the Bitcoin canister as known by the watchdog.
 #[query]
 pub fn get_api_access() -> ApiAccess {
     crate::storage::get_api_access()
