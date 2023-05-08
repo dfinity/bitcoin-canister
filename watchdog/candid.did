@@ -99,6 +99,6 @@ service : {
     /// Returns the configuration of the watchdog canister.
     get_config : () -> (config) query;
 
-    /// Returns the API access information for the Bitcoin canister.
-    get_api_access_flag : () -> (opt flag) query;
+    /// Returns the API access target for the Bitcoin canister.
+    get_api_access_target : () -> (opt flag) query;
 };
