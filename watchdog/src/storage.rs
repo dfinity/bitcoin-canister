@@ -36,5 +36,5 @@ pub fn set_api_access_target(flag: Option<Flag>) {
 
 /// Returns the API access from the local storage.
 pub fn get_api_access_target() -> Option<Flag> {
-    API_ACCESS_TARGET.with(|cell| cell.borrow().clone())
+    API_ACCESS_TARGET.with(|cell| *cell.borrow())
 }
