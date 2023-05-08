@@ -22,19 +22,19 @@ use crate::types::{CandidHttpRequest, CandidHttpResponse};
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};
 use serde_bytes::ByteBuf;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::RwLock;
 use std::time::Duration;
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access.
-    static API_ACCESS: RwLock<ApiAccess> = RwLock::new(ApiAccess::new());
+    static API_ACCESS: RefCell<ApiAccess> = RefCell::new(ApiAccess::new());
 
     /// The local storage for the configuration.
-    static CONFIG: RwLock<Config> = RwLock::new(Config::new());
+    static CONFIG: RefCell<Config> = RefCell::new(Config::new());
 }
 
 /// This function is called when the canister is created.
