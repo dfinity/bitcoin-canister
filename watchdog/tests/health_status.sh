@@ -14,8 +14,6 @@ dfx start --background --clean
 dfx deploy --no-wallet watchdog
 
 # Check health status has specific fields.
-health_status=$(dfx canister call watchdog health_status --query)
-
 fields=(
   "height_source"
   "height_target"
@@ -23,6 +21,8 @@ fields=(
   "height_status"
   "explorers"
 )
+
+health_status=$(dfx canister call watchdog health_status --query)
 
 for field in "${fields[@]}"; do
   if ! [[ $health_status == *"$field = "* ]]; then

@@ -13,8 +13,7 @@ dfx deploy --no-wallet watchdog
 # Request config.
 config=$(dfx canister call watchdog get_config --query)
 
-# Check that the config is correct.
-
+# Check config contains all the following fields.
 config_fields=(
   "bitcoin_network"
   "blocks_behind_threshold"
