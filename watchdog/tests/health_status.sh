@@ -26,7 +26,7 @@ health_status=$(dfx canister call watchdog health_status --query)
 
 for field in "${fields[@]}"; do
   if ! [[ $health_status == *"$field = "* ]]; then
-    echo "FAIL: $field not found in metrics page"
+    echo "FAIL: $field not found in health status"
     exit 1
   fi
 done
