@@ -13,6 +13,24 @@ dfx start --background --clean
 # Deploy the watchdog canister.
 dfx deploy --no-wallet watchdog
 
+# Check health status has specific fields.
+health_status=$(dfx canister call watchdog health_status --query)
+
+fields=(
+  "height_source"
+  "height_target"
+  "height_diff"
+  "height_status"
+  "explorers"
+)
+
+for field in "${fields[@]}"; do
+  if ! [[ $health_status == *"$field = "* ]]; then
+    echo "FAIL: $field not found in metrics page"
+    exit 1
+  fi
+done
+
 # Request health status repeatedly, break when the data is available.
 has_enough_data=0
 for ((i=1; i<=ITERATIONS; i++))
