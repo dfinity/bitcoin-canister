@@ -100,21 +100,11 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("code", "ahead")], ahead)?
         .value(&[("code", "behind")], behind)?;
 
-    let api_access = crate::storage::get_api_access();
+    let api_access_target = crate::storage::get_api_access_target();
     w.encode_gauge(
         "api_access_target",
-        flag_to_gauge(api_access.target),
+        flag_to_gauge(api_access_target),
         "Expected value of the Bitcoin canister API access flag.",
-    )?;
-    w.encode_gauge(
-        "api_access_actual",
-        flag_to_gauge(api_access.actual),
-        "Actual value of the Bitcoin canister API access flag.",
-    )?;
-    w.encode_gauge(
-        "api_access_is_in_sync",
-        if api_access.is_in_sync() { 1.0 } else { 0.0 },
-        "Whether the actual and target values of the Bitcoin canister API access flag are in sync.",
     )?;
 
     let mut available_explorers = HashMap::new();

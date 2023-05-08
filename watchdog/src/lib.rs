@@ -12,13 +12,13 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::api_access::ApiAccess;
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 use crate::config::Config;
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
 use crate::types::{CandidHttpRequest, CandidHttpResponse};
+use ic_btc_interface::Flag;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};
 use serde_bytes::ByteBuf;
@@ -27,14 +27,14 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 thread_local! {
+    /// The local storage for the configuration.
+    static CONFIG: RefCell<Config> = RefCell::new(Config::new());
+
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
 
-    /// The local storage for the API access.
-    static API_ACCESS: RefCell<ApiAccess> = RefCell::new(ApiAccess::new());
-
-    /// The local storage for the configuration.
-    static CONFIG: RefCell<Config> = RefCell::new(Config::new());
+    /// The local storage for the API access target.
+    static API_ACCESS_TARGET: RefCell<Option<Flag>> = RefCell::new(None);
 }
 
 /// This function is called when the canister is created.
@@ -85,10 +85,10 @@ pub fn get_config() -> Config {
     crate::storage::get_config()
 }
 
-/// Returns the API access of the Bitcoin canister as known by the watchdog.
+/// Returns the API access target for the Bitcoin canister.
 #[query]
-pub fn get_api_access() -> ApiAccess {
-    crate::storage::get_api_access()
+pub fn get_api_access_target() -> Option<Flag> {
+    crate::storage::get_api_access_target()
 }
 
 /// Processes external HTTP requests.
