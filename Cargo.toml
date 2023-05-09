@@ -21,4 +21,5 @@ members = [
     "ic-http",
     "ic-http/example_canister/src/canister_backend",
     "watchdog/e2e-tests/fake-bitcoin-canister",
+    "watchdog/e2e-tests/fake-explorers",
 ]
