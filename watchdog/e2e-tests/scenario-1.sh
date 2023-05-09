@@ -8,16 +8,15 @@ source "${SCRIPT_DIR}/utils.sh"
 # Run dfx stop and error function if we run into errors.
 trap error EXIT SIGINT
 
-# TODO: start fake explorers server.
+# Start fake explorers.
+# TODO: add code here.
 
 # Start the local dfx.
 dfx start --background --clean
 
 # Create watchdog canister and save its id.
 dfx canister create --no-wallet watchdog
-
 WATCHDOG_CANISTER_ID=$(dfx canister id watchdog)
-
 if [[ -z "${WATCHDOG_CANISTER_ID}" ]]; then
   echo "Failed to create watchdog canister"
   exit 1
@@ -26,7 +25,6 @@ fi
 # Create fake bitcoin canister and save its id.
 dfx canister create --no-wallet watchdog-e2e-fake-bitcoin-canister
 BITCOIN_CANISTER_ID=$(dfx canister id watchdog-e2e-fake-bitcoin-canister)
-
 if [[ -z "${BITCOIN_CANISTER_ID}" ]]; then
   echo "Failed to create bitcoin canister"
   exit 1
@@ -43,19 +41,25 @@ dfx deploy --no-wallet watchdog --argument "(record {
     interval_between_fetches_sec = 60;
 })"
 
-CONFIG=$(dfx canister call watchdog get_config)
-echo "CONFIG: ${CONFIG}"
-
 # Deploy fake bitcoin canister.
 dfx deploy --no-wallet watchdog-e2e-fake-bitcoin-canister
 
 # Wait until watchdog fetches the data.
 sleep 3
 
-# Check watchdog API access target.
+# Check watchdog API access target is enabled.
 API_ACCESS_TARGET=$(dfx canister call watchdog get_api_access_target)
+# TODO: add code here.
 echo "API_ACCESS_TARGET: ${API_ACCESS_TARGET}"
+
+# Check bitcoin_canister API access.
+BITCOIN_CANISTER_CONFIG=$(dfx canister call watchdog-e2e-fake-bitcoin-canister get_config)
+if [[ "${BITCOIN_CANISTER_CONFIG}" != *"api_access = variant { enabled };"* ]]; then
+  echo "Fake bitcoin_canister api_access is not enabled"
+  exit 1
+fi
 
 # If we made it here without any errors, then we can cleanup safely.
 trap - EXIT SIGINT
 cleanup
+echo "SUCCESS"

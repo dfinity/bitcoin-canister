@@ -32,6 +32,16 @@ type config = record {
     watchdog_canister : opt principal;
 };
 
+type set_config_request = record {
+    stability_threshold : opt nat;
+    syncing : opt flag;
+    fees : opt fees;
+    api_access : opt flag;
+    disable_api_if_not_fully_synced : opt flag;
+};
+
 service : {
     get_config : () -> (config) query;
+
+    set_config : (set_config_request) -> ();
 };
