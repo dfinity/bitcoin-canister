@@ -1,5 +1,6 @@
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode};
+use serde_json::json;
 use std::convert::Infallible;
 
 async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
@@ -57,31 +58,25 @@ fn response_text(path: &str) -> Option<String> {
 }
 
 fn api_bitaps_com_response(height: u64) -> String {
-    format!(
-        r#"{{
-            "data": {{
-                "height": {height}
-            }}
-    }}"#
-    )
+    serde_json::to_string_pretty(&json!({
+        "data": {
+            "height": height
+        },
+    }))
+    .unwrap()
 }
 
 fn api_blockchair_com_response(height: u64) -> String {
-    format!(
-        r#"{{
-            "data": {{
-                "best_block_height": {height}
-            }}
-    }}"#
-    )
+    serde_json::to_string_pretty(&json!({
+        "data": {
+            "best_block_height": height
+        },
+    }))
+    .unwrap()
 }
 
 fn api_blockcypher_com_response(height: u64) -> String {
-    format!(
-        r#"{{
-            "height": {height}
-    }}"#
-    )
+    serde_json::to_string_pretty(&json!({ "height": height })).unwrap()
 }
 
 fn bitcoin_canister_response(height: u64) -> String {
@@ -105,11 +100,10 @@ fn blockstream_info_height_response(height: u64) -> String {
 }
 
 fn chain_api_btc_com_response(height: u64) -> String {
-    format!(
-        r#"{{
-            "data": {{
-                "height": {height}
-            }}
-    }}"#
-    )
+    serde_json::to_string_pretty(&json!({
+        "data": {
+            "height": height
+        },
+    }))
+    .unwrap()
 }
