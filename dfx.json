@@ -12,6 +12,11 @@
       "package": "watchdog",
       "candid": "./watchdog/candid.did"
     },
+    "watchdog-e2e-fake-bitcoin-canister": {
+      "type": "rust",
+      "package": "fake-bitcoin-canister",
+      "candid": "./watchdog/e2e-tests/fake-bitcoin-canister/candid.did"
+    },
     "benchmarks": {
       "candid": "./benchmarks/candid.did",
       "package": "benchmarks",

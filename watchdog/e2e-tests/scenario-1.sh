@@ -14,7 +14,6 @@ trap error EXIT SIGINT
 dfx start --background --clean
 
 # Create watchdog canister and save its id.
-# TODO: check if --with-cycles is needed.
 dfx canister create --no-wallet watchdog
 
 WATCHDOG_CANISTER_ID=$(dfx canister id watchdog)
@@ -24,11 +23,9 @@ if [[ -z "${WATCHDOG_CANISTER_ID}" ]]; then
   exit 1
 fi
 
-# TODO: Create fake bitcoin canister and save its id.
-# dfx canister create --no-wallet fake_bitcoin_canister
-# BITCOIN_CANISTER_ID=$(dfx canister id fake_bitcoin_canister)
-
-BITCOIN_CANISTER_ID=g4xu7-jiaaa-aaaan-aaaaq-cai # TODO: remove debug value.
+# Create fake bitcoin canister and save its id.
+dfx canister create --no-wallet watchdog-e2e-fake-bitcoin-canister
+BITCOIN_CANISTER_ID=$(dfx canister id watchdog-e2e-fake-bitcoin-canister)
 
 if [[ -z "${BITCOIN_CANISTER_ID}" ]]; then
   echo "Failed to create bitcoin canister"
@@ -49,10 +46,8 @@ dfx deploy --no-wallet watchdog --argument "(record {
 CONFIG=$(dfx canister call watchdog get_config)
 echo "CONFIG: ${CONFIG}"
 
-API_ACCESS_TARGET=$(dfx canister call watchdog get_api_access_target)
-echo "API_ACCESS_TARGET: ${API_ACCESS_TARGET}"
-
-# TODO: Deploy fake bitcoin canister.
+# Deploy fake bitcoin canister.
+dfx deploy --no-wallet watchdog-e2e-fake-bitcoin-canister
 
 # Wait until watchdog fetches the data.
 sleep 3

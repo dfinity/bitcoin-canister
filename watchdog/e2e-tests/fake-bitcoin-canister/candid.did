@@ -1,0 +1,37 @@
+type network = variant {
+    mainnet;
+    testnet;
+    regtest;
+};
+
+type flag = variant {
+    enabled;
+    disabled;
+};
+
+type fees = record {
+    get_utxos_base : nat;
+    get_utxos_cycles_per_ten_instructions : nat;
+    get_utxos_maximum : nat;
+    get_balance : nat;
+    get_balance_maximum : nat;
+    get_current_fee_percentiles : nat;
+    get_current_fee_percentiles_maximum : nat;
+    send_transaction_base : nat;
+    send_transaction_per_byte : nat;
+};
+
+type config = record {
+    stability_threshold : nat;
+    network : network;
+    blocks_source : principal;
+    syncing : flag;
+    fees : fees;
+    api_access : flag;
+    disable_api_if_not_fully_synced : flag;
+    watchdog_canister : opt principal;
+};
+
+service : {
+    get_config : () -> (config) query;
+};
