@@ -60,6 +60,8 @@ pub struct Config {
 
     /// The number of seconds to wait between all the other data fetches.
     pub interval_between_fetches_sec: u64,
+
+    pub fake_explorers_server: Option<String>,
 }
 
 impl Config {
@@ -82,6 +84,7 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
+            fake_explorers_server: None,
         }
     }
 
@@ -96,6 +99,7 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
+            fake_explorers_server: None,
         }
     }
 

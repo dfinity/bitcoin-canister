@@ -22,6 +22,20 @@ impl HttpRequestConfig {
     where
         T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
+        let url = {
+            let config = crate::storage::get_config();
+            if let Some(server) = config.fake_explorers_server {
+                match url
+                    .strip_prefix("https://")
+                    .or_else(|| url.strip_prefix("http://"))
+                {
+                    Some(stripped_url) => format!("http://{}/{}", server, stripped_url),
+                    None => url.to_string(),
+                }
+            } else {
+                url.to_string()
+            }
+        };
         Self {
             request: create_request(url, transform_endpoint),
             transform_implementation,
@@ -45,11 +59,11 @@ impl HttpRequestConfig {
     }
 }
 
-fn create_request<T>(url: &str, transform_func: Option<T>) -> CanisterHttpRequestArgument
+fn create_request<T>(url: String, transform_func: Option<T>) -> CanisterHttpRequestArgument
 where
     T: Fn(TransformArgs) -> HttpResponse + 'static,
 {
-    let builder = ic_http::create_request().get(url).header(HttpHeader {
+    let builder = ic_http::create_request().get(&url).header(HttpHeader {
         name: "User-Agent".to_string(),
         value: "bitcoin_watchdog_canister".to_string(),
     });

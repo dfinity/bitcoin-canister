@@ -9,10 +9,44 @@ source "${SCRIPT_DIR}/utils.sh"
 trap error EXIT SIGINT
 
 # Start fake explorers.
-# TODO: add code here.
+# TODO: run fake explorers in the background.
+cargo build --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml"
+nohup cargo run --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml" > /dev/null 2>&1 &
+FAKE_EXPLORERS_PID=$!
+
+# Maximum number of attempts to check the status.
+max_attempts=10
+count=1
+
+# Wait for fake explorers to start up.
+until curl -s "http://127.0.0.1:8080/status" > /dev/null || [[ "$count" -eq "$max_attempts" ]]
+do
+  sleep 1
+  count=$((count + 1))
+  echo "Waiting for fake explorers to start... attempt: $count"
+done
+
+# Check if the maximum attempts was reached
+if [[ "$count" -eq "$max_attempts" ]]; then
+  echo "Failed to start fake explorers after $max_attempts attempts. Exiting."
+  exit 1
+fi
+
+EXPLORER=$(curl "http://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last")
+echo $EXPLORER
+
+# Additional cleanup trap to kill the fake explorer process.
+trap "kill ${FAKE_EXPLORERS_PID}; $(trap -p EXIT | cut -d ' ' -f3-)" EXIT
+
 
 # Start the local dfx.
 dfx start --background --clean
+
+# Deploy fake explorers canister.
+# dfx deploy --no-wallet watchdog-e2e-fake-explorers-canister
+# EXPLORERS_CANISTER_ID=$(dfx canister id watchdog-e2e-fake-explorers-canister)
+# EXPLORER=$(curl "http://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last?canisterId=$EXPLORERS_CANISTER_ID")
+# echo $EXPLORER
 
 # Deploy fake bitcoin canister.
 dfx deploy --no-wallet watchdog-e2e-fake-bitcoin-canister
@@ -31,6 +65,7 @@ dfx deploy --no-wallet watchdog --argument "(record {
     bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
     delay_before_first_fetch_sec = 1;
     interval_between_fetches_sec = 60;
+    fake_explorers_server = \"https://127.0.0.1:8080\";
 })"
 
 # Wait until watchdog fetches the data.
