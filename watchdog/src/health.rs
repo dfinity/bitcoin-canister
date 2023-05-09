@@ -47,10 +47,10 @@ pub struct HealthStatus {
 pub fn health_status() -> HealthStatus {
     let bitcoin_network = crate::storage::get_config().bitcoin_network;
     compare(
-        crate::storage::get(&BitcoinBlockApi::BitcoinCanister),
+        crate::storage::get_block_info(&BitcoinBlockApi::BitcoinCanister),
         BitcoinBlockApi::network_explorers(bitcoin_network)
             .iter()
-            .filter_map(crate::storage::get)
+            .filter_map(crate::storage::get_block_info)
             .collect::<Vec<_>>(),
         crate::storage::get_config(),
     )
@@ -72,9 +72,9 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
     let height_status = height_diff.map_or(HeightStatus::NotEnoughData, |diff| {
-        if diff < -(config.blocks_behind_threshold as i64) {
+        if diff < config.get_blocks_behind_threshold() {
             HeightStatus::Behind
-        } else if diff > config.blocks_ahead_threshold as i64 {
+        } else if diff > config.get_blocks_ahead_threshold() {
             HeightStatus::Ahead
         } else {
             HeightStatus::Ok

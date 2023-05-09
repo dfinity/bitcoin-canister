@@ -1,3 +1,4 @@
+mod api_access;
 mod bitcoin_block_apis;
 mod config;
 mod endpoints;
@@ -17,19 +18,23 @@ use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
 use crate::types::{CandidHttpRequest, CandidHttpResponse};
+use ic_btc_interface::Flag;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};
 use serde_bytes::ByteBuf;
+use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::RwLock;
 use std::time::Duration;
 
 thread_local! {
-    /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RwLock<HashMap<BitcoinBlockApi, BlockInfo>> = RwLock::new(HashMap::new());
-
     /// The local storage for the configuration.
-    static CONFIG: RwLock<Config> = RwLock::new(Config::new());
+    static CONFIG: RefCell<Config> = RefCell::new(Config::new());
+
+    /// The local storage for the data fetched from the external APIs.
+    static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
+
+    /// The local storage for the API access target.
+    static API_ACCESS_TARGET: RefCell<Option<Flag>> = RefCell::new(None);
 }
 
 /// This function is called when the canister is created.
@@ -39,10 +44,10 @@ fn init() {
         Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
         || {
             ic_cdk::spawn(async {
-                fetch_data().await;
+                tick().await;
                 ic_cdk_timers::set_timer_interval(
                     Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::spawn(fetch_data()),
+                    || ic_cdk::spawn(tick()),
                 );
             })
         },
@@ -56,10 +61,16 @@ fn post_upgrade() {
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
-async fn fetch_data() {
+async fn fetch_block_info_data() {
     let bitcoin_network = crate::storage::get_config().bitcoin_network;
     let data = crate::fetch::fetch_all_data(bitcoin_network).await;
-    data.into_iter().for_each(crate::storage::insert);
+    data.into_iter().for_each(crate::storage::insert_block_info);
+}
+
+/// Periodically fetches data and sets the API access to the Bitcoin canister.
+async fn tick() {
+    fetch_block_info_data().await;
+    crate::api_access::synchronise_api_access().await;
 }
 
 /// Returns the health status of the Bitcoin canister.
@@ -72,6 +83,12 @@ fn health_status() -> HealthStatus {
 #[query]
 pub fn get_config() -> Config {
     crate::storage::get_config()
+}
+
+/// Returns the API access target for the Bitcoin canister.
+#[query]
+pub fn get_api_access_target() -> Option<Flag> {
+    crate::storage::get_api_access_target()
 }
 
 /// Processes external HTTP requests.

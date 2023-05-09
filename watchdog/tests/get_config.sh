@@ -13,10 +13,22 @@ dfx deploy --no-wallet watchdog
 # Request config.
 config=$(dfx canister call watchdog get_config --query)
 
-# Check that the config is correct, eg. by checking it has min_explores field.
-if ! [[ $config == *"min_explorers = "* ]]; then
-  echo "FAIL"
-  exit 1
-fi
+# Check config contains all the following fields.
+config_fields=(
+  "bitcoin_network"
+  "blocks_behind_threshold"
+  "blocks_ahead_threshold"
+  "min_explorers"
+  "bitcoin_canister_principal"
+  "delay_before_first_fetch_sec"
+  "interval_between_fetches_sec"
+)
+
+for field in "${config_fields[@]}"; do
+  if ! [[ $config == *"$field = "* ]]; then
+    echo "FAIL: $field not found in config"
+    exit 1
+  fi
+done
 
 echo "SUCCESS"

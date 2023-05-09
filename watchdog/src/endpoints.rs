@@ -120,7 +120,7 @@ fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
 /// Creates a config for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        &crate::storage::get_config().bitcoin_canister_endpoint,
+        &crate::storage::get_config().get_bitcoin_canister_endpoint(),
         Some(transform_bitcoin_canister),
         |raw| {
             apply_to_body(raw, |text| {
