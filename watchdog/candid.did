@@ -92,7 +92,7 @@ type flag = variant {
     disabled;
 };
 
-service : {
+service : (config) -> {
     /// Returns the health status of the Bitcoin canister.
     health_status : () -> (health_status) query;
 
