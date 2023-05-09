@@ -5,8 +5,8 @@ set -Eexuo pipefail
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source "${SCRIPT_DIR}/utils.sh"
 
-# Run dfx stop if we run into errors.
-trap "dfx stop" EXIT SIGINT
+# Run dfx stop and error function if we run into errors.
+trap error EXIT SIGINT
 
 # TODO: start fake explorers server.
 
@@ -19,11 +19,21 @@ dfx canister create --no-wallet watchdog
 
 WATCHDOG_CANISTER_ID=$(dfx canister id watchdog)
 
+if [[ -z "${WATCHDOG_CANISTER_ID}" ]]; then
+  echo "Failed to create watchdog canister"
+  exit 1
+fi
+
 # TODO: Create fake bitcoin canister and save its id.
 # dfx canister create --no-wallet fake_bitcoin_canister
 # BITCOIN_CANISTER_ID=$(dfx canister id fake_bitcoin_canister)
 
 BITCOIN_CANISTER_ID=g4xu7-jiaaa-aaaan-aaaaq-cai # TODO: remove debug value.
+
+if [[ -z "${BITCOIN_CANISTER_ID}" ]]; then
+  echo "Failed to create bitcoin canister"
+  exit 1
+fi
 
 # Deploy watchdog canister.
 dfx deploy --no-wallet watchdog --argument "(record {
@@ -50,3 +60,7 @@ sleep 3
 # Check watchdog API access target.
 API_ACCESS_TARGET=$(dfx canister call watchdog get_api_access_target)
 echo "API_ACCESS_TARGET: ${API_ACCESS_TARGET}"
+
+# If we made it here without any errors, then we can cleanup safely.
+trap - EXIT SIGINT
+cleanup
