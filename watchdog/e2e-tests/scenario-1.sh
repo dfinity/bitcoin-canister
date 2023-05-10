@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eexuo pipefail
 
+# FAKE_EXPLORERS_ADDRESS="[::1]:8080"
 FAKE_EXPLORERS_ADDRESS="127.0.0.1:8080"
 
 # Source the utility functions.
@@ -73,7 +74,7 @@ dfx deploy --no-wallet watchdog --argument "(record {
     bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
     delay_before_first_fetch_sec = 1;
     interval_between_fetches_sec = 60;
-    fake_explorers_server = \"https://${FAKE_EXPLORERS_ADDRESS}\";
+    fake_explorers_server = opt \"https://${FAKE_EXPLORERS_ADDRESS}\";
 })"
 
 # Wait until watchdog fetches the data.
