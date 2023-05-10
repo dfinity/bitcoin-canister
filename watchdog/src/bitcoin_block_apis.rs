@@ -198,6 +198,7 @@ impl BitcoinBlockApi {
 
 /// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
 async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Value {
+    print(&format!("HTTP request: {:?}", config.request().url));
     // Send zero cycles with the request to avoid the canister
     // to run out of cycles when deployed on a system subnet.
     let cycles = 0;

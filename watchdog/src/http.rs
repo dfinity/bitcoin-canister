@@ -29,7 +29,7 @@ impl HttpRequestConfig {
                     .strip_prefix("https://")
                     .or_else(|| url.strip_prefix("http://"))
                 {
-                    Some(stripped_url) => format!("http://{}/{}", server, stripped_url),
+                    Some(stripped_url) => format!("{}/{}", server, stripped_url),
                     None => url.to_string(),
                 }
             } else {
