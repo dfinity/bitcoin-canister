@@ -47,7 +47,7 @@ pub struct State {
     /// Metrics for the various endpoints.
     pub metrics: Metrics,
 
-    /// Flag to control access to the apis provided by the canister.
+    /// Flag to control access to the APIs provided by the canister.
     pub api_access: Flag,
 
     /// Flag to determine if the API should be automatically disabled
