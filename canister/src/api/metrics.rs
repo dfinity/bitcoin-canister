@@ -126,7 +126,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             } else {
                 0.0
             },
-            "Flag to control access to the apis provided by the canister.",
+            "Flag to control access to the APIs provided by the canister.",
         )?;
 
         Ok(())
