@@ -32,17 +32,6 @@ struct Cli {
     key: PathBuf,
 }
 
-async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    match (req.method(), response_text(req.uri().path())) {
-        (&Method::GET, Some(text)) => Ok(Response::new(Body::from(text))),
-        _ => {
-            let mut not_found = Response::default();
-            *not_found.status_mut() = StatusCode::NOT_FOUND;
-            Ok(not_found)
-        }
-    }
-}
-
 fn main() {
     // Serve an echo service over HTTPS, with proper error handling.
     if let Err(e) = run_server() {
@@ -83,6 +72,17 @@ async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     server.await?;
 
     Ok(())
+}
+
+async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    match (req.method(), response_text(req.uri().path())) {
+        (&Method::GET, Some(text)) => Ok(Response::new(Body::from(text))),
+        _ => {
+            let mut not_found = Response::default();
+            *not_found.status_mut() = StatusCode::NOT_FOUND;
+            Ok(not_found)
+        }
+    }
 }
 
 fn response_text(path: &str) -> Option<String> {
