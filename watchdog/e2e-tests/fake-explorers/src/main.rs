@@ -1,3 +1,4 @@
+use clap::Parser;
 use core::task::{Context, Poll};
 use futures_util::ready;
 use hyper::server::accept::Accept;
@@ -7,6 +8,8 @@ use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use serde_json::json;
 use std::convert::Infallible;
 use std::future::Future;
+use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::vec::Vec;
@@ -14,6 +17,20 @@ use std::{fs, io};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio_rustls::rustls::ServerConfig;
 use tokio_rustls::rustls::{self};
+
+#[derive(Parser)]
+#[clap(name = "Fake Explorers HTTPS server")]
+#[clap(author = "DFINITY Execution Team")]
+struct Cli {
+    #[clap(long, default_value = "127.0.0.1:8080")]
+    addr: SocketAddr,
+
+    #[clap(long, default_value = "./src/certificate.pem")]
+    cert: PathBuf,
+
+    #[clap(long, default_value = "./src/private-key.rsa")]
+    key: PathBuf,
+}
 
 async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
     match (req.method(), response_text(req.uri().path())) {
@@ -36,14 +53,14 @@ fn main() {
 
 #[tokio::main]
 async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let addr = ([127, 0, 0, 1], 8080).into();
+    let cli = Cli::parse();
 
     // Build TLS configuration.
     let tls_cfg = {
         // Load public certificate.
-        let certs = load_certs("./src/sample.pem")?;
+        let certs = load_certs(&cli.cert)?;
         // Load private key.
-        let key = load_private_key("./src/sample.rsa")?;
+        let key = load_private_key(&cli.key)?;
         // Do not use client certificate authentication.
         let mut cfg = rustls::ServerConfig::builder()
             .with_safe_defaults()
@@ -56,13 +73,13 @@ async fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
 
     // Create a TCP listener via tokio.
-    let incoming = AddrIncoming::bind(&addr)?;
+    let incoming = AddrIncoming::bind(&cli.addr)?;
     let service =
         make_service_fn(|_conn| async { Ok::<_, Infallible>(service_fn(handle_request)) });
     let server = Server::builder(TlsAcceptor::new(tls_cfg, incoming)).serve(service);
 
     // Run the future, keep going until an error occurs.
-    println!("Starting to serve on https://{}.", addr);
+    println!("Starting to serve on https://{}.", cli.addr);
     server.await?;
 
     Ok(())
@@ -153,10 +170,10 @@ fn error(err: String) -> io::Error {
 }
 
 // Load public certificate from file.
-fn load_certs(filename: &str) -> io::Result<Vec<rustls::Certificate>> {
+fn load_certs(filename: &PathBuf) -> io::Result<Vec<rustls::Certificate>> {
     // Open certificate file.
     let certfile = fs::File::open(filename)
-        .map_err(|e| error(format!("failed to open {}: {}", filename, e)))?;
+        .map_err(|e| error(format!("failed to open {:?}: {}", filename, e)))?;
     let mut reader = io::BufReader::new(certfile);
 
     // Load and return certificate.
@@ -166,10 +183,10 @@ fn load_certs(filename: &str) -> io::Result<Vec<rustls::Certificate>> {
 }
 
 // Load private key from file.
-fn load_private_key(filename: &str) -> io::Result<rustls::PrivateKey> {
+fn load_private_key(filename: &PathBuf) -> io::Result<rustls::PrivateKey> {
     // Open keyfile.
     let keyfile = fs::File::open(filename)
-        .map_err(|e| error(format!("failed to open {}: {}", filename, e)))?;
+        .map_err(|e| error(format!("failed to open {:?}: {}", filename, e)))?;
     let mut reader = io::BufReader::new(keyfile);
 
     // Load and return a single private key.

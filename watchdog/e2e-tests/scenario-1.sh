@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -Eexuo pipefail
 
+FAKE_EXPLORERS_ADDRESS="127.0.0.1:8080"
+
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source "${SCRIPT_DIR}/utils.sh"
@@ -11,7 +13,11 @@ trap error EXIT SIGINT
 # Start fake explorers.
 # TODO: run fake explorers in the background.
 cargo build --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml"
-nohup cargo run --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml" > /dev/null 2>&1 &
+cargo run --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml" -- \
+  --addr=$FAKE_EXPLORERS_ADDRESS \
+  --cert="${SCRIPT_DIR}/fake-explorers/src/certificate.pem" \
+  --key="${SCRIPT_DIR}/fake-explorers/src/private-key.rsa" \
+  &
 FAKE_EXPLORERS_PID=$!
 
 # Maximum number of attempts to check the status.
@@ -19,7 +25,7 @@ max_attempts=5
 count=1
 
 # Wait for fake explorers to start up.
-until curl -s "https://127.0.0.1:8080/status" > /dev/null || [[ "$count" -eq "$max_attempts" ]]
+until curl -k -s "https://${FAKE_EXPLORERS_ADDRESS}/status" > /dev/null || [[ "$count" -eq "$max_attempts" ]]
 do
   sleep 1
   count=$((count + 1))
@@ -32,11 +38,13 @@ if [[ "$count" -eq "$max_attempts" ]]; then
   exit 1
 fi
 
-EXPLORER=$(curl "https://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last")
-echo $EXPLORER
+# EXPLORER=$(curl -k "https://${FAKE_EXPLORERS_ADDRESS}/api.bitaps.com/btc/v1/blockchain/block/last")
+# echo $EXPLORER
+
+# echo "Fake explorers PID: ${FAKE_EXPLORERS_PID}"
 
 # Additional cleanup trap to kill the fake explorer process.
-trap "kill ${FAKE_EXPLORERS_PID}; $(trap -p EXIT | cut -d ' ' -f3-)" EXIT
+trap "kill -9 ${FAKE_EXPLORERS_PID}; $(trap -p EXIT | cut -d ' ' -f3-)" EXIT
 
 
 # Start the local dfx.
@@ -65,7 +73,7 @@ dfx deploy --no-wallet watchdog --argument "(record {
     bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
     delay_before_first_fetch_sec = 1;
     interval_between_fetches_sec = 60;
-    fake_explorers_server = \"https://127.0.0.1:8080\";
+    fake_explorers_server = \"https://${FAKE_EXPLORERS_ADDRESS}\";
 })"
 
 # Wait until watchdog fetches the data.
