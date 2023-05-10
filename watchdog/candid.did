@@ -86,7 +86,7 @@ type config = record {
     /// The number of seconds to wait between all the other data fetches.
     interval_between_fetches_sec : nat64;
 
-    fake_explorers_server : text;
+    fake_explorers_server : opt text;
 };
 
 type flag = variant {
