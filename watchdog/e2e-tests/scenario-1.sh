@@ -15,11 +15,11 @@ nohup cargo run --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml" > /dev
 FAKE_EXPLORERS_PID=$!
 
 # Maximum number of attempts to check the status.
-max_attempts=10
+max_attempts=5
 count=1
 
 # Wait for fake explorers to start up.
-until curl -s "http://127.0.0.1:8080/status" > /dev/null || [[ "$count" -eq "$max_attempts" ]]
+until curl -s "https://127.0.0.1:8080/status" > /dev/null || [[ "$count" -eq "$max_attempts" ]]
 do
   sleep 1
   count=$((count + 1))
@@ -32,7 +32,7 @@ if [[ "$count" -eq "$max_attempts" ]]; then
   exit 1
 fi
 
-EXPLORER=$(curl "http://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last")
+EXPLORER=$(curl "https://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last")
 echo $EXPLORER
 
 # Additional cleanup trap to kill the fake explorer process.
@@ -45,7 +45,7 @@ dfx start --background --clean
 # Deploy fake explorers canister.
 # dfx deploy --no-wallet watchdog-e2e-fake-explorers-canister
 # EXPLORERS_CANISTER_ID=$(dfx canister id watchdog-e2e-fake-explorers-canister)
-# EXPLORER=$(curl "http://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last?canisterId=$EXPLORERS_CANISTER_ID")
+# EXPLORER=$(curl "https://127.0.0.1:8080/api.bitaps.com/btc/v1/blockchain/block/last?canisterId=$EXPLORERS_CANISTER_ID")
 # echo $EXPLORER
 
 # Deploy fake bitcoin canister.
