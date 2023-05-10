@@ -25,10 +25,10 @@ struct Cli {
     #[clap(long, default_value = "127.0.0.1:8080")]
     addr: SocketAddr,
 
-    #[clap(long, default_value = "./src/certificate.pem")]
+    #[clap(long, default_value = "./src/cert.crt")]
     cert: PathBuf,
 
-    #[clap(long, default_value = "./src/private-key.rsa")]
+    #[clap(long, default_value = "./src/key.pem")]
     key: PathBuf,
 }
 
@@ -190,7 +190,7 @@ fn load_private_key(filename: &PathBuf) -> io::Result<rustls::PrivateKey> {
     let mut reader = io::BufReader::new(keyfile);
 
     // Load and return a single private key.
-    let keys = rustls_pemfile::rsa_private_keys(&mut reader)
+    let keys = rustls_pemfile::pkcs8_private_keys(&mut reader)
         .map_err(|_| error("failed to load private key".into()))?;
     if keys.len() != 1 {
         return Err(error("expected a single private key".into()));

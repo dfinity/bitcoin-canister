@@ -3,6 +3,7 @@ set -Eexuo pipefail
 
 # FAKE_EXPLORERS_ADDRESS="[::1]:8080"
 FAKE_EXPLORERS_ADDRESS="127.0.0.1:8080"
+DFX_HOST="127.0.0.1:8123"
 
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -11,13 +12,15 @@ source "${SCRIPT_DIR}/utils.sh"
 # Run dfx stop and error function if we run into errors.
 trap error EXIT SIGINT
 
+CERT_FILE="${SCRIPT_DIR}/fake-explorers/src/cert.crt"
+
 # Start fake explorers.
 # TODO: run fake explorers in the background.
 cargo build --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml"
 cargo run --manifest-path "${SCRIPT_DIR}/fake-explorers/Cargo.toml" -- \
   --addr=$FAKE_EXPLORERS_ADDRESS \
-  --cert="${SCRIPT_DIR}/fake-explorers/src/certificate.pem" \
-  --key="${SCRIPT_DIR}/fake-explorers/src/private-key.rsa" \
+  --cert="${CERT_FILE}" \
+  --key="${SCRIPT_DIR}/fake-explorers/src/key.pem" \
   &
 FAKE_EXPLORERS_PID=$!
 
@@ -49,7 +52,8 @@ trap "kill -9 ${FAKE_EXPLORERS_PID}; $(trap -p EXIT | cut -d ' ' -f3-)" EXIT
 
 
 # Start the local dfx.
-dfx start --background --clean
+echo "The SSL_CERT_FILE value is $CERT_FILE"
+SSL_CERT_FILE=$CERT_FILE dfx start --background --clean --host $DFX_HOST
 
 # Deploy fake explorers canister.
 # dfx deploy --no-wallet watchdog-e2e-fake-explorers-canister
