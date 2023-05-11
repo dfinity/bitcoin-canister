@@ -14,3 +14,99 @@ deploy_watchdog_canister_mainnet() {
     interval_between_fetches_sec = 60;
   })"
 }
+
+# Function to get watchdog canister id.
+get_watchdog_canister_id() {
+  dfx canister id watchdog
+}
+
+# Function to get watchdog canister metrics.
+get_watchdog_canister_metrics() {
+  CANISTER_ID=$(get_watchdog_canister_id)
+  curl "http://127.0.0.1:8000/metrics?canisterId=$CANISTER_ID"
+}
+
+# Function to check for presence of specific fields in the config.
+check_config_fields() {
+  config_fields=(
+    "bitcoin_network"
+    "blocks_behind_threshold"
+    "blocks_ahead_threshold"
+    "min_explorers"
+    "bitcoin_canister_principal"
+    "delay_before_first_fetch_sec"
+    "interval_between_fetches_sec"
+  )
+  
+  config=$(dfx canister call watchdog get_config --query)
+  for field in "${config_fields[@]}"; do
+    if ! [[ $config == *"$field = "* ]]; then
+      echo "FAIL: $field not found in config of ${0##*/}"
+      exit 2
+    fi
+  done
+}
+
+# Function to check for presence of specific fields in the health status.
+check_health_status_fields() {
+  fields=(
+    "height_source"
+    "height_target"
+    "height_diff"
+    "height_status"
+    "explorers"
+  )
+  
+  health_status=$(dfx canister call watchdog health_status --query)
+  for field in "${fields[@]}"; do
+    if ! [[ $health_status == *"$field = "* ]]; then
+      echo "FAIL: $field not found in health status of ${0##*/}"
+      exit 3
+    fi
+  done
+}
+
+# Function to check if health status data is available.
+check_health_status_data() {
+  ITERATIONS=30
+  DELAY_SEC=1
+  has_enough_data=0
+  for ((i=1; i<=ITERATIONS; i++))
+  do
+    health_status=$(dfx canister call watchdog health_status --query)
+    if ! [[ $health_status == *"height_status = variant { not_enough_data }"* ]]; then
+      has_enough_data=1
+      break
+    fi
+    sleep $DELAY_SEC
+  done
+  if [ $has_enough_data -eq 0 ]; then
+    echo "FAIL: Not enough data in health status of ${0##*/}"
+    exit 4
+  fi
+}
+
+# Function to check for presence of specific names in the metrics.
+check_metric_names() {
+  metric_names=(
+    "bitcoin_network"
+    "blocks_behind_threshold"
+    "blocks_ahead_threshold"
+    "min_explorers"
+    "bitcoin_canister_height"
+    "height_target"
+    "height_diff"
+    "height_status"
+    "api_access_target"
+    "explorer_height"
+    "available_explorers"
+  )
+
+  metrics=$(get_watchdog_canister_metrics)
+  for name in "${metric_names[@]}"; do
+    if ! [[ $metrics == *"$name"* ]]; then
+      echo "FAIL: $name not found in metrics of ${0##*/}"
+      exit 5
+    fi
+  done
+}
