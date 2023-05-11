@@ -39,7 +39,11 @@ thread_local! {
 
 /// This function is called when the canister is created.
 #[init]
-fn init() {
+fn init(config: Option<Config>) {
+    if let Some(config) = config {
+        crate::storage::set_config(config);
+    }
+
     ic_cdk_timers::set_timer(
         Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
         || {
@@ -56,8 +60,8 @@ fn init() {
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade() {
-    init()
+fn post_upgrade(config: Option<Config>) {
+    init(config)
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.

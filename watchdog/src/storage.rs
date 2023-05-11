@@ -12,7 +12,6 @@ pub fn get_config() -> Config {
 }
 
 /// Sets the configuration in the local storage.
-#[cfg(test)]
 pub fn set_config(config: Config) {
     CONFIG.with(|cell| *cell.borrow_mut() = config);
 }
