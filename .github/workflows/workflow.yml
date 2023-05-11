@@ -381,7 +381,7 @@ jobs:
 
       - name: Run health_status test
         run: |
-          bash watchdog/tests/health_status.sh
+          bash watchdog/e2e-tests/health_status.sh
 
   watchdog_get_config:
     runs-on: ubuntu-20.04
@@ -413,7 +413,7 @@ jobs:
 
       - name: Run get_config test
         run: |
-          bash watchdog/tests/get_config.sh
+          bash watchdog/e2e-tests/get_config.sh
 
   watchdog_metrics:
     runs-on: ubuntu-20.04
@@ -445,7 +445,7 @@ jobs:
 
       - name: Run metrics test
         run: |
-          bash watchdog/tests/metrics.sh
+          bash watchdog/e2e-tests/metrics.sh
 
   checks-pass:
     needs:
