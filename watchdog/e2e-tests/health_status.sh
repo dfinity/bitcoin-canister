@@ -2,6 +2,9 @@
 #
 # A test that verifies that the `health_status` endpoint works as expected.
 
+BITCOIN_NEWTORK=mainnet
+BITCOIN_CANISTER_ID=ghsi2-tqaaa-aaaan-aaaca-cai
+
 ITERATIONS=30
 DELAY_SEC=1
 
@@ -11,7 +14,15 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the watchdog canister.
-dfx deploy --no-wallet watchdog
+dfx deploy --no-wallet watchdog --argument "(record {
+    bitcoin_network = variant { ${BITCOIN_NEWTORK} };
+    blocks_behind_threshold = 2;
+    blocks_ahead_threshold = 2;
+    min_explorers = 2;
+    bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
+    delay_before_first_fetch_sec = 1;
+    interval_between_fetches_sec = 60;
+})"
 
 # Check health status has specific fields.
 fields=(
