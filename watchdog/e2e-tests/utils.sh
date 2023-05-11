@@ -15,20 +15,15 @@ deploy_watchdog_canister_mainnet() {
   })"
 }
 
-# Function to get watchdog canister id.
-get_watchdog_canister_id() {
-  dfx canister id watchdog
-}
-
 # Function to get watchdog canister metrics.
 get_watchdog_canister_metrics() {
-  CANISTER_ID=$(get_watchdog_canister_id)
-  curl "http://127.0.0.1:8000/metrics?canisterId=$CANISTER_ID"
+  canister_id=$(dfx canister id watchdog)
+  curl "http://127.0.0.1:8000/metrics?canisterId=$canister_id"
 }
 
 # Function to check for presence of specific fields in the config.
 check_config_fields() {
-  config_fields=(
+  CONFIG_FIELDS=(
     "bitcoin_network"
     "blocks_behind_threshold"
     "blocks_ahead_threshold"
@@ -39,7 +34,7 @@ check_config_fields() {
   )
   
   config=$(dfx canister call watchdog get_config --query)
-  for field in "${config_fields[@]}"; do
+  for field in "${CONFIG_FIELDS[@]}"; do
     if ! [[ $config == *"$field = "* ]]; then
       echo "FAIL: $field not found in config of ${0##*/}"
       exit 2
@@ -49,7 +44,7 @@ check_config_fields() {
 
 # Function to check for presence of specific fields in the health status.
 check_health_status_fields() {
-  fields=(
+  FIELDS=(
     "height_source"
     "height_target"
     "height_diff"
@@ -58,7 +53,7 @@ check_health_status_fields() {
   )
   
   health_status=$(dfx canister call watchdog health_status --query)
-  for field in "${fields[@]}"; do
+  for field in "${FIELDS[@]}"; do
     if ! [[ $health_status == *"$field = "* ]]; then
       echo "FAIL: $field not found in health status of ${0##*/}"
       exit 3
@@ -88,7 +83,7 @@ check_health_status_data() {
 
 # Function to check for presence of specific names in the metrics.
 check_metric_names() {
-  metric_names=(
+  METRIC_NAMES=(
     "bitcoin_network"
     "blocks_behind_threshold"
     "blocks_ahead_threshold"
@@ -103,7 +98,7 @@ check_metric_names() {
   )
 
   metrics=$(get_watchdog_canister_metrics)
-  for name in "${metric_names[@]}"; do
+  for name in "${METRIC_NAMES[@]}"; do
     if ! [[ $metrics == *"$name"* ]]; then
       echo "FAIL: $name not found in metrics of ${0##*/}"
       exit 5

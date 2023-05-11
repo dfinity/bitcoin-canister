@@ -15,7 +15,7 @@ dfx start --background --clean
 # Deploy the watchdog canister.
 deploy_watchdog_canister_mainnet
 
-# Check config contains all the following fields.
+# Check config contains all the necessary fields.
 check_config_fields
 
 # Echo success message.
