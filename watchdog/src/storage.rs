@@ -8,16 +8,12 @@ use ic_btc_interface::Flag;
 
 /// Returns the configuration from the local storage.
 pub fn get_config() -> Config {
-    let config = CONFIG.with(|cell| cell.borrow().clone());
-    match config {
-        Some(config) => config,
-        None => panic!("Configuration not set"),
-    }
+    CONFIG.with(|cell| cell.borrow().clone())
 }
 
 /// Sets the configuration in the local storage.
 pub fn set_config(config: Config) {
-    CONFIG.with(|cell| *cell.borrow_mut() = Some(config));
+    CONFIG.with(|cell| *cell.borrow_mut() = config);
 }
 
 /// Inserts the data into the local storage.

@@ -4,7 +4,7 @@
 deploy_watchdog_canister_mainnet() {
   BITCOIN_NETWORK=mainnet
   BITCOIN_CANISTER_ID=ghsi2-tqaaa-aaaan-aaaca-cai
-  dfx deploy --no-wallet watchdog --argument "(record {
+  dfx deploy --no-wallet watchdog --argument "(opt record {
     bitcoin_network = variant { ${BITCOIN_NETWORK} };
     blocks_behind_threshold = 2;
     blocks_ahead_threshold = 2;
@@ -68,8 +68,8 @@ check_health_status_fields() {
 
 # Function to check if health status data is available.
 check_health_status_data() {
-  ITERATIONS=30
-  DELAY_SEC=1
+  ITERATIONS=15
+  DELAY_SEC=2
   has_enough_data=0
   for ((i=1; i<=ITERATIONS; i++))
   do

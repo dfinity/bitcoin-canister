@@ -28,7 +28,7 @@ use std::time::Duration;
 
 thread_local! {
     /// The local storage for the configuration.
-    static CONFIG: RefCell<Option<Config>> = RefCell::new(None);
+    static CONFIG: RefCell<Config> = RefCell::new(Default::default());
 
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
@@ -39,8 +39,10 @@ thread_local! {
 
 /// This function is called when the canister is created.
 #[init]
-fn init(config: Config) {
-    crate::storage::set_config(config);
+fn init(config: Option<Config>) {
+    if let Some(config) = config {
+        crate::storage::set_config(config);
+    }
 
     ic_cdk_timers::set_timer(
         Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
@@ -58,7 +60,7 @@ fn init(config: Config) {
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade(config: Config) {
+fn post_upgrade(config: Option<Config>) {
     init(config)
 }
 
