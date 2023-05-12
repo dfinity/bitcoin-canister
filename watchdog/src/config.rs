@@ -60,6 +60,8 @@ pub struct Config {
 
     /// The number of seconds to wait between all the other data fetches.
     pub interval_between_fetches_sec: u64,
+
+    pub use_fake_bitcoin_canister: bool,
 }
 
 impl Config {
@@ -82,6 +84,7 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
+            use_fake_bitcoin_canister: false,
         }
     }
 
@@ -96,6 +99,7 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
+            use_fake_bitcoin_canister: false,
         }
     }
 
@@ -112,7 +116,10 @@ impl Config {
     /// Returns the Bitcoin canister metrics endpoint.
     pub fn get_bitcoin_canister_endpoint(&self) -> String {
         let principal = self.bitcoin_canister_principal.to_text();
-        format!("https://{principal}.raw.ic0.app/metrics")
+        match self.use_fake_bitcoin_canister {
+            true => format!("http://127.0.0.1:8000/metrics?canisterId={principal}"),
+            false => format!("https://{principal}.raw.ic0.app/metrics"),
+        }
     }
 }
 

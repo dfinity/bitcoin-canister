@@ -85,6 +85,8 @@ type config = record {
 
     /// The number of seconds to wait between all the other data fetches.
     interval_between_fetches_sec : nat64;
+
+    use_fake_bitcoin_canister : bool;
 };
 
 type flag = variant {
