@@ -102,4 +102,6 @@ service bitcoin : (config) -> {
   get_config : () -> (config) query;
 
   set_config : (set_config_request) -> ();
+
+  get_main_chain_height : () -> (nat32) query;
 };

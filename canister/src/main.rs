@@ -67,6 +67,11 @@ async fn set_config(request: SetConfigRequest) {
 }
 
 #[query]
+pub fn get_main_chain_height() -> u32 {
+    ic_btc_canister::with_state(ic_btc_canister::state::main_chain_height)
+}
+
+#[query]
 pub fn http_request(request: HttpRequest) -> HttpResponse {
     ic_btc_canister::http_request(request)
 }
