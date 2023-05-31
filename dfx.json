@@ -1,11 +1,17 @@
 {
-  "dfx": "0.13.1",
+  "dfx": "0.14.1-beta.1",
   "canisters": {
     "bitcoin": {
-      "type": "custom",
+      "type": "rust",
       "candid": "./canister/candid.did",
-      "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
-      "build": "./scripts/build-canister.sh ic-btc-canister"
+      "package": "ic-btc-canister",
+      "optimize": "cycles",
+      "gzip": true,
+      "pullable": {
+        "wasm_url": "https://github.com/dfinity/bitcoin-canister/releases/latest/download/ic-btc-canister.wasm.gz",
+        "dependencies": [],
+        "init_guide": "https://github.com/dfinity/bitcoin-canister/blob/master/e2e-tests/set_config.sh"
+      }
     },
     "watchdog": {
       "type": "rust",
@@ -13,11 +19,11 @@
       "candid": "./watchdog/candid.did"
     },
     "benchmarks": {
+      "type" : "rust",
       "candid": "./benchmarks/candid.did",
       "package": "benchmarks",
-      "type": "custom",
-      "build": "./scripts/build-canister.sh benchmarks",
-      "wasm": "./target/wasm32-unknown-unknown/release/benchmarks.wasm.gz"
+      "optimize": "cycles",
+      "gzip": true
     },
     "upgradability-test": {
       "type": "custom",
@@ -25,51 +31,39 @@
       "wasm": "upgradability-test.wasm.gz"
     },
     "e2e-scenario-1": {
-      "type": "custom",
+      "type": "rust",
       "candid": "./e2e-tests/scenario-1/candid.did",
-      "build": "./scripts/build-canister.sh scenario-1",
-      "wasm": "./target/wasm32-unknown-unknown/release/scenario-1.wasm.gz"
+      "package": "scenario-1",
+      "optimize": "cycles",
+      "gzip": true
     },
     "e2e-scenario-2": {
-      "type": "custom",
+      "type": "rust",
       "candid": "./e2e-tests/scenario-2/candid.did",
-      "build": "./scripts/build-canister.sh scenario-2",
       "package": "scenario-2",
-      "wasm": "./target/wasm32-unknown-unknown/release/scenario-2.wasm.gz"
+      "optimize": "cycles",
+      "gzip": true
     },
     "e2e-scenario-3": {
-      "type": "custom",
+      "type": "rust",
       "candid": "./e2e-tests/scenario-3/candid.did",
-      "build": "./scripts/build-canister.sh scenario-3",
       "package": "scenario-3",
-      "wasm": "./target/wasm32-unknown-unknown/release/scenario-3.wasm.gz"
+      "optimize": "cycles",
+      "gzip": true
     },
     "e2e-disable-api-if-not-fully-synced-flag": {
-      "type": "custom",
+      "type": "rust",
       "candid": "./e2e-tests/disable-api-if-not-fully-synced-flag/candid.did",
-      "build": "./scripts/build-canister.sh disable-api-if-not-fully-synced-flag",
       "package": "disable-api-if-not-fully-synced-flag",
-      "wasm": "./target/wasm32-unknown-unknown/release/disable-api-if-not-fully-synced-flag.wasm.gz"
+      "optimize": "cycles",
+      "gzip": true
     },
     "uploader": {
-      "type": "custom",
+      "type": "rust",
       "candid": "./bootstrap/uploader/candid.did",
-      "build": "./scripts/build-canister.sh uploader-canister",
-      "wasm": "./target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz"
-    }
-  },
-  "defaults": {
-    "build": {
-      "packtool": ""
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:8000",
-      "type": "ephemeral",
-      "replica": {
-        "subnet_type": "system"
-      }
+      "package": "uploader",
+      "optimize": "cycles",
+      "gzip": true
     }
   },
   "version": 1
