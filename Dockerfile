@@ -2,7 +2,7 @@
 #
 # docker build -t canisters .
 # docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
-# docker run --rm --entrypoint cat canisters /uploader-canister.wasm > uploader-canister.wasm
+# docker run --rm --entrypoint cat canisters /uploader-canister.wasm.gz > uploader-canister.wasm.gz
 
 # The docker image. To update, run `docker pull ubuntu` locally, and update the
 # sha256:... accordingly.
@@ -32,14 +32,28 @@ RUN curl --fail https://sh.rustup.rs -sSf \
 
 ENV PATH=/cargo/bin:$PATH
 
+ENV DFX_VERSION=0.14.1-beta.1
+RUN sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
 COPY . .
 
+# fake canister IDs so that we can build without creating them
+RUN mkdir -p .dfx/local/
+RUN echo '{\n\
+  "bitcoin": {\n\
+    "local": "bkyz2-fmaaa-aaaaa-qaaaq-cai"\n\
+  },\n\
+  "uploader": {\n\
+    "local": "bd3sg-teaaa-aaaaa-qaaba-cai"\n\
+  }\n\
+}' > .dfx/local/canister_ids.json
+
 # Build bitcoin canister
-RUN scripts/build-canister.sh ic-btc-canister
-RUN cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz
+RUN dfx build bitcoin
+RUN cp .dfx/local/canisters/bitcoin/bitcoin.wasm.gz ic-btc-canister.wasm.gz
 RUN sha256sum ic-btc-canister.wasm.gz
 
 # Build uploader canister
-RUN scripts/build-canister.sh uploader-canister
-RUN cp target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz uploader-canister.wasm.gz
+RUN dfx build uploader
+RUN cp .dfx/local/canisters/uploader/uploader.wasm.gz uploader-canister.wasm.gz
 RUN sha256sum uploader-canister.wasm.gz
