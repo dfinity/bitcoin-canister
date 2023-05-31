@@ -5,3 +5,6 @@
 
 target
 .dfx
+
+ic-btc-canister.wasm.gz
+uploader-canister.wasm.gz
