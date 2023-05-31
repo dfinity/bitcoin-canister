@@ -19,7 +19,7 @@
       "candid": "./watchdog/candid.did"
     },
     "benchmarks": {
-      "type" : "rust",
+      "type": "rust",
       "candid": "./benchmarks/candid.did",
       "package": "benchmarks",
       "optimize": "cycles",
@@ -64,6 +64,15 @@
       "package": "uploader",
       "optimize": "cycles",
       "gzip": true
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral",
+      "replica": {
+        "subnet_type": "system"
+      }
     }
   },
   "version": 1
