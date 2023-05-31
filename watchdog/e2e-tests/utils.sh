@@ -18,7 +18,8 @@ deploy_watchdog_canister_mainnet() {
 # Function to get watchdog canister metrics.
 get_watchdog_canister_metrics() {
   canister_id=$(dfx canister id watchdog)
-  curl "http://127.0.0.1:8000/metrics?canisterId=$canister_id"
+  WEBSERVER_PORT=$(dfx info webserver-port)
+  curl "http://127.0.0.1:$WEBSERVER_PORT/metrics?canisterId=$canister_id"
 }
 
 # Function to check for presence of specific fields in the config.
