@@ -6,9 +6,10 @@ wait_until_main_chain_height () {
   ATTEMPTS=$2
 
   BITCOIN_CANISTER_ID=$(dfx canister id bitcoin)
+  WEBSERVER_PORT=$(dfx info webserver-port)
 
   while
-    METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$BITCOIN_CANISTER_ID")
+    METRICS=$(curl "http://127.0.0.1:$WEBSERVER_PORT/metrics?canisterId=$BITCOIN_CANISTER_ID")
     ! [[ "$METRICS" == *"main_chain_height $HEIGHT"* ]]; do
       ((ATTEMPTS-=1))
 
@@ -27,9 +28,10 @@ wait_until_stable_height () {
   ATTEMPTS=$2
 
   BITCOIN_CANISTER_ID=$(dfx canister id bitcoin)
+  WEBSERVER_PORT=$(dfx info webserver-port)
 
   while
-    METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$BITCOIN_CANISTER_ID")
+    METRICS=$(curl "http://127.0.0.1:$WEBSERVER_PORT/metrics?canisterId=$BITCOIN_CANISTER_ID")
     ! [[ "$METRICS" == *"stable_height $HEIGHT"* ]]; do
       ((ATTEMPTS-=1))
 
