@@ -52,6 +52,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_mainnet() {
+        crate::storage::set_config(crate::config::Config::mainnet());
         crate::test_utils::mock_mainnet_outcalls();
 
         let result = fetch_all_data(BitcoinNetwork::Mainnet).await;
@@ -71,10 +72,6 @@ mod test {
                     height: Some(700003),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
-                    height: Some(700007),
-                },
-                BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: Some(700004),
                 },
@@ -85,13 +82,18 @@ mod test {
                 BlockInfo {
                     provider: BitcoinBlockApi::ChainApiBtcComMainnet,
                     height: Some(700006),
-                }
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinCanister,
+                    height: Some(700007),
+                },
             ]
         );
     }
 
     #[tokio::test]
     async fn test_fetch_all_data_testnet() {
+        crate::storage::set_config(crate::config::Config::testnet());
         crate::test_utils::mock_testnet_outcalls();
 
         let result = fetch_all_data(BitcoinNetwork::Testnet).await;
@@ -111,12 +113,12 @@ mod test {
                     height: Some(2000003),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
-                    height: Some(2000007),
-                },
-                BlockInfo {
                     provider: BitcoinBlockApi::BlockstreamInfoTestnet,
                     height: Some(2000004),
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinCanister,
+                    height: Some(2000007),
                 },
             ]
         );
@@ -124,6 +126,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_mainnet() {
+        crate::storage::set_config(crate::config::Config::mainnet());
         crate::test_utils::mock_all_outcalls_404();
 
         let result = fetch_all_data(BitcoinNetwork::Mainnet).await;
@@ -143,10 +146,6 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
-                    height: None,
-                },
-                BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: None,
                 },
@@ -157,13 +156,18 @@ mod test {
                 BlockInfo {
                     provider: BitcoinBlockApi::ChainApiBtcComMainnet,
                     height: None,
-                }
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinCanister,
+                    height: None,
+                },
             ]
         );
     }
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_testnet() {
+        crate::storage::set_config(crate::config::Config::testnet());
         crate::test_utils::mock_all_outcalls_404();
 
         let result = fetch_all_data(BitcoinNetwork::Testnet).await;
@@ -183,11 +187,11 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
+                    provider: BitcoinBlockApi::BlockstreamInfoTestnet,
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfoTestnet,
+                    provider: BitcoinBlockApi::BitcoinCanister,
                     height: None,
                 },
             ]
