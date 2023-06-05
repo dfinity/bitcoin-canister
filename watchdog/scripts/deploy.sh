@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# 
+# This script deploys the watchdog canister to the Internet Computer
+# with a specified network type (mainnet or testnet) and a specified
+# set of explorers.
+
 set -euo pipefail
 
 # Hardcoded values.
