@@ -5,6 +5,7 @@ use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::HashSet;
 
 /// APIs that serve Bitcoin block data.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize)]
@@ -75,48 +76,52 @@ impl BitcoinBlockApi {
 
     /// Returns the list of all mainnet API providers.
     fn providers_mainnet() -> Vec<Self> {
-        vec![
-            BitcoinBlockApi::ApiBitapsComMainnet,
-            BitcoinBlockApi::ApiBlockchairComMainnet,
-            BitcoinBlockApi::ApiBlockcypherComMainnet,
-            BitcoinBlockApi::BitcoinCanister, // Not an explorer.
-            BitcoinBlockApi::BlockchainInfoMainnet,
-            BitcoinBlockApi::BlockstreamInfoMainnet,
-            BitcoinBlockApi::ChainApiBtcComMainnet,
-        ]
+        let mut providers = Self::explorers_mainnet();
+        // Add the Bitcoin canister, since it's not an explorer.
+        providers.push(BitcoinBlockApi::BitcoinCanister);
+
+        providers
     }
 
     /// Returns the list of all testnet API providers.
     fn providers_testnet() -> Vec<Self> {
-        vec![
-            BitcoinBlockApi::ApiBitapsComTestnet,
-            BitcoinBlockApi::ApiBlockchairComTestnet,
-            BitcoinBlockApi::ApiBlockcypherComTestnet,
-            BitcoinBlockApi::BitcoinCanister, // Not an explorer.
-            BitcoinBlockApi::BlockstreamInfoTestnet,
-        ]
+        let mut providers = Self::explorers_testnet();
+        // Add the Bitcoin canister, since it's not an explorer.
+        providers.push(BitcoinBlockApi::BitcoinCanister);
+
+        providers
     }
 
     /// Returns the list of mainnet explorers only.
     fn explorers_mainnet() -> Vec<Self> {
-        vec![
+        let mut explorers = vec![
             BitcoinBlockApi::ApiBitapsComMainnet,
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
             BitcoinBlockApi::BlockchainInfoMainnet,
             BitcoinBlockApi::BlockstreamInfoMainnet,
             BitcoinBlockApi::ChainApiBtcComMainnet,
-        ]
+        ];
+        // Remove the explorers that are not configured.
+        let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        explorers.retain(|x| configured.contains(x));
+
+        explorers
     }
 
     /// Returns the list of testnet explorers only.
     fn explorers_testnet() -> Vec<Self> {
-        vec![
+        let mut explorers = vec![
             BitcoinBlockApi::ApiBitapsComTestnet,
             BitcoinBlockApi::ApiBlockchairComTestnet,
             BitcoinBlockApi::ApiBlockcypherComTestnet,
             BitcoinBlockApi::BlockstreamInfoTestnet,
-        ]
+        ];
+        // Remove the explorers that are not configured.
+        let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        explorers.retain(|x| configured.contains(x));
+
+        explorers
     }
 
     /// Fetches the block data from the API.

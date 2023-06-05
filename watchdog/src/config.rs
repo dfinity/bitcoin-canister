@@ -1,3 +1,4 @@
+use crate::bitcoin_block_apis::BitcoinBlockApi;
 use candid::CandidType;
 use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
@@ -25,7 +26,7 @@ const TESTNET_BITCOIN_CANISTER_PRINCIPAL: &str = "g4xu7-jiaaa-aaaan-aaaaq-cai";
 const DELAY_BEFORE_FIRST_FETCH_SEC: u64 = 1;
 
 /// The number of seconds to wait between all the other data fetches.
-const INTERVAL_BETWEEN_FETCHES_SEC: u64 = 120;
+const INTERVAL_BETWEEN_FETCHES_SEC: u64 = 240;
 
 /// Bitcoin network.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
@@ -60,6 +61,9 @@ pub struct Config {
 
     /// The number of seconds to wait between all the other data fetches.
     pub interval_between_fetches_sec: u64,
+
+    /// Bitcoin Explorers to use for fetching bitcoin block data.
+    pub explorers: Vec<BitcoinBlockApi>,
 }
 
 impl Config {
@@ -82,6 +86,14 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
+            explorers: vec![
+                BitcoinBlockApi::ApiBitapsComMainnet,
+                BitcoinBlockApi::ApiBlockchairComMainnet,
+                BitcoinBlockApi::ApiBlockcypherComMainnet,
+                BitcoinBlockApi::BlockchainInfoMainnet,
+                BitcoinBlockApi::BlockstreamInfoMainnet,
+                BitcoinBlockApi::ChainApiBtcComMainnet,
+            ],
         }
     }
 
@@ -96,6 +108,12 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
+            explorers: vec![
+                BitcoinBlockApi::ApiBitapsComTestnet,
+                BitcoinBlockApi::ApiBlockchairComTestnet,
+                BitcoinBlockApi::ApiBlockcypherComTestnet,
+                BitcoinBlockApi::BlockstreamInfoTestnet,
+            ],
         }
     }
 

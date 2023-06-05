@@ -85,6 +85,9 @@ type config = record {
 
     /// The number of seconds to wait between all the other data fetches.
     interval_between_fetches_sec : nat64;
+
+    /// Bitcoin Explorers to use for fetching bitcoin block data.
+    explorers : vec bitcoin_block_api;
 };
 
 type flag = variant {
