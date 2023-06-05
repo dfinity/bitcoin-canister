@@ -26,7 +26,7 @@ const TESTNET_BITCOIN_CANISTER_PRINCIPAL: &str = "g4xu7-jiaaa-aaaan-aaaaq-cai";
 const DELAY_BEFORE_FIRST_FETCH_SEC: u64 = 1;
 
 /// The number of seconds to wait between all the other data fetches.
-const INTERVAL_BETWEEN_FETCHES_SEC: u64 = 240;
+const INTERVAL_BETWEEN_FETCHES_SEC: u64 = 300;
 
 /// Bitcoin network.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]

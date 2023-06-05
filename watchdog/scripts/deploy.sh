@@ -72,6 +72,6 @@ dfx deploy --network ic watchdog --no-wallet --argument "(opt record {
     min_explorers = 2;
     bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
     delay_before_first_fetch_sec = 1;
-    interval_between_fetches_sec = 240;
+    interval_between_fetches_sec = 300;
     explorers = $EXPLORERS;
 })"
