@@ -11,7 +11,14 @@ deploy_watchdog_canister_mainnet() {
     min_explorers = 2;
     bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
     delay_before_first_fetch_sec = 1;
-    interval_between_fetches_sec = 60;
+    interval_between_fetches_sec = 300;
+    explorers = vec {
+      variant { api_blockchair_com_mainnet };
+      variant { api_blockcypher_com_mainnet };
+      variant { blockchain_info_mainnet };
+      variant { blockstream_info_mainnet };
+      variant { chain_api_btc_com_mainnet };
+    };
   })"
 }
 
@@ -31,6 +38,7 @@ check_config_fields() {
     "bitcoin_canister_principal"
     "delay_before_first_fetch_sec"
     "interval_between_fetches_sec"
+    "explorers"
   )
   
   config=$(dfx canister call watchdog get_config --query)
