@@ -447,7 +447,7 @@ jobs:
         run: |
           bash watchdog/e2e-tests/metrics.sh
 
-  reproducibility:
+  canister-build-reproducibility:
     runs-on: ubuntu-20.04
 
     steps:
@@ -474,7 +474,7 @@ jobs:
       - watchdog_health_status
       - watchdog_get_config
       - watchdog_metrics
-      - reproducibility
+      - canister-build-reproducibility
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
