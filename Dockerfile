@@ -30,7 +30,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone &
     apt -yq update && \
     apt -yqq install --no-install-recommends curl ca-certificates \
     build-essential pkg-config libssl-dev llvm-dev liblmdb-dev clang cmake \
-    git
+    git && \
+    # Package cleanup to reduce image size.
+    rm -rf /var/lib/apt/lists/*
 
 # Install Rust and Cargo in /opt
 ENV RUSTUP_HOME=/opt/rustup \
@@ -44,19 +46,21 @@ RUN curl --fail https://sh.rustup.rs -sSf \
 
 ENV PATH=/cargo/bin:$PATH
 
+# Copy the current directory (containing your source code and build scripts) into the Docker image.
 COPY . .
 
-# Build bitcoin canister
-RUN scripts/build-canister.sh ic-btc-canister \
-    && cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz \
-    && sha256sum ic-btc-canister.wasm.gz
+RUN \
+    echo "Building bitcoin canister..." && \
+    scripts/build-canister.sh ic-btc-canister && \
+    cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz && \
+    sha256sum ic-btc-canister.wasm.gz && \
 
-# Build uploader canister
-RUN scripts/build-canister.sh uploader-canister \
-    && cp target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz uploader-canister.wasm.gz \
-    && sha256sum uploader-canister.wasm.gz
+    echo "Building uploader canister..." && \
+    scripts/build-canister.sh uploader-canister && \
+    cp target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz uploader-canister.wasm.gz && \
+    sha256sum uploader-canister.wasm.gz && \
 
-# Build watchdog canister
-RUN scripts/build-canister.sh watchdog-canister \
-    && cp target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz watchdog-canister.wasm.gz \
-    && sha256sum watchdog-canister.wasm.gz
+    echo "Building watchdog canister..." && \
+    scripts/build-canister.sh watchdog-canister && \
+    cp target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz watchdog-canister.wasm.gz && \
+    sha256sum watchdog-canister.wasm.gz
