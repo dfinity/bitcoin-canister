@@ -1,6 +1,13 @@
 #!/bin/bash
 
-# To run it from the root folder:
+# This script verifies the reproducibility of a Docker build by
+# performing the following steps:
+# - Build the Docker image twice
+# - Copy the WebAssembly (wasm) files from each build
+# - Calculate the SHA256 sums of the wasm files
+# - Compare the SHA256 sums to check for reproducibility
+#
+# Example:
 # ./e2e-tests/reproducibility.sh Dockerfile
 
 # Verify the argument count
