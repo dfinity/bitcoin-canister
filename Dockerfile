@@ -10,10 +10,16 @@
 # reproducibility and consistency of builds within this isolated setup.
 #
 # Use the following commands:
+#
 # docker build -t canisters .
+#
 # docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
 # docker run --rm --entrypoint cat canisters /uploader-canister.wasm.gz > uploader-canister.wasm.gz
 # docker run --rm --entrypoint cat canisters /watchdog-canister.wasm.gz > watchdog-canister.wasm.gz
+#
+# sha256sum ic-btc-canister.wasm.gz
+# sha256sum uploader-canister.wasm.gz
+# sha256sum watchdog-canister.wasm.gz
 
 # The docker image. To update, run `docker pull ubuntu` locally, and update the
 # sha256:... accordingly.
@@ -46,21 +52,19 @@ RUN curl --fail https://sh.rustup.rs -sSf \
 
 ENV PATH=/cargo/bin:$PATH
 
-# Copy the current directory (containing your source code and build scripts) into the Docker image.
+# Copy the current directory (containing source code and build scripts) into the Docker image.
 COPY . .
 
 RUN \
-    echo "Building bitcoin canister..." && \
+    # Building bitcoin canister...
     scripts/build-canister.sh ic-btc-canister && \
     cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz && \
     sha256sum ic-btc-canister.wasm.gz && \
-    \
-    echo "Building uploader canister..." && \
+    # Building uploader canister...
     scripts/build-canister.sh uploader-canister && \
     cp target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz uploader-canister.wasm.gz && \
     sha256sum uploader-canister.wasm.gz && \
-    \
-    echo "Building watchdog canister..." && \
+    # Building watchdog canister...
     scripts/build-canister.sh watchdog-canister && \
     cp target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz watchdog-canister.wasm.gz && \
     sha256sum watchdog-canister.wasm.gz

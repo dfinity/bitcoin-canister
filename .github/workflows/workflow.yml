@@ -447,6 +447,17 @@ jobs:
         run: |
           bash watchdog/e2e-tests/metrics.sh
 
+  reproducibility:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Reproducibility
+        run: |
+          ./scripts/verify_reproducibility.sh Dockerfile
+
   checks-pass:
     needs:
       - cargo-tests
@@ -463,6 +474,7 @@ jobs:
       - watchdog_health_status
       - watchdog_get_config
       - watchdog_metrics
+      - reproducibility
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes
