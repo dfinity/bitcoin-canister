@@ -456,7 +456,7 @@ jobs:
 
       - name: Verify Reproducibility
         run: |
-          ./scripts/reproducibility.sh Dockerfile
+          ./e2e-tests/reproducibility.sh Dockerfile
 
   checks-pass:
     needs:
