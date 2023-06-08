@@ -46,7 +46,7 @@ RUN curl --fail https://sh.rustup.rs -sSf \
 
 ENV PATH=/cargo/bin:$PATH
 
-# Copy the current directory (containing your source code and build scripts) into the Docker image.
+# Copy the current directory (containing source code and build scripts) into the Docker image.
 COPY . .
 
 RUN \
