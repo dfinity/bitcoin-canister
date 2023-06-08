@@ -54,12 +54,12 @@ RUN \
     scripts/build-canister.sh ic-btc-canister && \
     cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz && \
     sha256sum ic-btc-canister.wasm.gz && \
-
+    \
     echo "Building uploader canister..." && \
     scripts/build-canister.sh uploader-canister && \
     cp target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz uploader-canister.wasm.gz && \
     sha256sum uploader-canister.wasm.gz && \
-
+    \
     echo "Building watchdog canister..." && \
     scripts/build-canister.sh watchdog-canister && \
     cp target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz watchdog-canister.wasm.gz && \
