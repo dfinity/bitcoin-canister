@@ -52,8 +52,14 @@ sha256sum2=$(sha256sum "$tmpdir/watchdog-canister.wasm.gz" "$tmpdir/uploader-can
 # Compare the SHA256 sums
 if [ "$sha256sum1" = "$sha256sum2" ]; then
   echo "SUCCESS: Reproducible build, SHA256 sums match."
+  echo "Result SHA256 Sums:"
+  echo "$sha256sum1"
   exit 0
 else
   echo "FAIL: Non-reproducible build, SHA256 sums differ."
+  echo "Result SHA256 Sums 1st Build:"
+  echo "$sha256sum1"
+  echo "Result SHA256 Sums 2nd Build:"
+  echo "$sha256sum2"
   exit 1
 fi
