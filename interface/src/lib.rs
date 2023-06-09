@@ -299,6 +299,11 @@ pub struct SetConfigRequest {
 
     /// Whether or not to enable/disable the bitcoin apis if not fully synced.
     pub disable_api_if_not_fully_synced: Option<Flag>,
+
+    /// The principal of the watchdog canister.
+    /// The watchdog canister has the authority to disable the Bitcoin canister's API
+    /// if it suspects that there is a problem.
+    pub watchdog_canister: Option<Option<Principal>>,
 }
 
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug, Default)]
