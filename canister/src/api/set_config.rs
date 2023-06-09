@@ -87,6 +87,7 @@ async fn verify_caller() {
 mod test {
     use super::*;
     use crate::{init, with_state};
+    use candid::Principal;
     use ic_btc_interface::{Config, Fees, Flag};
     use proptest::prelude::*;
 
@@ -222,6 +223,25 @@ mod test {
             });
 
             assert_eq!(with_state(|s| s.disable_api_if_not_fully_synced), *flag);
+        }
+    }
+
+    #[test]
+    fn test_set_watchdog_canister() {
+        init(Config::default());
+
+        for watchdog_canister in [
+            None,
+            Some(Principal::anonymous()),
+            Some(Principal::management_canister()),
+            Some(Principal::from_text("g4xu7-jiaaa-aaaan-aaaaq-cai").unwrap()),
+        ] {
+            set_config_no_verification(SetConfigRequest {
+                watchdog_canister: Some(watchdog_canister),
+                ..Default::default()
+            });
+
+            assert_eq!(with_state(|s| s.watchdog_canister), watchdog_canister);
         }
     }
 }
