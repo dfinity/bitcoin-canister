@@ -55,6 +55,9 @@ fn set_config_no_verification(request: SetConfigRequest) {
         if let Some(disable_api_if_not_fully_synced) = request.disable_api_if_not_fully_synced {
             s.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
         }
+        if let Some(watchdog_canister) = request.watchdog_canister {
+            s.watchdog_canister = watchdog_canister;
+        }
     });
 }
 
