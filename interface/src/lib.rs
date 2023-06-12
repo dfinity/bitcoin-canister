@@ -316,7 +316,7 @@ pub enum Flag {
 }
 
 /// The payload used to initialize the canister.
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Debug)]
 pub struct Config {
     pub stability_threshold: u128,
     pub network: Network,
@@ -390,4 +390,19 @@ pub struct Fees {
 
     /// The number of cycles to charge for each byte in the transaction.
     pub send_transaction_per_byte: u128,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_config_debug_formatter_is_enabled() {
+        // Verify that debug formatter for Config is enabled.
+        // This might be important for logging and debugging purposes.
+        assert!(
+            !format!("{:?}", Config::default()).is_empty(),
+            "Config should be printable using debug formatter {{:?}}."
+        );
+    }
 }
