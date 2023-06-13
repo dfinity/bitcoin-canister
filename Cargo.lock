@@ -473,6 +473,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "candid"
+version = "0.9.0-beta.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3005be607a05b449b5a5a144839c5731699af5c309ce20eb5c812f889683601e"
+dependencies = [
+ "anyhow",
+ "binread",
+ "byteorder",
+ "candid_derive 0.6.1",
+ "codespan-reporting",
+ "crc32fast",
+ "data-encoding",
+ "hex",
+ "leb128",
+ "num-bigint",
+ "num-traits",
+ "num_enum",
+ "paste",
+ "pretty",
+ "serde",
+ "serde_bytes",
+ "sha2 0.10.6",
+ "stacker",
+ "thiserror",
+]
+
+[[package]]
 name = "candid_derive"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -497,10 +524,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "candid_derive"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "041ce1020740a400035899b2909a6f4f275b79c8db502cbd59ace9b2cc88af58"
+dependencies = [
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "canister_backend"
 version = "0.1.0"
 dependencies = [
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "futures",
  "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
@@ -817,7 +856,7 @@ name = "disable-api-if-not-fully-synced-flag"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
@@ -1328,7 +1367,7 @@ dependencies = [
  "async-std",
  "bitcoin",
  "byteorder",
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "ciborium",
  "hex",
  "ic-btc-interface",
@@ -1350,7 +1389,7 @@ dependencies = [
 name = "ic-btc-interface"
 version = "0.1.0"
 dependencies = [
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "serde",
  "serde_bytes",
 ]
@@ -1455,7 +1494,7 @@ dependencies = [
 name = "ic-http"
 version = "0.1.0"
 dependencies = [
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "futures",
  "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
@@ -2025,6 +2064,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "psm"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5787f7cda34e3033a72192c018bc5883100330f362ef279a8cbccfce8bb4e874"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2428,7 +2476,7 @@ name = "scenario-1"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
@@ -2440,7 +2488,7 @@ name = "scenario-2"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
@@ -2452,7 +2500,7 @@ name = "scenario-3"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
  "ic-cdk 0.6.10",
  "ic-cdk-macros 0.6.10",
@@ -2739,6 +2787,19 @@ checksum = "67cf02bbac7a337dc36e4f5a693db6c21e7863f45070f7064577eb4367a3212b"
 dependencies = [
  "base64ct",
  "der",
+]
+
+[[package]]
+name = "stacker"
+version = "0.1.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c886bd4480155fd3ef527d45e9ac8dd7118a898a46530b7b94c3e21866259fce"
+dependencies = [
+ "cc",
+ "cfg-if",
+ "libc",
+ "psm",
+ "winapi",
 ]
 
 [[package]]
@@ -3071,7 +3132,7 @@ name = "uploader"
 version = "0.1.0"
 dependencies = [
  "async-std",
- "candid 0.7.18",
+ "candid 0.9.0-beta.4",
  "clap",
  "garcon",
  "ic-agent",
@@ -3237,7 +3298,7 @@ version = "0.1.0"
 dependencies = [
  "assert-json-diff",
  "async-trait",
- "candid 0.8.4",
+ "candid 0.9.0-beta.4",
  "futures",
  "hex",
  "ic-btc-interface",

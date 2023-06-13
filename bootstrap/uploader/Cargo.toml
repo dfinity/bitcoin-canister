@@ -19,7 +19,7 @@ name = "compute_hashes"
 path = "src/compute_hashes.rs"
 
 [dependencies]
-candid = "0.7.4"
+candid = "0.9.0-beta.3"
 ic-cdk = "0.5.6"
 ic-cdk-macros = "0.5.6"
 sha256 = "1.1.1"
