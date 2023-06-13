@@ -7,6 +7,6 @@ edition = "2021"
 bitcoin = "0.28.1"
 candid = "0.9.0-beta.3"
 ic-btc-test-utils = { path = "../../test-utils" }
-ic-cdk = "0.6.1"
+ic-cdk = "0.7.4"
 ic-cdk-macros = "0.6.1"
 serde = "1.0.132"

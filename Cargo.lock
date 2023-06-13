@@ -277,7 +277,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
 ]
 
@@ -858,7 +858,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "serde",
 ]
@@ -1373,7 +1373,7 @@ dependencies = [
  "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-btc-validation",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "ic-metrics-encoder",
  "ic-stable-structures",
@@ -1418,20 +1418,6 @@ dependencies = [
  "candid 0.7.18",
  "cfg-if",
  "serde",
-]
-
-[[package]]
-name = "ic-cdk"
-version = "0.6.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c98b304a2657bad15bcb547625a018e13cf596676d834cfd93023395a6e2e03a"
-dependencies = [
- "candid 0.8.4",
- "cfg-if",
- "ic-cdk-macros 0.6.10",
- "ic0",
- "serde",
- "serde_bytes",
 ]
 
 [[package]]
@@ -2478,7 +2464,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "serde",
 ]
@@ -2490,7 +2476,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "serde",
 ]
@@ -2502,7 +2488,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.0-beta.4",
  "ic-btc-test-utils",
- "ic-cdk 0.6.10",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.6.10",
  "serde",
 ]
@@ -3136,7 +3122,7 @@ dependencies = [
  "clap",
  "garcon",
  "ic-agent",
- "ic-cdk 0.5.7",
+ "ic-cdk 0.7.4",
  "ic-cdk-macros 0.5.7",
  "serde",
  "sha256",
