@@ -8,7 +8,7 @@ pub fn create_response() -> HttpResponseBuilder {
 /// Represents a builder for an HTTP response.
 pub struct HttpResponseBuilder {
     /// The response status (e.g., 200, 404).
-    pub status: candid::Nat,
+    pub status: ic_cdk::export::candid::Nat,
     /// List of HTTP response headers and their corresponding values.
     pub headers: Vec<HttpHeader>,
     /// The response’s body.
@@ -18,7 +18,7 @@ pub struct HttpResponseBuilder {
 impl HttpResponseBuilder {
     pub fn new() -> Self {
         Self {
-            status: candid::Nat::from(200),
+            status: ic_cdk::export::candid::Nat::from(200),
             headers: Vec::new(),
             body: Vec::new(),
         }
