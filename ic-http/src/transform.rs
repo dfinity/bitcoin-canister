@@ -3,7 +3,7 @@ use ic_cdk::api::management_canister::http_request::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use {candid::Principal, ic_cdk::api::management_canister::http_request::TransformFunc};
+use ic_cdk::api::management_canister::http_request::TransformFunc;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub type TransformFn = dyn Fn(TransformArgs) -> HttpResponse + 'static;
@@ -19,8 +19,8 @@ where
     crate::storage::transform_function_insert(function_name.clone(), Box::new(func));
 
     TransformContext {
-        function: TransformFunc(candid::Func {
-            principal: Principal::management_canister(),
+        function: TransformFunc(ic_cdk::export::candid::Func {
+            principal: ic_cdk::export::candid::Principal::management_canister(),
             method: function_name,
         }),
         context,
