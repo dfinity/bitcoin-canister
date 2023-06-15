@@ -1,11 +1,6 @@
 use ic_cdk::api::call::RejectionCode;
 use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpResponse};
 
-#[cfg(target_arch = "wasm32")]
-use candid::Principal;
-#[cfg(target_arch = "wasm32")]
-use ic_cdk::api::call::call_with_payment128;
-
 /// The result of a Call.
 ///
 /// Errors on the IC have two components; a Code and a message associated with it.
@@ -39,8 +34,8 @@ pub async fn http_request_with_cycles(
     arg: CanisterHttpRequestArgument,
     cycles: u128,
 ) -> CallResult<(HttpResponse,)> {
-    call_with_payment128(
-        Principal::management_canister(),
+    ic_cdk::api::call::call_with_payment128(
+        candid::Principal::management_canister(),
         "http_request",
         (arg,),
         cycles,

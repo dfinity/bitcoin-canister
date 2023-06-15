@@ -1,4 +1,4 @@
-use ic_cdk::export::candid::CandidType;
+use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
