@@ -19,8 +19,8 @@ where
     crate::storage::transform_function_insert(function_name.clone(), Box::new(func));
 
     TransformContext {
-        function: TransformFunc(ic_cdk::export::candid::Func {
-            principal: ic_cdk::export::candid::Principal::management_canister(),
+        function: TransformFunc(candid::Func {
+            principal: candid::Principal::management_canister(),
             method: function_name,
         }),
         context,
