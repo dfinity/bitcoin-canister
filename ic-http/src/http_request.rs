@@ -39,9 +39,6 @@ pub async fn http_request_with_cycles(
     arg: CanisterHttpRequestArgument,
     cycles: u128,
 ) -> CallResult<(HttpResponse,)> {
-    // NOTE: removing `http_request_with_cycles` is a workaround for the dependency issue
-    // when a recent `ic_cdk` version lost the `http_request_with_cycles` function.
-    // TODO: put back `http_request_with_cycles` as soon as it's available in the corresponding CDK version.
     call_with_payment128(
         Principal::management_canister(),
         "http_request",
