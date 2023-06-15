@@ -34,6 +34,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
   };
   api_access = variant { enabled };
   disable_api_if_not_fully_synced = variant { enabled }
+  watchdog_canister = null;
 })"
 
 # Wait until the ingestion of stable blocks is complete.
