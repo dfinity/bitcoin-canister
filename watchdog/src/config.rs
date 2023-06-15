@@ -14,7 +14,7 @@ const BLOCKS_BEHIND_THRESHOLD: u64 = 2;
 const BLOCKS_AHEAD_THRESHOLD: u64 = 2;
 
 /// The minimum number of explorers to compare against.
-const MIN_EXPLORERS: u64 = 2;
+const MIN_EXPLORERS: u64 = 3;
 
 /// Mainnet bitcoin canister principal.
 const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
