@@ -166,7 +166,7 @@ mod test {
     }
 
     #[test]
-    fn test_compare_not_enough_explorers() {
+    fn test_compare_2_explorers_are_not_enough() {
         // Arrange
         let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
         let other = vec![
