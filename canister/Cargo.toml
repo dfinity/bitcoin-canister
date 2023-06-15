@@ -14,7 +14,7 @@ ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c36
 hex = "0.4.3"
 ic-btc-interface = { path = "../interface" }
 ic-btc-validation = { path = "../validation" }
-ic-cdk = "0.8.1"
+ic-cdk = "=0.8.0-beta.0"
 ic-cdk-macros = "0.8.0-beta.0"
 ic-metrics-encoder = "1.0.0"
 ic-stable-structures = "0.5.2"

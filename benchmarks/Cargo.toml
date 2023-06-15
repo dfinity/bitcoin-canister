@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 bitcoin = {version = "0.28.1", features = ["use-serde"]}
 hex = "0.4.3"
-ic-cdk = "0.8.1"
+ic-cdk = "=0.8.0-beta.0"
 ic-cdk-macros = "0.8.0-beta.0"
 ic-btc-canister = { path = "../canister" }
 ic-btc-interface = { path = "../interface" }
