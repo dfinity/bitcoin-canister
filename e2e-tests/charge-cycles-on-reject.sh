@@ -31,7 +31,8 @@ dfx deploy bitcoin --argument "(record {
     send_transaction_per_byte = 1;
   };
   api_access = variant { enabled };
-  disable_api_if_not_fully_synced = variant { enabled }
+  disable_api_if_not_fully_synced = variant { enabled };
+  watchdog_canister = null;
 })"
 
 check_charging()

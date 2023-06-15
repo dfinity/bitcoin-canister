@@ -28,7 +28,8 @@ ARGUMENT="(record {
  }; 
  syncing = variant { enabled }; 
  api_access = variant { enabled };
- disable_api_if_not_fully_synced = variant { enabled }
+ disable_api_if_not_fully_synced = variant { enabled };
+ watchdog_canister = null;
 })"
 
 # Download the latest release
