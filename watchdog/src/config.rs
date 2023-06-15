@@ -1,6 +1,6 @@
 use crate::bitcoin_block_apis::BitcoinBlockApi;
 use candid::CandidType;
-use ic_cdk::export::Principal;
+use candid::Principal;
 use serde::{Deserialize, Serialize};
 
 /// The Bitcoin network to use.

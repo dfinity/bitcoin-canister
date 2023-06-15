@@ -10,7 +10,7 @@ PARENT_DIR="$(dirname "$SCRIPT_DIR")"
 pushd "$PARENT_DIR"
 
 # The URL of the latest release.
-LATEST_RELEASE="$(curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | grep "browser_download_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g')"
+LATEST_RELEASE="$(curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | grep "browser_download_url" | awk '{ print $2 }' | sed 's/,$//' | sed 's/"//g' | grep "ic-btc-canister.wasm.gz")"
 MANAGEMENT_CANISTER="aaaaa-aa"
 ARGUMENT="(record { 
  stability_threshold = 2;

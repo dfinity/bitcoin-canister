@@ -34,5 +34,11 @@ pub async fn http_request_with_cycles(
     arg: CanisterHttpRequestArgument,
     cycles: u128,
 ) -> CallResult<(HttpResponse,)> {
-    ic_cdk::api::management_canister::http_request::http_request_with_cycles(arg, cycles).await
+    ic_cdk::api::call::call_with_payment128(
+        candid::Principal::management_canister(),
+        "http_request",
+        (arg,),
+        cycles,
+    )
+    .await
 }
