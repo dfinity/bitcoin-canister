@@ -11,9 +11,9 @@ use crate::{
     validation::ValidationContext,
     UtxoSet,
 };
+use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
-use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 
 /// A structure used to maintain the entire state.

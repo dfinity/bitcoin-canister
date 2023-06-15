@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-candid = "0.8.1"
+candid = "0.9.0-beta.3"
 serde = "1.0.132"
 serde_bytes = "0.11"

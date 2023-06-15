@@ -3,9 +3,10 @@
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
 use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
+use candid::Principal;
+use ic_cdk::api::call::CallResult;
 #[cfg(not(target_arch = "wasm32"))]
 use ic_cdk::api::call::RejectionCode;
-use ic_cdk::{api::call::CallResult, export::Principal};
 #[cfg(not(target_arch = "wasm32"))]
 use serde::Deserialize;
 #[cfg(not(target_arch = "wasm32"))]
