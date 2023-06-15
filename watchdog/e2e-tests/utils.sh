@@ -8,7 +8,7 @@ deploy_watchdog_canister_mainnet() {
     bitcoin_network = variant { ${BITCOIN_NETWORK} };
     blocks_behind_threshold = 2;
     blocks_ahead_threshold = 2;
-    min_explorers = 2;
+    min_explorers = 3;
     bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
     delay_before_first_fetch_sec = 1;
     interval_between_fetches_sec = 300;
