@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# This script tests the upgradability of a watchdog canister.
+# This script tests the upgradability of the watchdog canister.
 # The process follows these steps:
 # - Fetches and downloads the latest release of the watchdog canister (a reference canister).
 # - Deploys this reference canister on a local IC network.

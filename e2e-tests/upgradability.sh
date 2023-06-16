@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script tests the upgradability of a bitcoin canister.
+# This script tests the upgradability of the bitcoin canister.
 #
 # The process follows these steps:
 # - Fetches and downloads the latest release of the bitcoin canister (a reference canister).
