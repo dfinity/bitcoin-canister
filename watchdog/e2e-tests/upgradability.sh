@@ -61,7 +61,7 @@ dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "${ARGUMENT}"
 dfx canister stop ${REFERENCE_CANISTER_NAME}
 
 # Update the local dfx configuration to point to the 'watchdog' canister 
-# in the current branch, rather than the 'reference-canister'.
+# in the current branch, rather than the reference canister.
 sed -i'' -e 's/'${REFERENCE_CANISTER_NAME}'/watchdog/' .dfx/local/canister_ids.json
 
 # Verify that the watchdog canister now exists and is already stopped.
