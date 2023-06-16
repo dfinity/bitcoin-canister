@@ -36,7 +36,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source "${SCRIPT_DIR}/utils.sh"
 
 # Run dfx stop if we run into errors and remove the downloaded wasm.
-trap "dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz" EXIT SIGINT
+trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 
 # Get the URL of the latest release.
 get_latest_release_url() {
@@ -47,7 +47,8 @@ get_latest_release_url() {
 
 # Download the latest release.
 download_latest_release() {
-  local url=$(get_latest_release_url)
+  local url
+  url=$(get_latest_release_url)
   wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "${url}"
 }
 download_latest_release
