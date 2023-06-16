@@ -63,8 +63,8 @@ dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "${ARGUMENT}"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
 
-# Replace from reference-canister with bitcoin in .dfx/local/canister_ids.json
-# so that the canister is upgraded to the bitcoin canister of the current branch.
+# Update the local dfx configuration to point to the 'bitcoin' canister 
+# in the current branch, rather than the 'reference-canister'.
 sed -i'' -e 's/'${REFERENCE_CANISTER_NAME}'/bitcoin/' .dfx/local/canister_ids.json
 
 # Verify that the bitcoin canister now exists and is already stopped.
