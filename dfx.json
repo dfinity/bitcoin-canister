@@ -13,6 +13,11 @@
       "build": "./scripts/build-canister.sh watchdog-canister",
       "wasm": "./target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz"
     },
+    "watchdog-upgradability-test": {
+      "type": "custom",
+      "candid": "./watchdog/candid.did",
+      "wasm": "watchdog-upgradability-test.wasm.gz"
+    },
     "benchmarks": {
       "candid": "./benchmarks/candid.did",
       "package": "benchmarks",

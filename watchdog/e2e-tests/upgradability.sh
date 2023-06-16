@@ -11,7 +11,7 @@
 set -Eexuo pipefail
 
 # Constants.
-REFERENCE_CANISTER_NAME="reference-canister"
+REFERENCE_CANISTER_NAME="watchdog-upgradability-test"
 BITCOIN_NETWORK=mainnet
 BITCOIN_CANISTER_ID=ghsi2-tqaaa-aaaan-aaaca-cai
 ARGUMENT="(opt record {

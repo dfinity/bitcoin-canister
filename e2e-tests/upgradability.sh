@@ -13,7 +13,7 @@ set -Eexuo pipefail
 
 # Constants.
 MANAGEMENT_CANISTER="aaaaa-aa"
-REFERENCE_CANISTER_NAME="reference-canister"
+REFERENCE_CANISTER_NAME="upgradability-test"
 ARGUMENT="(record { 
  stability_threshold = 2;
  network = variant { regtest };
