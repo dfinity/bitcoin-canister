@@ -76,6 +76,10 @@
       "replica": {
         "subnet_type": "system"
       }
+    },
+    "testnet": {
+      "providers": ["http://[2a00:fb01:400:42:5000:aaff:fea4:ae46]:8080"],
+      "type": "persistent"
     }
   },
   "version": 1
