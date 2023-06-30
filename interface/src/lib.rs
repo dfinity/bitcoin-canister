@@ -171,7 +171,7 @@ impl TryFrom<&'_ [u8]> for Txid {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TxidFromStrError {
     InvalidChar(u8),
     InvalidLength { expected: usize, actual: usize },
