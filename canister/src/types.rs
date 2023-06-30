@@ -6,8 +6,8 @@ use bitcoin::{
 use candid::CandidType;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
-    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, UtxosFilter,
-    UtxosFilterInRequest,
+    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, Txid as PublicTxid,
+    UtxosFilter, UtxosFilterInRequest,
 };
 use ic_stable_structures::{storable::Blob, BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
@@ -620,6 +620,20 @@ impl Txid {
 
     pub fn to_vec(self) -> Vec<u8> {
         self.bytes
+    }
+}
+
+impl From<Txid> for PublicTxid {
+    fn from(txid: Txid) -> Self {
+        Self::try_from(&txid.bytes[..]).expect("bug: txid is not 32 bytes long")
+    }
+}
+
+impl From<PublicTxid> for Txid {
+    fn from(txid: PublicTxid) -> Self {
+        Self {
+            bytes: txid.as_ref().to_vec(),
+        }
     }
 }
 
