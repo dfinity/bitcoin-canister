@@ -235,7 +235,7 @@ fn get_utxos_from_chain(
                 height: utxo.height,
                 outpoint: ic_btc_interface::OutPoint {
                     vout: utxo.outpoint.vout,
-                    txid: utxo.outpoint.txid.to_vec(),
+                    txid: utxo.outpoint.txid.into(),
                 },
             }
         })
@@ -247,7 +247,7 @@ fn get_utxos_from_chain(
         Page {
             tip_block_hash: tip_block_hash.clone(),
             height: next.height,
-            outpoint: OutPoint::new(Txid::from(next.outpoint.txid.clone()), next.outpoint.vout),
+            outpoint: OutPoint::new(Txid::from(next.outpoint.txid), next.outpoint.vout),
         }
         .to_bytes()
     });
@@ -356,7 +356,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0
                     },
                     value: 1000,
@@ -423,7 +423,7 @@ mod test {
         for i in (0..num_blocks).rev() {
             let expected_utxo = Utxo {
                 outpoint: OutPoint {
-                    txid: transactions[i as usize].txid().to_vec(),
+                    txid: transactions[i as usize].txid().into(),
                     vout: 0,
                 },
                 value: i + 1,
@@ -514,7 +514,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -576,7 +576,7 @@ mod test {
                 GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
-                            txid: tx.txid().to_vec(),
+                            txid: tx.txid().into(),
                             vout: 0,
                         },
                         value: 1000,
@@ -627,7 +627,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -710,7 +710,7 @@ mod test {
         let block_0_utxos = GetUtxosResponse {
             utxos: vec![Utxo {
                 outpoint: OutPoint {
-                    txid: coinbase_tx.txid().to_vec(),
+                    txid: coinbase_tx.txid().into(),
                     vout: 0,
                 },
                 value: 1000,
@@ -754,7 +754,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().to_vec(),
+                        txid: tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -895,7 +895,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().to_vec(),
+                        txid: tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -941,7 +941,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().to_vec(),
+                        txid: tx.txid().into(),
                         vout: 0
                     },
                     value: 1000,
