@@ -198,7 +198,7 @@ fn get_next_target(
 /// returns to its previous value." This function is used to compute the
 /// difficulty target in case the block has been found within 20
 /// minutes.
-fn find_next_difficulty_in_chain(
+fn find_next_difficulty_in_chain0(
     network: &Network,
     store: &impl HeaderStore,
     prev_header: &BlockHeader,
@@ -229,6 +229,52 @@ fn find_next_difficulty_in_chain(
                 current_height -= 1;
                 current_hash = current_header.prev_blockhash;
             }
+            pow_limit_bits
+        }
+        Network::Bitcoin | Network::Signet => pow_limit_bits,
+    }
+}
+
+/// This method is only valid when used for testnet and regtest networks.
+/// As per "https://en.bitcoin.it/wiki/Testnet",
+/// "If no block has been found in 20 minutes, the difficulty automatically
+/// resets back to the minimum for a single block, after which it
+/// returns to its previous value." This function is used to compute the
+/// difficulty target in case the block has been found within 20
+/// minutes.
+fn find_next_difficulty_in_chain(
+    network: &Network,
+    store: &impl HeaderStore,
+    header: &BlockHeader,
+    height: BlockHeight,
+) -> u32 {
+    // This is the maximum difficulty target for the network
+    let pow_limit_bits = pow_limit_bits(network);
+    match network {
+        Network::Testnet | Network::Regtest => {
+            let mut current_header = *header;
+            let mut current_height = height;
+            let initial_header_hash = store.get_initial_hash();
+
+            // Keep traversing the blockchain backwards from the recent block to initial
+            // header hash.
+            loop {
+                if current_header.bits != pow_limit_bits
+                    || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
+                {
+                    return current_header.bits;
+                }
+                if current_header.block_hash() == initial_header_hash {
+                    break;
+                }
+
+                // Traverse to the previous header
+                current_header = store
+                    .get_with_block_hash(&current_header.prev_blockhash)
+                    .expect("previous header should be in the header store");
+                current_height -= 1;
+            }
+
             pow_limit_bits
         }
         Network::Bitcoin | Network::Signet => pow_limit_bits,
@@ -663,7 +709,7 @@ mod test {
             find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
         // Assert.
-        assert_eq!(result, pow_limit_bits(&network));
+        assert_eq!(result, FAKE_POW);
     }
 
     #[test]
