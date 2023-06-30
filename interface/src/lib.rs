@@ -139,6 +139,32 @@ impl<'de> serde::de::Deserialize<'de> for Txid {
                     Err(_) => Err(E::invalid_length(value.len(), &self)),
                 }
             }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                use serde::de::Error;
+                if let Some(size_hint) = seq.size_hint() {
+                    if size_hint != 32 {
+                        return Err(A::Error::invalid_length(size_hint, &self));
+                    }
+                }
+                let mut bytes = [0u8; 32];
+                let mut i = 0;
+                while let Some(byte) = seq.next_element()? {
+                    if i == 32 {
+                        return Err(A::Error::invalid_length(i + 1, &self));
+                    }
+
+                    bytes[i] = byte;
+                    i += 1;
+                }
+                if i != 32 {
+                    return Err(A::Error::invalid_length(i, &self));
+                }
+                Ok(Txid(bytes))
+            }
         }
 
         deserializer.deserialize_bytes(TxidVisitor)
@@ -160,6 +186,12 @@ impl fmt::Display for Txid {
             write!(fmt, "{:02x}", *b)?
         }
         Ok(())
+    }
+}
+
+impl From<[u8; 32]> for Txid {
+    fn from(bytes: [u8; 32]) -> Self {
+        Self(bytes)
     }
 }
 
