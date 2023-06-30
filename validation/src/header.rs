@@ -198,50 +198,6 @@ fn get_next_target(
 /// returns to its previous value." This function is used to compute the
 /// difficulty target in case the block has been found within 20
 /// minutes.
-fn find_next_difficulty_in_chain0(
-    network: &Network,
-    store: &impl HeaderStore,
-    prev_header: &BlockHeader,
-    prev_height: BlockHeight,
-) -> u32 {
-    // This is the maximum difficulty target for the network
-    let pow_limit_bits = pow_limit_bits(network);
-    match network {
-        Network::Testnet | Network::Regtest => {
-            let mut current_header = *prev_header;
-            let mut current_height = prev_height;
-            let mut current_hash = prev_header.block_hash();
-            let initial_header_hash = store.get_initial_hash();
-
-            // Keep traversing the blockchain backwards from the recent block to initial
-            // header hash.
-            while current_hash != initial_header_hash {
-                if current_header.bits != pow_limit_bits
-                    || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
-                {
-                    return current_header.bits;
-                }
-
-                // Traverse to the previous header
-                current_header = store
-                    .get_with_block_hash(&current_header.prev_blockhash)
-                    .expect("previous header should be in the header store");
-                current_height -= 1;
-                current_hash = current_header.prev_blockhash;
-            }
-            pow_limit_bits
-        }
-        Network::Bitcoin | Network::Signet => pow_limit_bits,
-    }
-}
-
-/// This method is only valid when used for testnet and regtest networks.
-/// As per "https://en.bitcoin.it/wiki/Testnet",
-/// "If no block has been found in 20 minutes, the difficulty automatically
-/// resets back to the minimum for a single block, after which it
-/// returns to its previous value." This function is used to compute the
-/// difficulty target in case the block has been found within 20
-/// minutes.
 fn find_next_difficulty_in_chain(
     network: &Network,
     store: &impl HeaderStore,
