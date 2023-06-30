@@ -607,4 +607,156 @@ mod test {
             Err(ValidateHeaderError::TargetDifficultyAboveMax)
         ));
     }
+
+    fn genesis_header(bits: u32) -> BlockHeader {
+        BlockHeader {
+            version: 1,
+            prev_blockhash: Default::default(),
+            merkle_root: Default::default(),
+            time: 1296688602,
+            bits,
+            nonce: 0,
+        }
+    }
+
+    fn next_block_header(prev: BlockHeader, bits: u32) -> BlockHeader {
+        BlockHeader {
+            prev_blockhash: prev.block_hash(),
+            time: prev.time + TEN_MINUTES,
+            bits,
+            ..prev
+        }
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_initial_header() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow = 1;
+        let h0 = genesis_header(pow);
+        let store = SimpleHeaderStore::new(h0, 0);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h0, 1);
+
+        // Assert.
+        assert_eq!(result, pow_limit_bits(&network));
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_2_blocks_pow_not_found() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(pow_limit);
+        let h1 = next_block_header(h0, pow_limit);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h1, 1);
+
+        // Assert.
+        assert_eq!(result, pow_limit);
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_2_blocks_pow_found() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow = 1;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(pow);
+        let h1 = next_block_header(h0, pow_limit);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h1, 1);
+
+        // Assert.
+        assert_eq!(result, pow);
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_3_blocks_pow_not_found() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(pow_limit);
+        let h1 = next_block_header(h0, pow_limit);
+        let h2 = next_block_header(h1, pow_limit);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+        store.add(h2);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h2, 2);
+
+        // Assert.
+        assert_eq!(result, pow_limit);
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_3_blocks_pow_found() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow = 1;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(pow);
+        let h1 = next_block_header(h0, pow_limit);
+        let h2 = next_block_header(h1, pow_limit);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+        store.add(h2);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h2, 2);
+
+        // Assert.
+        assert_eq!(result, pow);
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_4_blocks_pow_not_found() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(pow_limit);
+        let h1 = next_block_header(h0, pow_limit);
+        let h2 = next_block_header(h1, pow_limit);
+        let h3 = next_block_header(h2, pow_limit);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+        store.add(h2);
+        store.add(h3);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h3, 3);
+
+        // Assert.
+        assert_eq!(result, pow_limit);
+    }
+
+    #[test]
+    fn test_find_next_difficulty_in_chain_for_4_blocks_pow_found() {
+        // Arrange.
+        let network = Network::Regtest;
+        let pow = 1;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(pow);
+        let h1 = next_block_header(h0, pow_limit);
+        let h2 = next_block_header(h1, pow_limit);
+        let h3 = next_block_header(h2, pow_limit);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+        store.add(h2);
+        store.add(h3);
+
+        // Act.
+        let result = find_next_difficulty_in_chain(&network, &store, &h3, 3);
+
+        // Assert.
+        assert_eq!(result, pow);
+    }
 }
