@@ -654,119 +654,52 @@ mod test {
     }
 
     const SOME_NON_LIMIT_POW: u32 = 7;
+    const CHAIN_LENGTH_MAX: u32 = 10;
 
     #[test]
-    fn test_find_next_difficulty_in_chain_for_initial_header() {
+    fn test_find_next_difficulty_in_chain_pow_found() {
+        // This test checks the chain of headers of different lengths
+        // with non-limit PoW in the first block header and Pow limit
+        // in all the other headers.
+        // Found difficulty should be equal to the non-limit PoW.
+
         // Arrange.
         let network = Network::Regtest;
-        let chain_length = 1;
-        let (store, last_header) = create_chain(&network, SOME_NON_LIMIT_POW, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
+        let expected_pow = SOME_NON_LIMIT_POW;
 
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
+        for chain_length in 1..CHAIN_LENGTH_MAX {
+            let (store, last_header) = create_chain(&network, expected_pow, chain_length);
+            assert_eq!(store.height() + 1, chain_length);
 
-        // Assert.
-        assert_eq!(result, SOME_NON_LIMIT_POW);
+            // Act.
+            let result =
+                find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
+
+            // Assert.
+            assert_eq!(result, expected_pow);
+        }
     }
 
     #[test]
-    fn test_find_next_difficulty_in_chain_for_2_blocks_pow_not_found() {
+    fn test_find_next_difficulty_in_chain_pow_not_found() {
+        // This test checks the chain of headers of different lengths
+        // with Pow limit in all the headers.
+        // Found difficulty should be equal to the PoW limit.
+
         // Arrange.
         let network = Network::Regtest;
-        let chain_length = 2;
-        let pow_limit = pow_limit_bits(&network);
-        let (store, last_header) = create_chain(&network, pow_limit, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
+        let expected_pow = pow_limit_bits(&network);
 
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
+        for chain_length in 1..CHAIN_LENGTH_MAX {
+            let (store, last_header) = create_chain(&network, expected_pow, chain_length);
+            assert_eq!(store.height() + 1, chain_length);
 
-        // Assert.
-        assert_eq!(result, pow_limit);
-    }
+            // Act.
+            let result =
+                find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
-    #[test]
-    fn test_find_next_difficulty_in_chain_for_2_blocks_pow_found() {
-        // Arrange.
-        let network = Network::Regtest;
-        let chain_length = 2;
-        let (store, last_header) = create_chain(&network, SOME_NON_LIMIT_POW, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
-
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
-
-        // Assert.
-        assert_eq!(result, SOME_NON_LIMIT_POW);
-    }
-
-    #[test]
-    fn test_find_next_difficulty_in_chain_for_3_blocks_pow_not_found() {
-        // Arrange.
-        let network = Network::Regtest;
-        let chain_length = 3;
-        let pow_limit = pow_limit_bits(&network);
-        let (store, last_header) = create_chain(&network, pow_limit, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
-
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
-
-        // Assert.
-        assert_eq!(result, pow_limit);
-    }
-
-    #[test]
-    fn test_find_next_difficulty_in_chain_for_3_blocks_pow_found() {
-        // Arrange.
-        let network = Network::Regtest;
-        let chain_length = 3;
-        let (store, last_header) = create_chain(&network, SOME_NON_LIMIT_POW, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
-
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
-
-        // Assert.
-        assert_eq!(result, SOME_NON_LIMIT_POW);
-    }
-
-    #[test]
-    fn test_find_next_difficulty_in_chain_for_4_blocks_pow_not_found() {
-        // Arrange.
-        let network = Network::Regtest;
-        let chain_length = 4;
-        let pow_limit = pow_limit_bits(&network);
-        let (store, last_header) = create_chain(&network, pow_limit, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
-
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
-
-        // Assert.
-        assert_eq!(result, pow_limit);
-    }
-
-    #[test]
-    fn test_find_next_difficulty_in_chain_for_4_blocks_pow_found() {
-        // Arrange.
-        let network = Network::Regtest;
-        let chain_length = 4;
-        let (store, last_header) = create_chain(&network, SOME_NON_LIMIT_POW, chain_length);
-        assert_eq!(store.height() + 1, chain_length);
-
-        // Act.
-        let result =
-            find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
-
-        // Assert.
-        assert_eq!(result, SOME_NON_LIMIT_POW);
+            // Assert.
+            assert_eq!(result, expected_pow);
+        }
     }
 }
