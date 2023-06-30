@@ -201,16 +201,16 @@ fn get_next_target(
 fn find_next_difficulty_in_chain(
     network: &Network,
     store: &impl HeaderStore,
-    header: &BlockHeader,
-    height: BlockHeight,
+    prev_header: &BlockHeader,
+    prev_height: BlockHeight,
 ) -> u32 {
     // This is the maximum difficulty target for the network
     let pow_limit_bits = pow_limit_bits(network);
     match network {
         Network::Testnet | Network::Regtest => {
-            let mut current_header = *header;
-            let mut current_height = height;
-            let mut current_hash = header.block_hash();
+            let mut current_header = *prev_header;
+            let mut current_height = prev_height;
+            let mut current_hash = current_header.block_hash();
             let initial_header_hash = store.get_initial_hash();
 
             // Keep traversing the blockchain backwards from the recent block to initial
@@ -232,7 +232,6 @@ fn find_next_difficulty_in_chain(
                     .expect("previous header should be in the header store");
                 current_height -= 1;
             }
-
             pow_limit_bits
         }
         Network::Bitcoin | Network::Signet => pow_limit_bits,
