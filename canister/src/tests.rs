@@ -12,12 +12,10 @@ use crate::{
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
-use bitcoin::{
-    consensus::{Decodable, Encodable},
-};
+use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_interface::{GetUtxosResponse, Network, UtxosFilter, Txid};
+use ic_btc_interface::{GetUtxosResponse, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;
