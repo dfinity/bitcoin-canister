@@ -693,14 +693,14 @@ mod test {
         (store, last_header)
     }
 
-    const FAKE_POW: u32 = 7;
+    const SOME_NON_LIMIT_POW: u32 = 7;
 
     #[test]
     fn test_find_next_difficulty_in_chain_for_initial_header() {
         // Arrange.
         let network = Network::Regtest;
         let chain_length = 1;
-        let pow = FAKE_POW;
+        let pow = SOME_NON_LIMIT_POW;
         let (store, last_header) = create_chain(&network, pow, chain_length);
         assert_eq!(store.height() + 1, chain_length);
 
@@ -709,7 +709,7 @@ mod test {
             find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
         // Assert.
-        assert_eq!(result, FAKE_POW);
+        assert_eq!(result, SOME_NON_LIMIT_POW);
     }
 
     #[test]
@@ -734,7 +734,7 @@ mod test {
         // Arrange.
         let network = Network::Regtest;
         let chain_length = 2;
-        let pow = FAKE_POW;
+        let pow = SOME_NON_LIMIT_POW;
         let (store, last_header) = create_chain(&network, pow, chain_length);
         assert_eq!(store.height() + 1, chain_length);
 
@@ -768,7 +768,7 @@ mod test {
         // Arrange.
         let network = Network::Regtest;
         let chain_length = 3;
-        let pow = FAKE_POW;
+        let pow = SOME_NON_LIMIT_POW;
         let (store, last_header) = create_chain(&network, pow, chain_length);
         assert_eq!(store.height() + 1, chain_length);
 
@@ -802,7 +802,7 @@ mod test {
         // Arrange.
         let network = Network::Regtest;
         let chain_length = 4;
-        let pow = FAKE_POW;
+        let pow = SOME_NON_LIMIT_POW;
         let (store, last_header) = create_chain(&network, pow, chain_length);
         assert_eq!(store.height() + 1, chain_length);
 
