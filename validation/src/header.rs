@@ -254,6 +254,7 @@ fn find_next_difficulty_in_chain(
         Network::Testnet | Network::Regtest => {
             let mut current_header = *header;
             let mut current_height = height;
+            let mut current_hash = header.block_hash();
             let initial_header_hash = store.get_initial_hash();
 
             // Keep traversing the blockchain backwards from the recent block to initial
@@ -264,11 +265,12 @@ fn find_next_difficulty_in_chain(
                 {
                     return current_header.bits;
                 }
-                if current_header.block_hash() == initial_header_hash {
+                if current_hash == initial_header_hash {
                     break;
                 }
 
                 // Traverse to the previous header
+                current_hash = current_header.prev_blockhash;
                 current_header = store
                     .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
