@@ -169,12 +169,9 @@ fn get_next_target(
                 } else {
                     //If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    BlockHeader::u256_from_compact_target(find_next_difficulty_in_chain(
-                        network,
-                        store,
-                        prev_header,
-                        prev_height,
-                    ))
+                    let (difficulty, _) =
+                        find_next_difficulty_in_chain(network, store, prev_header, prev_height);
+                    BlockHeader::u256_from_compact_target(difficulty)
                 }
             } else {
                 BlockHeader::u256_from_compact_target(compute_next_difficulty(
@@ -203,9 +200,10 @@ fn find_next_difficulty_in_chain(
     store: &impl HeaderStore,
     prev_header: &BlockHeader,
     prev_height: BlockHeight,
-) -> u32 {
+) -> (u32, u32) {
     // This is the maximum difficulty target for the network
     let pow_limit_bits = pow_limit_bits(network);
+    let mut headers_inspected = 0;
     match network {
         Network::Testnet | Network::Regtest => {
             let mut current_header = *prev_header;
@@ -216,10 +214,11 @@ fn find_next_difficulty_in_chain(
             // Keep traversing the blockchain backwards from the recent block to initial
             // header hash.
             loop {
+                headers_inspected += 1;
                 if current_header.bits != pow_limit_bits
                     || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
                 {
-                    return current_header.bits;
+                    return (current_header.bits, headers_inspected);
                 }
                 if current_hash == initial_header_hash {
                     break;
@@ -233,9 +232,9 @@ fn find_next_difficulty_in_chain(
                     .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
             }
-            pow_limit_bits
+            (pow_limit_bits, headers_inspected)
         }
-        Network::Bitcoin | Network::Signet => pow_limit_bits,
+        Network::Bitcoin | Network::Signet => (pow_limit_bits, headers_inspected),
     }
 }
 
@@ -661,7 +660,8 @@ mod test {
         // This test checks the chain of headers of different lengths
         // with non-limit PoW in the first block header and Pow limit
         // in all the other headers.
-        // Found difficulty should be equal to the non-limit PoW.
+        // Expect difficulty to be equal to the non-limit PoW.
+        // Expect headers inspected to be equal to the chain length.
 
         // Arrange.
         let network = Network::Regtest;
@@ -672,11 +672,12 @@ mod test {
             assert_eq!(store.height() + 1, chain_length);
 
             // Act.
-            let result =
+            let (difficulty, headers_inspected) =
                 find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
             // Assert.
-            assert_eq!(result, expected_pow);
+            assert_eq!(difficulty, expected_pow);
+            assert_eq!(headers_inspected, chain_length);
         }
     }
 
@@ -684,7 +685,8 @@ mod test {
     fn test_find_next_difficulty_in_chain_pow_not_found() {
         // This test checks the chain of headers of different lengths
         // with Pow limit in all the headers.
-        // Found difficulty should be equal to the PoW limit.
+        // Expect difficulty to be equal to the PoW limit.
+        // Expect headers inspected to be equal to the chain length.
 
         // Arrange.
         let network = Network::Regtest;
@@ -695,11 +697,12 @@ mod test {
             assert_eq!(store.height() + 1, chain_length);
 
             // Act.
-            let result =
+            let (difficulty, headers_inspected) =
                 find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
             // Assert.
-            assert_eq!(result, expected_pow);
+            assert_eq!(difficulty, expected_pow);
+            assert_eq!(headers_inspected, chain_length);
         }
     }
 }
