@@ -214,20 +214,25 @@ fn find_next_difficulty_in_chain(
             // Keep traversing the blockchain backwards from the recent block to initial
             // header hash.
             loop {
+                // Count headers inspected for testing purposes.
                 headers_inspected += 1;
+
+                // Check if non-limit PoW found or it's time to adjust difficulty.
                 if current_header.bits != pow_limit_bits
                     || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
                 {
                     return (current_header.bits, headers_inspected);
                 }
+
+                // Stop if we reach the initial header.
                 if current_hash == initial_header_hash {
                     break;
                 }
 
-                // Update the previous header's hash, so that there's no need to calculate it.
+                // Save the previous header's hash, so that there's no need to calculate it.
                 current_hash = current_header.prev_blockhash;
                 current_height -= 1;
-                // Traverse to the previous header.
+                // Advance to the previous header.
                 current_header = store
                     .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
