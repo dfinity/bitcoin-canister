@@ -229,13 +229,13 @@ fn find_next_difficulty_in_chain(
                     break;
                 }
 
-                // Save the previous header's hash, so that there's no need to calculate it.
-                current_hash = current_header.prev_blockhash;
-                current_height -= 1;
                 // Advance to the previous header.
                 current_header = store
                     .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
+                // Update the current height and hash.
+                current_hash = current_header.block_hash();
+                current_height -= 1;
             }
             (pow_limit_bits, headers_inspected)
         }
