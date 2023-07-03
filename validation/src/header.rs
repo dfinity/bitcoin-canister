@@ -593,10 +593,16 @@ mod test {
 
     #[test]
     fn test_is_header_valid_invalid_computed_target() {
-        let header_705600 = deserialize_header(MAINNET_HEADER_705600);
-        let header = deserialize_header(MAINNET_HEADER_705601);
-        let store = SimpleHeaderStore::new(header_705600, 705_600);
-        let result = validate_header(&Network::Regtest, &store, &header, MOCK_CURRENT_TIME);
+        let pow_bitcoin = pow_limit_bits(&Network::Bitcoin);
+        let pow_regtest = pow_limit_bits(&Network::Regtest);
+        let h0 = genesis_header(pow_bitcoin);
+        let h1 = next_block_header(h0, pow_regtest);
+        let h2 = next_block_header(h1, pow_regtest);
+        let h3 = next_block_header(h2, pow_regtest);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+        store.add(h2);
+        let result = validate_header(&Network::Regtest, &store, &h3, MOCK_CURRENT_TIME);
         assert!(matches!(
             result,
             Err(ValidateHeaderError::InvalidPoWForComputedTarget)
