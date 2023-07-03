@@ -119,8 +119,8 @@ impl Transaction {
         &self.tx.output
     }
 
-    pub fn size(&self) -> usize {
-        self.tx.size()
+    pub fn vsize(&self) -> usize {
+        self.tx.vsize()
     }
 
     pub fn txid(&self) -> Txid {
