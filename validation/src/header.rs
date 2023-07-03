@@ -668,7 +668,7 @@ mod test {
     #[test]
     fn test_find_next_difficulty_in_chain_pow_found() {
         // This test checks the chain of headers of different lengths
-        // with non-limit PoW in the first block header and Pow limit
+        // with non-limit PoW in the first block header and PoW limit
         // in all the other headers.
         // Expect difficulty to be equal to the non-limit PoW.
         // Expect headers inspected to be equal to the chain length.
