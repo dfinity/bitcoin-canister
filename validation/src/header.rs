@@ -169,9 +169,12 @@ fn get_next_target(
                 } else {
                     //If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    let (difficulty, _) =
-                        find_next_difficulty_in_chain(network, store, prev_header, prev_height);
-                    BlockHeader::u256_from_compact_target(difficulty)
+                    BlockHeader::u256_from_compact_target(find_next_difficulty_in_chain(
+                        network,
+                        store,
+                        prev_header,
+                        prev_height,
+                    ))
                 }
             } else {
                 BlockHeader::u256_from_compact_target(compute_next_difficulty(
@@ -200,10 +203,9 @@ fn find_next_difficulty_in_chain(
     store: &impl HeaderStore,
     prev_header: &BlockHeader,
     prev_height: BlockHeight,
-) -> (u32, u32) {
+) -> u32 {
     // This is the maximum difficulty target for the network
     let pow_limit_bits = pow_limit_bits(network);
-    let mut headers_inspected = 0;
     match network {
         Network::Testnet | Network::Regtest => {
             let mut current_header = *prev_header;
@@ -214,14 +216,11 @@ fn find_next_difficulty_in_chain(
             // Keep traversing the blockchain backwards from the recent block to initial
             // header hash.
             loop {
-                // Count headers inspected for testing purposes.
-                headers_inspected += 1;
-
                 // Check if non-limit PoW found or it's time to adjust difficulty.
                 if current_header.bits != pow_limit_bits
                     || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
                 {
-                    return (current_header.bits, headers_inspected);
+                    return current_header.bits;
                 }
 
                 // Stop if we reach the initial header.
@@ -237,9 +236,9 @@ fn find_next_difficulty_in_chain(
                 current_height -= 1;
                 current_hash = current_header.block_hash();
             }
-            (pow_limit_bits, headers_inspected)
+            pow_limit_bits
         }
-        Network::Bitcoin | Network::Signet => (pow_limit_bits, headers_inspected),
+        Network::Bitcoin | Network::Signet => pow_limit_bits,
     }
 }
 
@@ -683,12 +682,11 @@ mod test {
             assert_eq!(store.height() + 1, chain_length);
 
             // Act.
-            let (difficulty, headers_inspected) =
+            let difficulty =
                 find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
             // Assert.
             assert_eq!(difficulty, expected_pow);
-            assert_eq!(headers_inspected, chain_length);
         }
     }
 
@@ -708,12 +706,11 @@ mod test {
             assert_eq!(store.height() + 1, chain_length);
 
             // Act.
-            let (difficulty, headers_inspected) =
+            let difficulty =
                 find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
 
             // Assert.
             assert_eq!(difficulty, expected_pow);
-            assert_eq!(headers_inspected, chain_length);
         }
     }
 }
