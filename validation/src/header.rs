@@ -228,7 +228,7 @@ fn find_next_difficulty_in_chain(
                     break;
                 }
 
-                // Advance to the previous header.
+                // Traverse to the previous header.
                 current_header = store
                     .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
