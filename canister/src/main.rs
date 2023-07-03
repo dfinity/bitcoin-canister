@@ -1,7 +1,7 @@
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
     Config, GetBalanceRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest,
-    MillisatoshiPerByte, SendTransactionRequest, SetConfigRequest,
+    MillisatoshiPerVbyte, SendTransactionRequest, SetConfigRequest,
 };
 use ic_cdk::api::call::{reject, reply};
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
@@ -52,7 +52,7 @@ async fn bitcoin_send_transaction(request: SendTransactionRequest) {
 #[update]
 pub fn bitcoin_get_current_fee_percentiles(
     request: GetCurrentFeePercentilesRequest,
-) -> Vec<MillisatoshiPerByte> {
+) -> Vec<MillisatoshiPerVbyte> {
     ic_btc_canister::get_current_fee_percentiles(request)
 }
 

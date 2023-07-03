@@ -80,7 +80,7 @@ type send_transaction_request = record {
   transaction : blob;
 };
 
-type millisatoshi_per_byte = nat64;
+type millisatoshi_per_vbyte = nat64;
 
 type set_config_request = record {
   stability_threshold : opt nat;
@@ -96,7 +96,7 @@ service bitcoin : (config) -> {
 
   bitcoin_get_utxos : (get_utxos_request) -> (get_utxos_response);
 
-  bitcoin_get_current_fee_percentiles : (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+  bitcoin_get_current_fee_percentiles : (get_current_fee_percentiles_request) -> (vec millisatoshi_per_vbyte);
 
   bitcoin_send_transaction : (send_transaction_request) -> ();
 

@@ -12,7 +12,7 @@ use crate::{
     UtxoSet,
 };
 use candid::Principal;
-use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
+use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerVbyte, Network};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
 use serde::{Deserialize, Serialize};
 
@@ -268,7 +268,7 @@ impl Default for SyncingState {
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct FeePercentilesCache {
     pub tip_block_hash: BlockHash,
-    pub fee_percentiles: Vec<MillisatoshiPerByte>,
+    pub fee_percentiles: Vec<MillisatoshiPerVbyte>,
 }
 
 #[cfg(test)]
