@@ -113,9 +113,9 @@ fn get_tx_fee_per_byte(
         satoshi -= tx_out.value;
     }
 
-    if tx.size() > 0 {
+    if tx.vsize() > 0 {
         // Don't use floating point division to avoid non-determinism.
-        Some(((1000 * satoshi) / tx.size() as u64) as MillisatoshiPerByte)
+        Some(((1000 * satoshi) / tx.vsize() as u64) as MillisatoshiPerByte)
     } else {
         // Calculating fee is not possible for a zero-size invalid transaction.
         None
@@ -358,7 +358,7 @@ mod test {
             // so the percentiles should be the fee / byte of the second transaction.
             assert_eq!(
                 get_current_fee_percentiles_internal(s, 1),
-                vec![fee_in_millisatoshi / tx_2.size() as u64; PERCENTILE_BUCKETS]
+                vec![fee_in_millisatoshi / tx_2.vsize() as u64; PERCENTILE_BUCKETS]
             );
         });
     }
