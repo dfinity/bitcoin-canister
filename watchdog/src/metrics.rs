@@ -36,15 +36,6 @@ pub fn get_metrics() -> CandidHttpResponse {
     }
 }
 
-/// Converts a flag to a gauge value.
-fn flag_to_gauge(flag: Option<Flag>) -> f64 {
-    match flag {
-        None => NO_VALUE,
-        Some(Flag::Enabled) => 1.0,
-        Some(Flag::Disabled) => 0.0,
-    }
-}
-
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     let config = crate::storage::get_config();
