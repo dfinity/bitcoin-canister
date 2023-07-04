@@ -100,12 +100,18 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("code", "ahead")], ahead)?
         .value(&[("code", "behind")], behind)?;
 
-    let api_access_target = crate::storage::get_api_access_target();
-    w.encode_gauge(
+    let (undefined, enabled, disabled) = match crate::storage::get_api_access_target() {
+        None => (1.0, 0.0, 0.0),
+        Some(Flag::Enabled) => (0.0, 1.0, 0.0),
+        Some(Flag::Disabled) => (0.0, 0.0, 1.0),
+    };
+    w.gauge_vec(
         "api_access_target",
-        flag_to_gauge(api_access_target),
         "Expected value of the Bitcoin canister API access flag.",
-    )?;
+    )?
+    .value(&[("flag", "undefined")], undefined)?
+    .value(&[("flag", "enabled")], enabled)?
+    .value(&[("flag", "disabled")], disabled)?;
 
     let mut available_explorers = HashMap::new();
     for explorer in health.explorers {
