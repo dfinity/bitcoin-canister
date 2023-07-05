@@ -119,15 +119,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "Is the canister synced with the network?",
         )?;
 
-        w.encode_gauge(
+        let (enabled, disabled) = match state.api_access {
+            Flag::Enabled => (1.0, 0.0),
+            Flag::Disabled => (0.0, 1.0),
+        };
+        w.gauge_vec(
             "api_access",
-            if state.api_access == Flag::Enabled {
-                1.0
-            } else {
-                0.0
-            },
             "Flag to control access to the APIs provided by the canister.",
-        )?;
+        )?
+        .value(&[("flag", "enabled")], enabled)?
+        .value(&[("flag", "disabled")], disabled)?;
 
         Ok(())
     })
