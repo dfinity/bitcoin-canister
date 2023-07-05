@@ -1,0 +1,2 @@
+validation/tests/data/block_headers_testnet.csv filter=lfs diff=lfs merge=lfs -text
+validation/tests/data/block_headers_mainnet.csv filter=lfs diff=lfs merge=lfs -text
