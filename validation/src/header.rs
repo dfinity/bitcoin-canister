@@ -662,9 +662,6 @@ mod test {
         (store, last_header)
     }
 
-    const SOME_NON_LIMIT_POW: u32 = 7;
-    const CHAIN_LENGTH_MAX: u32 = 10;
-
     #[test]
     fn test_find_next_difficulty_in_chain_pow_found() {
         // This test checks the chain of headers of different lengths
@@ -674,9 +671,9 @@ mod test {
 
         // Arrange.
         let network = Network::Regtest;
-        let expected_pow = SOME_NON_LIMIT_POW;
+        let expected_pow = 7; // Some non-limit PoW, the actual value is not important.
 
-        for chain_length in 1..CHAIN_LENGTH_MAX {
+        for chain_length in 1..10 {
             let (store, last_header) = create_chain(&network, expected_pow, chain_length);
             assert_eq!(store.height() + 1, chain_length);
 
