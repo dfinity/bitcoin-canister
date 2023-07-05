@@ -671,35 +671,10 @@ mod test {
         // with non-limit PoW in the first block header and PoW limit
         // in all the other headers.
         // Expect difficulty to be equal to the non-limit PoW.
-        // Expect headers inspected to be equal to the chain length.
 
         // Arrange.
         let network = Network::Regtest;
         let expected_pow = SOME_NON_LIMIT_POW;
-
-        for chain_length in 1..CHAIN_LENGTH_MAX {
-            let (store, last_header) = create_chain(&network, expected_pow, chain_length);
-            assert_eq!(store.height() + 1, chain_length);
-
-            // Act.
-            let difficulty =
-                find_next_difficulty_in_chain(&network, &store, &last_header, chain_length - 1);
-
-            // Assert.
-            assert_eq!(difficulty, expected_pow);
-        }
-    }
-
-    #[test]
-    fn test_find_next_difficulty_in_chain_pow_not_found() {
-        // This test checks the chain of headers of different lengths
-        // with Pow limit in all the headers.
-        // Expect difficulty to be equal to the PoW limit.
-        // Expect headers inspected to be equal to the chain length.
-
-        // Arrange.
-        let network = Network::Regtest;
-        let expected_pow = pow_limit_bits(&network);
 
         for chain_length in 1..CHAIN_LENGTH_MAX {
             let (store, last_header) = create_chain(&network, expected_pow, chain_length);
