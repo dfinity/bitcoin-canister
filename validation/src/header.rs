@@ -206,24 +206,31 @@ fn find_next_difficulty_in_chain(
         Network::Testnet | Network::Regtest => {
             let mut current_header = *prev_header;
             let mut current_height = prev_height;
-            let mut current_hash = prev_header.block_hash();
+            let mut current_hash = current_header.block_hash();
             let initial_header_hash = store.get_initial_hash();
 
             // Keep traversing the blockchain backwards from the recent block to initial
             // header hash.
-            while current_hash != initial_header_hash {
+            loop {
+                // Check if non-limit PoW found or it's time to adjust difficulty.
                 if current_header.bits != pow_limit_bits
                     || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
                 {
                     return current_header.bits;
                 }
 
-                // Traverse to the previous header
+                // Stop if we reach the initial header.
+                if current_hash == initial_header_hash {
+                    break;
+                }
+
+                // Traverse to the previous header.
                 current_header = store
                     .get_with_block_hash(&current_header.prev_blockhash)
                     .expect("previous header should be in the header store");
+                // Update the current height and hash.
                 current_height -= 1;
-                current_hash = current_header.prev_blockhash;
+                current_hash = current_header.block_hash();
             }
             pow_limit_bits
         }
@@ -580,10 +587,16 @@ mod test {
 
     #[test]
     fn test_is_header_valid_invalid_computed_target() {
-        let header_705600 = deserialize_header(MAINNET_HEADER_705600);
-        let header = deserialize_header(MAINNET_HEADER_705601);
-        let store = SimpleHeaderStore::new(header_705600, 705_600);
-        let result = validate_header(&Network::Regtest, &store, &header, MOCK_CURRENT_TIME);
+        let pow_bitcoin = pow_limit_bits(&Network::Bitcoin);
+        let pow_regtest = pow_limit_bits(&Network::Regtest);
+        let h0 = genesis_header(pow_bitcoin);
+        let h1 = next_block_header(h0, pow_regtest);
+        let h2 = next_block_header(h1, pow_regtest);
+        let h3 = next_block_header(h2, pow_regtest);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        store.add(h1);
+        store.add(h2);
+        let result = validate_header(&Network::Regtest, &store, &h3, MOCK_CURRENT_TIME);
         assert!(matches!(
             result,
             Err(ValidateHeaderError::InvalidPoWForComputedTarget)
@@ -623,9 +636,9 @@ mod test {
         }
 
         println!("Creating header store...");
-        let mut store = SimpleHeaderStore::new(headers[0].clone(), 0);
+        let mut store = SimpleHeaderStore::new(headers[0], 0);
         for header in headers[1..].iter() {
-            store.add(header.clone());
+            store.add(*header);
         }
 
         println!("Verifying next targets...");
@@ -658,5 +671,72 @@ mod test {
             "tests/data/block_headers_testnet.csv",
             2_400_000,
         );
+    }
+
+    fn genesis_header(bits: u32) -> BlockHeader {
+        BlockHeader {
+            version: 1,
+            prev_blockhash: Default::default(),
+            merkle_root: Default::default(),
+            time: 1296688602,
+            bits,
+            nonce: 0,
+        }
+    }
+
+    fn next_block_header(prev: BlockHeader, bits: u32) -> BlockHeader {
+        BlockHeader {
+            prev_blockhash: prev.block_hash(),
+            time: prev.time + TEN_MINUTES,
+            bits,
+            ..prev
+        }
+    }
+
+    /// Creates a chain of headers with the given length and
+    /// proof of work for the first header.
+    fn create_chain(
+        network: &Network,
+        initial_pow: u32,
+        chain_length: u32,
+    ) -> (SimpleHeaderStore, BlockHeader) {
+        let pow_limit = pow_limit_bits(network);
+        let h0 = genesis_header(initial_pow);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        let mut last_header = h0;
+
+        for _ in 1..chain_length {
+            let new_header = next_block_header(last_header, pow_limit);
+            store.add(new_header);
+            last_header = new_header;
+        }
+
+        (store, last_header)
+    }
+
+    #[test]
+    fn test_next_target_regtest() {
+        // This test checks the chain of headers of different lengths
+        // with non-limit PoW in the first block header and PoW limit
+        // in all the other headers.
+        // Expect difficulty to be equal to the non-limit PoW.
+
+        // Arrange.
+        let network = Network::Regtest;
+        let expected_pow = 7; // Some non-limit PoW, the actual value is not important.
+        for chain_length in 1..10 {
+            let (store, last_header) = create_chain(&network, expected_pow, chain_length);
+            assert_eq!(store.height() + 1, chain_length);
+            // Act.
+            let target = get_next_target(
+                &network,
+                &store,
+                &last_header,
+                chain_length - 1,
+                last_header.time + TEN_MINUTES,
+            );
+            // Assert.
+            assert_eq!(target, BlockHeader::u256_from_compact_target(expected_pow));
+        }
     }
 }
