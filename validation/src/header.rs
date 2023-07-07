@@ -80,7 +80,7 @@ pub fn validate_header(
         return Err(ValidateHeaderError::InvalidPoWForHeaderTarget);
     }
 
-    let target = get_next_target(network, store, &prev_header, prev_height, header);
+    let target = get_next_target(network, store, &prev_header, prev_height, header.time);
     if let Err(err) = header.validate_pow(&target) {
         match err {
             bitcoin::Error::BlockBadProofOfWork => println!("bad proof of work"),
@@ -141,18 +141,14 @@ fn is_timestamp_valid(
     Ok(())
 }
 
-/// Gets the next target by doing the following:
-/// * If the network allows blocks to have the max target (testnet & regtest),
-///   the next difficulty is searched for unless the header's timestamp is
-///   greater than 20 minutes from the previous header's timestamp.
-/// * If the network does not allow blocks with the max target, the next
-///   difficulty is computed and then cast into the next target.
+// Returns the next required target at the given timestamp.
+// The target is the number that a block hash must be below for it to be accepted.
 fn get_next_target(
     network: &Network,
     store: &impl HeaderStore,
     prev_header: &BlockHeader,
     prev_height: BlockHeight,
-    header: &BlockHeader,
+    timestamp: u32,
 ) -> Uint256 {
     match network {
         Network::Testnet | Network::Regtest => {
@@ -162,7 +158,7 @@ fn get_next_target(
                 // "If no block has been found in 20 minutes, the difficulty automatically
                 // resets back to the minimum for a single block, after which it
                 // returns to its previous value."
-                if header.time > prev_header.time + TEN_MINUTES * 2 {
+                if timestamp > prev_header.time + TEN_MINUTES * 2 {
                     //If no block has been found in 20 minutes, then use the maximum difficulty
                     // target
                     max_target(network)
@@ -311,6 +307,7 @@ mod test {
 
     use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode};
     use csv::Reader;
+    use proptest::prelude::*;
 
     use super::*;
     use crate::constants::test::{
@@ -399,8 +396,6 @@ mod test {
     }
 
     /// This function reads `num_headers` headers from `tests/data/headers.csv`
-    /// and returns them.
-    /// This function reads `num_headers` headers from `blockchain_headers.csv`
     /// and returns them.
     fn get_bitcoin_headers() -> Vec<BlockHeader> {
         let rdr = Reader::from_path(
@@ -621,6 +616,63 @@ mod test {
         ));
     }
 
+    fn test_next_targets(network: Network, headers_path: &str, up_to_height: usize) {
+        use bitcoin::consensus::Decodable;
+        use std::io::BufRead;
+        let file = std::fs::File::open(
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join(headers_path),
+        )
+        .unwrap();
+
+        let rdr = std::io::BufReader::new(file);
+
+        println!("Loading headers...");
+        let mut headers = vec![];
+        for line in rdr.lines() {
+            let header = line.unwrap();
+            let header = hex::decode(header.trim()).unwrap();
+            let header = BlockHeader::consensus_decode(header.as_slice()).unwrap();
+            headers.push(header);
+        }
+
+        println!("Creating header store...");
+        let mut store = SimpleHeaderStore::new(headers[0], 0);
+        for header in headers[1..].iter() {
+            store.add(*header);
+        }
+
+        println!("Verifying next targets...");
+        proptest!(|(i in 0..up_to_height)| {
+            // Compute what the target of the next header should be.
+            let expected_next_target =
+                get_next_target(&network, &store, &headers[i], i as u32, headers[i + 1].time);
+
+            // Assert that the expected next target matches the next header's target.
+            assert_eq!(
+                expected_next_target,
+                BlockHeader::u256_from_compact_target(headers[i + 1].bits)
+            );
+        });
+    }
+
+    #[test]
+    fn mainnet_next_targets() {
+        test_next_targets(
+            Network::Bitcoin,
+            "tests/data/block_headers_mainnet.csv",
+            700_000,
+        );
+    }
+
+    #[test]
+    fn testnet_next_targets() {
+        test_next_targets(
+            Network::Testnet,
+            "tests/data/block_headers_testnet.csv",
+            2_400_000,
+        );
+    }
+
     fn genesis_header(bits: u32) -> BlockHeader {
         BlockHeader {
             version: 1,
@@ -681,7 +733,7 @@ mod test {
                 &store,
                 &last_header,
                 chain_length - 1,
-                &next_block_header(last_header, expected_pow),
+                last_header.time + TEN_MINUTES,
             );
             // Assert.
             assert_eq!(target, BlockHeader::u256_from_compact_target(expected_pow));

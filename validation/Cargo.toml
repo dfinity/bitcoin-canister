@@ -10,3 +10,5 @@ bitcoin = "0.28.1"
 
 [dev-dependencies]
 csv = "1.1"
+hex = "0.4.3"
+proptest = "0.9.4"

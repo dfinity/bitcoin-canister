@@ -1362,6 +1362,8 @@ version = "0.1.0"
 dependencies = [
  "bitcoin",
  "csv",
+ "hex",
+ "proptest 0.9.6",
 ]
 
 [[package]]
