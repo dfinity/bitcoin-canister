@@ -62,7 +62,7 @@ jobs:
           lfs: true
 
       - name: Checkout LFS objects
-        run: git lfs checkout
+        run: git lfs fetch
 
       - name: Install Rust
         run: |
