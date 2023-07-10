@@ -195,6 +195,15 @@ impl From<[u8; 32]> for Txid {
     }
 }
 
+impl From<Vec<u8>> for Txid {
+    fn from(vec: Vec<u8>) -> Self {
+        let bytes: [u8; 32] = vec
+            .try_into()
+            .expect("Can't convert into Txid, vector must be 32 bytes");
+        Self(bytes)
+    }
+}
+
 impl TryFrom<&'_ [u8]> for Txid {
     type Error = core::array::TryFromSliceError;
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
@@ -555,5 +564,32 @@ mod test {
             !format!("{:?}", Config::default()).is_empty(),
             "Config should be printable using debug formatter {{:?}}."
         );
+    }
+
+    #[test]
+    fn test_txid_from_slice() {
+        let src = [1u8; 32];
+        let expected = Txid([1u8; 32]);
+
+        let result: Txid = src.into();
+        assert_eq!(result, expected);
+        assert_eq!(Txid::from(src), expected);
+    }
+
+    #[test]
+    fn test_txid_from_vector() {
+        let src = vec![1u8; 32];
+        let expected = Txid([1u8; 32]);
+
+        let result: Txid = src.clone().into();
+        assert_eq!(result, expected);
+        assert_eq!(Txid::from(src), expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_txid_from_vector_fails() {
+        // This test should panic because the vector is of the wrong size.
+        let _: Txid = vec![1u8; 30].into();
     }
 }
