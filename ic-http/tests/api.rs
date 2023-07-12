@@ -1,5 +1,6 @@
 use ic_cdk::api::call::RejectionCode;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk::export::candid::Nat;
 use std::time::{Duration, Instant};
 
 const STATUS_CODE_OK: u64 = 200;
@@ -20,7 +21,7 @@ async fn test_http_request_no_transform() {
     let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
-    assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
+    assert_eq!(response.status, Nat::from(STATUS_CODE_OK));
     assert_eq!(response.body, body.to_string().as_bytes().to_vec());
     assert_eq!(ic_http::mock::times_called(request), 1);
 }
@@ -40,7 +41,7 @@ async fn test_http_request_called_several_times() {
     // Act
     for _ in 0..calls {
         let (response,) = ic_http::http_request(request.clone()).await.unwrap();
-        assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
+        assert_eq!(response.status, Nat::from(STATUS_CODE_OK));
         assert_eq!(response.body, body.to_string().as_bytes().to_vec());
     }
 
@@ -70,8 +71,8 @@ async fn test_http_request_transform_status() {
     let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
-    assert_ne!(response.status, candid::Nat::from(STATUS_CODE_OK));
-    assert_eq!(response.status, candid::Nat::from(STATUS_CODE_NOT_FOUND));
+    assert_ne!(response.status, Nat::from(STATUS_CODE_OK));
+    assert_eq!(response.status, Nat::from(STATUS_CODE_NOT_FOUND));
     assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
@@ -110,7 +111,7 @@ async fn test_http_request_transform_both_status_and_body() {
 
     fn transform_status(arg: TransformArgs) -> HttpResponse {
         let mut response = arg.response;
-        response.status = candid::Nat::from(STATUS_CODE_NOT_FOUND);
+        response.status = Nat::from(STATUS_CODE_NOT_FOUND);
         response
     }
 
@@ -158,12 +159,9 @@ async fn test_http_request_transform_both_status_and_body() {
         vec!["transform_body", "transform_status"]
     );
     assert_eq!(responses.len(), 2);
-    assert_eq!(
-        responses[0].status,
-        candid::Nat::from(STATUS_CODE_NOT_FOUND)
-    );
+    assert_eq!(responses[0].status, Nat::from(STATUS_CODE_NOT_FOUND));
     assert_eq!(responses[0].body, ORIGINAL_BODY.as_bytes().to_vec());
-    assert_eq!(responses[1].status, candid::Nat::from(STATUS_CODE_OK));
+    assert_eq!(responses[1].status, Nat::from(STATUS_CODE_OK));
     assert_eq!(responses[1].body, TRANSFORMED_BODY.as_bytes().to_vec());
     assert_eq!(ic_http::mock::times_called(request_1), 1);
     assert_eq!(ic_http::mock::times_called(request_2), 1);
