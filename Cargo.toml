@@ -21,3 +21,6 @@ members = [
     "ic-http",
     "ic-http/example_canister/src/canister_backend",
 ]
+
+[workspace.dependencies]
+candid = "0.8.1"
