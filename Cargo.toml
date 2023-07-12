@@ -23,4 +23,4 @@ members = [
 ]
 
 [workspace.dependencies]
-candid = "0.8.1"
+candid = "0.9.1"
