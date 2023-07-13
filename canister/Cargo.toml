@@ -30,7 +30,7 @@ bitcoin = { workspace = true, features = ["rand"] } # needed for generating secp
 byteorder = { workspace = true }
 ic-btc-test-utils = { workspace = true }
 maplit = "1.0.2"
-proptest = { workspace = true }
+proptest = "0.9.4"
 tempfile = "3.2.0"
 
 [features]

@@ -1344,7 +1344,7 @@ dependencies = [
  "ic-stable-structures",
  "lazy_static",
  "maplit",
- "proptest",
+ "proptest 0.9.6",
  "serde",
  "serde_bytes",
  "tempfile",
@@ -1356,7 +1356,7 @@ version = "0.1.0"
 dependencies = [
  "candid",
  "ciborium",
- "proptest",
+ "proptest 1.2.0",
  "serde",
  "serde_bytes",
 ]
@@ -1375,7 +1375,7 @@ dependencies = [
  "bitcoin",
  "csv",
  "hex",
- "proptest",
+ "proptest 1.2.0",
 ]
 
 [[package]]
@@ -1975,6 +1975,26 @@ dependencies = [
 
 [[package]]
 name = "proptest"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01c477819b845fe023d33583ebf10c9f62518c8d79a0960ba5c36d6ac8a55a5b"
+dependencies = [
+ "bit-set",
+ "bitflags",
+ "byteorder",
+ "lazy_static",
+ "num-traits",
+ "quick-error",
+ "rand 0.6.5",
+ "rand_chacha 0.1.1",
+ "rand_xorshift 0.1.1",
+ "regex-syntax 0.6.29",
+ "rusty-fork 0.2.2",
+ "tempfile",
+]
+
+[[package]]
+name = "proptest"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e35c06b98bf36aba164cc17cb25f7e232f5c4aeea73baa14b8a9f0d92dbfa65"
@@ -1988,7 +2008,7 @@ dependencies = [
  "rand_chacha 0.3.1",
  "rand_xorshift 0.3.0",
  "regex-syntax 0.6.29",
- "rusty-fork",
+ "rusty-fork 0.3.0",
  "tempfile",
  "unarray",
 ]
@@ -2402,6 +2422,18 @@ name = "rustversion"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
+
+[[package]]
+name = "rusty-fork"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3dd93264e10c577503e926bd1430193eeb5d21b059148910082245309b424fae"
+dependencies = [
+ "fnv",
+ "quick-error",
+ "tempfile",
+ "wait-timeout",
+]
 
 [[package]]
 name = "rusty-fork"
