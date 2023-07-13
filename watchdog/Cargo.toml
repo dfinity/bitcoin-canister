@@ -20,11 +20,11 @@ serde_json = { workspace = true }
 hex = { workspace = true }
 async-trait = "0.1.67"
 regex = "1.7.0"
-futures = "0.3.27"
+futures = { workspace = true }
 ic-http = { workspace = true }
 serde_bytes = { workspace = true }
 ic-btc-interface = { workspace = true }
 
 [dev-dependencies]
-tokio = { version = "1.15.0", features = [ "full" ] }
+tokio = { workspace = true }
 assert-json-diff = "2.0.2"
