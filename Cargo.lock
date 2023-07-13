@@ -1375,7 +1375,7 @@ dependencies = [
  "bitcoin",
  "csv",
  "hex",
- "proptest 1.2.0",
+ "proptest 0.9.6",
 ]
 
 [[package]]

@@ -10,4 +10,4 @@ serde_bytes = { workspace = true }
 
 [dev-dependencies]
 ciborium = { workspace = true }
-proptest = { workspace = true }
+proptest = "1.0"

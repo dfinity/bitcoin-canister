@@ -11,4 +11,4 @@ bitcoin = { workspace = true }
 [dev-dependencies]
 csv = "1.1"
 hex = { workspace = true }
-proptest = { workspace = true }
+proptest = "0.9.4"
