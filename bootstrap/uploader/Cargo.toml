@@ -20,8 +20,8 @@ path = "src/compute_hashes.rs"
 
 [dependencies]
 candid = { workspace = true }
-ic-cdk = "0.7.4"
-ic-cdk-macros = "0.6.10"
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true}
 sha256 = "1.1.1"
 serde = "1.0.132"
 

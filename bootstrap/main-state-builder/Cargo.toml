@@ -10,6 +10,6 @@ ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c36
 hex = "0.4.3"
 ic-btc-canister = { path = "../../canister", features = ["file_memory"] }
 ic-btc-interface = { path = "../../interface" }
-ic-stable-structures = "0.5.2"
+ic-stable-structures = { workspace = true }
 
 [workspace]

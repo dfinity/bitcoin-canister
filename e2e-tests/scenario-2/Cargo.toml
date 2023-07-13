@@ -7,6 +7,6 @@ edition = "2021"
 bitcoin = "0.28.1"
 candid = { workspace = true }
 ic-btc-test-utils = { path = "../../test-utils" }
-ic-cdk = "0.7.4"
-ic-cdk-macros = "0.6.10"
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true}
 serde = "1.0.132"

@@ -11,8 +11,9 @@ path = "src/main.rs"
 
 [dependencies]
 candid = { workspace = true }
-ic-cdk = "0.7.4"
-ic-cdk-macros = "0.6.10"
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true}
+ic-metrics-encoder = { workspace = true }
 ic-cdk-timers = "0.1"
 serde = { version = "1.0.158", features = [ "derive" ] }
 serde_json = "1.0.94"
@@ -22,7 +23,6 @@ regex = "1.7.0"
 futures = "0.3.27"
 ic-http = {path = "../ic-http"}
 serde_bytes = "0.11"
-ic-metrics-encoder = "1.0.0"
 ic-btc-interface = { path = "../interface" }
 
 [dev-dependencies]
