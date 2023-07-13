@@ -21,9 +21,9 @@ hex = { workspace = true }
 async-trait = "0.1.67"
 regex = "1.7.0"
 futures = "0.3.27"
-ic-http = { path = "../ic-http" }
+ic-http = { workspace = true }
 serde_bytes = { workspace = true }
-ic-btc-interface = { path = "../interface" }
+ic-btc-interface = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1.15.0", features = [ "full" ] }

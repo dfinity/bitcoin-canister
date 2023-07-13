@@ -26,8 +26,8 @@ byteorder = { workspace = true }
 ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
 clap = { workspace = true }
 hex = { workspace = true }
-ic-btc-canister = { path = "../../canister", features = [] }
-ic-btc-interface = { path = "../../interface" }
+ic-btc-canister = { workspace = true }
+ic-btc-interface = { workspace = true }
 ic-stable-structures = { workspace = true }
 integer-encoding = "3.0.4"
 rand = "0.8.5"

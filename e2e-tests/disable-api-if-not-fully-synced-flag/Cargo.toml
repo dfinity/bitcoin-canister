@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 bitcoin = { workspace = true }
 candid = { workspace = true }
-ic-btc-test-utils = { path = "../../test-utils" }
+ic-btc-test-utils = { workspace = true }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
 serde = { workspace = true }
