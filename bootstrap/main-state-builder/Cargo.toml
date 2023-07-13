@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 bitcoin = "0.28.1"
 clap = { version = "4.0.11", features = ["derive"] }
-ciborium = { workspace = true }
+ciborium = "0.2.1"
 hex = "0.4.3"
 ic-btc-canister = { path = "../../canister", features = ["file_memory"] }
 ic-btc-interface = { path = "../../interface" }
