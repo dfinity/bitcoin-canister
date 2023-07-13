@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-candid = "0.8.1"
-serde = "1.0.132"
-serde_bytes = "0.11"
+candid = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
 
 [dev-dependencies]
 ciborium = "0.2.1"

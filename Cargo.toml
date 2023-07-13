@@ -21,3 +21,22 @@ members = [
     "ic-http",
     "ic-http/example_canister/src/canister_backend",
 ]
+
+[workspace.dependencies]
+bitcoin = "0.28.1"
+byteorder = "1.4.3"
+candid = "0.8.1"
+clap = { version = "4.0.11", features = ["derive"] }
+hex = "0.4.3"
+ic-btc-canister = { path = "./canister" }
+ic-btc-interface = { path = "./interface" }
+ic-btc-test-utils = { path = "./test-utils" }
+ic-btc-validation = { path = "./validation" }
+ic-cdk = "0.7.4"
+ic-cdk-macros = "0.6.10"
+ic-http = { path = "./ic-http" }
+ic-metrics-encoder = "1.0.0"
+ic-stable-structures = "0.5.2"
+serde = "1.0.132"
+serde_bytes = "0.11"
+serde_json = "1.0.94"

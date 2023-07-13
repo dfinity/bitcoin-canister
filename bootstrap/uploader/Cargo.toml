@@ -19,15 +19,15 @@ name = "compute_hashes"
 path = "src/compute_hashes.rs"
 
 [dependencies]
-candid = "0.8.1"
-ic-cdk = "0.7.4"
-ic-cdk-macros = "0.6.10"
+candid = { workspace = true }
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
 sha256 = "1.1.1"
-serde = "1.0.132"
+serde = { workspace = true }
 
 [dev-dependencies]
 async-std = { version = "1.12.0", features = ["attributes", "tokio1"] }
-clap = { version = "4.0.11", features = ["derive"] }
+clap = { workspace = true }
 garcon = "0.2.3"
 ic-agent = "0.21.0"
 url = "2.3.1"
