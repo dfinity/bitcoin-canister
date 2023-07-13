@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bitcoin = "0.28.1"
+bitcoin = { workspace = true }
 candid = { workspace = true }
 ic-btc-test-utils = { path = "../../test-utils" }
 ic-cdk = { workspace = true }
-ic-cdk-macros = { workspace = true}
-serde = "1.0.132"
+ic-cdk-macros = { workspace = true }
+serde = { workspace = true }

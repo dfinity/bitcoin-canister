@@ -9,8 +9,8 @@ path = "src/main.rs"
 
 [dependencies]
 bitcoin = {version = "0.28.1", features = ["use-serde"]}
-hex = "0.4.3"
+hex = { workspace = true }
 ic-cdk = { workspace = true }
-ic-cdk-macros = { workspace = true}
+ic-cdk-macros = { workspace = true }
 ic-btc-canister = { path = "../canister" }
 ic-btc-interface = { path = "../interface" }

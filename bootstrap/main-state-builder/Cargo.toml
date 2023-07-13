@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bitcoin = "0.28.1"
-clap = { version = "4.0.11", features = ["derive"] }
+bitcoin = { workspace = true }
+clap = { workspace = true }
 ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
-hex = "0.4.3"
+hex = { workspace = true }
 ic-btc-canister = { path = "../../canister", features = ["file_memory"] }
 ic-btc-interface = { path = "../../interface" }
 ic-stable-structures = { workspace = true }
