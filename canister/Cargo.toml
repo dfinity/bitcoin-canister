@@ -8,9 +8,7 @@ edition = "2018"
 [dependencies]
 bitcoin = { workspace = true, features = ["use-serde"] }
 candid = { workspace = true }
-# NOTE: A specific commit of ciborium is used that includes efficient serializion/deserialization of
-#       blobs. At the time of this writing, a new version including this commit hasn't yet been released.
-ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
+ciborium = { workspace = true }
 hex = { workspace = true }
 ic-btc-interface = { workspace = true }
 ic-btc-validation = { workspace = true }

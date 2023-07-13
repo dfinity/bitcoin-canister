@@ -9,5 +9,5 @@ serde = { workspace = true }
 serde_bytes = { workspace = true }
 
 [dev-dependencies]
-ciborium = "0.2.1"
+ciborium = { workspace = true }
 proptest = "1.0"
