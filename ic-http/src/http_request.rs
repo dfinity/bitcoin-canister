@@ -9,11 +9,12 @@ pub type CallResult<R> = Result<R, (RejectionCode, String)>;
 /// Make a HTTP request to a given URL and return HTTP response, possibly after a transformation.
 pub async fn http_request(
     arg: CanisterHttpRequestArgument,
-    _cycles: u128,
+    cycles: u128,
 ) -> CallResult<(HttpResponse,)> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mocking cycles is not implemented at the moment.
+        let _ = cycles;
         crate::mock::http_request(arg).await
     }
 
