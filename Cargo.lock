@@ -540,10 +540,10 @@ dependencies = [
 name = "canister_backend"
 version = "0.1.0"
 dependencies = [
- "candid 0.8.4",
+ "candid 0.9.1",
  "futures",
- "ic-cdk 0.7.4",
- "ic-cdk-macros 0.6.10",
+ "ic-cdk 0.10.0",
+ "ic-cdk-macros 0.7.0",
  "ic-http",
  "serde",
  "serde_json",
