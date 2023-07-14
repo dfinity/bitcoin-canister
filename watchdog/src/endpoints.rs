@@ -342,6 +342,8 @@ mod test {
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
+    const ZERO_CYCLES: u128 = 0;
+
     fn parse_json(body: Vec<u8>) -> serde_json::Value {
         let json_str = String::from_utf8(body).expect("Raw response is not UTF-8 encoded.");
         serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
@@ -360,7 +362,7 @@ mod test {
             .build();
         ic_http::mock::mock(request.clone(), mock_response);
 
-        let (response,) = ic_http::http_request(request.clone(), 0)
+        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .expect("HTTP request failed");
 
@@ -601,7 +603,7 @@ mod test {
             ic_http::mock::mock(request.clone(), mock_response);
 
             // Act
-            let (response,) = ic_http::http_request(request, 0).await.unwrap();
+            let (response,) = ic_http::http_request(request, ZERO_CYCLES).await.unwrap();
 
             // Assert
             assert_eq!(response.status, expected_status, "url: {:?}", config.url());
