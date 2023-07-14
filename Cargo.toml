@@ -26,7 +26,9 @@ members = [
 bitcoin = "0.28.1"
 byteorder = "1.4.3"
 candid = "0.8.1"
+ciborium = "0.2.1"
 clap = { version = "4.0.11", features = ["derive"] }
+futures = "0.3.28"
 hex = "0.4.3"
 ic-btc-canister = { path = "./canister" }
 ic-btc-interface = { path = "./interface" }
@@ -37,6 +39,7 @@ ic-cdk-macros = "0.6.10"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
 ic-stable-structures = "0.5.2"
-serde = "1.0.132"
+serde = "1.0.171"
 serde_bytes = "0.11"
 serde_json = "1.0.94"
+tokio = { version = "1.29.1", features = [ "full" ] }

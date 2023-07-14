@@ -23,7 +23,7 @@ path = "src/combine_state.rs"
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = { workspace = true }
 byteorder = { workspace = true }
-ciborium = { git = "https://github.com/enarx/ciborium", rev = "e719537c99b564c3674a56defe53713c702c6f46" }
+ciborium = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }
 ic-btc-canister = { workspace = true }

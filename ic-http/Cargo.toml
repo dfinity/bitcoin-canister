@@ -14,8 +14,8 @@ ic-cdk-macros = { workspace = true }
 # Added to use non-blocking sleep to mock delayed responses.
 # Currently wasm32 does not support tokio, so we need to disable it for wasm32.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tokio = { version = "1.15.0", features = [ "full" ] }
+tokio = { workspace = true }
 
 [dev-dependencies]
-futures = "0.3.27"
+futures = { workspace = true }
 serde_json = { workspace = true }
