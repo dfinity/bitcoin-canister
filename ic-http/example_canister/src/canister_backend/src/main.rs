@@ -53,7 +53,7 @@ fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
 
 /// Fetch data by making an HTTP request.
 async fn fetch(request: CanisterHttpRequestArgument) -> String {
-    let result = ic_http::http_request(request).await;
+    let result = ic_http::http_request(request, 0).await;
 
     match result {
         Ok((response,)) => {
@@ -97,7 +97,7 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone(), 0).await.unwrap();
 
         // Assert.
         assert_eq!(
@@ -115,7 +115,7 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone(), 0).await.unwrap();
 
         // Assert.
         assert_eq!(response.status, 404);
@@ -130,7 +130,7 @@ mod test {
         ic_http::mock::mock_error(request.clone(), mock_error);
 
         // Act.
-        let result = ic_http::http_request(request.clone()).await;
+        let result = ic_http::http_request(request.clone(), 0).await;
 
         // Assert.
         assert_eq!(

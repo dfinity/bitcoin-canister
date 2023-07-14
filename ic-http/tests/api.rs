@@ -17,7 +17,7 @@ async fn test_http_request_no_transform() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone(), 0).await.unwrap();
 
     // Assert
     assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
@@ -39,7 +39,7 @@ async fn test_http_request_called_several_times() {
 
     // Act
     for _ in 0..calls {
-        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone(), 0).await.unwrap();
         assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
         assert_eq!(response.body, body.to_string().as_bytes().to_vec());
     }
@@ -67,7 +67,7 @@ async fn test_http_request_transform_status() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone(), 0).await.unwrap();
 
     // Assert
     assert_ne!(response.status, candid::Nat::from(STATUS_CODE_OK));
@@ -94,7 +94,7 @@ async fn test_http_request_transform_body() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+    let (response,) = ic_http::http_request(request.clone(), 0).await.unwrap();
 
     // Assert
     assert_ne!(response.body, ORIGINAL_BODY.as_bytes().to_vec());
@@ -142,8 +142,8 @@ async fn test_http_request_transform_both_status_and_body() {
 
     // Act
     let futures = vec![
-        ic_http::http_request(request_1.clone()),
-        ic_http::http_request(request_2.clone()),
+        ic_http::http_request(request_1.clone(), 0),
+        ic_http::http_request(request_2.clone(), 0),
     ];
     let results = futures::future::join_all(futures).await;
     let responses: Vec<_> = results
@@ -185,7 +185,7 @@ async fn test_http_request_max_response_bytes_ok() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let result = ic_http::http_request(request.clone()).await;
+    let result = ic_http::http_request(request.clone(), 0).await;
 
     // Assert
     assert!(result.is_ok());
@@ -208,7 +208,7 @@ async fn test_http_request_max_response_bytes_error() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let result = ic_http::http_request(request.clone()).await;
+    let result = ic_http::http_request(request.clone(), 0).await;
 
     // Assert
     assert!(result.is_err());
@@ -236,9 +236,9 @@ async fn test_http_request_sequentially() {
 
     // Act
     let start = Instant::now();
-    let _ = ic_http::http_request(request_a.clone()).await;
-    let _ = ic_http::http_request(request_b.clone()).await;
-    let _ = ic_http::http_request(request_c.clone()).await;
+    let _ = ic_http::http_request(request_a.clone(), 0).await;
+    let _ = ic_http::http_request(request_b.clone(), 0).await;
+    let _ = ic_http::http_request(request_c.clone(), 0).await;
     println!("All finished after {} s", start.elapsed().as_secs_f32());
 
     // Assert
@@ -270,9 +270,9 @@ async fn test_http_request_concurrently() {
     // Act
     let start = Instant::now();
     let futures = vec![
-        ic_http::http_request(request_a.clone()),
-        ic_http::http_request(request_b.clone()),
-        ic_http::http_request(request_c.clone()),
+        ic_http::http_request(request_a.clone(), 0),
+        ic_http::http_request(request_b.clone(), 0),
+        ic_http::http_request(request_c.clone(), 0),
     ];
     futures::future::join_all(futures).await;
     println!("All finished after {} s", start.elapsed().as_secs_f32());
@@ -292,7 +292,7 @@ async fn test_http_request_error() {
     ic_http::mock::mock_error(request.clone(), mock_error);
 
     // Act
-    let result = ic_http::http_request(request.clone()).await;
+    let result = ic_http::http_request(request.clone(), 0).await;
 
     // Assert
     assert_eq!(
@@ -311,7 +311,7 @@ async fn test_http_request_error_with_delay() {
 
     // Act
     let start = Instant::now();
-    let result = ic_http::http_request(request.clone()).await;
+    let result = ic_http::http_request(request.clone(), 0).await;
 
     // Assert
     assert!(start.elapsed() > Duration::from_millis(100));
