@@ -58,7 +58,7 @@
 //!             name: "User-Agent".to_string(),
 //!             value: "ic-http-example-canister".to_string(),
 //!         })
-//!         .transform_func(transform, vec![])
+//!         .transform_func("transform", transform, vec![])
 //!         .build()
 //! }
 //!

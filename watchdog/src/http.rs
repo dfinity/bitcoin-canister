@@ -13,10 +13,15 @@ pub struct HttpRequestConfig {
     transform_implementation: TransformFn,
 }
 
+pub struct TransformFnWrapper<T> {
+    pub name: &'static str,
+    pub func: T,
+}
+
 impl HttpRequestConfig {
     pub fn new<T>(
         url: &str,
-        transform_endpoint: Option<T>,
+        transform_endpoint: Option<TransformFnWrapper<T>>,
         transform_implementation: TransformFn,
     ) -> Self
     where
@@ -45,7 +50,10 @@ impl HttpRequestConfig {
     }
 }
 
-fn create_request<T>(url: &str, transform_func: Option<T>) -> CanisterHttpRequestArgument
+fn create_request<T>(
+    url: &str,
+    transform_func: Option<TransformFnWrapper<T>>,
+) -> CanisterHttpRequestArgument
 where
     T: Fn(TransformArgs) -> HttpResponse + 'static,
 {
@@ -54,7 +62,7 @@ where
         value: "bitcoin_watchdog_canister".to_string(),
     });
     let builder = if let Some(func) = transform_func {
-        builder.transform_func(func, vec![])
+        builder.transform_func(func.name, func.func, vec![])
     } else {
         builder
     };

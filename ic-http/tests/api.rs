@@ -58,7 +58,7 @@ async fn test_http_request_transform_status() {
     }
     let request = ic_http::create_request()
         .get("https://example.com")
-        .transform_func(transform, vec![])
+        .transform_func("transform", transform, vec![])
         .build();
     let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)
@@ -85,7 +85,7 @@ async fn test_http_request_transform_body() {
     }
     let request = ic_http::create_request()
         .get("https://dummyjson.com/todos/1")
-        .transform_func(transform, vec![])
+        .transform_func("transform", transform, vec![])
         .build();
     let mock_response = ic_http::create_response()
         .status(STATUS_CODE_OK)
@@ -122,7 +122,7 @@ async fn test_http_request_transform_both_status_and_body() {
 
     let request_1 = ic_http::create_request()
         .get("https://dummyjson.com/todos/1")
-        .transform_func(transform_status, vec![])
+        .transform_func("transform_status", transform_status, vec![])
         .build();
     let mock_response_1 = ic_http::create_response()
         .status(STATUS_CODE_NOT_FOUND)
@@ -132,7 +132,7 @@ async fn test_http_request_transform_both_status_and_body() {
 
     let request_2 = ic_http::create_request()
         .get("https://dummyjson.com/todos/2")
-        .transform_func(transform_body, vec![])
+        .transform_func("transform_body", transform_body, vec![])
         .build();
     let mock_response_2 = ic_http::create_response()
         .status(STATUS_CODE_OK)
