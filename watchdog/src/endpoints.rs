@@ -313,7 +313,7 @@ mod test {
             .build();
         ic_http::mock::mock(request.clone(), mock_response);
 
-        let (response,) = ic_http::http_request(request.clone())
+        let (response,) = ic_http::http_request(request.clone(), 0)
             .await
             .expect("HTTP request failed");
 
@@ -554,7 +554,7 @@ mod test {
             ic_http::mock::mock(request.clone(), mock_response);
 
             // Act
-            let (response,) = ic_http::http_request(request).await.unwrap();
+            let (response,) = ic_http::http_request(request, 0).await.unwrap();
 
             // Assert
             assert_eq!(response.status, expected_status, "url: {:?}", config.url());
