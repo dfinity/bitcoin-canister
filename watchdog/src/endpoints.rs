@@ -1,5 +1,5 @@
 use crate::config::BitcoinNetwork;
-use crate::http::HttpRequestConfig;
+use crate::http::{HttpRequestConfig, TransformFnWrapper};
 use crate::print;
 use crate::{
     transform_api_bitaps_com_block, transform_api_blockchair_com_block,
@@ -28,15 +28,22 @@ fn endpoint_api_bitaps_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequest
         BitcoinNetwork::Mainnet => "https://api.bitaps.com/btc/v1/blockchain/block/last",
         BitcoinNetwork::Testnet => "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
     };
-    HttpRequestConfig::new(url, Some(transform_api_bitaps_com_block), |raw| {
-        apply_to_body_json(raw, |json| {
-            let data = json["data"].clone();
-            json!({
-                "height": data["height"].as_u64(),
-                "hash": data["hash"].as_str(),
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_api_bitaps_com_block",
+            func: transform_api_bitaps_com_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["height"].as_u64(),
+                    "hash": data["hash"].as_str(),
+                })
             })
-        })
-    })
+        },
+    )
 }
 
 /// Creates a config for fetching mainnet block data from api.blockchair.com.
@@ -55,15 +62,22 @@ fn endpoint_api_blockchair_com_block(bitcoin_network: BitcoinNetwork) -> HttpReq
         BitcoinNetwork::Mainnet => "https://api.blockchair.com/bitcoin/stats",
         BitcoinNetwork::Testnet => "https://api.blockchair.com/bitcoin/testnet/stats",
     };
-    HttpRequestConfig::new(url, Some(transform_api_blockchair_com_block), |raw| {
-        apply_to_body_json(raw, |json| {
-            let data = json["data"].clone();
-            json!({
-                "height": data["best_block_height"].as_u64(),
-                "hash": data["best_block_hash"].as_str(),
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_api_blockchair_com_block",
+            func: transform_api_blockchair_com_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["best_block_height"].as_u64(),
+                    "hash": data["best_block_hash"].as_str(),
+                })
             })
-        })
-    })
+        },
+    )
 }
 
 /// Creates a config for fetching mainnet block data from api.blockcypher.com.
@@ -82,15 +96,22 @@ fn endpoint_api_blockcypher_com_block(bitcoin_network: BitcoinNetwork) -> HttpRe
         BitcoinNetwork::Mainnet => "https://api.blockcypher.com/v1/btc/main",
         BitcoinNetwork::Testnet => "https://api.blockcypher.com/v1/btc/test3",
     };
-    HttpRequestConfig::new(url, Some(transform_api_blockcypher_com_block), |raw| {
-        apply_to_body_json(raw, |json| {
-            json!({
-                "height": json["height"].as_u64(),
-                "hash": json["hash"].as_str(),
-                "previous_hash": json["previous_hash"].as_str(),
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_api_blockcypher_com_block",
+            func: transform_api_blockcypher_com_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                json!({
+                    "height": json["height"].as_u64(),
+                    "hash": json["hash"].as_str(),
+                    "previous_hash": json["previous_hash"].as_str(),
+                })
             })
-        })
-    })
+        },
+    )
 }
 
 /// Applies regex rule to parse bitcoin_canister block height.
@@ -121,7 +142,10 @@ fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
         &crate::storage::get_config().get_bitcoin_canister_endpoint(),
-        Some(transform_bitcoin_canister),
+        Some(TransformFnWrapper {
+            name: "transform_bitcoin_canister",
+            func: transform_bitcoin_canister,
+        }),
         |raw| {
             apply_to_body(raw, |text| {
                 parse_bitcoin_canister_height(text)
@@ -141,7 +165,10 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
 pub fn endpoint_blockchain_info_hash_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/latesthash",
-        Some(transform_blockchain_info_hash),
+        Some(TransformFnWrapper {
+            name: "transform_blockchain_info_hash",
+            func: transform_blockchain_info_hash,
+        }),
         |raw| {
             apply_to_body(raw, |text| {
                 json!({
@@ -157,7 +184,10 @@ pub fn endpoint_blockchain_info_hash_mainnet() -> HttpRequestConfig {
 pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/getblockcount",
-        Some(transform_blockchain_info_height),
+        Some(TransformFnWrapper {
+            name: "transform_blockchain_info_height",
+            func: transform_blockchain_info_height,
+        }),
         |raw| {
             apply_to_body(raw, |text| {
                 text.parse::<u64>()
@@ -189,14 +219,21 @@ fn endpoint_blockstream_info_hash(bitcoin_network: BitcoinNetwork) -> HttpReques
         BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/hash",
         BitcoinNetwork::Testnet => "https://blockstream.info/testnet/api/blocks/tip/hash",
     };
-    HttpRequestConfig::new(url, Some(transform_blockstream_info_hash), |raw| {
-        apply_to_body(raw, |text| {
-            json!({
-                "hash": text,
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_blockstream_info_hash",
+            func: transform_blockstream_info_hash,
+        }),
+        |raw| {
+            apply_to_body(raw, |text| {
+                json!({
+                    "hash": text,
+                })
+                .to_string()
             })
-            .to_string()
-        })
-    })
+        },
+    )
 }
 
 /// Creates a config for fetching mainnet height data from blockstream.info.
@@ -215,25 +252,35 @@ fn endpoint_blockstream_info_height(bitcoin_network: BitcoinNetwork) -> HttpRequ
         BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/height",
         BitcoinNetwork::Testnet => "https://blockstream.info/testnet/api/blocks/tip/height",
     };
-    HttpRequestConfig::new(url, Some(transform_blockstream_info_height), |raw| {
-        apply_to_body(raw, |text| {
-            text.parse::<u64>()
-                .map(|height| {
-                    json!({
-                        "height": height,
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_blockstream_info_height",
+            func: transform_blockstream_info_height,
+        }),
+        |raw| {
+            apply_to_body(raw, |text| {
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
                     })
-                    .to_string()
-                })
-                .unwrap_or_default()
-        })
-    })
+                    .unwrap_or_default()
+            })
+        },
+    )
 }
 
 /// Creates a config for fetching mainnet block data from chain.api.btc.com.
 pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://chain.api.btc.com/v3/block/latest",
-        Some(transform_chain_api_btc_com_block),
+        Some(TransformFnWrapper {
+            name: "transform_chain_api_btc_com_block",
+            func: transform_chain_api_btc_com_block,
+        }),
         |raw| {
             apply_to_body_json(raw, |json| {
                 let data = json["data"].clone();
@@ -295,6 +342,8 @@ mod test {
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
 
+    const ZERO_CYCLES: u128 = 0;
+
     fn parse_json(body: Vec<u8>) -> serde_json::Value {
         let json_str = String::from_utf8(body).expect("Raw response is not UTF-8 encoded.");
         serde_json::from_str(&json_str).expect("Failed to parse JSON from string")
@@ -313,7 +362,7 @@ mod test {
             .build();
         ic_http::mock::mock(request.clone(), mock_response);
 
-        let (response,) = ic_http::http_request(request.clone())
+        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .expect("HTTP request failed");
 
@@ -554,7 +603,7 @@ mod test {
             ic_http::mock::mock(request.clone(), mock_response);
 
             // Act
-            let (response,) = ic_http::http_request(request).await.unwrap();
+            let (response,) = ic_http::http_request(request, ZERO_CYCLES).await.unwrap();
 
             // Assert
             assert_eq!(response.status, expected_status, "url: {:?}", config.url());
