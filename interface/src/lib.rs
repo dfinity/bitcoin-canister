@@ -107,6 +107,12 @@ impl AsRef<[u8]> for Txid {
     }
 }
 
+impl Into<[u8; 32]> for Txid {
+    fn into(self) -> [u8; 32] {
+        self.0
+    }
+}
+
 impl serde::Serialize for Txid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
