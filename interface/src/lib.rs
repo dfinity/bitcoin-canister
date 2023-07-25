@@ -107,6 +107,12 @@ impl AsRef<[u8]> for Txid {
     }
 }
 
+impl From<Txid> for [u8; 32] {
+    fn from(txid: Txid) -> Self {
+        txid.0
+    }
+}
+
 impl serde::Serialize for Txid {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -555,5 +561,12 @@ mod test {
             !format!("{:?}", Config::default()).is_empty(),
             "Config should be printable using debug formatter {{:?}}."
         );
+    }
+
+    #[test]
+    fn can_extract_bytes_from_txid() {
+        let tx_id = Txid([1; 32]);
+        let tx: [u8; 32] = tx_id.into();
+        assert_eq!(tx, [1; 32]);
     }
 }
