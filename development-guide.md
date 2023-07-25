@@ -29,5 +29,3 @@ Below are the steps needed to cut a release:
 7. Add release notes. Github can generate the release notes by clicking on "Generated Release Notes". Modify as needed.
 8. Add the commit hash of the Watchdog Canister's wasm from step 3 to the release notes.
 9. Attach the Watchdog Canister's wasm to the release notes (and nothing else).
-
-
