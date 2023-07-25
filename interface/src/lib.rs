@@ -562,4 +562,11 @@ mod test {
             "Config should be printable using debug formatter {{:?}}."
         );
     }
+
+    #[test]
+    fn can_extract_bytes_from_txid() {
+        let tx_id = Txid ([1; 32]);
+        let tx : [u8; 32] = tx_id.into();
+        assert_eq!(tx, [1; 32]);
+    }
 }
