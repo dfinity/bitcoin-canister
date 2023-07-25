@@ -107,9 +107,9 @@ impl AsRef<[u8]> for Txid {
     }
 }
 
-impl Into<[u8; 32]> for Txid {
-    fn into(self) -> [u8; 32] {
-        self.0
+impl From<Txid> for [u8; 32] {
+    fn from(txid: Txid) -> Self {
+        txid.0
     }
 }
 
@@ -565,8 +565,8 @@ mod test {
 
     #[test]
     fn can_extract_bytes_from_txid() {
-        let tx_id = Txid ([1; 32]);
-        let tx : [u8; 32] = tx_id.into();
+        let tx_id = Txid([1; 32]);
+        let tx: [u8; 32] = tx_id.into();
         assert_eq!(tx, [1; 32]);
     }
 }
