@@ -58,7 +58,7 @@
 //!             name: "User-Agent".to_string(),
 //!             value: "ic-http-example-canister".to_string(),
 //!         })
-//!         .transform_func("transform", transform, vec![])
+//!         .transform_func(transform, vec![])
 //!         .build()
 //! }
 //!
@@ -66,8 +66,7 @@
 //! #[ic_cdk_macros::update]
 //! async fn fetch() -> String {
 //!     let request = build_request();
-//!     let cycles = 0;
-//!     let result = ic_http::http_request(request, cycles).await;
+//!     let result = ic_http::http_request(request).await;
 //!
 //!     match result {
 //!         Ok((response,)) => {
@@ -101,8 +100,7 @@
 //!     ic_http::mock::mock(request.clone(), mock_response);
 //!
 //!     // Act
-//!     let cycles = 0;
-//!     let (response,) = ic_http::http_request(request.clone(), cycles).await.unwrap();
+//!     let (response,) = ic_http::http_request(request.clone()).await.unwrap();
 //!
 //!     // Assert
 //!     assert_eq!(
@@ -128,5 +126,6 @@ pub mod mock;
 
 // Re-export.
 pub use crate::http_request::http_request;
+pub use crate::http_request::http_request_with_cycles;
 pub use crate::request::create_request;
 pub use crate::response::create_response;

@@ -9,31 +9,40 @@ use {candid::Principal, ic_cdk::api::management_canister::http_request::Transfor
 pub type TransformFn = dyn Fn(TransformArgs) -> HttpResponse + 'static;
 
 /// Creates a `TransformContext` from a transform function and a context.
-pub(crate) fn create_transform_context<T>(
-    candid_function_name: &str,
-    func: T,
-    context: Vec<u8>,
-) -> TransformContext
+/// Also inserts the transform function into a thread-local hashmap.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn create_transform_context<T>(func: T, context: Vec<u8>) -> TransformContext
 where
     T: Fn(TransformArgs) -> HttpResponse + 'static,
 {
-    #[cfg(target_arch = "wasm32")]
-    {
-        TransformContext::from_name(candid_function_name.to_string(), context)
+    let function_name = get_function_name(&func).to_string();
+    crate::storage::transform_function_insert(function_name.clone(), Box::new(func));
+
+    TransformContext {
+        function: TransformFunc(candid::Func {
+            principal: Principal::management_canister(),
+            method: function_name,
+        }),
+        context,
     }
+}
 
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let method = candid_function_name.to_string();
-        super::storage::transform_function_insert(method.clone(), Box::new(func));
+/// Creates a `TransformContext` from a transform function and a context.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn create_transform_context<T>(func: T, context: Vec<u8>) -> TransformContext
+where
+    T: Fn(TransformArgs) -> HttpResponse + 'static,
+{
+    TransformContext::new(func, context)
+}
 
-        // crate::id() can not be called outside of canister, that's why for testing
-        // it is replaced with Principal::management_canister().
-        let principal = Principal::management_canister();
-        TransformContext {
-            function: TransformFunc(candid::Func { principal, method }),
-            context,
-        }
+/// Returns the name of a function as a string.
+#[cfg(not(target_arch = "wasm32"))]
+fn get_function_name<F>(_: &F) -> &'static str {
+    let full_name = std::any::type_name::<F>();
+    match full_name.rfind(':') {
+        Some(index) => &full_name[index + 1..],
+        None => full_name,
     }
 }
 
@@ -53,11 +62,12 @@ mod test {
     }
 
     /// Inserts the provided transform function into a thread-local hashmap.
-    fn insert<T>(name: &str, f: T)
+    fn insert<T>(f: T)
     where
         T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
-        crate::storage::transform_function_insert(name.to_string(), Box::new(f));
+        let name = get_function_name(&f).to_string();
+        crate::storage::transform_function_insert(name, Box::new(f));
     }
 
     /// This test makes sure that transform function names are preserved
@@ -65,8 +75,8 @@ mod test {
     #[test]
     fn test_transform_function_names() {
         // Arrange.
-        insert("transform_function_1", transform_function_1);
-        insert("transform_function_2", transform_function_2);
+        insert(transform_function_1);
+        insert(transform_function_2);
 
         // Act.
         let names = crate::mock::registered_transform_function_names();
@@ -86,11 +96,7 @@ mod test {
     fn create_request_with_transform() -> CanisterHttpRequestArgument {
         crate::request::create_request()
             .url("https://www.example.com")
-            .transform_func(
-                "transform_function_with_overwrite",
-                transform_function_with_overwrite,
-                vec![],
-            )
+            .transform_func(transform_function_with_overwrite, vec![])
             .build()
     }
 
