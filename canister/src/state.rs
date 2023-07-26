@@ -177,8 +177,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 }
 
 pub fn main_chain_height(state: &State) -> Height {
-    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height()
-        - 1
+    unstable_blocks::get_main_chain_length(&state.unstable_blocks) as u32 + state.utxos.next_height() - 1
 }
 
 pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
