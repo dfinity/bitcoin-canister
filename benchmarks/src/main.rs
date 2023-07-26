@@ -11,12 +11,6 @@ thread_local! {
 
 #[init]
 fn init() {
-    ic_btc_canister::init(Config {
-        network: Network::Testnet,
-        stability_threshold: 144,
-        ..Config::default()
-    });
-
     // Load the testnet blocks.
     TESTNET_BLOCKS.with(|blocks| {
         blocks.replace(
@@ -35,6 +29,12 @@ fn init() {
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
 #[query]
 fn insert_300_blocks() -> u64 {
+    ic_btc_canister::init(Config {
+        network: Network::Testnet,
+        stability_threshold: 144,
+        ..Config::default()
+    });
+
     count_instructions(|| {
         with_state_mut(|s| {
             for i in 0..300 {
@@ -45,6 +45,30 @@ fn insert_300_blocks() -> u64 {
                 .unwrap();
             }
         });
+    })
+}
+
+// Benchmarks gettings the metrics when there are many unstable blocks..
+#[query]
+fn get_metrics() -> u64 {
+    ic_btc_canister::init(Config {
+        network: Network::Testnet,
+        stability_threshold: 3000,
+        ..Config::default()
+    });
+
+    with_state_mut(|s| {
+        for i in 0..3000 {
+            ic_btc_canister::state::insert_block(
+                s,
+                TESTNET_BLOCKS.with(|b| b.borrow()[i as usize].clone()),
+            )
+            .unwrap();
+        }
+    });
+
+    count_instructions(|| {
+        ic_btc_canister::get_metrics();
     })
 }
 
