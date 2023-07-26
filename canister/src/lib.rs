@@ -23,9 +23,9 @@ use crate::{
     state::State,
     types::{into_bitcoin_network, Block, HttpRequest, HttpResponse},
 };
+pub use api::get_metrics;
 pub use api::send_transaction;
 pub use api::set_config;
-pub use api::get_metrics;
 pub use heartbeat::heartbeat;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest,
