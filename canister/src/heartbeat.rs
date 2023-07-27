@@ -16,15 +16,18 @@ use ic_btc_validation::{validate_header, ValidateHeaderError};
 ///
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
+    print("Starting heartbeat...");
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
         // This is a precaution to not exceed the instructions limit.
+        print("Done ingesting stable blocks.");
         return;
     }
 
     if maybe_fetch_blocks().await {
         // Exit the heartbeat if new blocks have been fetched.
         // This is a precaution to not exceed the instructions limit.
+        print("Done fetching new response.");
         return;
     }
 
@@ -185,6 +188,10 @@ fn maybe_process_response() {
 
         match response_to_process {
             Some(ResponseToProcess::Complete(response)) => {
+                print(&format!(
+                    "Inserting {} blocks from response...",
+                    response.blocks.len()
+                ));
                 for block_bytes in response.blocks.iter() {
                     // Deserialize the block.
                     let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
@@ -214,9 +221,23 @@ fn maybe_process_response() {
                         return;
                     }
                 }
+
+                print(&format!(
+                    "Inserting {} next block headers...",
+                    response.next.len()
+                ));
                 insert_next_block_headers(state, &response.next);
             }
             other => {
+                if other.is_some() {
+                    print(&format!(
+                        "Complete response not yet available. Response so far: {:?}",
+                        other
+                    ));
+                } else {
+                    print("No response available to process.");
+                }
+
                 // Not a complete response. Put it back into the state.
                 state.syncing_state.response_to_process = other;
             }
