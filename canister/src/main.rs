@@ -5,8 +5,18 @@ use ic_btc_interface::{
 };
 use ic_cdk::api::call::{reject, reply};
 use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
+
+#[cfg(target_arch = "wasm32")]
+mod printer;
+
+fn hook() {
+    #[cfg(target_arch = "wasm32")]
+    printer::hook();
+}
+
 #[init]
 fn init(config: Config) {
+    hook();
     ic_btc_canister::init(config);
 }
 
@@ -17,6 +27,7 @@ fn pre_upgrade() {
 
 #[post_upgrade]
 fn post_upgrade() {
+    hook();
     ic_btc_canister::post_upgrade();
 }
 
