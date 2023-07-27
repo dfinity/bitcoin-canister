@@ -523,6 +523,8 @@ mod test {
     #[test]
     fn transaction_vsize() {
         let balance = 1000;
+        let fee = 1;
+        let fee_in_millisatoshi = 1000;
 
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&random_p2pkh_address(Network::Regtest), balance)
@@ -536,16 +538,39 @@ mod test {
         ]);
         let tx = TransactionBuilder::new()
             .with_input_and_witness(OutPoint::new(coinbase_tx.txid(), 0), witness)
-            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
             .build();
 
         let tx_without_witness = TransactionBuilder::new()
             .with_input(OutPoint::new(coinbase_tx.txid(), 0))
-            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
             .build();
 
         // Check that vsize() is not the same as size() of a transaction.
         assert_ne!(tx.vsize(), tx.size());
         assert_eq!(tx_without_witness.vsize(), tx_without_witness.size());
+
+
+        let blocks = vec![
+            BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+                .with_transaction(coinbase_tx)
+                .with_transaction(tx.clone())
+                .build(),
+        ];
+
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+
+        with_state_mut(|s| {
+            // Coinbase txs are ignored, so the percentiles should be the fee / vbyte of the second transaction.
+            assert_ne!(
+                get_current_fee_percentiles_internal(s, 1),
+                vec![fee_in_millisatoshi / tx.size() as u64; PERCENTILE_BUCKETS]
+            );
+            assert_eq!(
+                get_current_fee_percentiles_internal(s, 1),
+                vec![fee_in_millisatoshi / tx.vsize() as u64; PERCENTILE_BUCKETS]
+            );
+        });
     }
 }
