@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{performance_counter, time},
+    runtime::{performance_counter, print, time},
     types::{
         into_bitcoin_network, Address, Block, BlockHash, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
@@ -11,9 +11,9 @@ use crate::{
     validation::ValidationContext,
     UtxoSet,
 };
+use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
-use ic_cdk::export::Principal;
 use serde::{Deserialize, Serialize};
 
 /// A structure used to maintain the entire state.
@@ -47,7 +47,7 @@ pub struct State {
     /// Metrics for the various endpoints.
     pub metrics: Metrics,
 
-    /// Flag to control access to the apis provided by the canister.
+    /// Flag to control access to the APIs provided by the canister.
     pub api_access: Flag,
 
     /// Flag to determine if the API should be automatically disabled
@@ -55,6 +55,11 @@ pub struct State {
     // TODO(EXC-1379): Remove this code once it's deployed to production.
     #[serde(default)]
     pub disable_api_if_not_fully_synced: Flag,
+
+    /// The principal of the watchdog canister.
+    /// The watchdog canister has the authority to disable the Bitcoin canister's API
+    /// if it suspects that there is a problem.
+    pub watchdog_canister: Option<Principal>,
 }
 
 impl State {
@@ -79,6 +84,7 @@ impl State {
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
+            watchdog_canister: None,
         }
     }
 
@@ -142,6 +148,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     };
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
+    print("Running ingest_block_continue...");
     match state.utxos.ingest_block_continue() {
         None => {}
         Some(Slicing::Paused(())) => return has_state_changed(state),
@@ -152,7 +159,13 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
+    print("Looking for new stable blocks to ingest...");
     while let Some(new_stable_block) = unstable_blocks::peek(&state.unstable_blocks) {
+        print(&format!(
+            "Ingesting new stable block {:?}...",
+            new_stable_block.block_hash()
+        ));
+
         // Store the block's header.
         state
             .stable_block_headers
@@ -171,7 +184,8 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 }
 
 pub fn main_chain_height(state: &State) -> Height {
-    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height()
+    unstable_blocks::get_main_chain_length(&state.unstable_blocks) as u32
+        + state.utxos.next_height()
         - 1
 }
 

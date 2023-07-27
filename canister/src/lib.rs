@@ -23,6 +23,7 @@ use crate::{
     state::State,
     types::{into_bitcoin_network, Block, HttpRequest, HttpResponse},
 };
+pub use api::get_metrics;
 pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
@@ -90,6 +91,7 @@ pub fn init(config: Config) {
     with_state_mut(|s| s.api_access = config.api_access);
     with_state_mut(|s| s.syncing_state.syncing = config.syncing);
     with_state_mut(|s| s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced);
+    with_state_mut(|s| s.watchdog_canister = config.watchdog_canister);
     with_state_mut(|s| s.fees = config.fees);
 }
 
@@ -125,6 +127,7 @@ pub fn get_config() -> Config {
         fees: s.fees.clone(),
         api_access: s.api_access,
         disable_api_if_not_fully_synced: s.disable_api_if_not_fully_synced,
+        watchdog_canister: s.watchdog_canister,
     })
 }
 

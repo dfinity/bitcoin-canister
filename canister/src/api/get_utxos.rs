@@ -235,7 +235,7 @@ fn get_utxos_from_chain(
                 height: utxo.height,
                 outpoint: ic_btc_interface::OutPoint {
                     vout: utxo.outpoint.vout,
-                    txid: utxo.outpoint.txid.to_vec(),
+                    txid: utxo.outpoint.txid.into(),
                 },
             }
         })
@@ -247,7 +247,7 @@ fn get_utxos_from_chain(
         Page {
             tip_block_hash: tip_block_hash.clone(),
             height: next.height,
-            outpoint: OutPoint::new(Txid::from(next.outpoint.txid.clone()), next.outpoint.vout),
+            outpoint: OutPoint::new(Txid::from(next.outpoint.txid), next.outpoint.vout),
         }
         .to_bytes()
     });
@@ -273,7 +273,7 @@ mod test {
         genesis_block, runtime, state,
         test_utils::{
             random_p2pkh_address, random_p2tr_address, random_p2wpkh_address, random_p2wsh_address,
-            BlockBuilder, TransactionBuilder,
+            BlockBuilder, BlockChainBuilder, TransactionBuilder,
         },
         types::Block,
         with_state_mut,
@@ -356,7 +356,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0
                     },
                     value: 1000,
@@ -423,7 +423,7 @@ mod test {
         for i in (0..num_blocks).rev() {
             let expected_utxo = Utxo {
                 outpoint: OutPoint {
-                    txid: transactions[i as usize].txid().to_vec(),
+                    txid: transactions[i as usize].txid().into(),
                     vout: 0,
                 },
                 value: i + 1,
@@ -514,7 +514,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -576,7 +576,7 @@ mod test {
                 GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
-                            txid: tx.txid().to_vec(),
+                            txid: tx.txid().into(),
                             vout: 0,
                         },
                         value: 1000,
@@ -627,7 +627,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().to_vec(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -710,7 +710,7 @@ mod test {
         let block_0_utxos = GetUtxosResponse {
             utxos: vec![Utxo {
                 outpoint: OutPoint {
-                    txid: coinbase_tx.txid().to_vec(),
+                    txid: coinbase_tx.txid().into(),
                     vout: 0,
                 },
                 value: 1000,
@@ -754,7 +754,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().to_vec(),
+                        txid: tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -895,7 +895,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().to_vec(),
+                        txid: tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -941,7 +941,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().to_vec(),
+                        txid: tx.txid().into(),
                         vout: 0
                     },
                     value: 1000,
@@ -1295,6 +1295,71 @@ mod test {
         assert_eq!(
             get_stability_count(&blocks_with_depths, block3.block_hash()),
             -4
+        );
+    }
+
+    // Documents the behavior of `get_utxos` when min_confirmations = 0.
+    #[test]
+    fn min_confirmations_zero() {
+        // Create a chain with two forks of equal length that looks as follows.
+        //
+        // A -> B -> C -> D -> E -> F
+        // |
+        //  \-> B'-> C'-> D'-> E'-> F'
+        //
+        let chain = BlockChainBuilder::new(6).build();
+        let fork = BlockChainBuilder::fork(&chain[0], 5).build();
+
+        crate::init(Config::default());
+
+        // Insert the blocks.
+        with_state_mut(|state| {
+            for block in chain.iter().skip(1) {
+                state::insert_block(state, block.clone()).unwrap();
+            }
+
+            for block in fork.into_iter() {
+                state::insert_block(state, block).unwrap();
+            }
+        });
+
+        // Because the forks are of equal length, `A`, the root of the fork,
+        // is considered the tip at zero confirmations.
+        assert_tip_at_confirmations(0, chain[0].block_hash());
+
+        // Extend the first fork by one block.
+        let chain_6 = BlockBuilder::with_prev_header(chain[5].header()).build();
+        with_state_mut(|state| {
+            state::insert_block(state, chain_6.clone()).unwrap();
+        });
+
+        // Now the chain looks like this:
+        //
+        // A -> B -> C -> D -> E -> F -> G
+        // |
+        //  \-> B'-> C'-> D'-> E'-> F'
+        //
+        // Now that one fork is longer, the tip of that fork is considered the tip
+        // at zero and one confirmations.
+        assert_tip_at_confirmations(0, chain_6.block_hash());
+        assert_tip_at_confirmations(1, chain_6.block_hash());
+
+        // A is the tip at 2+ confirmations.
+        assert_tip_at_confirmations(2, chain[0].block_hash());
+    }
+
+    // Asserts that the given block hash is the tip at the given number of confirmations.
+    fn assert_tip_at_confirmations(confirmations: u32, expected_tip: BlockHash) {
+        // To fetch the tip, we call `get_utxos` using a random address.
+        let address = random_p2pkh_address(Network::Regtest).to_string();
+        assert_eq!(
+            get_utxos(GetUtxosRequest {
+                address,
+                filter: Some(UtxosFilter::MinConfirmations(confirmations)),
+            })
+            .unwrap()
+            .tip_block_hash,
+            expected_tip.to_vec()
         );
     }
 }

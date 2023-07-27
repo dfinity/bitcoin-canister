@@ -1,4 +1,5 @@
 use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
+use ic_btc_interface::Flag;
 use ic_cdk::api::time;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
@@ -117,6 +118,17 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             if crate::is_synced() { 1.0 } else { 0.0 },
             "Is the canister synced with the network?",
         )?;
+
+        let (enabled, disabled) = match state.api_access {
+            Flag::Enabled => (1.0, 0.0),
+            Flag::Disabled => (0.0, 1.0),
+        };
+        w.gauge_vec(
+            "api_access",
+            "Flag to control access to the APIs provided by the canister.",
+        )?
+        .value(&[("flag", "enabled")], enabled)?
+        .value(&[("flag", "disabled")], disabled)?;
 
         Ok(())
     })

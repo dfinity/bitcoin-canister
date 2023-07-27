@@ -2,6 +2,8 @@ use ic_cdk::api::management_canister::http_request::{
     CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
 };
 
+const ZERO_CYCLES: u128 = 0;
+
 /// Print a message to the console.
 pub fn print(msg: &str) {
     #[cfg(target_arch = "wasm32")]
@@ -47,13 +49,13 @@ fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
             name: "User-Agent".to_string(),
             value: "ic-http-example-canister".to_string(),
         })
-        .transform_func(transform_quote, vec![])
+        .transform_func("transform_quote", transform_quote, vec![])
         .build()
 }
 
 /// Fetch data by making an HTTP request.
 async fn fetch(request: CanisterHttpRequestArgument) -> String {
-    let result = ic_http::http_request(request).await;
+    let result = ic_http::http_request(request, ZERO_CYCLES).await;
 
     match result {
         Ok((response,)) => {
@@ -97,7 +99,9 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+            .await
+            .unwrap();
 
         // Assert.
         assert_eq!(
@@ -115,7 +119,9 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+            .await
+            .unwrap();
 
         // Assert.
         assert_eq!(response.status, 404);
@@ -130,7 +136,7 @@ mod test {
         ic_http::mock::mock_error(request.clone(), mock_error);
 
         // Act.
-        let result = ic_http::http_request(request.clone()).await;
+        let result = ic_http::http_request(request.clone(), ZERO_CYCLES).await;
 
         // Assert.
         assert_eq!(

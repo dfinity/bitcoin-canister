@@ -2,8 +2,33 @@ use ic_btc_interface::SetConfigRequest;
 use std::convert::TryInto;
 
 pub async fn set_config(request: SetConfigRequest) {
-    verify_caller().await;
-    set_config_no_verification(request);
+    if is_watchdog_caller() {
+        // The watchdog canister can only set the API access flag.
+        set_api_access(request);
+    } else {
+        verify_caller().await;
+        set_config_no_verification(request);
+    }
+}
+
+fn is_watchdog_caller() -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        crate::with_state(|s| Some(ic_cdk::caller()) == s.watchdog_canister)
+    }
+}
+
+fn set_api_access(request: SetConfigRequest) {
+    crate::with_state_mut(|s| {
+        if let Some(api_access) = request.api_access {
+            s.api_access = api_access;
+        }
+    });
 }
 
 fn set_config_no_verification(request: SetConfigRequest) {
@@ -29,6 +54,9 @@ fn set_config_no_verification(request: SetConfigRequest) {
         }
         if let Some(disable_api_if_not_fully_synced) = request.disable_api_if_not_fully_synced {
             s.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
+        }
+        if let Some(watchdog_canister) = request.watchdog_canister {
+            s.watchdog_canister = watchdog_canister;
         }
     });
 }
@@ -59,11 +87,44 @@ async fn verify_caller() {
 mod test {
     use super::*;
     use crate::{init, with_state};
+    use candid::Principal;
     use ic_btc_interface::{Config, Fees, Flag};
     use proptest::prelude::*;
 
     #[test]
-    fn set_stability_threshold() {
+    fn test_set_api_access_updates_state() {
+        // Arrange
+        init(Config::default());
+        assert_eq!(with_state(|s| s.api_access), Flag::Enabled);
+
+        // Act
+        set_api_access(SetConfigRequest {
+            api_access: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        // Assert
+        assert_eq!(with_state(|s| s.api_access), Flag::Disabled);
+    }
+
+    #[test]
+    fn test_set_api_access_does_not_update_state() {
+        // Arrange
+        init(Config::default());
+        assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
+
+        // Act
+        set_api_access(SetConfigRequest {
+            syncing: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        // Assert
+        assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
+    }
+
+    #[test]
+    fn test_set_stability_threshold() {
         init(Config::default());
 
         proptest!(|(
@@ -82,7 +143,7 @@ mod test {
     }
 
     #[test]
-    fn set_syncing() {
+    fn test_set_syncing() {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
@@ -99,7 +160,7 @@ mod test {
     }
 
     #[test]
-    fn set_fees() {
+    fn test_set_fees() {
         init(Config::default());
 
         proptest!(|(
@@ -135,7 +196,7 @@ mod test {
     }
 
     #[test]
-    fn set_api_access() {
+    fn test_set_config_no_verification_for_setting_api_access() {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
@@ -152,7 +213,7 @@ mod test {
     }
 
     #[test]
-    fn set_disable_api_if_not_fully_synced() {
+    fn test_set_disable_api_if_not_fully_synced() {
         init(Config::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
@@ -162,6 +223,25 @@ mod test {
             });
 
             assert_eq!(with_state(|s| s.disable_api_if_not_fully_synced), *flag);
+        }
+    }
+
+    #[test]
+    fn test_set_watchdog_canister() {
+        init(Config::default());
+
+        for watchdog_canister in [
+            None,
+            Some(Principal::anonymous()),
+            Some(Principal::management_canister()),
+            Some(Principal::from_text("g4xu7-jiaaa-aaaan-aaaaq-cai").unwrap()),
+        ] {
+            set_config_no_verification(SetConfigRequest {
+                watchdog_canister: Some(watchdog_canister),
+                ..Default::default()
+            });
+
+            assert_eq!(with_state(|s| s.watchdog_canister), watchdog_canister);
         }
     }
 }

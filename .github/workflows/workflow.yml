@@ -52,6 +52,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
       - uses: actions/cache@v3
         with:
           path: |
@@ -381,7 +383,7 @@ jobs:
 
       - name: Run health_status test
         run: |
-          bash watchdog/tests/health_status.sh
+          bash watchdog/e2e-tests/health_status.sh
 
   watchdog_get_config:
     runs-on: ubuntu-20.04
@@ -413,7 +415,7 @@ jobs:
 
       - name: Run get_config test
         run: |
-          bash watchdog/tests/get_config.sh
+          bash watchdog/e2e-tests/get_config.sh
 
   watchdog_metrics:
     runs-on: ubuntu-20.04
@@ -445,10 +447,68 @@ jobs:
 
       - name: Run metrics test
         run: |
-          bash watchdog/tests/metrics.sh
+          bash watchdog/e2e-tests/metrics.sh
+
+  watchdog_upgradability:
+    runs-on: ubuntu-20.04
+    needs: cargo-build
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install DFX
+        run: |
+          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
+          bash install-dfx.sh < <(yes Y)
+          rm install-dfx.sh
+          dfx cache install
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Run upgradability test
+        run: |
+          bash watchdog/e2e-tests/upgradability.sh
+
+  canister-build-reproducibility:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Reproducibility
+        run: |
+          ./e2e-tests/reproducibility.sh Dockerfile
 
   checks-pass:
-    needs: ["cargo-tests", "shell-checks", "cargo-clippy", "rustfmt", "e2e-disable-api-if-not-fully-synced-flag", "e2e-scenario-1", "e2e-scenario-2", "e2e-scenario-3", "charge-cycles-on-reject", "upgradability", "set_config"]
+    needs:
+      - cargo-tests
+      - shell-checks
+      - cargo-clippy
+      - rustfmt
+      - e2e-disable-api-if-not-fully-synced-flag
+      - e2e-scenario-1
+      - e2e-scenario-2
+      - e2e-scenario-3
+      - charge-cycles-on-reject
+      - upgradability
+      - set_config
+      - watchdog_health_status
+      - watchdog_get_config
+      - watchdog_metrics
+      - canister-build-reproducibility
     runs-on: ubuntu-20.04
     steps:
        - name: Checks workflow passes

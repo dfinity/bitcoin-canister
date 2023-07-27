@@ -2,8 +2,19 @@
 name = "ic-btc-interface"
 version = "0.1.0"
 edition = "2021"
+description = "Rust types for the Internet Computer's Bitcoin API."
+homepage = "https://docs.rs/ic-btc-interface"
+documentation = "https://docs.rs/ic-btc-interface"
+license = "Apache-2.0"
+include = ["src", "Cargo.toml", "../LICENSE", "README.md"]
+repository = "https://github.com/dfinity/bitcoin-canister"
+readme= "README.md"
 
 [dependencies]
-candid = "0.8.1"
-serde = "1.0.132"
-serde_bytes = "0.11"
+candid = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+
+[dev-dependencies]
+ciborium = { workspace = true }
+proptest = "1.0"

@@ -5,3 +5,6 @@
 
 target
 .dfx
+canister_ids.json
+
+*.wasm.gz

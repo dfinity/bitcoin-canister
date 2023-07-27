@@ -8,9 +8,9 @@ name = "benchmarks"
 path = "src/main.rs"
 
 [dependencies]
-bitcoin = {version = "0.28.1", features = ["use-serde"]}
-hex = "0.4.3"
-ic-cdk = "0.6.1"
-ic-cdk-macros = "0.6.1"
-ic-btc-canister = { path = "../canister" }
-ic-btc-interface = { path = "../interface" }
+bitcoin = { workspace = true, features = ["use-serde"]}
+hex = { workspace = true }
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
+ic-btc-canister = { workspace = true }
+ic-btc-interface = { workspace = true }

@@ -3,12 +3,12 @@ use bitcoin::{
     util::uint::Uint256, Address as BitcoinAddress, Block as BitcoinBlock,
     Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Script, TxOut as BitcoinTxOut,
 };
+use candid::CandidType;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
-    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, UtxosFilter,
-    UtxosFilterInRequest,
+    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, Txid as PublicTxid,
+    UtxosFilter, UtxosFilterInRequest,
 };
-use ic_cdk::export::candid::CandidType;
 use ic_stable_structures::{storable::Blob, BoundedStorable, Storable as StableStructuresStorable};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
@@ -519,9 +519,7 @@ impl From<Vec<u8>> for BlockHeaderBlob {
 }
 
 // A blob representing a block hash.
-#[derive(
-    CandidType, PartialEq, Clone, Debug, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash,
-)]
+#[derive(CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash)]
 pub struct BlockHash(Vec<u8>);
 
 impl StableStructuresStorable for BlockHash {
@@ -589,6 +587,12 @@ impl Default for BlockHash {
     }
 }
 
+impl std::fmt::Debug for BlockHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BlockHash({})", self.to_string())
+    }
+}
+
 type PageNumber = u8;
 
 #[derive(Clone, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
@@ -620,6 +624,20 @@ impl Txid {
 
     pub fn to_vec(self) -> Vec<u8> {
         self.bytes
+    }
+}
+
+impl From<Txid> for PublicTxid {
+    fn from(txid: Txid) -> Self {
+        Self::try_from(&txid.bytes[..]).expect("bug: txid is not 32 bytes long")
+    }
+}
+
+impl From<PublicTxid> for Txid {
+    fn from(txid: PublicTxid) -> Self {
+        Self {
+            bytes: txid.as_ref().to_vec(),
+        }
     }
 }
 
@@ -656,11 +674,25 @@ pub enum GetSuccessorsRequest {
     FollowUp(PageNumber),
 }
 
-#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(CandidType, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetSuccessorsRequestInitial {
     pub network: Network,
     pub anchor: BlockHash,
     pub processed_block_hashes: Vec<BlockHash>,
+}
+
+impl std::fmt::Debug for GetSuccessorsRequestInitial {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GetSuccessorsRequestInitial")
+            .field("network", &self.network)
+            .field("anchor", &self.anchor)
+            .field(
+                "processed_block_hashes_len",
+                &self.processed_block_hashes.len(),
+            )
+            .field("processed_block_hashes", &self.processed_block_hashes)
+            .finish()
+    }
 }
 
 /// A response containing new successor blocks from the Bitcoin network.

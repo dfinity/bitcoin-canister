@@ -73,11 +73,20 @@ impl HttpRequestBuilder {
         self
     }
 
-    pub fn transform_func<T>(mut self, func: T, context: Vec<u8>) -> Self
+    pub fn transform_func<T>(
+        mut self,
+        candid_function_name: &str,
+        func: T,
+        context: Vec<u8>,
+    ) -> Self
     where
         T: Fn(TransformArgs) -> HttpResponse + 'static,
     {
-        self.transform = Some(create_transform_context(func, context));
+        self.transform = Some(create_transform_context(
+            candid_function_name,
+            func,
+            context,
+        ));
         self
     }
 

@@ -8,9 +8,15 @@
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
     "watchdog": {
-      "type": "rust",
-      "package": "watchdog",
-      "candid": "./watchdog/candid.did"
+      "type": "custom",
+      "candid": "./watchdog/candid.did",
+      "build": "./scripts/build-canister.sh watchdog-canister",
+      "wasm": "./target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz"
+    },
+    "watchdog-upgradability-test": {
+      "type": "custom",
+      "candid": "./watchdog/candid.did",
+      "wasm": "watchdog-upgradability-test.wasm.gz"
     },
     "benchmarks": {
       "candid": "./benchmarks/candid.did",
@@ -70,6 +76,10 @@
       "replica": {
         "subnet_type": "system"
       }
+    },
+    "testnet": {
+      "providers": ["http://[2a00:fb01:400:42:5000:aaff:fea4:ae46]:8080"],
+      "type": "persistent"
     }
   },
   "version": 1

@@ -17,13 +17,17 @@ type height_status = variant {
 
 /// Bitcoin block API providers.
 type bitcoin_block_api = variant {
-    api_bitaps_com;
-    api_blockchair_com;
-    api_blockcypher_com;
+    api_bitaps_com_mainnet;
+    api_bitaps_com_testnet;
+    api_blockchair_com_mainnet;
+    api_blockchair_com_testnet;
+    api_blockcypher_com_mainnet;
+    api_blockcypher_com_testnet;
     bitcoin_canister;
-    blockchain_info;
-    blockstream_info;
-    chain_api_btc_com;
+    blockchain_info_mainnet;
+    blockstream_info_mainnet;
+    blockstream_info_testnet;
+    chain_api_btc_com_mainnet;
 };
 
 /// Information about a Bitcoin block from a specific API provider.
@@ -53,7 +57,17 @@ type health_status = record {
     explorers : vec block_info;
 };
 
+/// Bitcoin network.
+type bitcoin_network = variant {
+    mainnet;
+    testnet;
+};
+
+/// Watchdog canister configuration.
 type config = record {
+    /// The Bitcoin network to use.
+    bitcoin_network : bitcoin_network;
+
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold : nat64;
 
@@ -63,20 +77,31 @@ type config = record {
     /// The minimum number of explorers to compare against.
     min_explorers : nat64;
 
-    /// Bitcoin canister endpoint.
-    bitcoin_canister_endpoint : text;
+    /// Bitcoin canister principal.
+    bitcoin_canister_principal : principal;
 
     /// The number of seconds to wait before the first data fetch.
     delay_before_first_fetch_sec : nat64;
 
     /// The number of seconds to wait between all the other data fetches.
     interval_between_fetches_sec : nat64;
+
+    /// Bitcoin Explorers to use for fetching bitcoin block data.
+    explorers : vec bitcoin_block_api;
 };
 
-service : {
+type flag = variant {
+    enabled;
+    disabled;
+};
+
+service : (opt config) -> {
     /// Returns the health status of the Bitcoin canister.
     health_status : () -> (health_status) query;
 
     /// Returns the configuration of the watchdog canister.
     get_config : () -> (config) query;
+
+    /// Returns the API access target for the Bitcoin canister.
+    get_api_access_target : () -> (opt flag) query;
 };

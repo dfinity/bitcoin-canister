@@ -12,13 +12,10 @@ use crate::{
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address, Config};
-use bitcoin::{
-    consensus::{Decodable, Encodable},
-    Txid,
-};
+use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_interface::{GetUtxosResponse, Network, UtxosFilter};
+use ic_btc_interface::{GetUtxosResponse, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;
@@ -180,8 +177,7 @@ async fn mainnet_100k_blocks() {
                     txid: Txid::from_str(
                         "1a592a31c79f817ed787b6acbeef29b0f0324179820949d7da6215f0f4870c42",
                     )
-                    .unwrap()
-                    .to_vec(),
+                    .unwrap(),
                     vout: 1,
                 },
                 value: 4000000,
@@ -221,8 +217,7 @@ async fn mainnet_100k_blocks() {
                     txid: Txid::from_str(
                         "3371b3978e7285d962fd54656aca6b3191135a1db838b5c689b8a44a7ede6a31",
                     )
-                    .unwrap()
-                    .to_vec(),
+                    .unwrap(),
                     vout: 0,
                 },
                 value: 500000000,
@@ -283,8 +278,7 @@ async fn mainnet_100k_blocks() {
                     txid: Txid::from_str(
                         "2bdd8506980479fb57d848ddbbb29831b4d468f9dc5d572ccdea69edec677ed6",
                     )
-                    .unwrap()
-                    .to_vec(),
+                    .unwrap(),
                     vout: 1,
                 },
                 value: 48_0000_0000,
