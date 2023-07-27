@@ -519,9 +519,7 @@ impl From<Vec<u8>> for BlockHeaderBlob {
 }
 
 // A blob representing a block hash.
-#[derive(
-    CandidType, PartialEq, Clone, Debug, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash,
-)]
+#[derive(CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash)]
 pub struct BlockHash(Vec<u8>);
 
 impl StableStructuresStorable for BlockHash {
@@ -586,6 +584,12 @@ impl ToString for BlockHash {
 impl Default for BlockHash {
     fn default() -> Self {
         Self(vec![0; 32])
+    }
+}
+
+impl std::fmt::Debug for BlockHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BlockHash({})", self.to_string())
     }
 }
 
@@ -670,11 +674,25 @@ pub enum GetSuccessorsRequest {
     FollowUp(PageNumber),
 }
 
-#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(CandidType, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetSuccessorsRequestInitial {
     pub network: Network,
     pub anchor: BlockHash,
     pub processed_block_hashes: Vec<BlockHash>,
+}
+
+impl std::fmt::Debug for GetSuccessorsRequestInitial {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GetSuccessorsRequestInitial")
+            .field("network", &self.network)
+            .field("anchor", &self.anchor)
+            .field(
+                "processed_block_hashes_len",
+                &self.processed_block_hashes.len(),
+            )
+            .field("processed_block_hashes", &self.processed_block_hashes)
+            .finish()
+    }
 }
 
 /// A response containing new successor blocks from the Bitcoin network.

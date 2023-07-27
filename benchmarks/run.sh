@@ -12,4 +12,4 @@ bash ../scripts/build-canister.sh benchmarks
 drun ./drun.txt --instruction-limit 99999999999999 \
     | awk '{ print $3 }' \
     | grep "44.*" -o \
-    | xargs didc decode
+    | xargs -L 1 didc decode

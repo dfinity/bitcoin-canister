@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{performance_counter, time},
+    runtime::{performance_counter, print, time},
     types::{
         into_bitcoin_network, Address, Block, BlockHash, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
@@ -148,6 +148,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     };
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
+    print("Running ingest_block_continue...");
     match state.utxos.ingest_block_continue() {
         None => {}
         Some(Slicing::Paused(())) => return has_state_changed(state),
@@ -158,7 +159,13 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     }
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
+    print("Looking for new stable blocks to ingest...");
     while let Some(new_stable_block) = unstable_blocks::peek(&state.unstable_blocks) {
+        print(&format!(
+            "Ingesting new stable block {:?}...",
+            new_stable_block.block_hash()
+        ));
+
         // Store the block's header.
         state
             .stable_block_headers
@@ -177,7 +184,8 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 }
 
 pub fn main_chain_height(state: &State) -> Height {
-    unstable_blocks::get_main_chain(&state.unstable_blocks).len() as u32 + state.utxos.next_height()
+    unstable_blocks::get_main_chain_length(&state.unstable_blocks) as u32
+        + state.utxos.next_height()
         - 1
 }
 
