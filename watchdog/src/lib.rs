@@ -42,7 +42,9 @@ thread_local! {
 
 /// This function is called when the canister is created.
 fn init(config: Option<Config>) {
-    hook();
+    // Setup the stdlib hooks.
+    #[cfg(target_arch = "wasm32")]
+    printer::hook();
 
     if let Some(config) = config {
         crate::storage::set_config(config);
