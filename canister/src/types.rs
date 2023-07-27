@@ -266,8 +266,7 @@ pub trait Storable {
 
 impl StableStructuresStorable for OutPoint {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
-        v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
+        let v = [self.txid.0.as_slice(), self.vout.to_le_bytes().as_slice()].concat();
 
         // An outpoint is always exactly 36 bytes.
         assert_eq!(v.len(), OUTPOINT_SIZE as usize);
@@ -596,14 +595,11 @@ impl std::fmt::Debug for BlockHash {
 type PageNumber = u8;
 
 #[derive(Clone, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize)]
-pub struct Txid {
-    #[serde(with = "serde_bytes")]
-    bytes: Vec<u8>,
-}
+pub struct Txid([u8; 32]);
 
 impl From<Vec<u8>> for Txid {
     fn from(bytes: Vec<u8>) -> Self {
-        Self { bytes }
+        Self(bytes.try_into().unwrap())
     }
 }
 
@@ -619,11 +615,11 @@ impl FromStr for Txid {
 
 impl Txid {
     pub fn as_bytes(&self) -> &[u8] {
-        self.bytes.as_slice()
+        self.0.as_slice()
     }
 
     pub fn to_vec(self) -> Vec<u8> {
-        self.bytes
+        self.0.to_vec()
     }
 }
 
@@ -649,7 +645,7 @@ impl std::fmt::Debug for Txid {
 
 impl std::fmt::Display for Txid {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut bytes = self.bytes.clone();
+        let mut bytes = self.0.to_vec();
         bytes.reverse();
         write!(f, "{}", hex::encode(bytes))
     }
