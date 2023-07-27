@@ -2,7 +2,7 @@
 
 ## Preparing Releases
 
-The canisters in this repo are deployed in production by submitting proposals to the Internet Computer's [Network Nervous System](https://internetcomputer.org/nns).
+The canisters in this repository are deployed in production by submitting proposals to the Internet Computer's [Network Nervous System](https://internetcomputer.org/nns).
 
 Below are the steps needed to cut a release:
 
