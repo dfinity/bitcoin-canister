@@ -550,7 +550,6 @@ mod test {
         assert_ne!(tx.vsize(), tx.size());
         assert_eq!(tx_without_witness.vsize(), tx_without_witness.size());
 
-
         let blocks = vec![
             BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
                 .with_transaction(coinbase_tx)
