@@ -4,7 +4,7 @@ use crate::{
 };
 use bitcoin::{
     hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
-    BlockHeader, PublicKey, Script, WScriptHash,
+    BlockHeader, PublicKey, Script, WScriptHash, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -213,7 +213,15 @@ impl TransactionBuilder {
 
     pub fn with_input(self, previous_output: OutPoint) -> Self {
         Self {
-            builder: self.builder.with_input(previous_output.into()),
+            builder: self.builder.with_input(previous_output.into(), None),
+        }
+    }
+
+    pub fn with_input_and_witness(self, previous_output: OutPoint, witness: Witness) -> Self {
+        Self {
+            builder: self
+                .builder
+                .with_input(previous_output.into(), Some(witness)),
         }
     }
 

@@ -152,6 +152,7 @@ mod test {
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         with_state,
     };
+    use bitcoin::Witness;
     use ic_btc_interface::{Config, Fees, Network, Satoshi};
     use ic_btc_types::OutPoint;
     use std::iter::FromIterator;
@@ -517,5 +518,34 @@ mod test {
         get_current_fee_percentiles();
 
         assert_eq!(crate::runtime::get_cycles_balance(), 10);
+    }
+
+    #[test]
+    fn transaction_vsize() {
+        let balance = 1000;
+
+        let coinbase_tx = TransactionBuilder::coinbase()
+            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .build();
+
+        let witness = Witness::from_vec(vec![
+            vec![0u8, 2u8],
+            vec![4u8, 2u8],
+            vec![3u8, 2u8],
+            vec![4u8, 2u8],
+        ]);
+        let tx = TransactionBuilder::new()
+            .with_input_and_witness(OutPoint::new(coinbase_tx.txid(), 0), witness)
+            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .build();
+
+        let tx_without_witness = TransactionBuilder::new()
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
+            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .build();
+
+        // Check that vsize() is not the same as size() of a transaction.
+        assert_ne!(tx.vsize(), tx.size());
+        assert_eq!(tx_without_witness.vsize(), tx_without_witness.size());
     }
 }
