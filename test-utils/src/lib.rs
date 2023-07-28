@@ -21,7 +21,7 @@ pub fn random_p2tr_address(network: Network) -> Address {
     Address::p2tr(&secp, xonly, None, network)
 }
 
-pub fn coinbase_input() -> TxIn {
+fn coinbase_input() -> TxIn {
     TxIn {
         previous_output: OutPoint::null(),
         script_sig: Script::new(),

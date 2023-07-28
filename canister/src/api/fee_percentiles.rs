@@ -521,7 +521,7 @@ mod test {
     }
 
     #[test]
-    fn transaction_vsize() {
+    fn measures_fees_in_vbytes() {
         let balance = 1000;
         let fee = 1;
         let fee_in_millisatoshi = 1000;
