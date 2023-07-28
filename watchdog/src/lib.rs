@@ -41,6 +41,7 @@ thread_local! {
 }
 
 /// This function is called when the canister is created.
+#[init]
 fn init(config: Option<Config>) {
     // Setup the stdlib hooks.
     #[cfg(target_arch = "wasm32")]
