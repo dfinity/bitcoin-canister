@@ -17,6 +17,8 @@ Below are the steps needed to cut a release:
 7. Add release notes. Github can generate the release notes by clicking on "Generated Release Notes". Modify as needed.
 8. Add the commit hash of the Bitcoin Canister's wasm from step 3 to the release notes.
 9. Attach the Bitcoin Canister's wasm to the release notes (and nothing else).
+10. Check the "Set as a pre-release" box to indicate that this release hasn't been deployed to production yet.
+11. Once the Bitcoin mainnet canister is upgraded to this version, uncheck the "Set as a pre-release" box to indicate that it's deployed.
 
 ### Watchdog Canister
 
@@ -29,3 +31,5 @@ Below are the steps needed to cut a release:
 7. Add release notes. Github can generate the release notes by clicking on "Generated Release Notes". Modify as needed.
 8. Add the commit hash of the Watchdog Canister's wasm from step 3 to the release notes.
 9. Attach the Watchdog Canister's wasm to the release notes (and nothing else).
+10. Check the "Set as a pre-release" box to indicate that this release hasn't been deployed to production yet.
+11. Once the Watchdog for the Bitcoin mainnet canister is upgraded to this version, uncheck the "Set as a pre-release" box to indicate that it's deployed.
