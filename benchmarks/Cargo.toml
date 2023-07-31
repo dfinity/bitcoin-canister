@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 bitcoin = { workspace = true, features = ["use-serde"]}
 hex = { workspace = true }
+ic-btc-test-utils = { workspace = true }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
 ic-btc-canister = { workspace = true }

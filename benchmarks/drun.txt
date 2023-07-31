@@ -1,4 +1,4 @@
 create
 install rwlgt-iiaaa-aaaaa-aaaaa-cai ../target/wasm32-unknown-unknown/release/benchmarks.wasm.gz ""
-query rwlgt-iiaaa-aaaaa-aaaaa-cai insert_300_blocks "DIDL\x00\x00"
-query rwlgt-iiaaa-aaaaa-aaaaa-cai get_metrics "DIDL\x00\x00"
+query rwlgt-iiaaa-aaaaa-aaaaa-cai deep_unstable_chain_pre_upgrade "DIDL\x00\x00"
+#query rwlgt-iiaaa-aaaaa-aaaaa-cai deep_unstable_chain_heartbeat "DIDL\x00\x00"
