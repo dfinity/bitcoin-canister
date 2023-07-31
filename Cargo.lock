@@ -316,6 +316,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
+ "ic-btc-test-utils",
  "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
 ]

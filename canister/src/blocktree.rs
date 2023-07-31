@@ -1,4 +1,5 @@
 use crate::types::{Block, BlockHash};
+use crate::runtime::print;
 use ic_btc_interface::Network;
 use std::fmt;
 mod serde;
@@ -219,11 +220,13 @@ fn get_chain_with_tip_reverse<'a>(
 
 // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
 pub fn difficulty_based_depth(tree: &BlockTree, network: Network) -> u128 {
+    print("difficulty_based_depth");
     let mut res: u128 = 0;
     for child in tree.children.iter() {
         res = std::cmp::max(res, difficulty_based_depth(child, network));
     }
     res += tree.root.difficulty(network) as u128;
+    print("difficulty_based_depth DONE");
     res
 }
 

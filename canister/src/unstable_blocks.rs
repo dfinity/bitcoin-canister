@@ -1,5 +1,6 @@
 mod outpoints_cache;
 use crate::{
+    runtime::print,
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
     types::{Address, Block, BlockHash, OutPoint, TxOut},
     UtxoSet,
@@ -135,6 +136,7 @@ impl UnstableBlocks {
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
 pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
+    print("peeking");
     get_stable_child(blocks).map(|_| &blocks.tree.root)
 }
 
@@ -263,6 +265,7 @@ pub fn get_chain_with_tip<'a>(
 
 // Returns the index of the `anchor`'s stable child if it exists.
 fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
+    print("get_stable_child");
     // Compute the difficulty based depth of all the children.
     let network = blocks.get_network();
 
@@ -283,6 +286,8 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 
     match depths.last() {
         Some((deepest_depth, child_idx)) => {
+
+            print(&format!("deepest_depth: {}", deepest_depth));
             // The deepest child tree must have a depth >= normalized_stability_threshold.
             if *deepest_depth < normalized_stability_threshold {
                 // Need a depth of at least >= normalized_stability_threshold.
@@ -300,10 +305,12 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                 }
             }
 
+            print("get_stable_child DONE");
             Some(*child_idx)
         }
         None => {
             // The anchor has no children. Nothing to return.
+            print("get_stable_child DONE");
             None
         }
     }
