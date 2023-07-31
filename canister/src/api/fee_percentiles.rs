@@ -297,6 +297,65 @@ mod test {
         });
     }
 
+    const INITAL_BALANCE: Satoshi = 1_000_000_000;
+
+    #[test]
+    fn dbg_insert_block() {
+        use std::time::Instant;
+
+        let max_number_of_blocks = 4_500;
+        let blocks = generate_blocks(INITAL_BALANCE, max_number_of_blocks);
+
+        let stability_threshold = blocks.len() as u128;
+        crate::init(Config {
+            stability_threshold,
+            network: Network::Regtest,
+            ..Default::default()
+        });
+
+        with_state_mut(|state| {
+            let start = Instant::now();
+            let n = blocks.len();
+            let delim = "\t";
+            println!("blocks{}time", delim);
+            for (i, block) in blocks.into_iter().enumerate() {
+                state::insert_block(state, block).unwrap();
+                if i % 100 == 0 || i + 1 == n {
+                    let duration = start.elapsed();
+                    println!("{:}{}{:>.1}", i, delim, duration.as_secs_f64());
+                }
+            }
+
+            //state::ingest_stable_blocks_into_utxoset(state);
+        });
+        assert!(false);
+    }
+
+    // #[test]
+    // fn dbg_init_state_10() {
+    //     let number_of_blocks = 10;
+    //     let blocks = generate_blocks(INITAL_BALANCE, number_of_blocks);
+    //     let stability_threshold = blocks.len() as u128;
+    //     init_state(blocks, stability_threshold);
+    //     assert!(false);
+    // }
+
+    // #[test]
+    // fn dbg_init_state_100() {
+    //     let number_of_blocks = 100;
+    //     let blocks = generate_blocks(INITAL_BALANCE, number_of_blocks);
+    //     let stability_threshold = blocks.len() as u128;
+    //     init_state(blocks, stability_threshold);
+    // }
+
+    // #[test]
+    // fn dbg_init_state_1000() {
+    //     let number_of_blocks = 1000;
+    //     let blocks = generate_blocks(INITAL_BALANCE, number_of_blocks);
+    //     let stability_threshold = blocks.len() as u128;
+    //     init_state(blocks, stability_threshold);
+    // }
+
     #[test]
     fn get_current_fee_percentiles_requested_number_of_txs_is_greater_than_number_of_actual_txs() {
         let number_of_blocks = 5;

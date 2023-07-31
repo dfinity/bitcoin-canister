@@ -9,7 +9,7 @@ pushd "$SCRIPT_DIR"
 bash ../scripts/build-canister.sh benchmarks
 
 # Run the benchmarks, decode the output.
-drun ./drun.txt --instruction-limit 99999999999999 # \
+../../ic/bazel-bin/rs/drun/drun ./drun.txt --instruction-limit 99999999999999 # \
 #    | awk '{ print $3 }' \
  #   | grep "44.*" -o \
   #  | xargs -L 1 didc decode
