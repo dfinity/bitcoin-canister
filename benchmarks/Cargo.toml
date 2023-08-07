@@ -14,3 +14,12 @@ ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
 ic-btc-canister = { workspace = true }
 ic-btc-interface = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+lazy_static = { workspace = true }
+
+[[bench]]
+name = "benches"
+harness = false
+path = "benches.rs"
