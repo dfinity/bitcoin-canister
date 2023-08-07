@@ -75,16 +75,20 @@ fn get_metrics() -> u64 {
     })
 }
 
+// Benchmarks inserting 100 block headers into a tree containing 1000 blocks
 #[query]
 fn insert_block_headers() -> u64 {
+    let blocks_to_insert = 1000;
+    let block_headers_to_insert = 100;
+
     ic_btc_canister::init(Config {
         network: Network::Testnet,
-        stability_threshold: 600,
         ..Config::default()
     });
 
+    // Insert the blocks.
     with_state_mut(|s| {
-        for i in 0..600 {
+        for i in 0..blocks_to_insert {
             ic_btc_canister::state::insert_block(
                 s,
                 TESTNET_BLOCKS.with(|b| b.borrow()[i as usize].clone()),
@@ -93,24 +97,23 @@ fn insert_block_headers() -> u64 {
         }
     });
 
+    // Compute the next block headers.
     let next_block_headers = TESTNET_BLOCKS.with(|b| {
         let blocks = b.borrow();
         let mut next_block_headers = vec![];
-
-        for i in 600..700 {
+        for i in blocks_to_insert..blocks_to_insert + block_headers_to_insert {
             let mut block_header_blob = vec![];
             BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
                 .unwrap();
-
             next_block_headers.push(BlockHeaderBlob::try_from(block_header_blob).unwrap());
         }
 
         next_block_headers
     });
-    
+
+    // Benchmark inserting the block headers.
     count_instructions(|| {
         with_state_mut(|s| {
-            // Insert 100 next block headers.
             ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
         });
     })
