@@ -7,8 +7,8 @@ use crate::{
     },
 };
 use crate::{with_state, with_state_mut};
+use bitcoin::consensus::Decodable;
 use bitcoin::Block as BitcoinBlock;
-use bitcoin::{consensus::Decodable};
 use ic_btc_interface::Flag;
 
 /// The heartbeat of the Bitcoin canister.
