@@ -165,5 +165,12 @@ fn benches() {
 }
 
 fn main() {
+    assert!(Command::new("bash")
+        .args(["../scripts/build-canister.sh", "benchmarks"])
+        .current_dir(bench_dir())
+        .status()
+        .unwrap()
+        .success());
+
     benches();
 }
