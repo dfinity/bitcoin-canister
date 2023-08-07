@@ -4,13 +4,14 @@ use crate::{
     metrics::Metrics,
     runtime::{performance_counter, print, time},
     types::{
-        into_bitcoin_network, Address, Block, BlockHash, GetSuccessorsCompleteResponse,
-        GetSuccessorsPartialResponse, Slicing,
+        into_bitcoin_network, Address, Block, BlockHash, BlockHeaderBlob,
+        GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse, Slicing,
     },
     unstable_blocks::{self, UnstableBlocks},
     validation::ValidationContext,
     UtxoSet,
 };
+use bitcoin::{consensus::Decodable, BlockHeader};
 use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
@@ -181,6 +182,54 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     }
 
     has_state_changed(state)
+}
+
+pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeaderBlob]) {
+    for block_header_blob in next_block_headers.iter() {
+        let block_header = match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
+            Ok(header) => header,
+            Err(err) => {
+                print(&format!(
+                    "ERROR: Failed decode block header. Err: {:?}, Block header: {:?}",
+                    err, block_header_blob,
+                ));
+                return;
+            }
+        };
+
+        let validation_result =
+            match ValidationContext::new_with_next_block_headers(state, &block_header)
+                .map_err(|_| InsertBlockError::PrevHeaderNotFound)
+            {
+                Ok(store) => validate_header(
+                    &into_bitcoin_network(state.network()),
+                    &store,
+                    &block_header,
+                    time(),
+                ),
+                Err(err) => Err(err),
+            };
+
+        if let Err(err) = validation_result {
+            print(&format!(
+                "ERROR: Failed to validate block header. Err: {:?}, Block header: {:?}",
+                err, block_header,
+            ));
+
+            return;
+        }
+
+        if let Err(err) = state
+            .unstable_blocks
+            .insert_next_block_header(block_header, state.stable_height())
+        {
+            print(&format!(
+                "ERROR: Failed to insert next block header. Err: {:?}, Block header: {:?}",
+                err, block_header,
+            ));
+            return;
+        }
+    }
 }
 
 pub fn main_chain_height(state: &State) -> Height {

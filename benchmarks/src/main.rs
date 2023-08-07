@@ -1,6 +1,9 @@
 use bitcoin::consensus::Decodable;
-use bitcoin::Block as BitcoinBlock;
-use ic_btc_canister::{types::Block, with_state_mut};
+use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
+use ic_btc_canister::{
+    types::{Block, BlockHeaderBlob},
+    with_state_mut,
+};
 use ic_btc_interface::{Config, Network};
 use ic_cdk_macros::{init, query};
 use std::cell::RefCell;
@@ -69,6 +72,47 @@ fn get_metrics() -> u64 {
 
     count_instructions(|| {
         ic_btc_canister::get_metrics();
+    })
+}
+
+#[query]
+fn insert_block_headers() -> u64 {
+    ic_btc_canister::init(Config {
+        network: Network::Testnet,
+        stability_threshold: 600,
+        ..Config::default()
+    });
+
+    with_state_mut(|s| {
+        for i in 0..600 {
+            ic_btc_canister::state::insert_block(
+                s,
+                TESTNET_BLOCKS.with(|b| b.borrow()[i as usize].clone()),
+            )
+            .unwrap();
+        }
+    });
+
+    let next_block_headers = TESTNET_BLOCKS.with(|b| {
+        let blocks = b.borrow();
+        let mut next_block_headers = vec![];
+
+        for i in 600..700 {
+            let mut block_header_blob = vec![];
+            BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
+                .unwrap();
+
+            next_block_headers.push(BlockHeaderBlob::try_from(block_header_blob).unwrap());
+        }
+
+        next_block_headers
+    });
+    
+    count_instructions(|| {
+        with_state_mut(|s| {
+            // Insert 100 next block headers.
+            ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
+        });
     })
 }
 
