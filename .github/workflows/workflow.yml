@@ -68,14 +68,10 @@ jobs:
           rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
 
-      - uses: ConorMacBride/install-package@v1
-        with:
-          brew: llvm
-
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets
+          cargo test --release --all-targets --workspace --exclude benchmarks
         env:
           RUST_BACKTRACE: 1
 
