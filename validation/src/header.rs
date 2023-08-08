@@ -225,12 +225,13 @@ fn find_next_difficulty_in_chain(
                 }
 
                 // Traverse to the previous header.
+                let prev_blockhash = current_header.prev_blockhash;
                 current_header = store
-                    .get_with_block_hash(&current_header.prev_blockhash)
+                    .get_with_block_hash(&prev_blockhash)
                     .expect("previous header should be in the header store");
                 // Update the current height and hash.
                 current_height -= 1;
-                current_hash = current_header.block_hash();
+                current_hash = prev_blockhash;
             }
             pow_limit_bits
         }
