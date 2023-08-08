@@ -4,6 +4,7 @@ members = [
     # Production crates
     "canister",
     "interface",
+    "types",
     "validation",
     "watchdog",
 
@@ -33,6 +34,7 @@ futures = "0.3.28"
 hex = "0.4.3"
 ic-btc-canister = { path = "./canister" }
 ic-btc-interface = { path = "./interface" }
+ic-btc-types = { path = "./types" }
 ic-btc-test-utils = { path = "./test-utils" }
 ic-btc-validation = { path = "./validation" }
 ic-cdk = "0.10.0"

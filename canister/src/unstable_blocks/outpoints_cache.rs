@@ -1,8 +1,9 @@
 use crate::{
-    types::{Address, Block, BlockHash, OutPoint, TxOut},
+    types::{Address, TxOut},
     UtxoSet,
 };
 use ic_btc_interface::Height;
+use ic_btc_types::{Block, BlockHash, OutPoint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

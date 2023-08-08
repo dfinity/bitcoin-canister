@@ -1,8 +1,9 @@
 use crate::{
     memory::{get_utxos_medium_memory, get_utxos_small_memory, Memory},
     state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL},
-    types::{OutPoint, Storable, TxOut},
+    types::{Storable, TxOut},
 };
+use ic_btc_types::OutPoint;
 use ic_btc_interface::Height;
 #[cfg(test)]
 use ic_stable_structures::{btreemap, Memory as MemoryTrait};

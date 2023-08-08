@@ -1,0 +1,19 @@
+[package]
+name = "ic-btc-types"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitcoin = { workspace = true, features = ["use-serde"] }
+candid = { workspace = true }
+hex = { workspace = true }
+ic-btc-interface = { workspace = true }
+ic-btc-validation = { workspace = true }
+ic-stable-structures = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+
+[features]
+mock_difficulty = []

@@ -1,6 +1,6 @@
 use crate::{
     genesis_block,
-    types::{into_bitcoin_network, Address, Block, OutPoint, Transaction},
+    types::{into_bitcoin_network, Address},
 };
 use bitcoin::{
     hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
@@ -10,6 +10,7 @@ use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
+use ic_btc_types::{Block, Transaction, OutPoint};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
 use std::str::FromStr;

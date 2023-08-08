@@ -1,9 +1,10 @@
 use crate::{
     multi_iter::MultiIter,
-    types::{Address, Block, OutPoint, Utxo},
+    types::{Address, Utxo},
     unstable_blocks::UnstableBlocks,
     UtxoSet,
 };
+use ic_btc_types::{Block, OutPoint};
 use std::{collections::BTreeSet, sync::Arc};
 
 /// A struct that tracks the UTXO set of a given address.
@@ -116,8 +117,9 @@ impl<'a> AddressUtxoSet<'a> {
 mod test {
     use super::*;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
-    use crate::{types::OutPoint, unstable_blocks};
+    use crate::unstable_blocks;
     use ic_btc_interface::Network;
+    use ic_btc_types::OutPoint;
 
     #[test]
     fn add_tx_to_empty_utxo() {

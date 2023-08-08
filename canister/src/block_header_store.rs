@@ -1,10 +1,8 @@
-use crate::{
-    memory::Memory,
-    types::{Block, BlockHash, BlockHeaderBlob},
-};
+use crate::{memory::Memory, types::BlockHeaderBlob};
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::BlockHeader;
 use ic_btc_interface::Height;
+use ic_btc_types::{Block, BlockHash};
 use ic_stable_structures::StableBTreeMap;
 use serde::{Deserialize, Serialize};
 

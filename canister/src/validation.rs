@@ -7,7 +7,7 @@ pub struct ValidationContext<'a> {
     state: &'a State,
     // BlockHash is stored in order to avoid repeatedly calling to
     // BlockHeader::block_hash() which is expensive.
-    chain: Vec<(&'a BlockHeader, crate::types::BlockHash)>,
+    chain: Vec<(&'a BlockHeader, ic_btc_types::BlockHash)>,
 }
 
 impl<'a> ValidationContext<'a> {
@@ -52,7 +52,7 @@ impl<'a> ValidationContext<'a> {
 impl<'a> HeaderStore for ValidationContext<'a> {
     fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<BlockHeader> {
         // Check if the header is in the chain.
-        let hash = crate::types::BlockHash::from(hash.to_vec());
+        let hash = ic_btc_types::BlockHash::from(hash.to_vec());
         for item in self.chain.iter() {
             if item.1 == hash {
                 return Some(*item.0);

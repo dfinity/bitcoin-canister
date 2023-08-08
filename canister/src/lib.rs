@@ -21,7 +21,7 @@ mod validation;
 use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
-    types::{into_bitcoin_network, Block, HttpRequest, HttpResponse},
+    types::{into_bitcoin_network, HttpRequest, HttpResponse},
 };
 pub use api::get_metrics;
 pub use api::send_transaction;
@@ -31,6 +31,7 @@ use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest,
     GetUtxosError, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Network, Satoshi,
 };
+use ic_btc_types::Block;
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
 use serde_bytes::ByteBuf;

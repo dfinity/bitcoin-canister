@@ -2,14 +2,15 @@ use crate::{
     runtime::{call_get_successors, print},
     state::{self, ResponseToProcess},
     types::{
-        Block, BlockHash, GetSuccessorsCompleteResponse, GetSuccessorsRequest,
-        GetSuccessorsRequestInitial, GetSuccessorsResponse,
+        GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
+        GetSuccessorsResponse,
     },
 };
 use crate::{with_state, with_state_mut};
 use bitcoin::consensus::Decodable;
 use bitcoin::Block as BitcoinBlock;
 use ic_btc_interface::Flag;
+use ic_btc_types::{Block, BlockHash};
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -445,7 +446,7 @@ mod test {
         // Create another transaction where the UTXOs of address 1 are transferred to address 2.
         let mut tx_2 = TransactionBuilder::new();
         for i in 0..tx_cardinality {
-            tx_2 = tx_2.with_input(crate::types::OutPoint {
+            tx_2 = tx_2.with_input(ic_btc_types::OutPoint {
                 txid: tx_1.txid(),
                 vout: i,
             });

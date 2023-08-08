@@ -103,9 +103,9 @@ mod test {
     use crate::{
         genesis_block, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
-        types::OutPoint,
         with_state_mut,
     };
+    use ic_btc_types::OutPoint;
     use ic_btc_interface::{Config, Fees, Network};
 
     #[test]
