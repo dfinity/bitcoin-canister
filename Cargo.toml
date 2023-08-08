@@ -28,6 +28,7 @@ byteorder = "1.4.3"
 candid = "0.9.1"
 ciborium = "0.2.1"
 clap = { version = "4.0.11", features = ["derive"] }
+criterion = "0.4.0"
 futures = "0.3.28"
 hex = "0.4.3"
 ic-btc-canister = { path = "./canister" }
@@ -39,6 +40,7 @@ ic-cdk-macros = "0.7.0"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
 ic-stable-structures = "0.5.2"
+lazy_static = "1.4.0"
 serde = "1.0.171"
 serde_bytes = "0.11"
 serde_json = "1.0.94"
