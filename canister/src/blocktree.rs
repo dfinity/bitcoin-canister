@@ -1,5 +1,5 @@
-use ic_btc_types::{Block, BlockHash};
 use ic_btc_interface::Network;
+use ic_btc_types::{Block, BlockHash};
 use std::fmt;
 mod serde;
 

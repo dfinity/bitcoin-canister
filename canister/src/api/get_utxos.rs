@@ -6,7 +6,7 @@ use crate::{
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
 use ic_btc_interface::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
-use ic_btc_types::{Block, BlockHash, Txid, OutPoint};
+use ic_btc_types::{Block, BlockHash, OutPoint, Txid};
 use serde_bytes::ByteBuf;
 use std::str::FromStr;
 

@@ -568,9 +568,7 @@ mod test {
     use super::*;
     use crate::runtime;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
-    use crate::{
-        address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks,
-    };
+    use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
     use ic_btc_interface::Network;
     use proptest::prelude::*;

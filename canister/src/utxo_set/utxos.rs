@@ -3,8 +3,8 @@ use crate::{
     state::{UTXO_KEY_SIZE, UTXO_VALUE_MAX_SIZE_MEDIUM, UTXO_VALUE_MAX_SIZE_SMALL},
     types::{Storable, TxOut},
 };
-use ic_btc_types::OutPoint;
 use ic_btc_interface::Height;
+use ic_btc_types::OutPoint;
 #[cfg(test)]
 use ic_stable_structures::{btreemap, Memory as MemoryTrait};
 use ic_stable_structures::{storable::Blob, StableBTreeMap, Storable as StableStructuresStorable};

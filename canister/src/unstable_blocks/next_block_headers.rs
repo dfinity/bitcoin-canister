@@ -64,10 +64,7 @@ impl NextBlockHeaders {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        test_utils::BlockBuilder,
-        unstable_blocks::next_block_headers::NextBlockHeaders,
-    };
+    use crate::{test_utils::BlockBuilder, unstable_blocks::next_block_headers::NextBlockHeaders};
     use ic_btc_types::BlockHash;
 
     #[test]

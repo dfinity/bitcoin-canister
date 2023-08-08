@@ -334,6 +334,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
+ "ic-btc-types",
  "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "lazy_static",

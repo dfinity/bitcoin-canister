@@ -105,8 +105,8 @@ mod test {
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         with_state_mut,
     };
-    use ic_btc_types::OutPoint;
     use ic_btc_interface::{Config, Fees, Network};
+    use ic_btc_types::OutPoint;
 
     #[test]
     fn error_on_malformed_address() {

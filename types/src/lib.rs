@@ -69,7 +69,7 @@ impl Block {
     // Computes the difficulty given a block's target.
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
-    fn target_difficulty(network: Network, target: Uint256) -> u64 {
+    pub fn target_difficulty(network: Network, target: Uint256) -> u64 {
         (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
     }
 }
@@ -400,17 +400,5 @@ fn target_difficulty() {
             bitcoin::BlockHeader::u256_from_compact_target(457142912)
         ),
         1_032
-    );
-
-    // Regtest blocks by the BlockBuilder should have a difficulty of 1.
-    assert_eq!(
-        Block::target_difficulty(
-            Network::Regtest,
-            crate::test_utils::BlockBuilder::genesis()
-                .build()
-                .header()
-                .target()
-        ),
-        1
     );
 }
