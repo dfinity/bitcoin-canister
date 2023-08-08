@@ -1,5 +1,6 @@
-use crate::types::{Address, OutPoint, TxOut};
+use crate::types::{Address, TxOut};
 use ic_btc_interface::Height;
+use ic_btc_types::OutPoint;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},

@@ -11,11 +11,12 @@ use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use clap::Parser;
 use ic_btc_canister::{
     pre_upgrade,
-    types::{Block, BlockHash, BlockHeaderBlob, OutPoint, TxOut},
+    types::{BlockHeaderBlob, TxOut},
     unstable_blocks::{self, UnstableBlocks},
     with_state, with_state_mut,
 };
 use ic_btc_interface::{Config, Flag, Height, Network};
+use ic_btc_types::{Block, BlockHash, OutPoint};
 use ic_stable_structures::FileMemory;
 use std::{
     collections::BTreeMap,

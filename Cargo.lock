@@ -334,6 +334,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
+ "ic-btc-types",
  "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "lazy_static",
@@ -1501,6 +1502,7 @@ dependencies = [
  "hex",
  "ic-btc-interface",
  "ic-btc-test-utils",
+ "ic-btc-types",
  "ic-btc-validation",
  "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
@@ -1530,6 +1532,20 @@ name = "ic-btc-test-utils"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+]
+
+[[package]]
+name = "ic-btc-types"
+version = "0.1.0"
+dependencies = [
+ "bitcoin",
+ "candid 0.9.1",
+ "hex",
+ "ic-btc-interface",
+ "ic-btc-validation",
+ "ic-stable-structures",
+ "serde",
+ "serde_bytes",
 ]
 
 [[package]]
@@ -3122,6 +3138,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
+ "ic-btc-types",
  "ic-stable-structures",
  "integer-encoding",
  "rand 0.8.5",

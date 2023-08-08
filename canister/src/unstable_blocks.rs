@@ -1,11 +1,12 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
-    types::{Address, Block, BlockHash, OutPoint, TxOut},
+    types::{Address, TxOut},
     UtxoSet,
 };
 use bitcoin::BlockHeader;
 use ic_btc_interface::{Height, Network};
+use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 

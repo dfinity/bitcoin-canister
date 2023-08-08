@@ -14,6 +14,7 @@ ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
 ic-btc-canister = { workspace = true }
 ic-btc-interface = { workspace = true }
+ic-btc-types = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

@@ -1,6 +1,6 @@
 use crate::{
     genesis_block,
-    types::{into_bitcoin_network, Address, Block, OutPoint, Transaction},
+    types::{into_bitcoin_network, Address},
 };
 use bitcoin::{
     hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
@@ -10,6 +10,7 @@ use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
+use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
 use std::str::FromStr;
@@ -260,4 +261,16 @@ impl BlockChainBuilder {
 
         blocks
     }
+}
+
+#[test]
+fn target_difficulty() {
+    // Regtest blocks by the BlockBuilder should have a difficulty of 1.
+    assert_eq!(
+        Block::target_difficulty(
+            Network::Regtest,
+            BlockBuilder::genesis().build().header().target()
+        ),
+        1
+    );
 }

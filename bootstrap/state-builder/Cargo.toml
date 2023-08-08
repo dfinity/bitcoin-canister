@@ -28,6 +28,7 @@ clap = { workspace = true }
 hex = { workspace = true }
 ic-btc-canister = { workspace = true }
 ic-btc-interface = { workspace = true }
+ic-btc-types = { workspace = true }
 ic-stable-structures = { workspace = true }
 integer-encoding = "3.0.4"
 rand = "0.8.5"

@@ -10,6 +10,7 @@ ciborium = "0.2.1"
 hex = "0.4.3"
 ic-btc-canister = { path = "../../canister", features = ["file_memory"] }
 ic-btc-interface = { path = "../../interface" }
+ic-btc-types = { path = "../../types" }
 ic-stable-structures = "0.5.2"
 
 [workspace]
