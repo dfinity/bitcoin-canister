@@ -35,6 +35,7 @@ pub fn get_metrics() -> HttpResponse {
 
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     with_state(|state| {
+        // General stats
         w.encode_gauge(
             "main_chain_height",
             state::main_chain_height(state) as f64,
@@ -54,6 +55,38 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "address_utxos_length",
             state.utxos.address_utxos_len() as f64,
             "The number of UTXOs that are owned by supported addresses.",
+        )?;
+
+        // Unstable blocks and stability threshold
+        w.encode_gauge(
+            "anchor_difficulty",
+            state.unstable_blocks.anchor_difficulty() as f64,
+            "The difficulty of the anchor block.",
+        )?;
+        w.encode_gauge(
+            "normalized_stability_threshold",
+            state.unstable_blocks.normalized_stability_threshold() as f64,
+            "The stability threshold normalized by the difficulty of the anchor block.",
+        )?;
+        w.encode_gauge(
+            "unstable_blocks_num_tips",
+            state.unstable_blocks.num_tips() as f64,
+            "The number of tips in the unstable block tree.",
+        )?;
+        w.encode_gauge(
+            "unstable_blocks_total",
+            state::get_unstable_blocks(state).len() as f64,
+            "The number of unstable blocks.",
+        )?;
+        w.encode_gauge(
+            "unstable_blocks_difficulty_based_depth",
+            state.unstable_blocks.blocks_depth() as f64,
+            "The depth of the unstable blocks.",
+        )?;
+        w.encode_gauge(
+            "unstable_blocks_max_depth",
+            state.unstable_blocks.blocks_difficulty_based_depth() as f64,
+            "The difficulty-based depth of the unstable blocks.",
         )?;
 
         // Memory

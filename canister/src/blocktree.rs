@@ -120,6 +120,15 @@ impl BlockTree {
 
         depth
     }
+
+    /// Returns the number of tips in the tree.
+    pub fn num_tips(&self) -> u32 {
+        if self.children.is_empty() {
+            1
+        } else {
+            self.children.iter().map(|c| c.num_tips()).sum()
+        }
+    }
 }
 
 /// Extends the tree with the given block.
@@ -224,6 +233,15 @@ pub fn difficulty_based_depth(tree: &BlockTree, network: Network) -> u128 {
         res = std::cmp::max(res, difficulty_based_depth(child, network));
     }
     res += tree.root.difficulty(network) as u128;
+    res
+}
+
+pub fn depth(tree: &BlockTree) -> u128 {
+    let mut res: u128 = 0;
+    for child in tree.children.iter() {
+        res = std::cmp::max(res, depth(child));
+    }
+    res += 1;
     res
 }
 
