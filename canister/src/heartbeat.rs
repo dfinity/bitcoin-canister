@@ -714,7 +714,7 @@ mod test {
     }
 
     #[async_std::test]
-    async fn extra_next_headers_are_ignored() {
+    async fn block_headers_are_not_inserted_above_instructions_threshold() {
         let network = Network::Regtest;
 
         init(Config {
