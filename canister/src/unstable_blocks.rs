@@ -925,7 +925,7 @@ mod test {
                 < unstable_blocks.normalized_stability_threshold()
         );
 
-        assert_eq!(unstable_blocks.blocks_depth(), chain_len as u128);
+        assert_eq!(unstable_blocks.blocks_depth(), chain_len);
 
         // Even though the chain's difficulty-based depth doesn't exceed the normalized stability
         // threshold, the anchor block can now be popped because the chain's length has exceeded

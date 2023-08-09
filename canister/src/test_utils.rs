@@ -240,6 +240,7 @@ impl TransactionBuilder {
 pub struct BlockChainBuilder {
     num_blocks: u32,
     prev_block_header: Option<BlockHeader>,
+    #[allow(clippy::type_complexity)]
     difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u64)>,
 }
 
