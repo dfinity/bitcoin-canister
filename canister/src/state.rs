@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{performance_counter, print, time},
+    runtime::{performance_counter, inc_performance_counter, print, time},
     types::{
         into_bitcoin_network, Address, BlockHeaderBlob, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
@@ -186,7 +186,17 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 }
 
 pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeaderBlob]) {
+    // The limit at which no further next block headers are processed.
+    // Note that the actual limit available on system subnets is 50B. The threshold is set
+    // lower to be conservative.
+    const MAX_INSTRUCTIONS_THRESHOLD: u64 = 30_000_000_000;
+
     for block_header_blob in next_block_headers.iter() {
+        if inc_performance_counter() > MAX_INSTRUCTIONS_THRESHOLD {
+            print("Reaching instruction threshold while inserting next block headers. Breaking...");
+            break;
+        }
+
         let block_header = match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
             Ok(header) => header,
             Err(err) => {

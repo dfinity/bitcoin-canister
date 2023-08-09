@@ -315,6 +315,15 @@ impl BoundedStorable for BlockHeaderBlob {
     const IS_FIXED_SIZE: bool = true;
 }
 
+impl From<&bitcoin::BlockHeader> for BlockHeaderBlob {
+    fn from(header: &bitcoin::BlockHeader) -> Self {
+        use bitcoin::consensus::Encodable;
+        let mut block_header_blob = vec![];
+        bitcoin::BlockHeader::consensus_encode(header, &mut block_header_blob).unwrap();
+        Self(block_header_blob)
+    }
+}
+
 impl BlockHeaderBlob {
     pub fn as_slice(&self) -> &[u8] {
         &self.0

@@ -234,7 +234,7 @@ mod test {
     use crate::{
         genesis_block, init,
         runtime::{self, GetSuccessorsReply},
-        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        test_utils::{random_p2pkh_address, BlockBuilder, BlockChainBuilder, TransactionBuilder},
         types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
         utxo_set::IngestingBlock,
     };
@@ -711,5 +711,42 @@ mod test {
             assert_eq!(s.syncing_state.num_insert_block_errors, 1);
             assert_eq!(s.syncing_state.response_to_process, None);
         });
+    }
+
+    #[async_std::test]
+    async fn extra_next_headers_are_ignored() {
+        let network = Network::Regtest;
+
+        init(Config {
+            network,
+            ..Default::default()
+        });
+
+        let next_block_headers = BlockChainBuilder::new(50)
+            .build()
+            .into_iter()
+            .skip(1)
+            .map(|b| b.header().into())
+            .collect();
+
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks: vec![],
+                next: next_block_headers,
+            },
+        )));
+
+        // Set a large step for the performance_counter to exceed the instructions limit quickly.
+        runtime::set_performance_counter_step(1_000_000_000);
+
+        // Fetch blocks.
+        heartbeat().await;
+
+        // Process response.
+        heartbeat().await;
+
+        // Even though there were 50 next block headers, only 30 were processed due to reaching
+        // the instruction limit threshold.
+        assert_eq!(with_state(|s| s.unstable_blocks.next_block_headers_max_height()), Some(30));
     }
 }

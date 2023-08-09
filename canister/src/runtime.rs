@@ -12,8 +12,10 @@ use serde::Deserialize;
 #[cfg(not(target_arch = "wasm32"))]
 use std::cell::RefCell;
 use std::future::Future;
+
+// The instruction limit in system subnets is 50B.
 #[cfg(not(target_arch = "wasm32"))]
-const INSTRUCTIONS_LIMIT: u64 = 5_000_000_000;
+const INSTRUCTIONS_LIMIT: u64 = 50_000_000_000;
 
 #[cfg(target_arch = "wasm32")]
 pub fn print(msg: &str) {
