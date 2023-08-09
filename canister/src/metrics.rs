@@ -22,22 +22,10 @@ pub struct Metrics {
     pub send_transaction_count: u64,
 
     /// The stats of the most recent block ingested into the stable UTXO set.
-    // TODO(EXC-1379): Remove this code once it's deployed to production.
-    #[serde(default)]
     pub block_ingestion_stats: BlockIngestionStats,
 
     /// Instructions needed to insert a block into the pool of unstable blocks.
-    // TODO(EXC-1379): Remove this code once it's deployed to production.
-    #[serde(default = "init_block_insertion_histogram")]
     pub block_insertion: InstructionHistogram,
-}
-
-// TODO(EXC-1379): Remove this code once it's deployed to production.
-fn init_block_insertion_histogram() -> InstructionHistogram {
-    InstructionHistogram::new(
-        "ins_block_insertion",
-        "Instructions needed to insert a block into the pool of unstable blocks.",
-    )
 }
 
 impl Default for Metrics {
