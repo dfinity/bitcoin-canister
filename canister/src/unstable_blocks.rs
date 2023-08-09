@@ -138,6 +138,13 @@ impl UnstableBlocks {
         Ok(())
     }
 
+    /// Returns true if the given block header is already stored as one of the next block headers.
+    pub fn has_next_block_header(&self, block_header: &BlockHeader) -> bool {
+        self.next_block_headers
+            .get_header(&BlockHash::from(block_header.block_hash()))
+            .is_some()
+    }
+
     // Public only for testing purpose.
     pub(crate) fn next_block_headers_max_height(&self) -> Option<Height> {
         self.next_block_headers.get_max_height()

@@ -146,6 +146,7 @@ fn bench_function(c: &mut Criterion<Instructions>, method: &str) {
 
 pub fn criterion_benchmark(c: &mut Criterion<Instructions>) {
     bench_function(c, "insert_block_headers");
+    bench_function(c, "insert_block_headers_multiple_times");
     bench_function(c, "insert_300_blocks");
     bench_function(c, "get_metrics");
 }
