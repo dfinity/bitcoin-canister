@@ -747,6 +747,9 @@ mod test {
 
         // Even though there were 50 next block headers, only 30 were processed due to reaching
         // the instruction limit threshold.
-        assert_eq!(with_state(|s| s.unstable_blocks.next_block_headers_max_height()), Some(30));
+        assert_eq!(
+            with_state(|s| s.unstable_blocks.next_block_headers_max_height()),
+            Some(30)
+        );
     }
 }
