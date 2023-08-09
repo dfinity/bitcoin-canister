@@ -117,6 +117,38 @@ fn insert_block_headers() -> u64 {
     })
 }
 
+// Inserts the same block headers multiple times.
+#[query]
+fn insert_block_headers_multiple_times() -> u64 {
+    ic_btc_canister::init(Config {
+        network: Network::Testnet,
+        ..Config::default()
+    });
+
+    // Compute the next block headers.
+    let next_block_headers = TESTNET_BLOCKS.with(|b| {
+        let blocks = b.borrow();
+        let mut next_block_headers = vec![];
+        for i in 0..1000 {
+            let mut block_header_blob = vec![];
+            BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
+                .unwrap();
+            next_block_headers.push(BlockHeaderBlob::try_from(block_header_blob).unwrap());
+        }
+
+        next_block_headers
+    });
+
+    // Benchmark inserting the block headers.
+    count_instructions(|| {
+        with_state_mut(|s| {
+            for _ in 0..10 {
+                ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
+            }
+        });
+    })
+}
+
 // Returns the number of instructions consumed by the given function.
 fn count_instructions<R>(f: impl FnOnce() -> R) -> u64 {
     let start = ic_cdk::api::performance_counter(0);

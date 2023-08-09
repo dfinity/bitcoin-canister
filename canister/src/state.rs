@@ -198,6 +198,11 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
             }
         };
 
+        if state.unstable_blocks.has_next_block_header(&block_header) {
+            // Already processed this block header. Skip...
+            continue;
+        }
+
         let validation_result =
             match ValidationContext::new_with_next_block_headers(state, &block_header)
                 .map_err(|_| InsertBlockError::PrevHeaderNotFound)
