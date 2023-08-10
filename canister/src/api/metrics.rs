@@ -79,12 +79,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The number of unstable blocks.",
         )?;
         w.encode_gauge(
-            "unstable_blocks_difficulty_based_depth",
+            "unstable_blocks_depth",
             state.unstable_blocks.blocks_depth() as f64,
             "The depth of the unstable blocks.",
         )?;
         w.encode_gauge(
-            "unstable_blocks_max_depth",
+            "unstable_blocks_difficulty_based_depth",
             state.unstable_blocks.blocks_difficulty_based_depth() as f64,
             "The difficulty-based depth of the unstable blocks.",
         )?;
