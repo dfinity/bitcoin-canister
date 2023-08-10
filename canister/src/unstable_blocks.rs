@@ -1,6 +1,7 @@
 mod outpoints_cache;
 use crate::{
     blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
+    runtime::print,
     types::{Address, TxOut},
     UtxoSet,
 };
@@ -12,6 +13,8 @@ use serde::{Deserialize, Serialize};
 
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
+
+const TESTNET_MAX_SOLO_CHAIN_LENGTH: u128 = 1000;
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -72,6 +75,19 @@ impl UnstableBlocks {
         self.stability_threshold = stability_threshold;
     }
 
+    pub fn anchor_difficulty(&self) -> u64 {
+        self.tree.root.difficulty(self.network)
+    }
+
+    pub fn normalized_stability_threshold(&self) -> u128 {
+        self.anchor_difficulty() as u128 * self.stability_threshold as u128
+    }
+
+    /// Returns the number of tips available in the current block tree.
+    pub fn num_tips(&self) -> u32 {
+        self.tree.num_tips()
+    }
+
     fn get_network(&self) -> Network {
         self.network
     }
@@ -80,6 +96,16 @@ impl UnstableBlocks {
     /// separated by heights.
     pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
         self.tree.blocks_with_depths_by_heights()
+    }
+
+    /// Returns the depth of the unstable block tree.
+    pub fn blocks_depth(&self) -> u128 {
+        blocktree::depth(&self.tree)
+    }
+
+    /// Returns the difficulty-based depth of the unstable block tree.
+    pub fn blocks_difficulty_based_depth(&self) -> u128 {
+        blocktree::difficulty_based_depth(&self.tree, self.network)
     }
 
     /// Returns depth in BlockTree of Block with given BlockHash.
@@ -285,12 +311,50 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     // Sort by depth.
     depths.sort_by_key(|(depth, _child_idx)| *depth);
 
-    let root_difficulty = blocks.tree.root.difficulty(network) as u128;
-
-    let normalized_stability_threshold = root_difficulty * blocks.stability_threshold as u128;
+    let normalized_stability_threshold = blocks.normalized_stability_threshold();
 
     match depths.last() {
         Some((deepest_depth, child_idx)) => {
+            match network {
+                Network::Testnet | Network::Regtest => {
+                    // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
+                    // in case a block hasn't been found for 20 minutes. This can be problematic.
+                    // Consider the following scenario:
+                    //
+                    // * Assume a `stability_threshold` of 144.
+                    // * The anchor at height `h` has difficulty of 4642.
+                    // * The anchor will be marked as stable if the difficulty-based depth of
+                    //   the successor blocks is `stability_threshold * difficulty(anchor)` = 668,448
+                    // * The difficulty is reset to the minimum of 1.
+                    // * The canister will now need to maintain a chain of length 668,448 just to
+                    //   mark the anchor block as stable!
+                    //
+                    // Very long chains can cause the shadow stacks to overflow, resulting in a
+                    // broken canister.
+                    //
+                    // The pragmatic solution in this case is to bound the length of the chain. If
+                    // there's only one chain and it starts exceeding a certain length, we assume
+                    // that the anchor is stable even if the difficulty requirement hasn't been
+                    // met.
+                    //
+                    // This scenario is only relevant for testnets, so this addition is safe and
+                    // has not impact on the behavior of the mainnet canister.
+                    if depths.len() == 1
+                        && blocktree::depth(&blocks.tree.children[*child_idx])
+                            > TESTNET_MAX_SOLO_CHAIN_LENGTH
+                    {
+                        print(
+                            "Detected a solo chain > {TESTNET_MAX_SOLO_CHAIN_LENGTH}. Assuming the root is stable...",
+                        );
+                        return Some(*child_idx);
+                    }
+                }
+                Network::Mainnet => {
+                    // The difficulty on mainnet is much more stable and is bounded to change by a
+                    // factor of 4, so there is no limit that needs to be imposed.
+                }
+            }
+
             // The deepest child tree must have a depth >= normalized_stability_threshold.
             if *deepest_depth < normalized_stability_threshold {
                 // Need a depth of at least >= normalized_stability_threshold.
@@ -320,7 +384,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::BlockBuilder;
+    use crate::test_utils::{BlockBuilder, BlockChainBuilder};
     use ic_btc_interface::Network;
 
     #[test]
@@ -814,5 +878,65 @@ mod test {
                 (block_y.header(), block_y.block_hash()),
             ]
         );
+    }
+
+    #[test]
+    fn testnet_chain_longer_than_max_solo_chain() {
+        let stability_threshold = 144;
+        let chain_len = 2000;
+        let anchor_block_difficulty = 4642;
+        let remaining_blocks_difficulty = 1;
+        let network = Network::Regtest;
+        let utxos = UtxoSet::new(network);
+
+        // Assert the chain that will be built exceeds the maximum allowed, so that we can test
+        // that case.
+        assert!(chain_len > TESTNET_MAX_SOLO_CHAIN_LENGTH);
+
+        // Build a long chain where the first block has a substantially higher difficulty than the
+        // remaining blocks.
+        let chain = BlockChainBuilder::new(chain_len as u32)
+            // Set the difficulty of the anchor block to be high.
+            .with_difficulty(anchor_block_difficulty, 0..1)
+            // Set the difficulty of the remaining blocks to be low.
+            .with_difficulty(remaining_blocks_difficulty, 1..)
+            .build();
+
+        let mut unstable_blocks =
+            UnstableBlocks::new(&utxos, stability_threshold, chain[0].clone(), network);
+
+        // Sanity check that the difficulties are set correctly.
+        assert_eq!(chain[0].mock_difficulty, Some(anchor_block_difficulty));
+        assert_eq!(chain[1].mock_difficulty, Some(remaining_blocks_difficulty));
+        assert_eq!(
+            chain[chain_len as usize - 1].mock_difficulty,
+            Some(remaining_blocks_difficulty)
+        );
+
+        // Insert chain into the state.
+        for block in chain.iter().skip(1) {
+            push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
+        }
+
+        // The normalized stability threshold is now very high because of the high difficulty
+        // of the anchor block.
+        assert_eq!(
+            unstable_blocks.normalized_stability_threshold(),
+            anchor_block_difficulty as u128 * stability_threshold as u128
+        );
+
+        // The normalized stability threshold is still not met, which means that, in theory,
+        // there are no stable blocks that can be popped.
+        assert!(
+            unstable_blocks.blocks_difficulty_based_depth()
+                < unstable_blocks.normalized_stability_threshold()
+        );
+
+        assert_eq!(unstable_blocks.blocks_depth(), chain_len);
+
+        // Even though the chain's difficulty-based depth doesn't exceed the normalized stability
+        // threshold, the anchor block can now be popped because the chain's length has exceeded
+        // the maximum allowed.
+        assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
     }
 }

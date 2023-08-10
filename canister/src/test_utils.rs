@@ -13,7 +13,10 @@ use ic_btc_test_utils::{
 use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use proptest::prelude::RngCore;
-use std::str::FromStr;
+use std::{
+    ops::{Bound, RangeBounds},
+    str::FromStr,
+};
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
@@ -144,29 +147,42 @@ pub fn is_stable_btreemap_equal<
 /// as opposed to `bitcoin::Block`.
 pub struct BlockBuilder {
     builder: ExternalBlockBuilder,
+    mock_difficulty: Option<u64>,
 }
 
 impl BlockBuilder {
     pub fn genesis() -> Self {
         Self {
             builder: ExternalBlockBuilder::genesis(),
+            mock_difficulty: None,
         }
     }
 
     pub fn with_prev_header(prev_header: &BlockHeader) -> Self {
         Self {
             builder: ExternalBlockBuilder::with_prev_header(*prev_header),
+            mock_difficulty: None,
         }
     }
 
     pub fn with_transaction(self, transaction: Transaction) -> Self {
         Self {
             builder: self.builder.with_transaction(transaction.into()),
+            mock_difficulty: None,
+        }
+    }
+
+    pub fn with_difficulty(self, difficulty: u64) -> Self {
+        Self {
+            mock_difficulty: Some(difficulty),
+            ..self
         }
     }
 
     pub fn build(self) -> Block {
-        Block::new(self.builder.build())
+        let mut block = Block::new(self.builder.build());
+        block.mock_difficulty = self.mock_difficulty;
+        block
     }
 
     pub fn build_with_mock_difficulty(self, mock_difficulty: u64) -> Block {
@@ -224,6 +240,8 @@ impl TransactionBuilder {
 pub struct BlockChainBuilder {
     num_blocks: u32,
     prev_block_header: Option<BlockHeader>,
+    #[allow(clippy::type_complexity)]
+    difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u64)>,
 }
 
 impl BlockChainBuilder {
@@ -231,6 +249,7 @@ impl BlockChainBuilder {
         Self {
             num_blocks,
             prev_block_header: None,
+            difficulty_ranges: vec![],
         }
     }
 
@@ -238,28 +257,50 @@ impl BlockChainBuilder {
         Self {
             num_blocks,
             prev_block_header: Some(*prev_block.header()),
+            difficulty_ranges: vec![],
         }
+    }
+
+    /// Sets the difficulty of blocks at the given range of heights.
+    pub fn with_difficulty<R: RangeBounds<usize>>(mut self, difficulty: u64, range: R) -> Self {
+        self.difficulty_ranges.push((
+            (range.start_bound().cloned(), range.end_bound().cloned()),
+            difficulty,
+        ));
+        self
     }
 
     pub fn build(self) -> Vec<Block> {
         let mut blocks = Vec::with_capacity(self.num_blocks as usize);
 
-        match self.prev_block_header {
-            None => {
-                blocks.push(genesis_block(Network::Regtest));
-            }
-            Some(prev_block_header) => {
-                let block = BlockBuilder::with_prev_header(&prev_block_header).build();
-                blocks.push(block);
-            }
+        let mut first_block = match self.prev_block_header {
+            None => genesis_block(Network::Regtest),
+            Some(prev_block_header) => BlockBuilder::with_prev_header(&prev_block_header).build(),
         };
+        if let difficulty @ Some(_) = self.get_difficulty(0) {
+            first_block.mock_difficulty = difficulty;
+        }
+
+        blocks.push(first_block);
 
         for i in 1..self.num_blocks as usize {
-            let block = BlockBuilder::with_prev_header(blocks[i - 1].header()).build();
-            blocks.push(block);
+            let mut block = BlockBuilder::with_prev_header(blocks[i - 1].header());
+            if let Some(difficulty) = self.get_difficulty(i) {
+                block = block.with_difficulty(difficulty);
+            }
+            blocks.push(block.build());
         }
 
         blocks
+    }
+
+    fn get_difficulty(&self, i: usize) -> Option<u64> {
+        for (range, difficulty) in &self.difficulty_ranges {
+            if range.contains(&i) {
+                return Some(*difficulty);
+            }
+        }
+        None
     }
 }
 
