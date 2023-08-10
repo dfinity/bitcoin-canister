@@ -27,9 +27,7 @@ pub struct UnstableBlocks {
     tree: BlockTree,
     outpoints_cache: OutPointsCache,
     network: Network,
-    /// The headers of the blocks that are expected to be received.
-    // TODO(EXC-1379): remove this directive once it's deployed to production.
-    #[serde(default)]
+    // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
 }
 
