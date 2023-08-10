@@ -54,8 +54,6 @@ pub struct State {
 
     /// Flag to determine if the API should be automatically disabled
     /// if the canister isn't fully synced.
-    // TODO(EXC-1379): Remove this code once it's deployed to production.
-    #[serde(default)]
     pub disable_api_if_not_fully_synced: Flag,
 
     /// The principal of the watchdog canister.
