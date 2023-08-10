@@ -751,5 +751,13 @@ mod test {
             with_state(|s| s.unstable_blocks.next_block_headers_max_height()),
             Some(30)
         );
+
+        // Run heartbeat again.
+        heartbeat().await;
+        // There were no more block headers processed.
+        assert_eq!(
+            with_state(|s| s.unstable_blocks.next_block_headers_max_height()),
+            Some(30)
+        );
     }
 }
