@@ -21,6 +21,15 @@ pub fn random_p2tr_address(network: Network) -> Address {
     Address::p2tr(&secp, xonly, None, network)
 }
 
+fn coinbase_input() -> TxIn {
+    TxIn {
+        previous_output: OutPoint::null(),
+        script_sig: Script::new(),
+        sequence: 0xffffffff,
+        witness: Witness::new(),
+    }
+}
+
 pub struct BlockBuilder {
     prev_header: Option<BlockHeader>,
     transactions: Vec<Transaction>,
@@ -91,7 +100,7 @@ fn genesis(merkle_root: TxMerkleNode) -> BlockHeader {
 }
 
 pub struct TransactionBuilder {
-    previous_output: Vec<OutPoint>,
+    input: Vec<TxIn>,
     output: Vec<TxOut>,
     lock_time: u32,
 }
@@ -99,7 +108,7 @@ pub struct TransactionBuilder {
 impl TransactionBuilder {
     pub fn new() -> Self {
         Self {
-            previous_output: vec![],
+            input: vec![],
             output: vec![],
             lock_time: 0,
         }
@@ -107,17 +116,25 @@ impl TransactionBuilder {
 
     pub fn coinbase() -> Self {
         Self {
-            previous_output: vec![OutPoint::null()],
+            input: vec![coinbase_input()],
             output: vec![],
             lock_time: 0,
         }
     }
 
-    pub fn with_input(mut self, previous_output: OutPoint) -> Self {
-        if self.previous_output == vec![OutPoint::null()] {
+    pub fn with_input(mut self, previous_output: OutPoint, witness: Option<Witness>) -> Self {
+        if self.input == vec![coinbase_input()] {
             panic!("A call `with_input` should not be possible if `coinbase` was called");
         }
-        self.previous_output.push(previous_output);
+
+        let witness = witness.map_or(Witness::new(), |w| w);
+        let input = TxIn {
+            previous_output,
+            script_sig: Script::new(),
+            sequence: 0xffffffff,
+            witness,
+        };
+        self.input.push(input);
         self
     }
 
@@ -135,21 +152,12 @@ impl TransactionBuilder {
     }
 
     pub fn build(self) -> Transaction {
-        let prev_outputs = if self.previous_output.is_empty() {
+        let input = if self.input.is_empty() {
             // Default to coinbase if no inputs provided.
-            vec![OutPoint::null()]
+            vec![coinbase_input()]
         } else {
-            self.previous_output
+            self.input
         };
-        let input = prev_outputs
-            .iter()
-            .map(|output| TxIn {
-                previous_output: *output,
-                script_sig: Script::new(),
-                sequence: 0xffffffff,
-                witness: Witness::new(),
-            })
-            .collect();
         let output = if self.output.is_empty() {
             // Use default of 50 BTC.
             vec![TxOut {
@@ -236,7 +244,7 @@ mod test {
                 .build();
 
             TransactionBuilder::coinbase()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0));
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None);
         }
 
         #[test]
@@ -281,7 +289,7 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0))
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None)
                 .build();
             assert!(!tx.is_coin_base());
             assert_eq!(tx.input.len(), 1);
@@ -304,8 +312,8 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0))
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0))
+                .with_input(bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0), None)
+                .with_input(bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0), None)
                 .build();
             assert!(!tx.is_coin_base());
             assert_eq!(tx.input.len(), 2);

@@ -95,10 +95,13 @@ fn init() {
     for i in 0..10_000 {
         block_2_txs.push(
             TransactionBuilder::new()
-                .with_input(OutPoint {
-                    txid: tx_1_id,
-                    vout: i,
-                })
+                .with_input(
+                    OutPoint {
+                        txid: tx_1_id,
+                        vout: i,
+                    },
+                    None,
+                )
                 .with_output(&Address::from_str(ADDRESS_2).unwrap(), 500_000)
                 .build(),
         )
@@ -136,10 +139,13 @@ fn init() {
     for block_2_tx in block_2_txs {
         block_5_txs.push(
             TransactionBuilder::new()
-                .with_input(OutPoint {
-                    txid: block_2_tx.txid(),
-                    vout: 0,
-                })
+                .with_input(
+                    OutPoint {
+                        txid: block_2_tx.txid(),
+                        vout: 0,
+                    },
+                    None,
+                )
                 .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
                 .build(),
         )
