@@ -1,0 +1,22 @@
+    Finished bench [optimized] target(s) in 4.88s
+     Running unittests src/main.rs (target/release/deps/benchmarks-90cabe69259102f2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches.rs (target/release/deps/benches-4ae2ebe7f4e0e11c)
+~/bitcoin-canister/scripts ~/bitcoin-canister/benchmarks
+    Finished release [optimized] target(s) in 1.12s
+     Ignored package `ic-wasm v0.2.0` is already installed, use --force to override
+warning: be sure to add `./target/bin` to your PATH to be able to run the installed binaries
+~/bitcoin-canister/benchmarks
+Benchmarking insert_block_headers
+Benchmarking insert_block_headers: Warming up for 1.0000 ms
+thread 'main' panicked at 'drun is not installed. Please add drun to your path from commit d35535c96184be039aaa31f68b48bbe45909494e.
+
+run-benchmark.sh: line 9: type: drun: not found
+', benchmarks/benches.rs:119:5
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+error: bench failed, to rerun pass `-p benchmarks --bench benches`

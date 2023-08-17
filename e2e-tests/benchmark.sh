@@ -14,11 +14,11 @@ if [ "$(uname)" == "Darwin" ]; then
   export AR="${LLVM_PATH}/bin/llvm-ar"
   export CC="${LLVM_PATH}/bin/clang"
   wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-macos
-else if [ "$(uname)" == "Linux" ]; then
+elif [ "$(uname)" == "Linux" ]; then
         wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-linux64
     else
-        wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-arm32
-    fi
+        echo "Unsoported machine"
+        EXIT SIGINT
 fi
 
 chmod +x didc
