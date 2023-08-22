@@ -88,6 +88,29 @@ if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
 fi
 set -x
 
+set +x
+UTXOS=$(dfx canister call --query bitcoin bitcoin_get_utxos_untrusted '(record {
+  network = variant { regtest };
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
+})')
+
+# The address has 10000 UTXOs, but the response is capped to 1000 UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
+  echo "FAIL"
+  exit 1
+fi
+set -x
+
+BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_untrusted '(record {
+  network = variant { regtest };
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+})')
+
+if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
 BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";

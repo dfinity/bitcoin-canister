@@ -36,12 +36,15 @@ struct Stats {
 }
 
 /// Retrieves the UTXOs of the given Bitcoin address.
-pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
-    verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
-
-    // Charge the base fee.
-    charge_cycles(with_state(|s| s.fees.get_utxos_base));
-
+pub fn get_utxos(
+    request: GetUtxosRequest,
+    trusted: bool,
+) -> Result<GetUtxosResponse, GetUtxosError> {
+    if trusted {
+        verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
+        // Charge the base fee.
+        charge_cycles(with_state(|s| s.fees.get_utxos_base));
+    }
     let (res, stats) = with_state(|state| {
         match &request.filter {
             None => {
@@ -85,7 +88,9 @@ pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosE
             (stats.ins_total / 10) as u128 * s.fees.get_utxos_cycles_per_ten_instructions,
             s.fees.get_utxos_maximum - s.fees.get_utxos_base,
         );
-        charge_cycles(fee);
+        if trusted {
+            charge_cycles(fee);
+        }
     });
 
     // Print the number of instructions it took to process this request.
