@@ -109,28 +109,28 @@ pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceErro
     verify_api_access();
     verify_network(request.network.into());
     verify_synced();
-    api::get_balance(request.into(), true)
+    api::get_balance(request.into())
 }
 
 pub fn get_balance_untrusted(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     verify_api_access();
     verify_network(request.network.into());
     verify_synced();
-    api::get_balance(request.into(), false)
+    api::get_balance_untrusted(request.into())
 }
 
 pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_api_access();
     verify_network(request.network.into());
     verify_synced();
-    api::get_utxos(request.into(), true)
+    api::get_utxos(request.into())
 }
 
 pub fn get_utxos_untrusted(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_api_access();
     verify_network(request.network.into());
     verify_synced();
-    api::get_utxos(request.into(), false)
+    api::get_utxos_untrusted(request.into())
 }
 
 pub fn get_config() -> Config {

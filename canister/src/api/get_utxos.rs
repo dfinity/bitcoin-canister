@@ -35,8 +35,7 @@ struct Stats {
     ins_build_utxos_vec: u64,
 }
 
-/// Retrieves the UTXOs of the given Bitcoin address.
-pub fn get_utxos(
+fn get_utxos_private(
     request: GetUtxosRequest,
     trusted: bool,
 ) -> Result<GetUtxosResponse, GetUtxosError> {
@@ -96,6 +95,17 @@ pub fn get_utxos(
     // Print the number of instructions it took to process this request.
     print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
     Ok(res)
+}
+
+/// Retrieves the UTXOs of the given Bitcoin address.
+pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
+    get_utxos_private(request, true)
+}
+
+/// Retrieves the UTXOs of the given Bitcoin address,
+/// while not charging for the execution, used only for queries.
+pub fn get_utxos_untrusted(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
+    get_utxos_private(request, false)
 }
 
 // Returns the set of UTXOs for a given bitcoin address.

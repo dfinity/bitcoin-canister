@@ -18,12 +18,16 @@ struct Stats {
 }
 
 /// Retrieves the balance of the given Bitcoin address.
-pub fn get_balance(request: GetBalanceRequest, trusted: bool) -> Result<Satoshi, GetBalanceError> {
-    if trusted {
-        verify_has_enough_cycles(with_state(|s| s.fees.get_balance_maximum));
-        charge_cycles(with_state(|s| s.fees.get_balance));
-    }
+pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
+    verify_has_enough_cycles(with_state(|s| s.fees.get_balance_maximum));
+    charge_cycles(with_state(|s| s.fees.get_balance));
 
+    get_balance_internal(request)
+}
+
+/// Retrieves the balance of the given Bitcoin address,
+/// while not charging for the execution, used only for queries.
+pub fn get_balance_untrusted(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     get_balance_internal(request)
 }
 
