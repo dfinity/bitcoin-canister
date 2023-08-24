@@ -45,8 +45,8 @@ pub fn bitcoin_get_balance(request: GetBalanceRequest) {
 }
 
 #[query(composite = true, manual_reply = true)]
-pub fn bitcoin_get_balance_untrusted(request: GetBalanceRequest) {
-    match ic_btc_canister::get_balance_untrusted(request) {
+pub fn bitcoin_get_balance_query(request: GetBalanceRequest) {
+    match ic_btc_canister::get_balance_query(request) {
         Ok(response) => reply((response,)),
         Err(e) => reject(format!("get_balance failed: {:?}", e).as_str()),
     }
@@ -61,8 +61,8 @@ pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
 }
 
 #[query(composite = true, manual_reply = true)]
-pub fn bitcoin_get_utxos_untrusted(request: GetUtxosRequest) {
-    match ic_btc_canister::get_utxos_untrusted(request) {
+pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) {
+    match ic_btc_canister::get_utxos_query(request) {
         Ok(response) => reply((response,)),
         Err(e) => reject(format!("get_utxos failed: {:?}", e).as_str()),
     };

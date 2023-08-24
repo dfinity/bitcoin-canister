@@ -48,7 +48,7 @@ if ! [[ $BALANCE = "(0 : nat64)" ]]; then
   exit 1
 fi
 
-BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_untrusted '(record {
+BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_query '(record {
   network = variant { regtest };
   address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
 })')
@@ -82,7 +82,7 @@ if ! [[ $(num_utxos "$UTXOS") = 0 ]]; then
   exit 1
 fi
 
-UTXOS=$(dfx canister call --query bitcoin bitcoin_get_utxos_untrusted '(record {
+UTXOS=$(dfx canister call --query bitcoin bitcoin_get_utxos_query '(record {
   network = variant { regtest };
   address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
 })')
@@ -110,7 +110,7 @@ fi
 set -x
 
 set +x
-UTXOS=$(dfx canister call --query bitcoin bitcoin_get_utxos_untrusted '(record {
+UTXOS=$(dfx canister call --query bitcoin bitcoin_get_utxos_query '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
 })')
@@ -122,7 +122,7 @@ if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
 fi
 set -x
 
-BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_untrusted '(record {
+BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_query '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 })')
@@ -142,7 +142,7 @@ if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
   exit 1
 fi
 
-BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_untrusted '(record {
+BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_query '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 })')

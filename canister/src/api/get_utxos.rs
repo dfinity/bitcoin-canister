@@ -104,7 +104,7 @@ pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosE
 
 /// Retrieves the UTXOs of the given Bitcoin address,
 /// while not charging for the execution, used only for queries.
-pub fn get_utxos_untrusted(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
+pub fn get_utxos_query(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     get_utxos_private(request, false)
 }
 

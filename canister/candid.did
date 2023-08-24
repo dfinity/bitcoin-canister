@@ -94,11 +94,11 @@ type set_config_request = record {
 service bitcoin : (config) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
-  bitcoin_get_balance_untrusted : (get_balance_request) -> (satoshi) query;
+  bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
 
   bitcoin_get_utxos : (get_utxos_request) -> (get_utxos_response);
 
-  bitcoin_get_utxos_untrusted : (get_utxos_request) -> (get_utxos_response) query;
+  bitcoin_get_utxos_query : (get_utxos_request) -> (get_utxos_response) query;
 
   bitcoin_get_current_fee_percentiles : (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
 

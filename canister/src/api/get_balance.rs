@@ -27,7 +27,7 @@ pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceErro
 
 /// Retrieves the balance of the given Bitcoin address,
 /// while not charging for the execution, used only for queries.
-pub fn get_balance_untrusted(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
+pub fn get_balance_query(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     get_balance_internal(request)
 }
 
