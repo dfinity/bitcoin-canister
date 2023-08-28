@@ -508,6 +508,7 @@ jobs:
       - watchdog_health_status
       - watchdog_get_config
       - watchdog_metrics
+      - watchdog_upgradability
       - canister-build-reproducibility
     runs-on: ubuntu-20.04
     steps:
