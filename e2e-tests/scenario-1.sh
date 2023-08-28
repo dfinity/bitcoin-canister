@@ -97,19 +97,6 @@ fi
 # We temporarily pause outputting the commands to the terminal as
 # this command would print thousands of UTXOs.
 set +x
-UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
-  network = variant { regtest };
-  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
-})')
-
-# The address has 10000 UTXOs, but the response is capped to 1000 UTXOs.
-if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
-  echo "FAIL"
-  exit 1
-fi
-set -x
-
-set +x
 UTXOS=$(dfx canister call --query bitcoin bitcoin_get_utxos_query '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
@@ -122,12 +109,51 @@ if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
 fi
 set -x
 
+set +x
+UTXOS=$(dfx canister call bitcoin bitcoin_get_utxos_query '(record {
+  network = variant { regtest };
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh"
+})')
+
+# The address has 10000 UTXOs, but the response is capped to 1000 UTXOs.
+if ! [[ $(num_utxos "$UTXOS") = 1000 ]]; then
+  echo "FAIL"
+  exit 1
+fi
+set -x
+
+# Check that 'bitcoin_get_utxos_query' cannot be called in replicated mode.
+set +e
+GET_UTXOS_QUERY_REPLICATED_CALL=$(dfx canister call --update bitcoin bitcoin_get_utxos_query '(record {
+  network = variant { regtest };
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+})' 2>&1)
+set -e
+
+if [[ $GET_UTXOS_QUERY_REPLICATED_CALL != *"Replica Error: reject code CanisterError, reject message Composite query cannot be called in replicated mode"* ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
 BALANCE=$(dfx canister call --query bitcoin bitcoin_get_balance_query '(record {
   network = variant { regtest };
   address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 })')
 
 if ! [[ $BALANCE = "(5_000_000_000 : nat64)" ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
+# Check that 'bitcoin_get_balance_query' cannot be called in replicated mode.
+set +e
+GET_BALANCE_QUERY_REPLICATED_CALL=$(dfx canister call --update bitcoin bitcoin_get_balance_query '(record {
+  network = variant { regtest };
+  address = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+})' 2>&1)
+set -e
+
+if [[ $GET_BALANCE_QUERY_REPLICATED_CALL != *"Replica Error: reject code CanisterError, reject message Composite query cannot be called in replicated mode"* ]]; then
   echo "FAIL"
   exit 1
 fi

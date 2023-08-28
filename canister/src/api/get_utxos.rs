@@ -48,11 +48,11 @@ fn get_utxos_private(
         match &request.filter {
             None => {
                 // No filter is specified. Return all UTXOs for the address.
-                get_utxos_internal(state, &request.address, 0, None, MAX_UTXOS_PER_RESPONSE)
+                get_balance_private(state, &request.address, 0, None, MAX_UTXOS_PER_RESPONSE)
             }
             Some(UtxosFilter::MinConfirmations(min_confirmations)) => {
                 // Return UTXOs with the requested number of confirmations.
-                get_utxos_internal(
+                get_balance_private(
                     state,
                     &request.address,
                     *min_confirmations,
@@ -60,7 +60,7 @@ fn get_utxos_private(
                     MAX_UTXOS_PER_RESPONSE,
                 )
             }
-            Some(UtxosFilter::Page(page)) => get_utxos_internal(
+            Some(UtxosFilter::Page(page)) => get_balance_private(
                 state,
                 &request.address,
                 0,
@@ -120,7 +120,7 @@ pub fn get_utxos_query(request: GetUtxosRequest) -> Result<GetUtxosResponse, Get
 // cannot fit in a single response. A `page` reference will be returned along
 // the list of UTXOs in this case that can be used in a subsequent request
 // to retrieve the remaining UTXOs.
-fn get_utxos_internal(
+fn get_balance_private(
     state: &State,
     address: &str,
     min_confirmations: u32,
@@ -1023,7 +1023,7 @@ mod test {
 
         // Address 1 should have no UTXOs at zero confirmations.
         assert_eq!(
-            get_utxos_internal(
+            get_balance_private(
                 &state,
                 &address_1.to_string(),
                 0,
@@ -1065,7 +1065,7 @@ mod test {
             let state = State::new(2, *network, block_0.clone());
             let tip_block_hash = block_0.block_hash();
 
-            let utxo_set = get_utxos_internal(
+            let utxo_set = get_balance_private(
                 &state,
                 &address.to_string(),
                 0,
@@ -1077,7 +1077,7 @@ mod test {
             .utxos;
 
             // Only some UTXOs can be included given that we use a utxo limit.
-            let response = get_utxos_internal(
+            let response = get_balance_private(
                 &state,
                 &address.to_string(),
                 0,
@@ -1095,7 +1095,7 @@ mod test {
             assert!(response.next_page.is_some());
 
             // A bigger limit allows more UTXOs to be included in a single response.
-            let response = get_utxos_internal(
+            let response = get_balance_private(
                 &state,
                 &address.to_string(),
                 0,
@@ -1113,7 +1113,7 @@ mod test {
             assert!(response.next_page.is_some());
 
             // A very big limit will result in the same as requesting UTXOs without any limit.
-            let response = get_utxos_internal(&state, &address.to_string(), 0, None, 1000)
+            let response = get_balance_private(&state, &address.to_string(), 0, None, 1000)
                 .unwrap()
                 .0;
 
@@ -1178,7 +1178,7 @@ mod test {
             }
 
             // Get UTXO set without any pagination...
-            let utxo_set = get_utxos_internal(&state, &address.to_string(), 0, None, MAX_UTXOS_PER_RESPONSE)
+            let utxo_set = get_balance_private(&state, &address.to_string(), 0, None, MAX_UTXOS_PER_RESPONSE)
                 .unwrap().0
                 .utxos;
 
@@ -1187,7 +1187,7 @@ mod test {
             let mut utxos_chunked = vec![];
             let mut page = None;
             loop {
-                let response = get_utxos_internal(
+                let response = get_balance_private(
                     &state,
                     &address.to_string(),
                     0,
