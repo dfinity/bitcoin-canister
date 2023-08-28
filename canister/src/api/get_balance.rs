@@ -22,16 +22,16 @@ pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceErro
     verify_has_enough_cycles(with_state(|s| s.fees.get_balance_maximum));
     charge_cycles(with_state(|s| s.fees.get_balance));
 
-    get_balance_internal(request)
+    get_balance_private(request)
 }
 
 /// Retrieves the balance of the given Bitcoin address,
 /// while not charging for the execution, used only for queries.
 pub fn get_balance_query(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
-    get_balance_internal(request)
+    get_balance_private(request)
 }
 
-fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
+fn get_balance_private(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     let min_confirmations = request.min_confirmations.unwrap_or(0);
     let address =
         Address::from_str(&request.address).map_err(|_| GetBalanceError::MalformedAddress)?;
