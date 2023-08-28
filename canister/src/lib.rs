@@ -418,6 +418,23 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
+    fn get_balance_query_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_balance_query(GetBalanceRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Mainnet,
+            min_confirmations: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_access_disabled() {
         init(Config {
             stability_threshold: 0,
@@ -426,6 +443,23 @@ mod test {
             ..Default::default()
         });
         get_utxos(GetUtxosRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Mainnet,
+            filter: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Bitcoin API is disabled")]
+    fn get_utxos_query_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_utxos_query(GetUtxosRequest {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
             filter: None,

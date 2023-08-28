@@ -315,6 +315,22 @@ mod test {
     }
 
     #[test]
+    fn get_utxos_query_malformed_address() {
+        crate::init(Config {
+            stability_threshold: 1,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+        assert_eq!(
+            get_utxos_query(GetUtxosRequest {
+                address: String::from("not an address"),
+                filter: None,
+            }),
+            Err(GetUtxosError::MalformedAddress)
+        );
+    }
+
+    #[test]
     fn genesis_block_only() {
         let network = Network::Regtest;
         crate::init(Config {

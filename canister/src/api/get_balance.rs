@@ -115,7 +115,7 @@ mod test {
     use ic_btc_types::OutPoint;
 
     #[test]
-    fn error_on_malformed_address() {
+    fn get_balance_error_on_malformed_address() {
         crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
@@ -124,6 +124,23 @@ mod test {
 
         assert_eq!(
             get_balance(GetBalanceRequest {
+                address: String::from("not an address"),
+                min_confirmations: None,
+            }),
+            Err(GetBalanceError::MalformedAddress)
+        );
+    }
+
+    #[test]
+    fn get_balance_query_error_on_malformed_address() {
+        crate::init(Config {
+            stability_threshold: 1,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+
+        assert_eq!(
+            get_balance_query(GetBalanceRequest {
                 address: String::from("not an address"),
                 min_confirmations: None,
             }),
