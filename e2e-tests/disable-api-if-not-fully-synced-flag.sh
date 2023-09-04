@@ -55,9 +55,35 @@ if ! [[ $MSG = *"Canister state is not fully synced."* ]]; then
   exit 1
 fi
 
+# bitcoin_get_balance_query should panic.
+set +e
+MSG=$(dfx canister call --query bitcoin bitcoin_get_balance_query '(record {
+  network = variant { regtest };
+  address = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8"
+})' 2>&1);
+set -e
+
+if ! [[ $MSG = *"Canister state is not fully synced."* ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
 # bitcoin_get_utxos should panic.
 set +e
 MSG=$(dfx canister call bitcoin bitcoin_get_utxos '(record {
+  network = variant { regtest };
+  address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+})' 2>&1);
+set -e
+
+if ! [[ $MSG = *"Canister state is not fully synced."* ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
+# bitcoin_get_utxos_query should panic.
+set +e
+MSG=$(dfx canister call --query bitcoin bitcoin_get_utxos_query '(record {
   network = variant { regtest };
   address = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
 })' 2>&1);

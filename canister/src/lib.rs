@@ -112,11 +112,25 @@ pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceErro
     api::get_balance(request.into())
 }
 
+pub fn get_balance_query(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
+    verify_api_access();
+    verify_network(request.network.into());
+    verify_synced();
+    api::get_balance_query(request.into())
+}
+
 pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
     verify_api_access();
     verify_network(request.network.into());
     verify_synced();
     api::get_utxos(request.into())
+}
+
+pub fn get_utxos_query(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
+    verify_api_access();
+    verify_network(request.network.into());
+    verify_synced();
+    api::get_utxos_query(request.into())
 }
 
 pub fn get_config() -> Config {
@@ -345,7 +359,23 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
-    fn get_utxos_correct_network() {
+    fn get_balance_query_incorrect_network() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+        get_balance_query(GetBalanceRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Testnet,
+            min_confirmations: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_utxos_incorrect_network() {
         init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
@@ -361,7 +391,23 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
-    fn get_current_fee_percentiles_correct_network() {
+    fn get_utxos_query_incorrect_network() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+        get_utxos_query(GetUtxosRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Testnet,
+            filter: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_current_fee_percentiles_incorrect_network() {
         init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
@@ -404,6 +450,23 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
+    fn get_balance_query_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_balance_query(GetBalanceRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Mainnet,
+            min_confirmations: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_access_disabled() {
         init(Config {
             stability_threshold: 0,
@@ -412,6 +475,23 @@ mod test {
             ..Default::default()
         });
         get_utxos(GetUtxosRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Mainnet,
+            filter: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Bitcoin API is disabled")]
+    fn get_utxos_query_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_utxos_query(GetUtxosRequest {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
             filter: None,
