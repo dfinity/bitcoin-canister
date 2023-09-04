@@ -359,7 +359,23 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
-    fn get_utxos_correct_network() {
+    fn get_balance_query_incorrect_network() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+        get_balance_query(GetBalanceRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Testnet,
+            min_confirmations: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_utxos_incorrect_network() {
         init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
@@ -375,7 +391,23 @@ mod test {
 
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
-    fn get_current_fee_percentiles_correct_network() {
+    fn get_utxos_query_incorrect_network() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+        get_utxos_query(GetUtxosRequest {
+            address: String::from(""),
+            network: NetworkInRequest::Testnet,
+            filter: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_current_fee_percentiles_incorrect_network() {
         init(Config {
             stability_threshold: 0,
             network: Network::Mainnet,
