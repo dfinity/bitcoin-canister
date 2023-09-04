@@ -35,13 +35,15 @@ struct Stats {
     ins_build_utxos_vec: u64,
 }
 
-/// Retrieves the UTXOs of the given Bitcoin address.
-pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
-    verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
-
-    // Charge the base fee.
-    charge_cycles(with_state(|s| s.fees.get_utxos_base));
-
+fn get_utxos_private(
+    request: GetUtxosRequest,
+    charge_fees: bool,
+) -> Result<GetUtxosResponse, GetUtxosError> {
+    if charge_fees {
+        verify_has_enough_cycles(with_state(|s| s.fees.get_utxos_maximum));
+        // Charge the base fee.
+        charge_cycles(with_state(|s| s.fees.get_utxos_base));
+    }
     let (res, stats) = with_state(|state| {
         match &request.filter {
             None => {
@@ -85,12 +87,25 @@ pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosE
             (stats.ins_total / 10) as u128 * s.fees.get_utxos_cycles_per_ten_instructions,
             s.fees.get_utxos_maximum - s.fees.get_utxos_base,
         );
-        charge_cycles(fee);
+        if charge_fees {
+            charge_cycles(fee);
+        }
     });
 
     // Print the number of instructions it took to process this request.
     print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
     Ok(res)
+}
+
+/// Retrieves the UTXOs of the given Bitcoin address.
+pub fn get_utxos(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
+    get_utxos_private(request, true)
+}
+
+/// Retrieves the UTXOs of the given Bitcoin address
+/// without charging for the execution, used only for query calls.
+pub fn get_utxos_query(request: GetUtxosRequest) -> Result<GetUtxosResponse, GetUtxosError> {
+    get_utxos_private(request, false)
 }
 
 // Returns the set of UTXOs for a given bitcoin address.
@@ -292,6 +307,22 @@ mod test {
         });
         assert_eq!(
             get_utxos(GetUtxosRequest {
+                address: String::from("not an address"),
+                filter: None,
+            }),
+            Err(GetUtxosError::MalformedAddress)
+        );
+    }
+
+    #[test]
+    fn get_utxos_query_malformed_address() {
+        crate::init(Config {
+            stability_threshold: 1,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+        assert_eq!(
+            get_utxos_query(GetUtxosRequest {
                 address: String::from("not an address"),
                 filter: None,
             }),

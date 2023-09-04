@@ -22,10 +22,16 @@ pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceErro
     verify_has_enough_cycles(with_state(|s| s.fees.get_balance_maximum));
     charge_cycles(with_state(|s| s.fees.get_balance));
 
-    get_balance_internal(request)
+    get_balance_private(request)
 }
 
-fn get_balance_internal(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
+/// Retrieves the balance of the given Bitcoin address,
+/// while not charging for the execution, used only for queries.
+pub fn get_balance_query(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
+    get_balance_private(request)
+}
+
+fn get_balance_private(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     let min_confirmations = request.min_confirmations.unwrap_or(0);
     let address =
         Address::from_str(&request.address).map_err(|_| GetBalanceError::MalformedAddress)?;
@@ -109,7 +115,7 @@ mod test {
     use ic_btc_types::OutPoint;
 
     #[test]
-    fn error_on_malformed_address() {
+    fn get_balance_error_on_malformed_address() {
         crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
@@ -118,6 +124,23 @@ mod test {
 
         assert_eq!(
             get_balance(GetBalanceRequest {
+                address: String::from("not an address"),
+                min_confirmations: None,
+            }),
+            Err(GetBalanceError::MalformedAddress)
+        );
+    }
+
+    #[test]
+    fn get_balance_query_error_on_malformed_address() {
+        crate::init(Config {
+            stability_threshold: 1,
+            network: Network::Mainnet,
+            ..Default::default()
+        });
+
+        assert_eq!(
+            get_balance_query(GetBalanceRequest {
                 address: String::from("not an address"),
                 min_confirmations: None,
             }),

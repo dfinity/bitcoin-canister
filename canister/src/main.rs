@@ -44,11 +44,35 @@ pub fn bitcoin_get_balance(request: GetBalanceRequest) {
     }
 }
 
+#[query(manual_reply = true)]
+pub fn bitcoin_get_balance_query(request: GetBalanceRequest) {
+    if ic_cdk::api::data_certificate().is_none() {
+        reject("get_balance_query cannot be called in replicated mode");
+        return;
+    }
+    match ic_btc_canister::get_balance_query(request) {
+        Ok(response) => reply((response,)),
+        Err(e) => reject(format!("get_balance_query failed: {:?}", e).as_str()),
+    }
+}
+
 #[update(manual_reply = true)]
 pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
     match ic_btc_canister::get_utxos(request) {
         Ok(response) => reply((response,)),
         Err(e) => reject(format!("get_utxos failed: {:?}", e).as_str()),
+    };
+}
+
+#[query(manual_reply = true)]
+pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) {
+    if ic_cdk::api::data_certificate().is_none() {
+        reject("get_utxos_query cannot be called in replicated mode");
+        return;
+    }
+    match ic_btc_canister::get_utxos_query(request) {
+        Ok(response) => reply((response,)),
+        Err(e) => reject(format!("get_utxos_query failed: {:?}", e).as_str()),
     };
 }
 
