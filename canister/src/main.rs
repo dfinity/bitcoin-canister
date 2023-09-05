@@ -4,7 +4,7 @@ use ic_btc_interface::{
     MillisatoshiPerByte, SendTransactionRequest, SetConfigRequest,
 };
 use ic_cdk::api::call::{reject, reply};
-use ic_cdk_macros::{heartbeat, init, post_upgrade, pre_upgrade, query, update};
+use ic_cdk_macros::{heartbeat, init, inspect_message, post_upgrade, pre_upgrade, query, update};
 
 #[cfg(target_arch = "wasm32")]
 mod printer;
@@ -47,7 +47,7 @@ pub fn bitcoin_get_balance(request: GetBalanceRequest) {
 #[query(manual_reply = true)]
 pub fn bitcoin_get_balance_query(request: GetBalanceRequest) {
     if ic_cdk::api::data_certificate().is_none() {
-        reject("get_balance_query cannot be called in replicated mode");
+        reject("bitcoin_get_balance_query cannot be called in replicated mode");
         return;
     }
     match ic_btc_canister::get_balance_query(request) {
@@ -67,7 +67,7 @@ pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
 #[query(manual_reply = true)]
 pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) {
     if ic_cdk::api::data_certificate().is_none() {
-        reject("get_utxos_query cannot be called in replicated mode");
+        reject("bitcoin_get_utxos_query cannot be called in replicated mode");
         return;
     }
     match ic_btc_canister::get_utxos_query(request) {
@@ -104,6 +104,16 @@ async fn set_config(request: SetConfigRequest) {
 #[query]
 pub fn http_request(request: HttpRequest) -> HttpResponse {
     ic_btc_canister::http_request(request)
+}
+
+#[inspect_message]
+fn inspect_message() {
+    let inspected_maethod_name = ic_cdk::api::call::method_name();
+    if inspected_maethod_name.as_str() != "bitcoin_get_balance_query"
+        && inspected_maethod_name.as_str() != "bitcoin_get_utxos_query"
+    {
+        ic_cdk::api::call::accept_message();
+    }
 }
 
 fn main() {}
