@@ -130,7 +130,7 @@ GET_UTXOS_QUERY_REPLICATED_CALL=$(dfx canister call --update bitcoin bitcoin_get
 })' 2>&1)
 set -e
 
-if [[ $GET_UTXOS_QUERY_REPLICATED_CALL != *"get_utxos_query cannot be called in replicated mode"* ]]; then
+if [[ $GET_UTXOS_QUERY_REPLICATED_CALL != *"rejected the message, error code Some(\"IC0516\")"* ]]; then
   echo "FAIL"
   exit 1
 fi
@@ -153,7 +153,7 @@ GET_BALANCE_QUERY_REPLICATED_CALL=$(dfx canister call --update bitcoin bitcoin_g
 })' 2>&1)
 set -e
 
-if [[ $GET_BALANCE_QUERY_REPLICATED_CALL != *"get_balance_query cannot be called in replicated mode"* ]]; then
+if [[ $GET_BALANCE_QUERY_REPLICATED_CALL != *"rejected the message, error code Some(\"IC0516\")"* ]]; then
   echo "FAIL"
   exit 1
 fi
