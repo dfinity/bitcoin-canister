@@ -47,7 +47,7 @@ pub fn bitcoin_get_balance(request: GetBalanceRequest) {
 #[query(manual_reply = true)]
 pub fn bitcoin_get_balance_query(request: GetBalanceRequest) {
     if ic_cdk::api::data_certificate().is_none() {
-        reject("bitcoin_get_balance_query cannot be called in replicated mode");
+        reject("get_balance_query cannot be called in replicated mode");
         return;
     }
     match ic_btc_canister::get_balance_query(request) {
@@ -67,7 +67,7 @@ pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
 #[query(manual_reply = true)]
 pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) {
     if ic_cdk::api::data_certificate().is_none() {
-        reject("bitcoin_get_utxos_query cannot be called in replicated mode");
+        reject("get_utxos_query cannot be called in replicated mode");
         return;
     }
     match ic_btc_canister::get_utxos_query(request) {
