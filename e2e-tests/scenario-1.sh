@@ -9,6 +9,10 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
+dfx canister update-settings --network ic --wallet "$(
+  dfx identity get-wallet)" --all --add-controller "$(
+    dfx identity get-principal)"
+
 # Deploy the canister that returns the blocks for scenario 1.
 dfx deploy --no-wallet e2e-scenario-1
 
