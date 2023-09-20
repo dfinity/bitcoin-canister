@@ -5,7 +5,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export PATH="$SCRIPT_DIR:$PATH"
 
 # Remove downloaded didc if we run into errors.
-trap 'rm didc' EXIT SIGINT
+trap 'rm didc drun' EXIT SIGINT
 
 # NOTE: On macOS a specific version of llvm-ar and clang need to be set here.
 # Otherwise the wasm compilation of rust-secp256k1 will fail.
@@ -21,7 +21,12 @@ elif [ "$(uname)" == "Linux" ]; then
         EXIT SIGINT
 fi
 
+curl -sfS --retry 5 --retry-delay 10 https://download.dfinity.systems/ic/6deaa2b4550bbd1e174258c253fc9771b4d761a9/release/drun.gz -O
+gzip -d drun.gz
+
+
 chmod +x didc
+chmod +x drun
 
 # Run cargo bench, searching for performance regressions and outputting them to a file.
 LOG_FILE="$SCRIPT_DIR"/benchmarking/output.txt
