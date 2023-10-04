@@ -42,7 +42,11 @@ trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 get_latest_release_url() {
   local page=1
   local url
-  while true; do
+
+  # Set a limit to the number of pages (e.g., 10 pages).
+  local page_limit=100
+
+  while [ "$page" -le "$page_limit" ]; do
     url=$(curl -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page" | \
       grep "browser_download_url.*watchdog-canister.wasm.gz" | \
       cut -d '"' -f 4)
@@ -69,8 +73,8 @@ download_latest_release() {
   url=$(get_latest_release_url)
 
   if [ -n "$url" ]; then
-    wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"
     echo "Found watchdog-canister.wasm.gz at URL: $url"
+    wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"
   else
     echo "No release with watchdog-canister.wasm.gz found."
   fi
