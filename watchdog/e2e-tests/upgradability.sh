@@ -38,18 +38,42 @@ source "${SCRIPT_DIR}/utils.sh"
 # Run dfx stop if we run into errors and remove the downloaded wasm.
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 
-# Get the URL of the latest release.
+# Get the URL of the latest release for watchdog-canister.
 get_latest_release_url() {
-  curl -s https://api.github.com/repos/dfinity/bitcoin-canister/releases/latest | 
-  grep "browser_download_url.*watchdog-canister.wasm.gz" | 
-  cut -d '"' -f 4
+  local page=1
+  local url
+  while true; do
+    url=$(curl -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page" | \
+      grep "browser_download_url.*watchdog-canister.wasm.gz" | \
+      cut -d '"' -f 4)
+
+    if [ -z "$url" ]; then
+      echo "No release found on page $page." >/dev/null
+      break
+    fi
+
+    # Check if the URL points to a valid file.
+    if wget --spider "$url" 2>/dev/null; then
+      break
+    else
+      ((page++))
+    fi
+  done
+
+  echo "$url"
 }
 
 # Download the latest release.
 download_latest_release() {
   local url
   url=$(get_latest_release_url)
-  wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "${url}"
+
+  if [ -n "$url" ]; then
+    wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"
+    echo "Found watchdog-canister.wasm.gz at URL: $url"
+  else
+    echo "No release with watchdog-canister.wasm.gz found."
+  fi
 }
 download_latest_release
 
