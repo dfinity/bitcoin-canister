@@ -1,0 +1,394 @@
+   Compiling ic-btc-types v0.1.0 (/home/dragoljub-duric/bitcoin-canister/types)
+   Compiling ic-btc-test-utils v0.1.0 (/home/dragoljub-duric/bitcoin-canister/test-utils)
+   Compiling ic-btc-canister v0.1.0 (/home/dragoljub-duric/bitcoin-canister/canister)
+   Compiling scenario-2 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-2)
+   Compiling scenario-3 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-3)
+   Compiling scenario-1 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-1)
+   Compiling disable-api-if-not-fully-synced-flag v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/disable-api-if-not-fully-synced-flag)
+   Compiling benchmarks v0.1.0 (/home/dragoljub-duric/bitcoin-canister/benchmarks)
+   Compiling state-builder v0.1.0 (/home/dragoljub-duric/bitcoin-canister/bootstrap/state-builder)
+    Finished bench [optimized] target(s) in 15.35s
+     Running unittests src/main.rs (target/release/deps/benchmarks-90cabe69259102f2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running benches.rs (target/release/deps/benches-4ae2ebe7f4e0e11c)
+~/bitcoin-canister/scripts ~/bitcoin-canister/benchmarks
+   Compiling ic-btc-types v0.1.0 (/home/dragoljub-duric/bitcoin-canister/types)
+   Compiling ic-btc-canister v0.1.0 (/home/dragoljub-duric/bitcoin-canister/canister)
+   Compiling benchmarks v0.1.0 (/home/dragoljub-duric/bitcoin-canister/benchmarks)
+    Finished release [optimized] target(s) in 10.66s
+     Ignored package `ic-wasm v0.2.0` is already installed, use --force to override
+warning: be sure to add `./target/bin` to your PATH to be able to run the installed binaries
+~/bitcoin-canister/benchmarks
+Benchmarking insert_block_headers
+Benchmarking insert_block_headers: Warming up for 1.0000 ms
+Benchmarking insert_block_headers: Collecting 10 samples in estimated 528.70 s (165 iterations)
+Benchmarking insert_block_headers: Analyzing
+insert_block_headers    time:   [3841.8 M Instructions 3841.8 M Instructions 3841.8 M Instructions]
+                        change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
+                        No change in performance detected.
+
+Benchmarking insert_block_headers_multiple_times
+Benchmarking insert_block_headers_multiple_times: Warming up for 1.0000 ms
+Benchmarking insert_block_headers_multiple_times: Collecting 10 samples in estimated 590.29 s (220 iterations)
+Benchmarking insert_block_headers_multiple_times: Analyzing
+insert_block_headers_multiple_times
+                        time:   [13.990 B Instructions 13.990 B Instructions 13.990 B Instructions]
+                        change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
+                        No change in performance detected.
+
+Benchmarking insert_300_blocks
+Benchmarking insert_300_blocks: Warming up for 1.0000 ms
+Benchmarking insert_300_blocks: Collecting 10 samples in estimated 513.52 s (825 iterations)
+Benchmarking insert_300_blocks: Analyzing
+insert_300_blocks       time:   [584.38 M Instructions 584.38 M Instructions 584.38 M Instructions]
+                        change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
+                        No change in performance detected.
+
+Benchmarking get_metrics
+Benchmarking get_metrics: Warming up for 1.0000 ms
+Benchmarking get_metrics: Collecting 10 samples in estimated 543.72 s (20 iterations)
+Benchmarking get_metrics: Analyzing
+get_metrics             time:   [89.792 M Instructions 89.792 M Instructions 89.792 M Instructions]
+                        change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
+                        No change in performance detected.
+
+     Running unittests src/main.rs (target/release/deps/canister_backend-3e96cc56c1e4d0af)
+
+running 3 tests
+test test::test_http_request_transform_body_quote ... ignored
+test test::test_http_request_transform_body_quote_404 ... ignored
+test test::test_http_request_transform_body_quote_error ... ignored
+
+test result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/disable_api_if_not_fully_synced_flag-a257bb63c2073f80)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/ic_btc_canister-0d64ff6cf89baa84)
+
+running 141 tests
+test address_utxoset::test::add_tx_then_transfer ... ignored
+test address_utxoset::test::add_tx_to_empty_utxo ... ignored
+test address_utxoset::test::spending_multiple_inputs ... ignored
+test api::fee_percentiles::test::charges_cycles ... ignored
+test api::fee_percentiles::test::coinbase_txs_are_ignored ... ignored
+test api::fee_percentiles::test::get_current_fee_percentiles_caches_results ... ignored
+test api::fee_percentiles::test::get_current_fee_percentiles_from_utxos ... ignored
+test api::fee_percentiles::test::get_current_fee_percentiles_no_transactions ... ignored
+test api::fee_percentiles::test::get_current_fee_percentiles_requested_number_of_txs_is_equal_to_the_number_of_actual_txs ... ignored
+test api::fee_percentiles::test::get_current_fee_percentiles_requested_number_of_txs_is_greater_than_number_of_actual_txs ... ignored
+test api::fee_percentiles::test::get_current_fee_percentiles_requested_number_of_txs_is_less_than_number_of_actual_txs ... ignored
+test api::fee_percentiles::test::measures_fees_in_vbytes ... ignored
+test api::fee_percentiles::test::percentiles_big_input ... ignored
+test api::fee_percentiles::test::percentiles_empty_input ... ignored
+test api::fee_percentiles::test::percentiles_nearest_rank_method_simple_example ... ignored
+test api::fee_percentiles::test::percentiles_sequential_numbers ... ignored
+test api::fee_percentiles::test::percentiles_small_input ... ignored
+test api::get_balance::test::charges_cycles ... ignored
+test api::get_balance::test::error_on_very_large_confirmations ... ignored
+test api::get_balance::test::get_balance_error_on_malformed_address ... ignored
+test api::get_balance::test::get_balance_query_error_on_malformed_address ... ignored
+test api::get_balance::test::retrieves_balances_of_addresses_with_different_confirmations ... ignored
+test api::get_balance::test::retrieves_the_balance_of_address ... ignored
+test api::get_utxos::test::charges_cycles ... ignored
+test api::get_utxos::test::charges_cycles_capped_at_maximum ... ignored
+test api::get_utxos::test::charges_cycles_per_instructions ... ignored
+test api::get_utxos::test::error_on_very_large_confirmations ... ignored
+test api::get_utxos::test::genesis_block_only ... ignored
+test api::get_utxos::test::get_utxos_does_not_include_other_addresses ... ignored
+test api::get_utxos::test::get_utxos_for_address_with_many_of_them_respects_utxo_limit ... ignored
+test api::get_utxos::test::get_utxos_malformed_address ... ignored
+test api::get_utxos::test::get_utxos_min_confirmations_greater_than_chain_height ... ignored
+test api::get_utxos::test::get_utxos_query_malformed_address ... ignored
+test api::get_utxos::test::get_utxos_with_pagination_is_consistent_with_no_pagination ... ignored
+test api::get_utxos::test::min_confirmations ... ignored
+test api::get_utxos::test::min_confirmations_zero ... ignored
+test api::get_utxos::test::returns_results_in_descending_height_order ... ignored
+test api::get_utxos::test::single_block ... ignored
+test api::get_utxos::test::supports_p2wpkh_addresses ... ignored
+test api::get_utxos::test::supports_p2wsh_addresses ... ignored
+test api::get_utxos::test::supports_taproot_addresses ... ignored
+test api::get_utxos::test::test_get_stability_count_multiple_blocks_on_height ... ignored
+test api::get_utxos::test::test_get_stability_count_single_block_on_height ... ignored
+test api::get_utxos::test::utxos_forks ... ignored
+test api::send_transaction::test::charges_cycles ... ignored
+test api::send_transaction::test::invalid_tx_error ... ignored
+test api::send_transaction::test::send_transaction_access_disabled - should panic ... ignored
+test api::set_config::test::test_set_api_access_does_not_update_state ... ignored
+test api::set_config::test::test_set_api_access_updates_state ... ignored
+test api::set_config::test::test_set_config_no_verification_for_setting_api_access ... ignored
+test api::set_config::test::test_set_disable_api_if_not_fully_synced ... ignored
+test api::set_config::test::test_set_fees ... ignored
+test api::set_config::test::test_set_stability_threshold ... ignored
+test api::set_config::test::test_set_syncing ... ignored
+test api::set_config::test::test_set_watchdog_canister ... ignored
+test blocktree::test::chain_with_tip_multiple_forks ... ignored
+test blocktree::test::chain_with_tip_no_forks ... ignored
+test blocktree::test::test_blocks_with_depths_by_heights_chain ... ignored
+test blocktree::test::test_blocks_with_depths_by_heights_fork ... ignored
+test blocktree::test::test_blocks_with_depths_by_heights_only_root ... ignored
+test blocktree::test::test_difficulty_based_depth_root_with_children ... ignored
+test blocktree::test::test_difficulty_based_depth_single_block ... ignored
+test blocktree::test::tree_multiple_forks ... ignored
+test blocktree::test::tree_single_block ... ignored
+test heartbeat::test::block_headers_are_not_inserted_above_instructions_threshold ... ignored
+test heartbeat::test::does_not_fetch_blocks_if_syncing_is_disabled ... ignored
+test heartbeat::test::fetches_and_processes_responses_paginated ... ignored
+test heartbeat::test::fetches_blocks_and_processes_response ... ignored
+test heartbeat::test::handles_block_deserialize_errors ... ignored
+test heartbeat::test::handles_blocks_that_dont_extend_tree ... ignored
+test heartbeat::test::time_slices_large_blocks ... ignored
+test heartbeat::test::time_slices_large_transactions ... ignored
+test metrics::test::empty_buckets ... ignored
+test metrics::test::infinity_bucket ... ignored
+test metrics::test::observing_values ... ignored
+test state::test::block_ingestion_stats_are_updated ... ignored
+test state::test::serialize_deserialize_state ... ignored
+test test::get_balance_access_disabled - should panic ... ignored
+test test::get_balance_incorrect_network - should panic ... ignored
+test test::get_balance_query_access_disabled - should panic ... ignored
+test test::get_balance_query_incorrect_network - should panic ... ignored
+test test::get_current_fee_percentiles_access_disabled - should panic ... ignored
+test test::get_current_fee_percentiles_incorrect_network - should panic ... ignored
+test test::get_utxos_access_disabled - should panic ... ignored
+test test::get_utxos_incorrect_network - should panic ... ignored
+test test::get_utxos_query_access_disabled - should panic ... ignored
+test test::get_utxos_query_incorrect_network - should panic ... ignored
+test test::init_sets_disable_api_if_not_fully_synced ... ignored
+test test::init_sets_state ... ignored
+test test::init_sets_syncing_flag ... ignored
+test test::test_verify_has_enough_cycles_does_not_panic_with_enough_cycles ... ignored
+test test::test_verify_has_enough_cycles_panics_with_not_enough_cycles - should panic ... ignored
+test test::upgrade ... ignored
+test test_utils::target_difficulty ... ignored
+test tests::confirmation_counts::multiple_forks ... ignored
+test tests::confirmation_counts::single_chain ... ignored
+test tests::confirmation_counts::single_fork ... ignored
+test tests::mainnet_100k_blocks ... ignored
+test tests::test_rejections_counting ... ignored
+test tests::test_syncing_with_next_block_headers ... ignored
+test tests::testnet_10k_blocks ... ignored
+test tests::time_slices_large_block_with_multiple_transactions ... ignored
+test types::address_handles_script_edge_case ... ignored
+test types::test_txid_to_string ... ignored
+test types::test_utxo_ordering ... ignored
+test unstable_blocks::next_block_headers::test::test_get_max_height ... ignored
+test unstable_blocks::next_block_headers::test::test_insert ... ignored
+test unstable_blocks::next_block_headers::test::test_remove ... ignored
+test unstable_blocks::next_block_headers::test::test_remove_block_until_height ... ignored
+test unstable_blocks::outpoints_cache::test::caches_outpoint_info_of_blocks ... ignored
+test unstable_blocks::outpoints_cache::test::empty_when_initialized ... ignored
+test unstable_blocks::outpoints_cache::test::errors_if_tx_out_is_not_found ... ignored
+test unstable_blocks::outpoints_cache::test::inserting_a_block_is_atomic ... ignored
+test unstable_blocks::test::empty ... ignored
+test unstable_blocks::test::forks_same_difficulties ... ignored
+test unstable_blocks::test::forks_various_difficulties ... ignored
+test unstable_blocks::test::get_main_chain_anchor_only ... ignored
+test unstable_blocks::test::get_main_chain_fork_at_first_block ... ignored
+test unstable_blocks::test::get_main_chain_longer_fork ... ignored
+test unstable_blocks::test::get_main_chain_multiple_forks ... ignored
+test unstable_blocks::test::get_main_chain_multiple_forks_2 ... ignored
+test unstable_blocks::test::get_main_chain_single_blockchain ... ignored
+test unstable_blocks::test::get_main_chain_two_contesting_trees ... ignored
+test unstable_blocks::test::insert_in_order ... ignored
+test unstable_blocks::test::single_chain_same_difficulties ... ignored
+test unstable_blocks::test::single_chain_various_difficulties ... ignored
+test unstable_blocks::test::test_get_next_block_headers_chain_with_tip ... ignored
+test unstable_blocks::test::testnet_chain_longer_than_max_solo_chain ... ignored
+test utxo_set::test::addresses_with_empty_balances_are_removed ... ignored
+test utxo_set::test::atomicity_while_ingesting_block ... ignored
+test utxo_set::test::consuming_an_input_with_value_zero ... ignored
+test utxo_set::test::filter_provably_unspendable_utxos ... ignored
+test utxo_set::test::ingest_block_test_block_ingestion_stats ... ignored
+test utxo_set::test::inserting_same_outpoint_panics - should panic ... ignored
+test utxo_set::test::spending_mainnet ... ignored
+test utxo_set::test::spending_regtest ... ignored
+test utxo_set::test::spending_testnet ... ignored
+test utxo_set::test::tx_without_outputs_leaves_utxo_set_unchanged ... ignored
+test utxo_set::test::utxos_are_sorted_by_height ... ignored
+test validation::test::test_new_with_next_block_headers ... ignored
+test validation::test::validation_context ... ignored
+
+test result: ok. 0 passed; 0 failed; 141 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/ic_btc_canister-d8c22e79253e998d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/ic_btc_interface-6d7019e6e1db9c23)
+
+running 2 tests
+test test::can_extract_bytes_from_txid ... ignored
+test test::test_config_debug_formatter_is_enabled ... ignored
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/ic_btc_test_utils-1618362e62cc046e)
+
+running 7 tests
+test test::transaction_builder::coinbase ... ignored
+test test::transaction_builder::new_build ... ignored
+test test::transaction_builder::with_input ... ignored
+test test::transaction_builder::with_input_2 ... ignored
+test test::transaction_builder::with_input_panic - should panic ... ignored
+test test::transaction_builder::with_output ... ignored
+test test::transaction_builder::with_output_2 ... ignored
+
+test result: ok. 0 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/ic_btc_types-c76bcd8f541ad7ef)
+
+running 1 test
+test target_difficulty ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/ic_btc_validation-b52338f641f8554d)
+
+running 12 tests
+test header::test::mainnet_next_targets ... ignored
+test header::test::test_is_header_valid ... ignored
+test header::test::test_is_header_valid_invalid_computed_target ... ignored
+test header::test::test_is_header_valid_invalid_header_target ... ignored
+test header::test::test_is_header_valid_missing_prev_header ... ignored
+test header::test::test_is_header_valid_target_difficulty_above_max ... ignored
+test header::test::test_is_timestamp_valid ... ignored
+test header::test::test_next_target_regtest ... ignored
+test header::test::test_simple_mainnet ... ignored
+test header::test::test_simple_testnet ... ignored
+test header::test::test_timestamp_is_less_than_2h_in_future ... ignored
+test header::test::testnet_next_targets ... ignored
+
+test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/ic_http-a2ecc43b391f1543)
+
+running 2 tests
+test transform::test::test_transform_function_call_without_a_hang ... ignored
+test transform::test::test_transform_function_names ... ignored
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/scenario_1-e7a48904048e4ace)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/scenario_2-71f458e3497365f1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/scenario_3-816b409221761033)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/build_address_utxos.rs (target/release/deps/build_address_utxos-7cc460481d5c1c9d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/build_balances.rs (target/release/deps/build_balances-648b82e61bef551b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/build_utxos.rs (target/release/deps/build_utxos-206468d03e190d82)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/combine_state.rs (target/release/deps/combine_state-fc9cf82fbf381c11)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/state_builder-ae6a5a901787e700)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/uploader-c411e7b4bcf65e85)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/uploader_canister-9dbf74a9c5d378bd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/release/deps/watchdog-97faba1fe3d26697)
+
+running 42 tests
+test bitcoin_block_apis::test::test_api_bitaps_com_mainnet ... ignored
+test bitcoin_block_apis::test::test_api_bitaps_com_testnet ... ignored
+test bitcoin_block_apis::test::test_api_blockchair_com_mainnet ... ignored
+test bitcoin_block_apis::test::test_api_blockchair_com_testnet ... ignored
+test bitcoin_block_apis::test::test_api_blockcypher_com_mainnet ... ignored
+test bitcoin_block_apis::test::test_api_blockcypher_com_testnet ... ignored
+test bitcoin_block_apis::test::test_bitcoin_canister_mainnet ... ignored
+test bitcoin_block_apis::test::test_blockchain_info_mainnet ... ignored
+test bitcoin_block_apis::test::test_blockstream_info_mainnet ... ignored
+test bitcoin_block_apis::test::test_blockstream_info_testnet ... ignored
+test bitcoin_block_apis::test::test_chain_api_btc_com_mainnet ... ignored
+test bitcoin_block_apis::test::test_http_request_abusing_api ... ignored
+test bitcoin_block_apis::test::test_http_request_failed_with_404 ... ignored
+test bitcoin_block_apis::test::test_names ... ignored
+test config::test::test_bitcoin_canister_endpoint_contains_principal_mainnet ... ignored
+test config::test::test_bitcoin_canister_endpoint_contains_principal_testnet ... ignored
+test config::test::test_config_mainnet ... ignored
+test config::test::test_config_testnet ... ignored
+test endpoints::test::test_api_bitaps_com_block_mainnet ... ignored
+test endpoints::test::test_api_bitaps_com_block_testnet ... ignored
+test endpoints::test::test_api_blockchair_com_block ... ignored
+test endpoints::test::test_api_blockcypher_com_block ... ignored
+test endpoints::test::test_bitcoin_canister_mainnet ... ignored
+test endpoints::test::test_bitcoin_canister_testnet ... ignored
+test endpoints::test::test_blockchain_info_hash ... ignored
+test endpoints::test::test_blockchain_info_height ... ignored
+test endpoints::test::test_blockstream_info_hash ... ignored
+test endpoints::test::test_blockstream_info_height ... ignored
+test endpoints::test::test_chain_api_btc_com_block ... ignored
+test endpoints::test::test_height_regex ... ignored
+test endpoints::test::test_http_response_404 ... ignored
+test endpoints::test::test_transform_function_names ... ignored
+test fetch::test::test_fetch_all_data_failed_404_mainnet ... ignored
+test fetch::test::test_fetch_all_data_failed_404_testnet ... ignored
+test fetch::test::test_fetch_all_data_mainnet ... ignored
+test fetch::test::test_fetch_all_data_testnet ... ignored
+test health::test::test_compare_2_explorers_are_not_enough ... ignored
+test health::test::test_compare_ahead ... ignored
+test health::test::test_compare_behind ... ignored
+test health::test::test_compare_no_explorers ... ignored
+test health::test::test_compare_no_source_neither_explorers ... ignored
+test health::test::test_median ... ignored
+
+test result: ok. 0 passed; 0 failed; 42 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/release/deps/watchdog_canister-e6ec910739c53eb4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
