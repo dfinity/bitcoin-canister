@@ -37,14 +37,18 @@ chmod +x drun
 
 # Run cargo bench, searching for performance regressions and outputting them to a file.
 LOG_FILE="$SCRIPT_DIR/benchmarking/benchmark.txt"
-cargo bench 2>&1 | tee "$LOG_FILE"
+cargo bench -v 2>&1 | tee "$LOG_FILE"
+
+set +e
+NO_CHANGE=$(grep -c "No change in performance detected." "$LOG_FILE")
+IMPROVED=$(grep -c "Performance has improved." "$LOG_FILE")
+set -e
 
 # Since we have 4 benchmark tests, we expect 4 appearances of "No change in performance detected."
-# otherwise, there are changes in performances.
-OCCURENCES=$(grep -c "No change in performance detected." "$LOG_FILE")
+# or "Performance has improved." otherwise, performances are degraded.
+OCCURENCES=$(($NO_CHANGE+$IMPROVED))
 
-
-if [[ "$OCCURENCES" != 4 ]]; then
+if [[ $OCCURENCES != 4 ]]; then
   echo "FAIL"
   exit 1
 fi
