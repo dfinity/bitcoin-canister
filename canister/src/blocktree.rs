@@ -536,4 +536,19 @@ mod test {
         assert_eq!(height_2_block.block_hash(), fork[1].block_hash());
         assert_eq!(height_2_depth, 1);
     }
+
+    #[test]
+    fn deserialize_very_deep_block_tree() {
+        let chain = BlockChainBuilder::new(5_000).build();
+        let mut tree = BlockTree::new(chain[0].clone());
+
+        for block in chain.into_iter().skip(1) {
+            extend(&mut tree, block).unwrap();
+        }
+
+        let mut bytes = vec![];
+        ciborium::ser::into_writer(&tree, &mut bytes).unwrap();
+        let new_tree: BlockTree = ciborium::de::from_reader(&bytes[..]).unwrap();
+        assert_eq!(tree, new_tree);
+    }
 }
