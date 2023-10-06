@@ -52,21 +52,37 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        // Unflatten a block tree from a list back into a `BlockTree` struct.
-        fn build_tree<'a, A: SeqAccess<'a>>(seq: &mut A) -> BlockTree {
-            let (root, num_children) = seq
-                .next_element()
+        fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> (Block, usize) {
+            seq.next_element()
                 .expect("reading next element must succeed")
-                .expect("root must exist");
-
-            let mut block_tree = BlockTree::new(root);
-            for _ in 0..num_children {
-                block_tree.children.push(build_tree(seq));
-            }
-
-            block_tree
+                .expect("block must exist")
         }
 
-        Ok(build_tree(&mut seq))
+        // A stack containing a pointer to a `BlockTree` along with how many children it has.
+        let mut stack: Vec<(*mut BlockTree, usize)> = Vec::new();
+
+        // Read the root and add it to the stack.
+        let (root, children_len) = next(&mut seq);
+        let mut block_tree = BlockTree::new(root);
+        stack.push((&mut block_tree, children_len));
+
+        // Read the remaining children and add them to the tree.
+        unsafe {
+            while let Some((tree, children_len)) = stack.pop() {
+                for _ in 0..children_len {
+                    let (child, grand_children_len) = next(&mut seq);
+
+                    // Add the child to the tree.
+                    let subtree = BlockTree::new(child);
+                    (*tree).children.push(subtree);
+
+                    // Add a pointer to the subtree on the stack.
+                    let subtree_ptr: *mut BlockTree = (*tree).children.last_mut().unwrap();
+                    stack.push((subtree_ptr, grand_children_len));
+                }
+            }
+        }
+
+        Ok(block_tree)
     }
 }
