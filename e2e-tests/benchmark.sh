@@ -41,7 +41,7 @@ git checkout master
 
 cargo bench --quiet 2>&1
 
-git checkout $PR_BRANCH
+git checkout "$PR_BRANCH"
 
 # Run cargo bench, searching for performance regressions and outputting them to a file.
 LOG_FILE="$SCRIPT_DIR/benchmarking/benchmark.txt"
