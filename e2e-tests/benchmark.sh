@@ -37,7 +37,7 @@ chmod +x drun
 
 # Run cargo bench, searching for performance regressions and outputting them to a file.
 LOG_FILE="$SCRIPT_DIR/benchmarking/benchmark.txt"
-cargo bench -v 2>&1 | tee "$LOG_FILE"
+cargo bench --quiet 2>&1 | tee "$LOG_FILE"
 
 set +e
 NO_CHANGE=$(grep -c "No change in performance detected." "$LOG_FILE")
