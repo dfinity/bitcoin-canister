@@ -1,31 +1,353 @@
-   Compiling ic-btc-types v0.1.0 (/home/dragoljub-duric/bitcoin-canister/types)
-   Compiling ic-btc-test-utils v0.1.0 (/home/dragoljub-duric/bitcoin-canister/test-utils)
-   Compiling ic-btc-canister v0.1.0 (/home/dragoljub-duric/bitcoin-canister/canister)
-   Compiling scenario-2 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-2)
-   Compiling scenario-3 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-3)
-   Compiling scenario-1 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-1)
-   Compiling disable-api-if-not-fully-synced-flag v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/disable-api-if-not-fully-synced-flag)
-   Compiling benchmarks v0.1.0 (/home/dragoljub-duric/bitcoin-canister/benchmarks)
-   Compiling state-builder v0.1.0 (/home/dragoljub-duric/bitcoin-canister/bootstrap/state-builder)
-    Finished bench [optimized] target(s) in 15.35s
-     Running unittests src/main.rs (target/release/deps/benchmarks-90cabe69259102f2)
+       Fresh autocfg v1.1.0
+       Fresh unicode-ident v1.0.9
+       Fresh version_check v0.9.4
+       Fresh cc v1.0.79
+       Fresh winnow v0.4.7
+       Fresh toml_datetime v0.6.2
+       Fresh cfg-if v1.0.0
+       Fresh proc-macro2 v1.0.64
+       Fresh libc v0.2.146
+       Fresh quote v1.0.28
+       Fresh toml_edit v0.19.10
+       Fresh lazy_static v1.4.0
+       Fresh pin-project-lite v0.2.9
+       Fresh syn v2.0.25
+       Fresh syn v1.0.109
+       Fresh proc-macro-crate v1.3.1
+       Fresh rustversion v1.0.12
+       Fresh typenum v1.16.0
+       Fresh serde_derive v1.0.171
+       Fresh thiserror-impl v1.0.40
+       Fresh binread_derive v2.1.0
+       Fresh paste v1.0.12
+       Fresh generic-array v0.14.7
+       Fresh serde v1.0.171
+       Fresh libm v0.2.7
+       Fresh futures-core v0.3.28
+       Fresh num_enum_derive v0.6.1
+       Fresh crypto-common v0.1.6
+       Fresh num-traits v0.2.15
+       Fresh block-buffer v0.10.4
+       Fresh autocfg v0.1.8
+       Fresh rand_core v0.4.2
+       Fresh arrayvec v0.5.2
+       Fresh typed-arena v2.0.2
+       Fresh subtle v2.5.0
+       Fresh candid_derive v0.6.2
+       Fresh num_cpus v1.15.0
+       Fresh num-integer v0.1.45
+       Fresh digest v0.10.7
+       Fresh unicode-width v0.1.10
+       Fresh cpufeatures v0.2.7
+       Fresh termcolor v1.2.0
+       Fresh anyhow v1.0.71
+       Fresh thiserror v1.0.40
+       Fresh serde_bytes v0.11.9
+       Fresh binread v2.2.0
+       Fresh hex v0.4.3
+       Fresh data-encoding v2.4.0
+       Fresh futures-io v0.3.28
+       Fresh num-bigint v0.4.3
+       Fresh codespan-reporting v0.11.1
+       Fresh crc32fast v1.3.2
+       Fresh sha2 v0.10.6
+       Fresh byteorder v1.4.3
+       Fresh leb128 v0.2.5
+       Fresh once_cell v1.18.0
+       Fresh rand_core v0.3.1
+       Fresh serde_tokenstream v0.1.7
+       Fresh slab v0.4.8
+       Fresh bytes v1.4.0
+       Fresh psm v0.1.21
+       Fresh socket2 v0.4.9
+       Fresh unicode-segmentation v1.10.1
+       Fresh num_enum v0.6.1
+       Fresh tokio-macros v2.1.0
+       Fresh stacker v0.1.15
+       Fresh pretty v0.12.1
+       Fresh mio v0.8.8
+       Fresh signal-hook-registry v1.4.1
+       Fresh ic0 v0.18.11
+       Fresh itoa v1.0.6
+       Fresh pin-utils v0.1.0
+       Fresh rand_xorshift v0.1.1
+       Fresh candid v0.9.1
+       Fresh rand_pcg v0.1.2
+       Fresh rand_chacha v0.1.1
+       Fresh rand_hc v0.1.0
+       Fresh rand_isaac v0.1.1
+       Fresh rand_jitter v0.1.4
+       Fresh rand_os v0.1.3
+       Fresh getrandom v0.2.10
+       Fresh tokio v1.29.1
+       Fresh ic-cdk-macros v0.7.0
+       Fresh crossbeam-utils v0.8.16
+       Fresh rand v0.6.5
+       Fresh rand_core v0.6.4
+       Fresh bitcoin_hashes v0.10.0
+       Fresh fastrand v1.9.0
+       Fresh bech32 v0.8.1
+       Fresh futures-sink v0.3.28
+       Fresh half v1.8.2
+       Fresh ic-cdk v0.10.0
+       Fresh secp256k1-sys v0.5.2
+       Fresh memchr v2.5.0
+       Fresh futures-macro v0.3.28
+       Fresh dirs-sys-next v0.1.2
+       Fresh smallvec v1.10.0
+       Fresh secp256k1 v0.22.2
+       Fresh futures-task v0.3.28
+       Fresh futures-channel v0.3.28
+       Fresh ryu v1.0.13
+       Fresh scopeguard v1.1.0
+       Fresh dirs-next v2.0.0
+       Fresh io-lifetimes v1.0.11
+       Fresh parking_lot_core v0.9.8
+       Fresh linux-raw-sys v0.3.8
+       Fresh bitcoin v0.28.2
+       Fresh futures-util v0.3.28
+       Fresh lock_api v0.4.10
+       Fresh bitflags v1.3.2
+       Fresh siphasher v0.3.10
+       Fresh value-bag v1.4.0
+       Fresh crunchy v0.2.2
+       Fresh term v0.7.0
+       Fresh new_debug_unreachable v1.0.4
+       Fresh event-listener v2.5.3
+       Fresh precomputed-hash v0.1.1
+       Fresh log v0.4.19
+       Fresh rustix v0.37.20
+       Fresh phf_shared v0.10.0
+       Fresh parking_lot v0.12.1
+       Fresh fixedbitset v0.4.2
+       Fresh ascii-canvas v3.0.0
+       Fresh concurrent-queue v2.2.0
+       Fresh waker-fn v1.1.0
+       Fresh unicode-xid v0.2.4
+       Fresh untrusted v0.7.1
+       Fresh diff v0.1.13
+       Fresh ena v0.14.2
+       Fresh tiny-keccak v2.0.2
+       Fresh petgraph v0.6.3
+       Fresh string_cache v0.8.7
+       Fresh spin v0.5.2
+       Fresh parking v2.1.0
+       Fresh ppv-lite86 v0.2.17
+       Fresh ciborium-io v0.2.1
+       Fresh serde_json v1.0.96
+       Fresh async-lock v2.7.0
+       Fresh aho-corasick v1.0.2
+       Fresh regex-syntax v0.7.2
+       Fresh ic-metrics-encoder v1.1.0
+       Fresh fnv v1.0.7
+       Fresh futures-lite v1.13.0
+       Fresh ciborium-ll v0.2.1
+       Fresh lalrpop v0.19.12
+       Fresh ring v0.16.20
+       Fresh beef v0.5.2
+       Fresh regex v1.8.4
+       Fresh num_enum_derive v0.5.11
+       Fresh async-task v4.4.0
+       Fresh ic-stable-structures v0.5.4
+       Fresh hashbrown v0.12.3
+       Fresh async-channel v1.8.0
+       Fresh atomic-waker v1.1.1
+       Fresh logos-derive v0.12.1
+       Fresh ciborium v0.2.1
+       Fresh polling v2.8.0
+       Fresh indexmap v1.9.3
+       Fresh zeroize v1.6.0
+       Fresh async-executor v1.5.1
+       Fresh blocking v1.3.1
+       Fresh rand_chacha v0.3.1
+       Fresh candid_derive v0.5.0
+       Fresh base64ct v1.6.0
+       Fresh utf8parse v0.2.1
+       Fresh sct v0.7.0
+       Fresh async-io v1.13.0
+       Fresh anstyle-parse v0.2.0
+       Fresh rand v0.8.5
+       Fresh pem-rfc7468 v0.6.0
+       Fresh is-terminal v0.4.7
+       Fresh kv-log-macro v1.0.7
+       Fresh ff v0.12.1
+       Fresh tracing-core v0.1.31
+       Fresh async-attributes v1.1.2
+       Fresh colorchoice v1.0.0
+       Fresh const-oid v0.9.2
+       Fresh anstyle-query v1.0.0
+       Fresh anstyle v1.0.0
+       Fresh async-global-executor v2.3.1
+       Fresh getrandom v0.1.16
+       Fresh anstream v0.3.2
+       Fresh tracing v0.1.37
+       Fresh group v0.12.1
+       Fresh der v0.6.1
+       Fresh lalrpop-util v0.19.12
+       Fresh http v0.2.9
+       Fresh heck v0.4.1
+       Fresh async-std v1.12.0
+       Fresh strsim v0.10.0
+       Fresh clap_lex v0.5.0
+       Fresh build_const v0.2.2
+       Fresh tempfile v3.6.0
+       Fresh clap_derive v4.3.2
+       Fresh spki v0.6.0
+       Fresh tokio-util v0.7.8
+       Fresh rand_core v0.5.1
+       Fresh webpki v0.22.0
+       Fresh wait-timeout v0.2.0
+       Fresh quick-error v1.2.3
+       Fresh clap_builder v4.3.4
+       Fresh try-lock v0.2.4
+       Fresh tinyvec_macros v0.1.1
+       Fresh memoffset v0.9.0
+       Fresh pkcs8 v0.9.0
+       Fresh httparse v1.8.0
+       Fresh h2 v0.3.19
+       Fresh rand_chacha v0.2.2
+       Fresh http-body v0.4.5
+       Fresh crypto-bigint v0.4.9
+       Fresh tinyvec v1.6.0
+       Fresh clap v4.3.4
+       Fresh want v0.3.1
+       Fresh logos v0.12.1
+       Fresh rustls-webpki v0.100.2
+       Fresh num_enum v0.5.11
+       Fresh futures-executor v0.3.28
+       Fresh pretty v0.10.0
+       Fresh percent-encoding v2.3.0
+       Fresh httpdate v1.0.2
+       Fresh bit-vec v0.6.3
+       Fresh tower-service v0.3.2
+       Fresh base16ct v0.1.1
+       Fresh base64 v0.21.2
+       Fresh rustls v0.21.2
+       Fresh form_urlencoded v1.2.0
+       Fresh crc v1.8.1
+       Fresh bit-set v0.5.3
+       Fresh unicode-normalization v0.1.22
+       Fresh candid v0.8.4
+       Fresh futures v0.3.28
+       Fresh async-trait v0.1.68
+       Fresh snap v1.1.0
+       Fresh crossbeam-epoch v0.9.15
+       Fresh rand v0.7.3
+       Fresh sec1 v0.3.0
+       Fresh rustls-pemfile v1.0.2
+       Fresh hyper v0.14.26
+       Fresh hmac v0.12.1
+       Fresh digest v0.9.0
+       Fresh errno v0.2.8
+       Fresh fs2 v0.4.3
+       Fresh regex-syntax v0.6.29
+       Fresh either v1.8.1
+       Fresh unicode-bidi v0.3.13
+       Fresh integer-encoding v3.0.4
+       Fresh ic-cdk-macros v0.6.10
+       Fresh tokio-rustls v0.24.1
+       Fresh time-macros v0.2.9
+       Fresh rusty-leveldb v1.0.7
+       Fresh rfc6979 v0.3.1
+       Fresh elliptic-curve v0.12.3
+       Fresh idna v0.4.0
+       Fresh crossbeam-deque v0.8.3
+       Fresh rustls v0.20.8
+       Fresh webpki-roots v0.22.6
+       Fresh pairing v0.22.0
+       Fresh crossbeam-channel v0.5.8
+       Fresh signature v1.6.4
+       Fresh block-buffer v0.9.0
+       Fresh plotters-backend v0.3.5
+       Fresh opaque-debug v0.3.0
+       Fresh openssl-probe v0.1.5
+       Fresh time-core v0.1.1
+       Fresh os_str_bytes v6.5.1
+       Fresh plotters-svg v0.3.5
+       Fresh sha2 v0.9.9
+       Fresh url v2.4.0
+       Fresh ecdsa v0.14.8
+       Fresh tokio-rustls v0.23.4
+       Fresh slotmap v1.0.6
+       Fresh bls12_381 v0.7.1
+       Fresh rayon-core v1.11.0
+       Fresh hyper-rustls v0.24.0
+       Fresh ic-cdk v0.7.4
+       Fresh itertools v0.10.5
+       Fresh serde_urlencoded v0.7.1
+       Fresh rusty-fork v0.2.2
+       Fresh clap_lex v0.2.4
+       Fresh time v0.3.22
+       Fresh rustls-native-certs v0.6.3
+       Fresh encoding_rs v0.8.32
+       Fresh same-file v1.0.6
+       Fresh cast v0.3.0
+       Fresh ipnet v2.7.2
+       Fresh mime v0.3.17
+       Fresh textwrap v0.16.0
+       Fresh base64 v0.13.1
+       Fresh ic-verify-bls-signature v0.1.0
+       Fresh rayon v1.7.0
+       Fresh ic-cdk-timers v0.1.2
+       Fresh k256 v0.11.6
+       Fresh plotters v0.3.5
+       Fresh criterion-plot v0.5.0
+       Fresh pem v1.1.1
+       Fresh clap v3.2.25
+       Fresh reqwest v0.11.18
+       Fresh walkdir v2.3.3
+       Fresh simple_asn1 v0.6.2
+       Fresh hyper-rustls v0.23.2
+       Fresh proptest v0.9.6
+       Fresh tinytemplate v1.2.1
+       Fresh garcon v0.2.3
+       Fresh serde_cbor v0.11.2
+       Fresh sha256 v1.1.4
+       Fresh atty v0.2.14
+       Fresh anes v0.1.6
+       Fresh base32 v0.4.0
+       Fresh oorandom v11.1.3
+       Fresh criterion v0.4.0
+       Fresh ic-agent v0.21.0
+       Fresh rusty-fork v0.3.0
+       Fresh assert-json-diff v2.0.2
+       Fresh rand_xorshift v0.3.0
+       Fresh csv-core v0.1.10
+       Fresh maplit v1.0.2
+       Fresh unarray v0.1.4
+       Fresh canister_backend v0.1.0 (/home/dragoljub-duric/bitcoin-canister/ic-http/example_canister/src/canister_backend)
+       Fresh state-builder v0.1.0 (/home/dragoljub-duric/bitcoin-canister/bootstrap/state-builder)
+       Fresh proptest v1.2.0
+       Fresh csv v1.2.2
+       Fresh ic-btc-canister v0.1.0 (/home/dragoljub-duric/bitcoin-canister/canister)
+       Fresh uploader v0.1.0 (/home/dragoljub-duric/bitcoin-canister/bootstrap/uploader)
+       Fresh watchdog v0.1.0 (/home/dragoljub-duric/bitcoin-canister/watchdog)
+       Fresh scenario-1 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-1)
+       Fresh ic-http v0.1.0 (/home/dragoljub-duric/bitcoin-canister/ic-http)
+       Fresh scenario-2 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-2)
+       Fresh disable-api-if-not-fully-synced-flag v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/disable-api-if-not-fully-synced-flag)
+       Fresh scenario-3 v0.1.0 (/home/dragoljub-duric/bitcoin-canister/e2e-tests/scenario-3)
+       Fresh benchmarks v0.1.0 (/home/dragoljub-duric/bitcoin-canister/benchmarks)
+       Fresh ic-btc-validation v0.1.0 (/home/dragoljub-duric/bitcoin-canister/validation)
+       Fresh ic-btc-interface v0.1.0 (/home/dragoljub-duric/bitcoin-canister/interface)
+       Fresh ic-btc-types v0.1.0 (/home/dragoljub-duric/bitcoin-canister/types)
+       Fresh ic-btc-test-utils v0.1.0 (/home/dragoljub-duric/bitcoin-canister/test-utils)
+    Finished bench [optimized] target(s) in 0.20s
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/benchmarks-90cabe69259102f2 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running benches.rs (target/release/deps/benches-4ae2ebe7f4e0e11c)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/benches-4ae2ebe7f4e0e11c --bench`
 ~/bitcoin-canister/scripts ~/bitcoin-canister/benchmarks
-   Compiling ic-btc-types v0.1.0 (/home/dragoljub-duric/bitcoin-canister/types)
-   Compiling ic-btc-canister v0.1.0 (/home/dragoljub-duric/bitcoin-canister/canister)
-   Compiling benchmarks v0.1.0 (/home/dragoljub-duric/bitcoin-canister/benchmarks)
-    Finished release [optimized] target(s) in 10.66s
+    Finished release [optimized] target(s) in 0.16s
      Ignored package `ic-wasm v0.2.0` is already installed, use --force to override
 warning: be sure to add `./target/bin` to your PATH to be able to run the installed binaries
 ~/bitcoin-canister/benchmarks
 Benchmarking insert_block_headers
 Benchmarking insert_block_headers: Warming up for 1.0000 ms
-Benchmarking insert_block_headers: Collecting 10 samples in estimated 528.70 s (165 iterations)
+Benchmarking insert_block_headers: Collecting 10 samples in estimated 537.77 s (165 iterations)
 Benchmarking insert_block_headers: Analyzing
 insert_block_headers    time:   [3841.8 M Instructions 3841.8 M Instructions 3841.8 M Instructions]
                         change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
@@ -33,7 +355,7 @@ insert_block_headers    time:   [3841.8 M Instructions 3841.8 M Instructions 384
 
 Benchmarking insert_block_headers_multiple_times
 Benchmarking insert_block_headers_multiple_times: Warming up for 1.0000 ms
-Benchmarking insert_block_headers_multiple_times: Collecting 10 samples in estimated 590.29 s (220 iterations)
+Benchmarking insert_block_headers_multiple_times: Collecting 10 samples in estimated 609.42 s (220 iterations)
 Benchmarking insert_block_headers_multiple_times: Analyzing
 insert_block_headers_multiple_times
                         time:   [13.990 B Instructions 13.990 B Instructions 13.990 B Instructions]
@@ -42,7 +364,7 @@ insert_block_headers_multiple_times
 
 Benchmarking insert_300_blocks
 Benchmarking insert_300_blocks: Warming up for 1.0000 ms
-Benchmarking insert_300_blocks: Collecting 10 samples in estimated 513.52 s (825 iterations)
+Benchmarking insert_300_blocks: Collecting 10 samples in estimated 503.25 s (825 iterations)
 Benchmarking insert_300_blocks: Analyzing
 insert_300_blocks       time:   [584.38 M Instructions 584.38 M Instructions 584.38 M Instructions]
                         change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
@@ -50,13 +372,13 @@ insert_300_blocks       time:   [584.38 M Instructions 584.38 M Instructions 584
 
 Benchmarking get_metrics
 Benchmarking get_metrics: Warming up for 1.0000 ms
-Benchmarking get_metrics: Collecting 10 samples in estimated 543.72 s (20 iterations)
+Benchmarking get_metrics: Collecting 10 samples in estimated 538.81 s (20 iterations)
 Benchmarking get_metrics: Analyzing
 get_metrics             time:   [89.792 M Instructions 89.792 M Instructions 89.792 M Instructions]
                         change: [+0.0000% +0.0000% +0.0000%] (p = NaN > 0.05)
                         No change in performance detected.
 
-     Running unittests src/main.rs (target/release/deps/canister_backend-3e96cc56c1e4d0af)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/canister_backend-3e96cc56c1e4d0af --bench`
 
 running 3 tests
 test test::test_http_request_transform_body_quote ... ignored
@@ -65,13 +387,13 @@ test test::test_http_request_transform_body_quote_error ... ignored
 
 test result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/disable_api_if_not_fully_synced_flag-a257bb63c2073f80)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/disable_api_if_not_fully_synced_flag-a257bb63c2073f80 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/ic_btc_canister-0d64ff6cf89baa84)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_btc_canister-0d64ff6cf89baa84 --bench`
 
 running 141 tests
 test address_utxoset::test::add_tx_then_transfer ... ignored
@@ -218,13 +540,13 @@ test validation::test::validation_context ... ignored
 
 test result: ok. 0 passed; 0 failed; 141 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/ic_btc_canister-d8c22e79253e998d)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_btc_canister-d8c22e79253e998d --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/ic_btc_interface-6d7019e6e1db9c23)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_btc_interface-6d7019e6e1db9c23 --bench`
 
 running 2 tests
 test test::can_extract_bytes_from_txid ... ignored
@@ -232,7 +554,7 @@ test test::test_config_debug_formatter_is_enabled ... ignored
 
 test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/ic_btc_test_utils-1618362e62cc046e)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_btc_test_utils-1618362e62cc046e --bench`
 
 running 7 tests
 test test::transaction_builder::coinbase ... ignored
@@ -245,14 +567,14 @@ test test::transaction_builder::with_output_2 ... ignored
 
 test result: ok. 0 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/ic_btc_types-c76bcd8f541ad7ef)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_btc_types-c76bcd8f541ad7ef --bench`
 
 running 1 test
 test target_difficulty ... ignored
 
 test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/ic_btc_validation-b52338f641f8554d)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_btc_validation-b52338f641f8554d --bench`
 
 running 12 tests
 test header::test::mainnet_next_targets ... ignored
@@ -270,7 +592,7 @@ test header::test::testnet_next_targets ... ignored
 
 test result: ok. 0 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/ic_http-a2ecc43b391f1543)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/ic_http-a2ecc43b391f1543 --bench`
 
 running 2 tests
 test transform::test::test_transform_function_call_without_a_hang ... ignored
@@ -278,67 +600,67 @@ test transform::test::test_transform_function_names ... ignored
 
 test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/scenario_1-e7a48904048e4ace)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/scenario_1-e7a48904048e4ace --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/scenario_2-71f458e3497365f1)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/scenario_2-71f458e3497365f1 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/scenario_3-816b409221761033)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/scenario_3-816b409221761033 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/build_address_utxos.rs (target/release/deps/build_address_utxos-7cc460481d5c1c9d)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/build_address_utxos-7cc460481d5c1c9d --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/build_balances.rs (target/release/deps/build_balances-648b82e61bef551b)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/build_balances-648b82e61bef551b --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/build_utxos.rs (target/release/deps/build_utxos-206468d03e190d82)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/build_utxos-206468d03e190d82 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/combine_state.rs (target/release/deps/combine_state-fc9cf82fbf381c11)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/combine_state-fc9cf82fbf381c11 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/state_builder-ae6a5a901787e700)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/state_builder-ae6a5a901787e700 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/uploader-c411e7b4bcf65e85)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/uploader-c411e7b4bcf65e85 --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/uploader_canister-9dbf74a9c5d378bd)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/uploader_canister-9dbf74a9c5d378bd --bench`
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/lib.rs (target/release/deps/watchdog-97faba1fe3d26697)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/watchdog-97faba1fe3d26697 --bench`
 
 running 42 tests
 test bitcoin_block_apis::test::test_api_bitaps_com_mainnet ... ignored
@@ -386,7 +708,7 @@ test health::test::test_median ... ignored
 
 test result: ok. 0 passed; 0 failed; 42 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/release/deps/watchdog_canister-e6ec910739c53eb4)
+     Running `/home/dragoljub-duric/bitcoin-canister/target/release/deps/watchdog_canister-e6ec910739c53eb4 --bench`
 
 running 0 tests
 

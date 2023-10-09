@@ -46,7 +46,7 @@ set -e
 
 # Since we have 4 benchmark tests, we expect 4 appearances of "No change in performance detected."
 # or "Performance has improved." otherwise, performances are degraded.
-OCCURENCES=$(($NO_CHANGE+$IMPROVED))
+OCCURENCES=$((NO_CHANGE+IMPROVED))
 
 if [[ $OCCURENCES != 4 ]]; then
   echo "FAIL"
