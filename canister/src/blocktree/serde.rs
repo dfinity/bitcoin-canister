@@ -52,37 +52,41 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> (Block, usize) {
+        fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> Option<(Block, usize)> {
             seq.next_element()
                 .expect("reading next element must succeed")
-                .expect("block must exist")
         }
 
-        // A stack containing a pointer to a `BlockTree` along with how many children it has.
-        let mut stack: Vec<(*mut BlockTree, usize)> = Vec::new();
+        // A stack containing a `BlockTree` along with how many children remain to be added to it.
+        let mut stack: Vec<(BlockTree, usize)> = Vec::new();
 
         // Read the root and add it to the stack.
-        let (root, children_len) = next(&mut seq);
-        let mut block_tree = BlockTree::new(root);
-        stack.push((&mut block_tree, children_len));
+        let (root, children_to_add) = next(&mut seq).unwrap();
+        stack.push((BlockTree::new(root), children_to_add));
 
-        // Read the remaining children and add them to the tree.
-        unsafe {
-            while let Some((tree, children_len)) = stack.pop() {
-                for _ in 0..children_len {
-                    let (child, grand_children_len) = next(&mut seq);
-
-                    // Add the child to the tree.
-                    let subtree = BlockTree::new(child);
-                    (*tree).children.push(subtree);
-
-                    // Add a pointer to the subtree on the stack.
-                    let subtree_ptr: *mut BlockTree = (*tree).children.last_mut().unwrap();
-                    stack.push((subtree_ptr, grand_children_len));
+        while let Some((tree, children_to_add)) = stack.pop() {
+            if children_to_add == 0 {
+                // No more children. Add tree to its parent if it exists.
+                match stack.last_mut() {
+                    Some(parent) => parent.0.children.push(tree),
+                    None => {
+                        // There's no parent to this tree. Deserialization is complete.
+                        // Assert that there's no more data to serialize.
+                        assert_eq!(next(&mut seq), None);
+                        return Ok(tree);
+                    }
                 }
+            } else {
+                // Add the tree back to stack, decrementing the number of children that still need
+                // to be added.
+                stack.push((tree, children_to_add - 1));
+
+                // Add the child to the stack.
+                let (child, grand_children_to_add) = next(&mut seq).unwrap();
+                stack.push((BlockTree::new(child), grand_children_to_add));
             }
         }
 
-        Ok(block_tree)
+        unreachable!();
     }
 }
