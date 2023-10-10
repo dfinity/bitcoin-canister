@@ -1,6 +1,6 @@
 mod outpoints_cache;
 use crate::{
-    blocktree::{self, BlockChain, BlockDoesNotExtendTree, BlockTree},
+    blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree},
     runtime::print,
     types::{Address, TxOut},
     UtxoSet,
@@ -100,17 +100,19 @@ impl UnstableBlocks {
 
     /// Returns the depth of the unstable block tree.
     pub fn blocks_depth(&self) -> u128 {
-        blocktree::depth(&self.tree)
+        self.tree.depth()
     }
 
     /// Returns the difficulty-based depth of the unstable block tree.
     pub fn blocks_difficulty_based_depth(&self) -> u128 {
-        blocktree::difficulty_based_depth(&self.tree, self.network)
+        self.tree.difficulty_based_depth(self.network)
     }
 
     /// Returns depth in BlockTree of Block with given BlockHash.
     fn block_depth(&mut self, block_hash: &BlockHash) -> Result<u32, BlockDoesNotExtendTree> {
-        let (_, depth) = blocktree::find_mut(&mut self.tree, block_hash)
+        let (_, depth) = self
+            .tree
+            .find_mut(block_hash)
             .ok_or_else(|| BlockDoesNotExtendTree(block_hash.clone()))?;
         Ok(depth)
     }
@@ -200,9 +202,10 @@ pub fn push(
     utxos: &UtxoSet,
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
-    let (parent_block_tree, depth) =
-        blocktree::find_mut(&mut blocks.tree, &block.header().prev_blockhash.into())
-            .ok_or_else(|| BlockDoesNotExtendTree(block.block_hash()))?;
+    let (parent_block_tree, depth) = blocks
+        .tree
+        .find_mut(&block.header().prev_blockhash.into())
+        .ok_or_else(|| BlockDoesNotExtendTree(block.block_hash()))?;
 
     let height = utxos.next_height() + depth + 1;
 
@@ -213,7 +216,7 @@ pub fn push(
 
     let block_hash = block.block_hash();
 
-    blocktree::extend(parent_block_tree, block)?;
+    parent_block_tree.extend(block)?;
 
     blocks.next_block_headers.remove(&block_hash);
 
@@ -227,7 +230,7 @@ pub fn push(
 /// block at the same height as the tip.
 pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain {
     // Get all the blockchains that extend the anchor.
-    let blockchains: Vec<BlockChain> = blocktree::blockchains(&blocks.tree);
+    let blockchains: Vec<BlockChain> = blocks.tree.blockchains();
 
     // Find the length of the longest blockchain.
     let mut longest_blockchain_len = 0;
@@ -279,7 +282,9 @@ pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
 }
 
 pub fn get_blocks(blocks: &UnstableBlocks) -> Vec<&Block> {
-    blocktree::blockchains(&blocks.tree)
+    blocks
+        .tree
+        .blockchains()
         .into_iter()
         .flat_map(|bc| bc.into_chain())
         .collect()
@@ -292,7 +297,7 @@ pub fn get_chain_with_tip<'a>(
     blocks: &'a UnstableBlocks,
     tip: &BlockHash,
 ) -> Option<BlockChain<'a>> {
-    blocktree::get_chain_with_tip(&blocks.tree, tip)
+    blocks.tree.get_chain_with_tip(tip)
 }
 
 // Returns the index of the `anchor`'s stable child if it exists.
@@ -305,7 +310,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .children
         .iter()
         .enumerate()
-        .map(|(idx, child)| (blocktree::difficulty_based_depth(child, network), idx))
+        .map(|(idx, child)| (child.difficulty_based_depth(network), idx))
         .collect();
 
     // Sort by depth.
@@ -338,8 +343,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                     //
                     // This scenario is only relevant for testnets, so this addition is safe and
                     // has no impact on the behavior of the mainnet canister.
-                    if blocktree::depth(&blocks.tree.children[*child_idx]) >= TESTNET_CHAIN_MAX_DEPTH
-                    {
+                    if blocks.tree.children[*child_idx].depth() >= TESTNET_CHAIN_MAX_DEPTH {
                         // If there's another competing chain, verify that it's at least
                         // `TESTNET_CHAIN_MAX_DEPTH` blocks behind the longest chain to mark the
                         // current anchor as stable.
@@ -347,7 +351,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                             None => 0,
                             Some(idx) => {
                                 let (_, second_child_idx) = depths[idx];
-                                blocktree::depth(&blocks.tree.children[second_child_idx])
+                                blocks.tree.children[second_child_idx].depth()
                             }
                         };
 
@@ -461,10 +465,7 @@ mod test {
         // difficulty_based_depth is 15 + 20 + 110 = 145 is greater than
         // normalized_stability_threshold is 20 * 7 = 140 and it does not have
         // any siblings. Hence, block_0 should be returned when calling `pop`.
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
-            145
-        );
+        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 145);
 
         assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest, 0), Some(block_0));
@@ -543,14 +544,8 @@ mod test {
         // None of the forks are stable, because fork1 has difficulty_based_depth of 10,
         // while fork2 has difficulty_based_depth 5, while normalized_stability_threshold
         // is 3 * 4 = 12. Hence, we shouldn't get anything.
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
-            10
-        );
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[1], network),
-            5
-        );
+        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 10);
+        assert_eq!(forest.tree.children[1].difficulty_based_depth(network), 5);
 
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest, 0), None);
@@ -571,14 +566,8 @@ mod test {
         // 10 + 1 = 11, satisfying sencond condition
         // 30 - 11 > normalized_stability_threshold. So we can get a
         // stable child, and fork2_block should be a new anchor.
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
-            11
-        );
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[1], network),
-            30
-        );
+        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 11);
+        assert_eq!(forest.tree.children[1].difficulty_based_depth(network), 30);
 
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest, 0), Some(genesis_block));
@@ -588,10 +577,7 @@ mod test {
         // its difficulty_based_depth is 25,
         // normalized_stability_threshold is 3 * 5 = 15,
         // and it does not have any siblings.
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
-            25
-        );
+        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 25);
 
         assert_eq!(peek(&forest), Some(&fork2_block));
         assert_eq!(pop(&mut forest, 0), Some(fork2_block));
@@ -609,10 +595,7 @@ mod test {
         // difficulty_based_depth is 75, and
         // normalized_stability_threshold is 3 * 25 = 75,
         // hence difficulty_based_depth >= normalized_stability_threshold.
-        assert_eq!(
-            crate::blocktree::difficulty_based_depth(&forest.tree.children[0], network),
-            75
-        );
+        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 75);
 
         assert_eq!(peek(&forest), Some(&block_2));
         assert_eq!(pop(&mut forest, 0), Some(block_2));
