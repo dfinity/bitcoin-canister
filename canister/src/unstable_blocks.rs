@@ -338,7 +338,8 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                     //
                     // This scenario is only relevant for testnets, so this addition is safe and
                     // has no impact on the behavior of the mainnet canister.
-                    if blocktree::depth(&blocks.tree.children[*child_idx]) >= TESTNET_CHAIN_MAX_DEPTH
+                    if blocktree::depth(&blocks.tree.children[*child_idx])
+                        >= TESTNET_CHAIN_MAX_DEPTH
                     {
                         // If there's another competing chain, verify that it's at least
                         // `TESTNET_CHAIN_MAX_DEPTH` blocks behind the longest chain to mark the
@@ -353,8 +354,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 
                         // NOTE: We use a `saturating_sub` here because `depths` is ordered by
                         // `difficult_based_depth`, whereas here the chains are compared by their
-                        // `depth`, so it's not guaranteed that
-                        // `deepest_depth > second_deepest_depth`.
+                        // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
                         if deepest_depth.saturating_sub(second_deepest_depth)
                             >= TESTNET_CHAIN_MAX_DEPTH
                         {
