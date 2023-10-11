@@ -9,7 +9,7 @@ ROOT_DIR="$SCRIPT_DIR/.."
 cd "$ROOT_DIR"
 
 # Remove downloaded didc if we run into errors.
-trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -r $ROOT_DIR/old' EXIT SIGINT
+trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -rf $ROOT_DIR/old' EXIT SIGINT
 
 get_didc_release(){
   OS=$(uname)
@@ -39,9 +39,6 @@ chmod +x didc
 get_drun_release 
 chmod +x drun
 
-#PR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-#git checkout master
 
 mkdir old
 cd old
@@ -52,7 +49,8 @@ cargo bench --quiet 2>&1
 
 cd "$ROOT_DIR"
 
-#git checkout "$PR_BRANCH"
+rm -rf target/criterion
+cp -r old/bitcoin-canister/target/criterion target/criterion
 
 # Run cargo bench, searching for performance regressions and outputting them to a file.
 LOG_FILE="$SCRIPT_DIR/benchmarking/benchmark.txt"
