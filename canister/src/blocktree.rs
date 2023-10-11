@@ -296,6 +296,41 @@ pub struct BlockDoesNotExtendTree(pub BlockHash);
 mod test {
     use super::*;
     use crate::test_utils::{BlockBuilder, BlockChainBuilder};
+    use proptest::collection::vec as pvec;
+    use proptest::prelude::*;
+    use test_strategy::proptest;
+
+    // For generating arbitrary BlockTrees.
+    impl Arbitrary for BlockTree {
+        type Parameters = Option<()>;
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            fn build_block_tree(tree: &mut BlockTree, num_children: &[u8]) {
+                // Add children.
+                if num_children.is_empty() {
+                    return;
+                }
+
+                for _ in 0..num_children[0] {
+                    let mut subtree =
+                        BlockTree::new(BlockBuilder::with_prev_header(tree.root.header()).build());
+
+                    build_block_tree(&mut subtree, &num_children[1..]);
+                    tree.children.push(subtree);
+                }
+            }
+
+            // Each depth can have up to 3 children, up to a depth of 10.
+            pvec(1..3u8, 0..10)
+                .prop_map(|num_children| {
+                    let mut tree = BlockTree::new(BlockBuilder::genesis().build());
+                    build_block_tree(&mut tree, &num_children);
+                    tree
+                })
+                .boxed()
+        }
+    }
 
     #[test]
     fn tree_single_block() {
@@ -535,5 +570,28 @@ mod test {
 
         assert_eq!(height_2_block.block_hash(), fork[1].block_hash());
         assert_eq!(height_2_depth, 1);
+    }
+
+    #[test]
+    fn deserialize_very_deep_block_tree() {
+        let chain = BlockChainBuilder::new(5_000).build();
+        let mut tree = BlockTree::new(chain[0].clone());
+
+        for block in chain.into_iter().skip(1) {
+            extend(&mut tree, block).unwrap();
+        }
+
+        let mut bytes = vec![];
+        ciborium::ser::into_writer(&tree, &mut bytes).unwrap();
+        let new_tree: BlockTree = ciborium::de::from_reader(&bytes[..]).unwrap();
+        assert_eq!(tree, new_tree);
+    }
+
+    #[proptest]
+    fn serialize_deserialize(tree: BlockTree) {
+        let mut bytes = vec![];
+        ciborium::ser::into_writer(&tree, &mut bytes).unwrap();
+        let new_tree: BlockTree = ciborium::de::from_reader(&bytes[..]).unwrap();
+        assert_eq!(tree, new_tree);
     }
 }
