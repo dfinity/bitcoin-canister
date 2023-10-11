@@ -59,11 +59,12 @@ cargo bench --quiet 2>&1 | tee "$LOG_FILE"
 set +e
 NO_CHANGE=$(grep -c "No change in performance detected." "$LOG_FILE")
 IMPROVED=$(grep -c "Performance has improved." "$LOG_FILE")
+WITHIN_NOISE=$(grep -c "Change within noise threshold." "$LOG_FILE")
 set -e
 
 # Since we have 4 benchmark tests, we expect 4 appearances of "No change in performance detected."
-# or "Performance has improved." otherwise, performances are degraded.
-OCCURENCES=$((NO_CHANGE+IMPROVED))
+# or "Performance has improved." or "Change within noise threshold." otherwise, performances are degraded.
+OCCURENCES=$((NO_CHANGE+IMPROVED+WITHIN_NOISE))
 
 if [[ $OCCURENCES != 4 ]]; then
   echo "FAIL"
