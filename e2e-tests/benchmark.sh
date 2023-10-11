@@ -9,7 +9,7 @@ ROOT_DIR="$SCRIPT_DIR/.."
 cd "$ROOT_DIR"
 
 # Remove downloaded didc if we run into errors.
-trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -r $ROOT_DIR/old/bitcoin-canister' EXIT SIGINT
+trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -r $ROOT_DIR/old' EXIT SIGINT
 
 get_didc_release(){
   OS=$(uname)
@@ -43,8 +43,9 @@ chmod +x drun
 
 #git checkout master
 
-mkdir old && cd old
-git clone git@github.com:dfinity/bitcoin-canister.git
+mkdir old
+cd old
+git clone https://github.com/dfinity/bitcoin-canister.git
 cd bitcoin-canister
 
 cargo bench --quiet 2>&1
