@@ -52,21 +52,41 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
     }
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        // Unflatten a block tree from a list back into a `BlockTree` struct.
-        fn build_tree<'a, A: SeqAccess<'a>>(seq: &mut A) -> BlockTree {
-            let (root, num_children) = seq
-                .next_element()
+        fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> Option<(Block, usize)> {
+            seq.next_element()
                 .expect("reading next element must succeed")
-                .expect("root must exist");
-
-            let mut block_tree = BlockTree::new(root);
-            for _ in 0..num_children {
-                block_tree.children.push(build_tree(seq));
-            }
-
-            block_tree
         }
 
-        Ok(build_tree(&mut seq))
+        // A stack containing a `BlockTree` along with how many children remain to be added to it.
+        let mut stack: Vec<(BlockTree, usize)> = Vec::new();
+
+        // Read the root and add it to the stack.
+        let (root, children_to_add) = next(&mut seq).unwrap();
+        stack.push((BlockTree::new(root), children_to_add));
+
+        while let Some((tree, children_to_add)) = stack.pop() {
+            if children_to_add == 0 {
+                // No more children. Add tree to its parent if it exists.
+                match stack.last_mut() {
+                    Some(parent) => parent.0.children.push(tree),
+                    None => {
+                        // There's no parent to this tree. Deserialization is complete.
+                        // Assert that there's no more data to deserialize.
+                        assert_eq!(next(&mut seq), None);
+                        return Ok(tree);
+                    }
+                }
+            } else {
+                // Add the tree back to stack, decrementing the number of children that still need
+                // to be added.
+                stack.push((tree, children_to_add - 1));
+
+                // Add the child to the stack.
+                let (child, grand_children_to_add) = next(&mut seq).unwrap();
+                stack.push((BlockTree::new(child), grand_children_to_add));
+            }
+        }
+
+        unreachable!("expected more while deserializing BlockTree");
     }
 }
