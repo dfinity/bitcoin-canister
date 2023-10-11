@@ -8,8 +8,8 @@ ROOT_DIR="$SCRIPT_DIR/.."
 
 cd "$ROOT_DIR"
 
-# Remove downloaded didc if we run into errors.
-trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -rf $ROOT_DIR/old' EXIT SIGINT
+# Remove downloaded didc, drun, and master branch code if we run into errors.
+trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -rf $ROOT_DIR/bitcoin-canister-master' EXIT SIGINT
 
 get_didc_release(){
   OS=$(uname)
@@ -39,18 +39,18 @@ chmod +x didc
 get_drun_release 
 chmod +x drun
 
+# Create the directory and clone master branch to it.
+git clone https://github.com/dfinity/bitcoin-canister.git bitcoin-canister-master
+cd bitcoin-canister-master
 
-mkdir old
-cd old
-git clone https://github.com/dfinity/bitcoin-canister.git
-cd bitcoin-canister
-
+# Run benchmark on the master branch.
 cargo bench --quiet 2>&1
 
 cd "$ROOT_DIR"
 
+# Move bench results to the current branch.
 rm -rf target/criterion
-cp -r old/bitcoin-canister/target/criterion target/criterion
+cp -r bitcoin-canister-master/target/criterion target/criterion
 
 # Run cargo bench, searching for performance regressions and outputting them to a file.
 LOG_FILE="$SCRIPT_DIR/benchmarking/benchmark.txt"
@@ -67,8 +67,8 @@ set -e
 OCCURENCES=$((NO_CHANGE+IMPROVED+WITHIN_NOISE))
 
 if [[ $OCCURENCES != 4 ]]; then
-  echo "FAIL"
+  echo "FAIL! Performance regressions are detected."
   exit 1
 fi
 
-echo "SUCCESS"
+echo "SUCCESS! Performance regressions are not detected."
