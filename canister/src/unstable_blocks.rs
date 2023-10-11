@@ -14,7 +14,9 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
-const TESTNET_MAX_SOLO_CHAIN_LENGTH: u128 = 1000;
+// The maximum number of blocks that a chain on testnet can exceed other chains before its
+// anchor block is marked as stable.
+const TESTNET_CHAIN_MAX_DEPTH: u128 = 1000;
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -327,24 +329,38 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                     // * The canister will now need to maintain a chain of length 668,448 just to
                     //   mark the anchor block as stable!
                     //
-                    // Very long chains can cause the shadow stacks to overflow, resulting in a
-                    // broken canister.
+                    // Very long chains can cause the stack to overflow, resulting in a broken
+                    // canister.
                     //
                     // The pragmatic solution in this case is to bound the length of the chain. If
-                    // there's only one chain and it starts exceeding a certain length, we assume
-                    // that the anchor is stable even if the difficulty requirement hasn't been
-                    // met.
+                    // one chain starts exceeding other chains by a certain length, we assume that
+                    // the anchor is stable even if the difficulty requirement hasn't been met.
                     //
                     // This scenario is only relevant for testnets, so this addition is safe and
-                    // has not impact on the behavior of the mainnet canister.
-                    if depths.len() == 1
-                        && blocktree::depth(&blocks.tree.children[*child_idx])
-                            > TESTNET_MAX_SOLO_CHAIN_LENGTH
+                    // has no impact on the behavior of the mainnet canister.
+                    if blocktree::depth(&blocks.tree.children[*child_idx])
+                        >= TESTNET_CHAIN_MAX_DEPTH
                     {
-                        print(
-                            "Detected a solo chain > {TESTNET_MAX_SOLO_CHAIN_LENGTH}. Assuming the root is stable...",
-                        );
-                        return Some(*child_idx);
+                        // If there's another competing chain, verify that it's at least
+                        // `TESTNET_CHAIN_MAX_DEPTH` blocks behind the longest chain to mark the
+                        // current anchor as stable.
+                        let second_deepest_depth = match depths.len().checked_sub(2) {
+                            None => 0,
+                            Some(idx) => {
+                                let (_, second_child_idx) = depths[idx];
+                                blocktree::depth(&blocks.tree.children[second_child_idx])
+                            }
+                        };
+
+                        // NOTE: We use a `saturating_sub` here because `depths` is ordered by
+                        // `difficulty_based_depth`, whereas here the chains are compared by their
+                        // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
+                        if deepest_depth.saturating_sub(second_deepest_depth)
+                            >= TESTNET_CHAIN_MAX_DEPTH
+                        {
+                            print(&format!("Detected a chain that's > {TESTNET_CHAIN_MAX_DEPTH} blocks ahead of any other chain. Assuming its root is stable..."));
+                            return Some(*child_idx);
+                        }
                     }
                 }
                 Network::Mainnet => {
@@ -879,7 +895,7 @@ mod test {
     }
 
     #[test]
-    fn testnet_chain_longer_than_max_solo_chain() {
+    fn anchor_of_testnet_chain_longer_than_max_depth_is_marked_stable() {
         let stability_threshold = 144;
         let chain_len = 2000;
         let anchor_block_difficulty = 4642;
@@ -889,7 +905,7 @@ mod test {
 
         // Assert the chain that will be built exceeds the maximum allowed, so that we can test
         // that case.
-        assert!(chain_len > TESTNET_MAX_SOLO_CHAIN_LENGTH);
+        assert!(chain_len > TESTNET_CHAIN_MAX_DEPTH);
 
         // Build a long chain where the first block has a substantially higher difficulty than the
         // remaining blocks.
@@ -936,5 +952,67 @@ mod test {
         // threshold, the anchor block can now be popped because the chain's length has exceeded
         // the maximum allowed.
         assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
+    }
+
+    #[test]
+    fn long_testnet_chain_along_with_a_fork() {
+        let stability_threshold = 144;
+        let chain_len = 2000;
+        let anchor_block_difficulty = 4642;
+        let remaining_blocks_difficulty = 1;
+        let network = Network::Regtest;
+        let utxos = UtxoSet::new(network);
+
+        // Assert the chain that will be built exceeds the maximum allowed, so that we can test
+        // that case.
+        assert!(chain_len > TESTNET_CHAIN_MAX_DEPTH);
+
+        // Build a long chain where the first block has a substantially higher difficulty than the
+        // remaining blocks.
+        let chain = BlockChainBuilder::new(chain_len as u32)
+            // Set the difficulty of the anchor block to be high.
+            .with_difficulty(anchor_block_difficulty, 0..1)
+            // Set the difficulty of the remaining blocks to be low.
+            .with_difficulty(remaining_blocks_difficulty, 1..)
+            .build();
+
+        // Build a second chain that's a fork of the first.
+        let second_chain = BlockChainBuilder::fork(&chain[0], TESTNET_CHAIN_MAX_DEPTH as u32 - 1)
+            .with_difficulty(remaining_blocks_difficulty, 0..)
+            .build();
+
+        let mut unstable_blocks =
+            UnstableBlocks::new(&utxos, stability_threshold, chain[0].clone(), network);
+
+        // Insert chains into the state.
+        for block in chain.iter().skip(1) {
+            push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
+        }
+        for block in second_chain.iter() {
+            push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
+        }
+
+        // The normalized stability threshold is still not met, which means that, in theory,
+        // there are no stable blocks that can be popped.
+        assert!(
+            unstable_blocks.blocks_difficulty_based_depth()
+                < unstable_blocks.normalized_stability_threshold()
+        );
+
+        // If there's a very long testnet chain `A`, and there exists another chain `B` s.t.
+        // depth(A) - depth(B) < TESTNET_CHAIN_MAX_DEPTH, the root of chain `A` is considered stable.
+        assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
+
+        // Add one more block to the second chain, so that it's depth is `TESTNET_CHAIN_MAX_DEPTH`.
+        push(
+            &mut unstable_blocks,
+            &utxos,
+            BlockBuilder::with_prev_header(second_chain.last().unwrap().header()).build(),
+        )
+        .unwrap();
+
+        // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
+        // is considered unstable.
+        assert_eq!(peek(&unstable_blocks), None);
     }
 }
