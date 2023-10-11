@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
-// The maximum number of blocks that a chain on testnet can exceed other chains before it's
+// The maximum number of blocks that a chain on testnet can exceed other chains before its
 // anchor block is marked as stable.
 const TESTNET_CHAIN_MAX_DEPTH: u128 = 1000;
 
@@ -356,7 +356,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                         };
 
                         // NOTE: We use a `saturating_sub` here because `depths` is ordered by
-                        // `difficult_based_depth`, whereas here the chains are compared by their
+                        // `difficulty_based_depth`, whereas here the chains are compared by their
                         // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
                         if deepest_depth.saturating_sub(second_deepest_depth)
                             >= TESTNET_CHAIN_MAX_DEPTH
@@ -994,7 +994,7 @@ mod test {
         .unwrap();
 
         // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
-        // is considered stable.
+        // is considered unstable.
         assert_eq!(peek(&unstable_blocks), None);
     }
 }
