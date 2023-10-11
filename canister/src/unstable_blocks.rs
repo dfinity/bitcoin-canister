@@ -1012,7 +1012,7 @@ mod test {
         .unwrap();
 
         // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
-        // is considered stable.
+        // is considered unstable.
         assert_eq!(peek(&unstable_blocks), None);
     }
 }
