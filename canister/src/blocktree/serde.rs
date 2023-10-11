@@ -71,7 +71,7 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
                     Some(parent) => parent.0.children.push(tree),
                     None => {
                         // There's no parent to this tree. Deserialization is complete.
-                        // Assert that there's no more data to serialize.
+                        // Assert that there's no more data to deserialize.
                         assert_eq!(next(&mut seq), None);
                         return Ok(tree);
                     }
@@ -87,6 +87,6 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
             }
         }
 
-        unreachable!();
+        unreachable!("expected more while deserializing BlockTree");
     }
 }
