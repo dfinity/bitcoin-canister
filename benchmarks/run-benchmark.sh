@@ -11,13 +11,13 @@ if ! type "drun" > /dev/null; then
   exit 1
 fi
 
-cat > $FILE << EOF
+cat > "$FILE" << EOF
 create
 install rwlgt-iiaaa-aaaaa-aaaaa-cai ../target/wasm32-unknown-unknown/release/benchmarks.wasm.gz ""
 query rwlgt-iiaaa-aaaaa-aaaaa-cai ${BENCH_NAME} "DIDL\x00\x00"
 EOF
 
 # Run the benchmarks, decode the output.
-drun $FILE --instruction-limit 99999999999999 \
+drun "$FILE" --instruction-limit 99999999999999 \
     | awk '{ print $3 }' \
     | grep "44.*" -o
