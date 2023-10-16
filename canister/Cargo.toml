@@ -25,6 +25,11 @@ serde_bytes = { workspace = true }
 name = "ic-btc-canister"
 path = "src/main.rs"
 
+# There are no benchmarks in the library itself, so by default it's turned off
+# to avoid having `cargo bench` look for benchmarks there.
+[lib]
+bench = false
+
 [dev-dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = { workspace = true, features = ["rand"] } # needed for generating secp256k1 keys.
