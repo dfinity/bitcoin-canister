@@ -43,24 +43,38 @@ get_latest_release_url() {
   local page=1
   local url
 
-  # Set a limit to the number of pages (e.g., 10 pages).
-  local page_limit=100
+  # Set a limit to the number of pages and the delay between the retries.
+  local page_limit=10
+  local delay_sec=2
 
   while [ "$page" -le "$page_limit" ]; do
-    url=$(curl -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page" | \
-      grep "browser_download_url.*watchdog-canister.wasm.gz" | \
-      cut -d '"' -f 4)
+    api_response=$(curl -i -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page")
+
+    rate_limit_remaining=$(echo "$api_response" | grep -i "X-RateLimit-Remaining:" | tr -d '[:space:]' | cut -d ':' -f 2)
+    rate_limit_reset=$(echo "$api_response" | grep -i "X-RateLimit-Reset:" | tr -d '[:space:]' | cut -d ':' -f 2)
+
+    if [ "$rate_limit_remaining" -le 0 ]; then
+      echo "GitHub API rate limit exceeded. Please wait and try again later."
+      current_time=$(date +%s)
+      time_to_reset=$((rate_limit_reset - current_time))
+      echo "Rate limiting will reset at: $(date -d @$rate_limit_reset)"
+      echo "You need to wait for $time_to_reset seconds from now."
+      echo ""
+      exit 3
+    fi
+
+    # There might be several releases on a page, but we only want the first one.
+    url=$(echo "$api_response" | grep -m 1 "browser_download_url.*watchdog-canister.wasm.gz" | cut -d '"' -f 4)
 
     if [ -z "$url" ]; then
       echo "No release found on page $page." >/dev/null
-      break
+      sleep $delay_sec
+      ((page++))
     fi
 
     # Check if the URL points to a valid file.
     if wget --spider "$url" 2>/dev/null; then
       break
-    else
-      ((page++))
     fi
   done
 
@@ -76,7 +90,9 @@ download_latest_release() {
     echo "Found watchdog-canister.wasm.gz at URL: $url"
     wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"
   else
-    echo "No release with watchdog-canister.wasm.gz found."
+    echo "No release with watchdog-canister.wasm.gz found at: $url"
+    echo ""
+    exit 2
   fi
 }
 download_latest_release
@@ -95,6 +111,7 @@ sed -i'' -e 's/'${REFERENCE_CANISTER_NAME}'/watchdog/' .dfx/local/canister_ids.j
 # Verify that the watchdog canister now exists and is already stopped.
 if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
   echo "Failed to create and stop watchdog canister."
+  echo ""
   exit 1
 fi
 
