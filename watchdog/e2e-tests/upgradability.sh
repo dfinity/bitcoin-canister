@@ -55,7 +55,7 @@ get_latest_release_url() {
       current_time=$(date +%s)
       time_to_reset=$((rate_limit_reset - current_time))
       echo "GitHub API rate limit exceeded. Please wait and try again later."
-      echo "Rate limiting will reset at: $(date -d @$rate_limit_reset)"
+      echo "Rate limiting will reset at: $(date -d @"$rate_limit_reset")"
       echo "You need to wait for $time_to_reset seconds from now."
       exit 2
     fi
