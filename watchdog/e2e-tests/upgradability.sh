@@ -57,7 +57,7 @@ get_latest_release_url() {
       echo "GitHub API rate limit exceeded. Please wait and try again later."
       echo "Rate limiting will reset at: $(date -d @$rate_limit_reset)"
       echo "You need to wait for $time_to_reset seconds from now."
-      exit 3
+      exit 2
     fi
 
     # Extract the URL of the first release.
@@ -73,7 +73,7 @@ get_latest_release_url() {
   done
 
   echo "No release found after $page_limit pages."
-  exit 4
+  exit 3
 }
 
 # Download the latest release.
@@ -87,11 +87,8 @@ download_latest_release() {
       echo "Download successful."
     else
       echo "Download failed. Please check the URL or try again later."
-      exit 5
+      exit 4
     fi
-  else
-    echo "No release with watchdog-canister.wasm.gz found."
-    exit 2
   fi
 }
 download_latest_release
