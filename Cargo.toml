@@ -29,7 +29,6 @@ byteorder = "1.4.3"
 candid = "0.9.1"
 ciborium = "0.2.1"
 clap = { version = "4.0.11", features = ["derive"] }
-criterion = "0.4.0"
 futures = "0.3.28"
 hex = "0.4.3"
 ic-btc-canister = { path = "./canister" }
