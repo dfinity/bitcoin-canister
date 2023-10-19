@@ -1,177 +1,172 @@
+//! A script for running benchmarks on a canister.
+//! To run this script, run `cargo bench`.
+use candid::{CandidType, Decode};
+use clap::Parser;
+use colored::Colorize;
+use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap, env, path::PathBuf, process::Command, sync::Mutex, time::Duration,
+    collections::BTreeMap,
+    env,
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
+    process::Command,
 };
 
-use criterion::{measurement::Measurement, Criterion};
+// The file to persist benchmark results to.
+const RESULTS_FILE: &str = "results.yml";
 
-pub struct Instructions;
-struct InstructionsFormatter;
-
-impl Measurement for Instructions {
-    type Intermediate = ();
-
-    type Value = u64;
-
-    fn start(&self) -> Self::Intermediate {
-        panic!("Instruction measurements must be custom calculated");
-    }
-
-    fn end(&self, _i: Self::Intermediate) -> Self::Value {
-        panic!("Instruction measurements must be custom calculated");
-    }
-
-    fn add(&self, v1: &Self::Value, v2: &Self::Value) -> Self::Value {
-        v1 + v2
-    }
-
-    fn zero(&self) -> Self::Value {
-        0
-    }
-
-    fn to_f64(&self, value: &Self::Value) -> f64 {
-        *value as f64
-    }
-
-    fn formatter(&self) -> &dyn criterion::measurement::ValueFormatter {
-        &InstructionsFormatter
-    }
+lazy_static::lazy_static! {
+    // The benchmarks to run.
+    static ref BENCHES: Vec<&'static str> = vec![
+        "insert_block_headers",
+        "insert_block_headers_multiple_times",
+        "insert_300_blocks",
+        "get_metrics",
+    ];
 }
 
-impl criterion::measurement::ValueFormatter for InstructionsFormatter {
-    fn scale_values(&self, typical_value: f64, values: &mut [f64]) -> &'static str {
-        if typical_value < 10_000.0 {
-            return "Instructions";
-        }
-        if typical_value < 10_000_000.0 {
-            for v in values {
-                *v /= 1_000.0;
-            }
-            return "K Instructions";
-        }
-        if typical_value < 10_000_000_000.0 {
-            for v in values {
-                *v /= 1_000_000.0;
-            }
-            return "M Instructions";
-        }
-        if typical_value < 10_000_000_000_000.0 {
-            for v in values {
-                *v /= 1_000_000_000.0;
-            }
-            return "B Instructions";
-        }
-        for v in values {
-            *v /= 1_000_000_000_000.0;
-        }
-        "T Instructions"
-    }
-
-    fn scale_throughputs(
-        &self,
-        typical_value: f64,
-        _throughput: &criterion::Throughput,
-        values: &mut [f64],
-    ) -> &'static str {
-        self.scale_values(typical_value, values)
-    }
-
-    fn scale_for_machines(&self, _values: &mut [f64]) -> &'static str {
-        "Instructions"
-    }
-}
-
-fn bench_dir() -> PathBuf {
+fn benchmarks_dir() -> PathBuf {
     PathBuf::new().join(env::var("CARGO_MANIFEST_DIR").unwrap())
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-struct ExecutionArguments {
-    method: String,
+#[derive(Debug, PartialEq, CandidType, Serialize, Deserialize)]
+struct BenchResult {
+    measurements: BTreeMap<String, u64>,
 }
 
-impl ExecutionArguments {
-    fn new(method: &str) -> Self {
-        Self {
-            method: method.to_string(),
+// Prints a measurement along with its percentage change relative to the old value.
+fn print_measurement(measurement: &str, value: u64, diff: f64) {
+    if diff == 0.0 {
+        println!("    {measurement}: {value} ({:.2}%) (no change)", diff);
+    } else if diff.abs() < 2.0 {
+        println!(
+            "    {measurement}: {value} ({:.2}%) (change within noise threshold)",
+            diff
+        );
+    } else if diff > 0.0 {
+        println!(
+            "    {}",
+            format!("{}: {value} (regressed by {:.2}%)", measurement, diff,)
+                .red()
+                .bold()
+        );
+    } else {
+        println!(
+            "    {}",
+            format!("{}: {value} (improved by {:.2}%)", measurement, diff.abs(),)
+                .green()
+                .bold()
+        );
+    }
+}
+
+// Prints out a measurement of the new value along with a comparison with the old value.
+fn compare(old: &BenchResult, new: &BenchResult) {
+    println!("  measurements:");
+    for (measurement, value) in new.measurements.iter() {
+        match old.measurements.get(measurement) {
+            Some(old_value) => {
+                let diff = ((*value as f64 - *old_value as f64) / *old_value as f64) * 100.0;
+                print_measurement(measurement, *value, diff);
+            }
+            None => println!("    {measurement}: {value} (new)"),
         }
     }
 }
 
-lazy_static::lazy_static! {
-    static ref CACHED_RESULTS: Mutex<HashMap<ExecutionArguments, u64>> = Mutex::new(HashMap::new());
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    // If provided, only benchmarks that match this pattern will be executed.
+    pattern: Option<String>,
+
+    // A necessary flag to keep `cargo bench` happy.
+    #[clap(long)]
+    bench: bool,
+
+    // Whether or not results should be persisted to disk.
+    #[clap(long)]
+    persist: bool,
 }
 
-fn execution_instructions(arguments: ExecutionArguments) -> u64 {
-    // Since execution will be deterministic and Criterion won't let us run it
-    // only once, we'll cache the result of a given execution and immediatelly
-    // return the same value on subsequent runs.
-    if let Some(&result) = CACHED_RESULTS.lock().unwrap().get(&arguments) {
-        return result;
-    }
+fn read_current_results() -> BTreeMap<String, BenchResult> {
+    // Create a path to the desired file
+    let mut file = match File::open(benchmarks_dir().join(RESULTS_FILE)) {
+        Err(_) => {
+            // No current results found.
+            return BTreeMap::new();
+        }
+        Ok(file) => file,
+    };
 
-    let output = Command::new("bash")
-        .current_dir(bench_dir())
-        .args(vec!["run-benchmark.sh", &arguments.method])
-        .output()
-        .unwrap();
-    let stdout = String::from_utf8(output.stdout).unwrap();
-    let stderr = String::from_utf8(output.stderr).unwrap();
-    assert!(output.status.success(), "{stdout}\n{stderr}");
-
-    // Convert result formatted as "(1_000_000 : nat64)" to u64.
-    let result = stdout
-        .trim()
-        .strip_prefix('(')
-        .unwrap()
-        .strip_suffix(" : nat64)")
-        .unwrap()
-        .chars()
-        .filter(|&c| c != '_')
-        .collect::<String>()
-        .parse()
-        .unwrap();
-    CACHED_RESULTS.lock().unwrap().insert(arguments, result);
-    result
-}
-
-fn bench_function(c: &mut Criterion<Instructions>, method: &str) {
-    c.bench_function(method, |b| {
-        b.iter_custom(|iters| {
-            // Each run will have the same result, so just do it once and
-            // multiply by the number of iterations.
-            iters * execution_instructions(ExecutionArguments::new(method))
-        })
-    });
-}
-
-pub fn criterion_benchmark(c: &mut Criterion<Instructions>) {
-    bench_function(c, "insert_block_headers");
-    bench_function(c, "insert_block_headers_multiple_times");
-    bench_function(c, "insert_300_blocks");
-    bench_function(c, "get_metrics");
-}
-
-fn benches() {
-    let mut c = Criterion::default()
-        .with_measurement(Instructions)
-        // 10 is the smallest sample size allowed.
-        .sample_size(10)
-        // Should limit us to one warm-up run.
-        .warm_up_time(Duration::from_millis(1))
-        // Large enough to suppress warnings about not being able to complete 10
-        // samples in time.
-        .measurement_time(Duration::from_secs(500))
-        .configure_from_args();
-    criterion_benchmark(&mut c);
+    // Read the current results.
+    let mut results_str = String::new();
+    file.read_to_string(&mut results_str)
+        .expect("error reading results file");
+    serde_yaml::from_str(&results_str).unwrap()
 }
 
 fn main() {
+    let args = Args::parse();
+
+    // Build benchmark canister.
+    println!("{:?}", env::var("CARGO_MANIFEST_DIR").unwrap());
     assert!(Command::new("bash")
         .args(["../scripts/build-canister.sh", "benchmarks"])
-        .current_dir(bench_dir())
+        .current_dir(benchmarks_dir())
         .status()
         .unwrap()
         .success());
 
-    benches();
+    let current_results = read_current_results();
+
+    let mut results = BTreeMap::new();
+
+    for bench_fn in BENCHES.iter() {
+        if let Some(pattern) = &args.pattern {
+            if !bench_fn.contains(pattern) {
+                continue;
+            }
+        }
+
+        println!();
+        println!("---------------------------------------------------");
+        println!();
+
+        let output = Command::new("bash")
+            .current_dir(benchmarks_dir())
+            .args(vec!["run-benchmark.sh", bench_fn])
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(
+            output.status.success(),
+            "executing benchmark failed: {stdout}\n{stderr}"
+        );
+
+        let result = Decode!(&hex::decode(stdout.trim()).unwrap(), BenchResult).unwrap();
+
+        // Compare result to previous result if that exists.
+        if let Some(current_result) = current_results.get(&bench_fn.to_string()) {
+            println!("Benchmark: {}", bench_fn.bold());
+            compare(current_result, &result);
+        } else {
+            println!("Benchmark: {} {}", bench_fn.bold(), "(new)".blue().bold());
+            let yaml = serde_yaml::to_string(&result).unwrap();
+            println!("{}", yaml);
+        }
+
+        results.insert(*bench_fn, result);
+    }
+
+    // Persist the result if requested.
+    if args.persist {
+        // Open a file in write-only mode, returns `io::Result<File>`
+        let mut file = File::create(benchmarks_dir().join(RESULTS_FILE)).unwrap();
+        file.write_all(serde_yaml::to_string(&results).unwrap().as_bytes())
+            .unwrap();
+        println!("Successfully persisted results to {}", RESULTS_FILE);
+    }
 }
