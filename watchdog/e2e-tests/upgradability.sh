@@ -50,11 +50,11 @@ get_latest_release_url() {
   while [ "$page" -le "$page_limit" ]; do
     api_response=$(curl -i -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page")
 
+    # Check if we have reached the rate limit.
     rate_limit_remaining=$(echo "$api_response" | grep -i "X-RateLimit-Remaining:" | tr -d '[:space:]' | cut -d ':' -f 2)
-    rate_limit_reset=$(echo "$api_response" | grep -i "X-RateLimit-Reset:" | tr -d '[:space:]' | cut -d ':' -f 2)
-
     if [ "$rate_limit_remaining" -le 0 ]; then
       echo "GitHub API rate limit exceeded. Please wait and try again later."
+      rate_limit_reset=$(echo "$api_response" | grep -i "X-RateLimit-Reset:" | tr -d '[:space:]' | cut -d ':' -f 2)
       current_time=$(date +%s)
       time_to_reset=$((rate_limit_reset - current_time))
       echo "Rate limiting will reset at: $(date -d @$rate_limit_reset)"
