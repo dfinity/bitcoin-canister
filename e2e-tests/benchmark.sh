@@ -8,8 +8,8 @@ ROOT_DIR="$SCRIPT_DIR/.."
 
 cd "$ROOT_DIR"
 
-# Remove downloaded didc, drun, and master branch code if we run into errors.
-trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun && rm -rf $ROOT_DIR/bitcoin-canister-master' EXIT SIGINT
+# Remove downloaded didc, drun.
+trap 'rm $ROOT_DIR/didc $ROOT_DIR/drun' EXIT SIGINT
 
 get_didc_release(){
   OS=$(uname)
@@ -45,7 +45,8 @@ set -e
 
 if [[ $REGRESSIONS != 0 ]]; then
   echo "FAIL! Performance regressions are detected. 
-        Make sure that you have correct results in results.yml."
+        Make sure that you results.yml represent results
+        of benchmarking current master branch."
   exit 1
 fi
 
