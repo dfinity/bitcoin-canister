@@ -63,7 +63,7 @@ get_latest_release_url() {
     # Extract the URL of the first release.
     url=$(grep -m 1 "browser_download_url.*watchdog-canister.wasm.gz" <<< "$api_response" | cut -d '"' -f 4)
 
-    if [ -n "$url" ] && wget --spider "$url" 2>/dev/null; then
+    if [ -n "$url" ]; then
       echo "$url"
       return
     fi
@@ -83,9 +83,14 @@ download_latest_release() {
 
   if [ -n "$url" ]; then
     echo "Found watchdog-canister.wasm.gz at URL: $url"
-    wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"
+    if wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"; then
+      echo "Download successful."
+    else
+      echo "Download failed. Please check the URL or try again later."
+      exit 5
+    fi
   else
-    echo "No release with watchdog-canister.wasm.gz found at: $url"
+    echo "No release with watchdog-canister.wasm.gz found."
     exit 2
   fi
 }
