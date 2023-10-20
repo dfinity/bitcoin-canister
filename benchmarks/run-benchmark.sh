@@ -16,7 +16,7 @@ get_didc_release(){
       # Linux x86 64bit
       wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-linux64
     else
-      echo "Unsoported machine"
+      echo "Unsupported machine"
       EXIT SIGINT
   fi
 }
