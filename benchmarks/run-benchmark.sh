@@ -18,32 +18,36 @@ get_didc_release(){
     # Apple sillicon
     wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-macos
   elif [ "$OS" == "Linux" ] && [ "$ARCH" == "x86_64" ]; then
-          # Linux x86 64bit
-          wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-linux64
-      else
-          echo "Unsoported machine"
-          EXIT SIGINT
+      # Linux x86 64bit
+      wget -O didc https://github.com/dfinity/candid/releases/download/2023-07-25/didc-linux64
+    else
+      echo "Unsoported machine"
+      EXIT SIGINT
   fi
+}
+
+install_drun(){
+  URL="https://github.com/dfinity/ic/releases/download/release-2023-09-27_23-01%2Bquic/drun-x86_64-${OS}.gz"
+  wget -O "drun.gz" "${URL}"
+  gzip -fd drun.gz
+  chmod +x drun
 }
 
 get_correct_drun_release() {
   OS=$(uname | tr '[:upper:]' '[:lower:]')
   
-  set +e
-  DRUN_LOCATION=$(echo $(type "drun") | awk '{print $3}')
-  DRUN_SHA=$(shasum -a 256 "$DRUN_LOCATION" | awk '{ print $1 }')
-  set -e
-
-  # Check if drun exists and if the correct version is used.
-  if ["$OS"==*"linux"* && "$DRUN_SHA"==*"7bf08d5f1c1a7cd44f62c03f8554f07aa2430eb3ae81c7c0a143a68ff52dc7f7"*] ||
-      ["$OS"==*"darwin"* && "$DRUN_SHA"==*"57b506d05a6f42f7461198f79f648ad05434c72f3904834db2ced30853d01a62"*]; then
-      return
+  if ! type "drun" > /dev/null; then
+    install_drun
+  else 
+    DRUN_LOCATION=$(echo $(type "drun") | awk '{print $3}')
+    DRUN_SHA=$(shasum -a 256 "$DRUN_LOCATION" | awk '{ print $1 }')
+    # Check if drun exists and if the correct version is used.
+    if ! [[ "$OS" == "linux" && "$DRUN_SHA" == "7bf08d5f1c1a7cd44f62c03f8554f07aa2430eb3ae81c7c0a143a68ff52dc7f7" ]]; then
+      if ! [[ "$OS" == "darwin" && "$DRUN_SHA" == "57b506d05a6f42f7461198f79f648ad05434c72f3904834db2ced30853d01a62" ]]; then
+        install_drun
+      fi
+    fi
   fi
-
-  URL="https://github.com/dfinity/ic/releases/download/release-2023-09-27_23-01%2Bquic/drun-x86_64-${OS}.gz"
-  wget -O "drun.gz" "${URL}"
-  gzip -fd drun.gz
-  chmod +x drun
 }
 
 if ! type "didc" > /dev/null; then
