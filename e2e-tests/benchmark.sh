@@ -8,8 +8,7 @@ set -e
 if [[ $REGRESSIONS != 0 ]]; then
   echo "FAIL! Performance regressions are detected. 
         Make sure that you results.yml represent results
-        of benchmarking current master branch with drun
-        \"release-2023-09-27_23-01\"."
+        of benchmarking current master branch."
   exit 1
 fi
 

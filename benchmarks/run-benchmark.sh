@@ -3,9 +3,6 @@
 # Runs a benchmark using drun. The script assumes drun is available on the caller's path.
 set -euo pipefail
 
-# Remove downloaded didc, drun.
-trap 'set +e && rm drun didc && set -e' EXIT SIGINT
-
 BENCH_NAME=$1
 FILE=$(mktemp)
 
@@ -29,11 +26,24 @@ get_didc_release(){
   fi
 }
 
-get_drun_release() {
+get_correct_drun_release() {
   OS=$(uname | tr '[:upper:]' '[:lower:]')
+  
+  set +e
+  DRUN_LOCATION=$(echo $(type "drun") | awk '{print $3}')
+  DRUN_SHA=$(shasum -a 256 "$DRUN_LOCATION" | awk '{ print $1 }')
+  set -e
+
+  # Check if drun exists and if the correct version is used.
+  if ["$OS"==*"linux"* && "$DRUN_SHA"==*"7bf08d5f1c1a7cd44f62c03f8554f07aa2430eb3ae81c7c0a143a68ff52dc7f7"*] ||
+      ["$OS"==*"darwin"* && "$DRUN_SHA"==*"57b506d05a6f42f7461198f79f648ad05434c72f3904834db2ced30853d01a62"*]; then
+      return
+  fi
+
   URL="https://github.com/dfinity/ic/releases/download/release-2023-09-27_23-01%2Bquic/drun-x86_64-${OS}.gz"
   wget -O "drun.gz" "${URL}"
-  gzip -d drun.gz
+  gzip -fd drun.gz
+  chmod +x drun
 }
 
 if ! type "didc" > /dev/null; then
@@ -41,10 +51,7 @@ if ! type "didc" > /dev/null; then
   chmod +x didc
 fi
 
-if ! type "drun" > /dev/null; then
-  get_drun_release 
-  chmod +x drun
-fi
+get_correct_drun_release
 
 cat > "$FILE" << EOF
 create
