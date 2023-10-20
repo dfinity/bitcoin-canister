@@ -6,11 +6,6 @@ set -euo pipefail
 BENCH_NAME=$1
 FILE=$(mktemp)
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
-# Add script directory to the PATH
-export PATH="$SCRIPT_DIR:$PATH"
-
 get_didc_release(){
   OS=$(uname)
   ARCH=$(uname -m)
