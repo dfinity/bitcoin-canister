@@ -1,16 +1,16 @@
 get_metrics:
   measurements:
-    instructions: 90708530
+    instructions: 89792442
     stable_memory_size: 769
 insert_300_blocks:
   measurements:
-    instructions: 586134355
+    instructions: 584377909
     stable_memory_size: 769
 insert_block_headers:
   measurements:
-    instructions: 3201195751
+    instructions: 3841791258
     stable_memory_size: 769
 insert_block_headers_multiple_times:
   measurements:
-    instructions: 12047830062
+    instructions: 13984236150
     stable_memory_size: 769
