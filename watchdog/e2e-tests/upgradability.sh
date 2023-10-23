@@ -42,29 +42,38 @@ trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 get_latest_release_url() {
   local page=1
   local url
-
-  # Set a limit to the number of pages (e.g., 10 pages).
-  local page_limit=100
+  local page_limit=10
+  local delay_sec=2
 
   while [ "$page" -le "$page_limit" ]; do
-    url=$(curl -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page" | \
-      grep "browser_download_url.*watchdog-canister.wasm.gz" | \
-      cut -d '"' -f 4)
+    api_response=$(curl -i -s "https://api.github.com/repos/dfinity/bitcoin-canister/releases?page=$page")
 
-    if [ -z "$url" ]; then
-      echo "No release found on page $page." >/dev/null
-      break
+    # Check rate limit and calculate time to reset.
+    rate_limit_remaining=$(grep -i "X-RateLimit-Remaining:" <<< "$api_response" | tr -d '[:space:]' | cut -d ':' -f 2)
+    if [ "$rate_limit_remaining" -le 0 ]; then
+      rate_limit_reset=$(grep -i "X-RateLimit-Reset:" <<< "$api_response" | tr -d '[:space:]' | cut -d ':' -f 2)
+      current_time=$(date +%s)
+      time_to_reset=$((rate_limit_reset - current_time))
+      echo "GitHub API rate limit exceeded. Please wait and try again later."
+      echo "Rate limiting will reset at: $(date -d @"$rate_limit_reset")"
+      echo "You need to wait for $time_to_reset seconds from now."
+      exit 2
     fi
 
-    # Check if the URL points to a valid file.
-    if wget --spider "$url" 2>/dev/null; then
-      break
-    else
-      ((page++))
+    # Extract the URL of the first release.
+    url=$(grep -m 1 "browser_download_url.*watchdog-canister.wasm.gz" <<< "$api_response" | cut -d '"' -f 4)
+
+    if [ -n "$url" ]; then
+      echo "$url"
+      return
     fi
+
+    sleep $delay_sec
+    ((page++))
   done
 
-  echo "$url"
+  echo "No release found after $page_limit pages."
+  exit 3
 }
 
 # Download the latest release.
@@ -74,9 +83,12 @@ download_latest_release() {
 
   if [ -n "$url" ]; then
     echo "Found watchdog-canister.wasm.gz at URL: $url"
-    wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"
-  else
-    echo "No release with watchdog-canister.wasm.gz found."
+    if wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"; then
+      echo "Download successful."
+    else
+      echo "Download failed. Please check the URL or try again later."
+      exit 4
+    fi
   fi
 }
 download_latest_release
