@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -Eexuo pipefail
 
+BENCH_OUTPUT=$(cargo bench)
+
 set +e
-REGRESSIONS=$(cargo bench | grep -c "regressed by")
+REGRESSIONS=$( echo "$BENCH_OUTPUT" |  grep -c "regressed by" )
 set -e
 
 if [[ $REGRESSIONS != 0 ]]; then
