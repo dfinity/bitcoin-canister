@@ -39,14 +39,14 @@ get_correct_drun_release() {
   OS=$(uname | tr '[:upper:]' '[:lower:]')
   
   if ! type "drun" > /dev/null; then
-    install_drun $OS
+    install_drun "$OS"
   else 
     DRUN_LOCATION=$(type "drun" | awk '{print $3}')
     DRUN_SHA=$(shasum -a 256 "$DRUN_LOCATION" | awk '{ print $1 }')
     # Check if drun exists and if the correct version is used.
     if ! [[ "$OS" == "linux" && "$DRUN_SHA" == "$DRUN_LINUX_SHA" ]]; then
       if ! [[ "$OS" == "darwin" && "$DRUN_SHA" == "$DRUN_MAC_SHA" ]]; then
-        install_drun $OS
+        install_drun "$OS"
       fi
     fi
   fi
