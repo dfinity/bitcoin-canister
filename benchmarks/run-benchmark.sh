@@ -31,6 +31,23 @@ install_didc(){
   chmod +x didc
 }
 
+get_coccrect_didc_release(){
+  OS=$(uname)
+
+  if ! type "didc" > /dev/null; then
+    install_didc
+  else
+    DIDC_LOCATION=$(type "didc" | awk '{print $3}')
+    DIDC_SHA=$(shasum -a 256 "$DIDC_LOCATION" | awk '{ print $1 }')
+    # Check if didc exists and if the correct version is used.
+    if ! [[ "$OS" == "Linux" && "$DIDC_SHA" == "$DIDC_LINUX_SHA" ]]; then
+      if ! [[ "$OS" == "Darwin" && "$DIDC_SHA" == "$DIDC_MAC_SHA" ]]; then
+        install_didc
+      fi
+    fi
+  fi
+}
+
 install_drun(){
   OS=$1
   wget -O "drun.gz" "${DRUN_RELEASE_URL_PREFIX}${OS}.gz"
@@ -50,23 +67,6 @@ get_correct_drun_release() {
     if ! [[ "$OS" == "linux" && "$DRUN_SHA" == "$DRUN_LINUX_SHA" ]]; then
       if ! [[ "$OS" == "darwin" && "$DRUN_SHA" == "$DRUN_MAC_SHA" ]]; then
         install_drun "$OS"
-      fi
-    fi
-  fi
-}
-
-get_coccrect_didc_release(){
-  OS=$(uname | tr '[:upper:]' '[:lower:]')
-
-  if ! type "didc" > /dev/null; then
-    install_didc
-  else
-    DIDC_LOCATION=$(type "didc" | awk '{print $3}')
-    DIDC_SHA=$(shasum -a 256 "$DIDC_LOCATION" | awk '{ print $1 }')
-    # Check if drun exists and if the correct version is used.
-    if ! [[ "$OS" == "linux" && "$DIDC_SHA" == "$DIDC_LINUX_SHA" ]]; then
-      if ! [[ "$OS" == "darwin" && "$DIDC_SHA" == "$DIDC_MAC_SHA" ]]; then
-        install_didc
       fi
     fi
   fi
