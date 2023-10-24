@@ -16,7 +16,7 @@ DIDC_MAC_URL="https://github.com/dfinity/candid/releases/download/2023-07-25/did
 CURR_DIR=$(pwd)
 export PATH="$CURR_DIR:$PATH"
 
-install_didc(){
+download_didc(){
   OS=$(uname)
   ARCH=$(uname -m)
   if [ "$OS" == "Darwin" ]; then
@@ -35,20 +35,20 @@ get_coccrect_didc_release(){
   OS=$(uname)
 
   if ! type "didc" > /dev/null; then
-    install_didc
+    download_didc
   else
     DIDC_LOCATION=$(type "didc" | awk '{print $3}')
     DIDC_SHA=$(shasum -a 256 "$DIDC_LOCATION" | awk '{ print $1 }')
     # Check if didc exists and if the correct version is used.
     if ! [[ "$OS" == "Linux" && "$DIDC_SHA" == "$DIDC_LINUX_SHA" ]]; then
       if ! [[ "$OS" == "Darwin" && "$DIDC_SHA" == "$DIDC_MAC_SHA" ]]; then
-        install_didc
+        download_didc
       fi
     fi
   fi
 }
 
-install_drun(){
+download_drun(){
   OS=$1
   wget -O "drun.gz" "${DRUN_RELEASE_URL_PREFIX}${OS}.gz"
   gzip -fd drun.gz
@@ -59,14 +59,14 @@ get_correct_drun_release() {
   OS=$(uname | tr '[:upper:]' '[:lower:]')
   
   if ! type "drun" > /dev/null; then
-    install_drun "$OS"
+    download_drun "$OS"
   else 
     DRUN_LOCATION=$(type "drun" | awk '{print $3}')
     DRUN_SHA=$(shasum -a 256 "$DRUN_LOCATION" | awk '{ print $1 }')
     # Check if drun exists and if the correct version is used.
     if ! [[ "$OS" == "linux" && "$DRUN_SHA" == "$DRUN_LINUX_SHA" ]]; then
       if ! [[ "$OS" == "darwin" && "$DRUN_SHA" == "$DRUN_MAC_SHA" ]]; then
-        install_drun "$OS"
+        download_drun "$OS"
       fi
     fi
   fi
