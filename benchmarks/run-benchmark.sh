@@ -31,7 +31,7 @@ download_didc(){
   chmod +x didc
 }
 
-get_coccrect_didc_release(){
+get_correct_didc_release(){
   OS=$(uname)
 
   if ! type "didc" > /dev/null; then
@@ -72,7 +72,7 @@ get_correct_drun_release() {
   fi
 }
 
-get_coccrect_didc_release
+get_correct_didc_release
 
 get_correct_drun_release
 
