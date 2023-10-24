@@ -9,8 +9,7 @@ set -e
 
 if [[ $REGRESSIONS != 0 ]]; then
   echo "FAIL! Performance regressions are detected. 
-        Make sure that you results.yml represent results
-        of benchmarking current master branch."
+        Please run `cargo bench -- --persist` to update `results.yml`"
   exit 1
 fi
 
