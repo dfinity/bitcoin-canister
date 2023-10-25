@@ -29,6 +29,7 @@ download_didc(){
       EXIT SIGINT
   fi
   chmod +x didc
+  alias didc="$CURR_DIR/didc"
 }
 
 get_correct_didc_release(){
@@ -58,11 +59,11 @@ download_drun(){
 get_correct_drun_release() {
   OS=$(uname | tr '[:upper:]' '[:lower:]')
   
-  if ! type "drun" > /dev/null; then
+  # Check if drun exists in current repo.
+  if ! [ -e "drun" ]; then
     download_drun "$OS"
   else 
-    DRUN_LOCATION=$(type "drun" | awk '{print $3}')
-    DRUN_SHA=$(shasum -a 256 "$DRUN_LOCATION" | awk '{ print $1 }')
+    DRUN_SHA=$(shasum -a 256 "drun" | awk '{ print $1 }')
     # Check if drun exists and if the correct version is used.
     if ! [[ "$OS" == "linux" && "$DRUN_SHA" == "$DRUN_LINUX_SHA" ]]; then
       if ! [[ "$OS" == "darwin" && "$DRUN_SHA" == "$DRUN_MAC_SHA" ]]; then
@@ -72,7 +73,7 @@ get_correct_drun_release() {
   fi
 }
 
-get_correct_didc_release
+#get_correct_didc_release
 
 get_correct_drun_release
 
@@ -83,6 +84,6 @@ query rwlgt-iiaaa-aaaaa-aaaaa-cai ${BENCH_NAME} "DIDL\x00\x00"
 EOF
 
 # Run the benchmarks, decode the output.
-drun "$FILE" --instruction-limit 99999999999999 \
+./drun "$FILE" --instruction-limit 99999999999999 \
     | awk '{ print $3 }' \
     | grep "44.*" -o
