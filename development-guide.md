@@ -32,10 +32,6 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
     $ docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
     $ docker run --rm --entrypoint cat canisters /watchdog-canister.wasm.gz > watchdog-canister.wasm.gz
 
-    # Verify that the files are present.
-    $ ls *.wasm.gz
-    ic-btc-canister.wasm.gz  watchdog-canister.wasm.gz
-
     # Compute checksums.
     $ sha256sum *.wasm.gz
     09f5647a45ff6d5d05b2b0ed48613fb2365b5fe6573ba0e901509c39fb9564ac  ic-btc-canister.wasm.gz
