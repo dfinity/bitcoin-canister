@@ -23,7 +23,7 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
     # Checkout the repo with a given commit.
     $ git clone https://github.com/dfinity/bitcoin-canister &&\
         cd bitcoin-canister &&\
-        git checkout aff3eef
+        git checkout aff3eef  # <- make sure the right commit is provided.
 
     # Use docker to reproducibly build canister WASMs.
     $ docker build -t canisters .
