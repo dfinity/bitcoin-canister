@@ -37,7 +37,7 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
     ic-btc-canister.wasm.gz  watchdog-canister.wasm.gz
 
     # Compute checksums.
-    $ sha256sum ic-btc-canister.wasm.gz watchdog-canister.wasm.gz
+    $ sha256sum *.wasm.gz
     09f5647a45ff6d5d05b2b0ed48613fb2365b5fe6573ba0e901509c39fb9564ac  ic-btc-canister.wasm.gz
     cc58b2a32517f9907f0d3c77bc8c099d0a65d8194a8d9bc0ad7df357ee867a07  watchdog-canister.wasm.gz
     ```
