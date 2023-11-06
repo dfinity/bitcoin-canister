@@ -40,4 +40,5 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
 4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes (and nothing else).
     - Add calculated checksums into release notes
 5. Finalize the release once all the expected canisters were upgraded
+    - (Optionally) provide links to corresponding NNS proposals
     - Uncheck `Set as a pre-release` box to indicate that it's all deployed
