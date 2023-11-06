@@ -1,12 +1,19 @@
 # Development Guide
 
-## Preparing Latest Release
+## Release Preparation
 
 The canisters in this repository are deployed in production by submitting proposals to the Internet Computer's [Network Nervous System](https://internetcomputer.org/nns).
 
-Since Github doesn't have a good flow for handling releases for two different artifacts we can't have two separate latest releases for the Bitcoin canister and the Watchdog canister. Instead we have to include both artifacts in each latest release.
+Due to limitations in GitHub's release handling, we cannot create separate latest releases for the Bitcoin canister and the Watchdog canister. Therefore, we include both artifacts in each latest release. 
 
-Steps to cut a release:
+To facilitate clarity, we explicitly specify which of them have changed, or if both have been modified, and provide their release status, accounting for potential deployment durations, such as
+ - `no change since release/<yyyy-mm-dd>`
+ - `waiting for deployment`
+ - `deployed, <NNS proposal link>`
+
+Only after all the expected canisters were deployed the `pre-release` can be turned into a proper `latest release`.
+
+## Steps to Cut a Release
 
 1. Identify the commit for the release, eg. `aff3eef`
 2. Draft a new pre-release
@@ -30,7 +37,7 @@ Steps to cut a release:
     $ docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
     $ docker run --rm --entrypoint cat canisters /watchdog-canister.wasm.gz > watchdog-canister.wasm.gz
 
-    # Check files are there.
+    # Verify that the files are present.
     $ ls *.wasm.gz
     ic-btc-canister.wasm.gz  watchdog-canister.wasm.gz
 
@@ -41,15 +48,15 @@ Steps to cut a release:
     ```
 4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes (and nothing else).
     - Clearly state the release status both for Bitcoin mainnet canister and Watchdog mainnet canister in release notes, eg
-        - `no change, same as release/<yyyy-mm-dd>`
-        - `waiting for deployment`
-        - `deployed, <nns proposal link>`, provide the link to an accepted NNS proposal
+        - `No change, same as release/<yyyy-mm-dd>`
+        - `Waiting for deployment`
+        - `Deployed, <NNS proposal link>`, provide the link to an accepted NNS proposal
     - Example
     ```md
     ## Release Status
 
-    - Bitcoin Mainnet Canister: waiting for deployment
-    - Watchdog Mainnet Canister: no change, same as release/<yyyy-mm-dd>
+    - Bitcoin Mainnet Canister: Waiting for deployment
+    - Watchdog Mainnet Canister: No change, same as release/<yyyy-mm-dd>
     ```
 5. Finalize the release once all the expected canisters were upgraded
     - Update release statuses with corresponding NNS proposal links
