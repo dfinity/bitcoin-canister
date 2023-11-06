@@ -13,12 +13,12 @@ Steps to cut a release:
     - Click on `Draft a new release` at the [releases page](https://github.com/dfinity/bitcoin-canister/releases), make sure the right commit is selected
     - Create a new tag with the name `release/<yyyy-mm-dd>`
     - Set the title to be `release/<yyyy-mm-dd>`
-    - Check the `Set as a pre-release` box to indicate that this release(s) have not been deployed to production yet
+    - Check the `Set as a pre-release` box to indicate that this release has not been deployed to production yet
     - Add release notes. Github can generate the release notes by clicking on `Generated Release Notes`, modify as needed
 3. Prepare canister WASM files and compute their checksums
-    - Note: there is no guarantee on Mac M1 for reproducible build, preferably use Ubuntu
+    - **Note**: there is no guarantee on Mac M1 for reproducible build, preferably use Ubuntu
     ```shell
-    # Checkout the repo with a given commit
+    # Checkout the repo with a given commit.
     $ git clone https://github.com/dfinity/bitcoin-canister &&\
         cd bitcoin-canister &&\
         git checkout aff3eef
@@ -40,16 +40,17 @@ Steps to cut a release:
     cc58b2a32517f9907f0d3c77bc8c099d0a65d8194a8d9bc0ad7df357ee867a07  watchdog-canister.wasm.gz
     ```
 4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes (and nothing else).
-    - Clearly state the release status both for Bitcoin mainnet canister and Watchdog mainnet canister in release notes, they can have the following statuses
-        - `no change, same as release/yyyy-mm-dd`
+    - Clearly state the release status both for Bitcoin mainnet canister and Watchdog mainnet canister in release notes, eg
+        - `no change, same as release/<yyyy-mm-dd>`
         - `waiting for deployment`
-        - `deployed, <nns proposal link>` provide the link to an accepted NNS proposal
+        - `deployed, <nns proposal link>`, provide the link to an accepted NNS proposal
     - Example
     ```md
     ## Release Status
+
     - Bitcoin Mainnet Canister: waiting for deployment
     - Watchdog Mainnet Canister: no change, same as release/<yyyy-mm-dd>
     ```
-5. Finalize the release once all the expected canisters are upgraded
+5. Finalize the release once all the expected canisters were upgraded
     - Update release statuses with corresponding NNS proposal links
-    - Uncheck `Set as a pre-release`
+    - Uncheck `Set as a pre-release` box to indicate that it's all deployed
