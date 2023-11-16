@@ -17,6 +17,10 @@ use ic_btc_types::{Block, BlockHash};
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
     print("Starting heartbeat...");
+
+    cycles_burn();
+    print("Done burning received cycles.");
+
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
         // This is a precaution to not exceed the instructions limit.
@@ -226,6 +230,21 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             }))
         }
     })
+}
+
+#[cfg(target_arch = "wasm32")]
+fn cycles_burn() {
+    let cycles_burnt = ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128());
+    with_state_mut(|s| {
+        s.metrics.cycles_burnt += cycles_burnt;
+    });
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn cycles_burn() {
+    let cycles_burnt = 1_000_000;
+    with_state_mut(|s| {
+        s.metrics.cycles_burnt += cycles_burnt;
+    });
 }
 
 #[cfg(test)]
