@@ -135,7 +135,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
 
         w.encode_gauge(
             "cycles_burnt",
-            state.metrics.cycles_burnt as f64,
+            state.metrics.cycles_burnt.unwrap_or_default() as f64,
             "The total number of cycles burnt.",
         )?;
 

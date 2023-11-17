@@ -236,14 +236,23 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
 fn cycles_burn() {
     let cycles_burnt = ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128());
     with_state_mut(|s| {
-        s.metrics.cycles_burnt += cycles_burnt;
+        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
+            *metric_cycles_burnt += cycles_burnt;
+        } else {
+            s.metrics.cycles_burnt = Some(cycles_burnt);
+        }
     });
 }
+
 #[cfg(not(target_arch = "wasm32"))]
 fn cycles_burn() {
     let cycles_burnt = 1_000_000;
     with_state_mut(|s| {
-        s.metrics.cycles_burnt += cycles_burnt;
+        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
+            *metric_cycles_burnt += cycles_burnt;
+        } else {
+            s.metrics.cycles_burnt = Some(cycles_burnt);
+        }
     });
 }
 

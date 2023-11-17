@@ -28,7 +28,7 @@ pub struct Metrics {
     pub block_insertion: InstructionHistogram,
 
     /// The total number of cycles burnt.
-    pub cycles_burnt: u128,
+    pub cycles_burnt: Option<u128>,
 }
 
 impl Default for Metrics {
@@ -70,7 +70,7 @@ impl Default for Metrics {
                 "Instructions needed to insert a block into the pool of unstable blocks.",
             ),
 
-            cycles_burnt: 0,
+            cycles_burnt: Some(0),
         }
     }
 }
