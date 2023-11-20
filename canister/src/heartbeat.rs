@@ -1,5 +1,5 @@
 use crate::{
-    runtime::{call_get_successors, print},
+    runtime::{call_get_successors, cycles_burn, print},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
@@ -19,7 +19,6 @@ pub async fn heartbeat() {
     print("Starting heartbeat...");
 
     cycles_burn();
-    print("Done burning received cycles.");
 
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
@@ -230,30 +229,6 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             }))
         }
     })
-}
-
-#[cfg(target_arch = "wasm32")]
-fn cycles_burn() {
-    let cycles_burnt = ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128());
-    with_state_mut(|s| {
-        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
-            *metric_cycles_burnt += cycles_burnt;
-        } else {
-            s.metrics.cycles_burnt = Some(cycles_burnt);
-        }
-    });
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn cycles_burn() {
-    let cycles_burnt = 1_000_000;
-    with_state_mut(|s| {
-        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
-            *metric_cycles_burnt += cycles_burnt;
-        } else {
-            s.metrics.cycles_burnt = Some(cycles_burnt);
-        }
-    });
 }
 
 #[cfg(test)]
