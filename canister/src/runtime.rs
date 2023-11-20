@@ -219,9 +219,7 @@ pub fn time() -> u64 {
         .as_secs()
 }
 
-#[cfg(target_arch = "wasm32")]
-pub fn cycles_burn() {
-    let cycles_burnt = ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128());
+fn add_cycles_burnt_to_metric(cycles_burnt: u128) {
     with_state_mut(|s| {
         if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
             *metric_cycles_burnt += cycles_burnt;
@@ -231,14 +229,13 @@ pub fn cycles_burn() {
     });
 }
 
+#[cfg(target_arch = "wasm32")]
+pub fn cycles_burn() {
+    let cycles_burnt = ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128());
+    add_cycles_burnt_to_metric(cycles_burnt);
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub fn cycles_burn() {
-    let cycles_burnt = 1_000_000;
-    with_state_mut(|s| {
-        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
-            *metric_cycles_burnt += cycles_burnt;
-        } else {
-            s.metrics.cycles_burnt = Some(cycles_burnt);
-        }
-    });
+    add_cycles_burnt_to_metric(1_000_000);
 }
