@@ -18,7 +18,8 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
-    cycles_burn();
+    let cycles_burnt = cycles_burn();
+    add_cycles_burnt_to_metric(cycles_burnt);
 
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
@@ -229,6 +230,16 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             }))
         }
     })
+}
+
+fn add_cycles_burnt_to_metric(cycles_burnt: u128) {
+    with_state_mut(|s| {
+        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
+            *metric_cycles_burnt += cycles_burnt;
+        } else {
+            s.metrics.cycles_burnt = Some(cycles_burnt);
+        }
+    });
 }
 
 #[cfg(test)]
