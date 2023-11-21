@@ -18,7 +18,7 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
     - Check the `Set as a pre-release` box to indicate that this release has not been deployed to production yet
     - Add release notes. Github can generate the release notes by clicking on `Generated Release Notes`, modify as needed
 3. Prepare canister WASM files and compute their checksums
-    - **Note**: there is no guarantee on Mac M1 for reproducible build, preferably use Ubuntu
+    - **Note**: there is no reproducibility guarantee on Mac M1s, preferably use Ubuntu or Intel Macs
     ```shell
     # Checkout the repo with a given commit.
     $ git clone https://github.com/dfinity/bitcoin-canister &&\
@@ -41,4 +41,4 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
     - Add calculated checksums into release notes
 5. Finalize the release once all the expected canisters were upgraded
     - (Optional) Provide links to corresponding NNS proposals
-    - Uncheck `Set as a pre-release` box to indicate that it's all deployed
+    - Uncheck `Set as a pre-release` box and check `Set as the latest release ` to indicate that the release is fully deployed
