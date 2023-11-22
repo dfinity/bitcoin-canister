@@ -718,7 +718,7 @@ async fn test_syncing_with_next_block_headers() {
 }
 
 #[async_std::test]
-async fn test_cycles_burnt() {
+async fn cycles_burnt_are_tracked_in_metrics() {
     crate::init(crate::Config::default());
 
     let cycles_burnt_0 = crate::with_state(|state| state.metrics.cycles_burnt);
