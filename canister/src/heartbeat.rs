@@ -1,5 +1,5 @@
 use crate::{
-    runtime::{call_get_successors, print},
+    runtime::{call_get_successors, cycles_burn, print},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
@@ -17,6 +17,11 @@ use ic_btc_types::{Block, BlockHash};
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
     print("Starting heartbeat...");
+
+    // Burn any cycles in the canister's balance (to count towards the IC's cycles burn rate)
+    let cycles_burnt = cycles_burn();
+    add_cycles_burnt_to_metric(cycles_burnt);
+
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
         // This is a precaution to not exceed the instructions limit.
@@ -226,6 +231,16 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             }))
         }
     })
+}
+
+fn add_cycles_burnt_to_metric(cycles_burnt: u128) {
+    with_state_mut(|s| {
+        if let Some(metric_cycles_burnt) = &mut s.metrics.cycles_burnt {
+            *metric_cycles_burnt += cycles_burnt;
+        } else {
+            s.metrics.cycles_burnt = Some(cycles_burnt);
+        }
+    });
 }
 
 #[cfg(test)]

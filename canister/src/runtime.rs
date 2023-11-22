@@ -217,3 +217,13 @@ pub fn time() -> u64 {
         .unwrap()
         .as_secs()
 }
+
+#[cfg(target_arch = "wasm32")]
+pub fn cycles_burn() -> u128 {
+    ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn cycles_burn() -> u128 {
+    1_000_000
+}

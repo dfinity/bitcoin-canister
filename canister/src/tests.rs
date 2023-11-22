@@ -716,3 +716,35 @@ async fn test_syncing_with_next_block_headers() {
 
     assert!(catch_unwind(verify_synced).is_err());
 }
+
+#[async_std::test]
+async fn cycles_burnt_are_tracked_in_metrics() {
+    crate::init(crate::Config::default());
+
+    let cycles_burnt_0 = crate::with_state(|state| state.metrics.cycles_burnt);
+
+    assert_eq!(cycles_burnt_0, Some(0));
+
+    let burn_amount = 1_000_000;
+
+    // Burn cycles.
+    heartbeat().await;
+
+    let cycles_burnt_1 = crate::with_state(|state| state.metrics.cycles_burnt);
+
+    assert_eq!(cycles_burnt_1, Some(burn_amount));
+
+    // Burn cycles.
+    heartbeat().await;
+
+    let cycles_burnt_2 = crate::with_state(|state| state.metrics.cycles_burnt);
+
+    assert_eq!(cycles_burnt_2, Some(2 * burn_amount));
+
+    // Burn cycles.
+    heartbeat().await;
+
+    let cycles_burnt_3 = crate::with_state(|state| state.metrics.cycles_burnt);
+
+    assert_eq!(cycles_burnt_3, Some(3 * burn_amount));
+}

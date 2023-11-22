@@ -130,7 +130,7 @@ GET_UTXOS_QUERY_REPLICATED_CALL=$(dfx canister call --update bitcoin bitcoin_get
 })' 2>&1)
 set -e
 
-if [[ $GET_UTXOS_QUERY_REPLICATED_CALL != *"Http Error: status 403 Forbidden"* ]]; then
+if [[ $GET_UTXOS_QUERY_REPLICATED_CALL != *"CanisterReject"* ]]; then
   echo "FAIL"
   exit 1
 fi
@@ -153,7 +153,7 @@ GET_BALANCE_QUERY_REPLICATED_CALL=$(dfx canister call --update bitcoin bitcoin_g
 })' 2>&1)
 set -e
 
-if [[ $GET_BALANCE_QUERY_REPLICATED_CALL != *"Http Error: status 403 Forbidden"* ]]; then
+if [[ $GET_BALANCE_QUERY_REPLICATED_CALL != *"CanisterReject"* ]]; then
   echo "FAIL"
   exit 1
 fi

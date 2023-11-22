@@ -2,7 +2,7 @@ name: CI Checks
 
 env:
   RUST_VERSION: 1.68.0
-  DFX_VERSION: 0.13.1
+  DFX_VERSION: 0.15.2-beta.0
 
 on:
   push:
@@ -353,6 +353,38 @@ jobs:
         run: |
           bash e2e-tests/set_config.sh
 
+  cycles_burn:
+      runs-on: ubuntu-20.04
+      needs: cargo-build
+
+      steps:
+        - uses: actions/checkout@v3
+        - uses: actions/cache@v3
+          with:
+            path: |
+              ~/.cargo/registry
+              ~/.cargo/git
+              target
+            key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+        - name: Install Rust
+          run: |
+            rustup update ${{ matrix.rust }} --no-self-update
+            rustup default ${{ matrix.rust }}
+            rustup target add wasm32-unknown-unknown
+
+        - name: Install DFX
+          run: |
+            wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
+            bash install-dfx.sh < <(yes Y)
+            rm install-dfx.sh
+            dfx cache install
+            echo "$HOME/bin" >> $GITHUB_PATH
+
+        - name: Run cycles_burn test
+          run: |
+            bash e2e-tests/cycles_burn.sh
+
   benchmark:
     runs-on: ubuntu-20.04
     needs: cargo-build
@@ -529,6 +561,7 @@ jobs:
       - charge-cycles-on-reject
       - upgradability
       - set_config
+      - cycles_burn
       - benchmark
       - watchdog_health_status
       - watchdog_get_config
