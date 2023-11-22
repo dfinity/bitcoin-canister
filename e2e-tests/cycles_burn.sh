@@ -37,6 +37,8 @@ dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(rec
   watchdog_canister = null;
 })"
 
+sleep 3
+
 # Check that cycles are burnt.
 if [ "$(get_balance)" != "0" ]; then
     EXIT SIGINT
