@@ -320,7 +320,7 @@ dependencies = [
  "ic-btc-canister",
  "ic-btc-interface",
  "ic-btc-types",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "lazy_static",
  "maplit",
@@ -550,7 +550,7 @@ version = "0.1.0"
 dependencies = [
  "candid 0.9.10",
  "futures",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "ic-http",
  "serde",
@@ -862,7 +862,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.10",
  "ic-btc-test-utils",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "serde",
 ]
@@ -1409,7 +1409,7 @@ dependencies = [
  "ic-btc-test-utils",
  "ic-btc-types",
  "ic-btc-validation",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "ic-metrics-encoder",
  "ic-stable-structures",
@@ -1472,20 +1472,20 @@ checksum = "9beb0bf1dcd0639c313630e34aa547a2b19450ddf1969c176e13225ef3b29048"
 dependencies = [
  "candid 0.8.4",
  "ic-cdk-macros 0.6.10",
- "ic0 0.18.11",
+ "ic0",
  "serde",
  "serde_bytes",
 ]
 
 [[package]]
 name = "ic-cdk"
-version = "0.11.3"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c126ac20219abff15c3441282e9da6aa7244319d5a4a42c7260667237e790712"
+checksum = "08d4c0b932bf454d5d60e61e13c3c944972fcfd74dc82b9ed5c8b0a75979cf50"
 dependencies = [
  "candid 0.9.10",
- "ic-cdk-macros 0.8.1",
- "ic0 0.21.1",
+ "ic-cdk-macros 0.7.0",
+ "ic0",
  "serde",
  "serde_bytes",
 ]
@@ -1519,20 +1519,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-cdk-macros"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b6295fd7389c198a97dd99b28b846e18487d99303077102d817eebbf6a924cd"
-dependencies = [
- "candid 0.9.10",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "ic-cdk-timers"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1540,7 +1526,7 @@ checksum = "c739e7c592cb66df4f15c6b6c4859b1195782f63923e2fb1b29553d9c0819bd4"
 dependencies = [
  "futures",
  "ic-cdk 0.7.4",
- "ic0 0.18.11",
+ "ic0",
  "serde",
  "serde_bytes",
  "slotmap",
@@ -1552,7 +1538,7 @@ version = "0.1.0"
 dependencies = [
  "candid 0.9.10",
  "futures",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "serde_json",
  "tokio",
@@ -1587,12 +1573,6 @@ name = "ic0"
 version = "0.18.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "576c539151d4769fb4d1a0c25c4108dd18facd04c5695b02cf2d226ab4e43aa5"
-
-[[package]]
-name = "ic0"
-version = "0.21.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a54b5297861c651551676e8c43df805dad175cc33bc97dbd992edbbb85dcbcdf"
 
 [[package]]
 name = "idna"
@@ -2658,7 +2638,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.10",
  "ic-btc-test-utils",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "serde",
 ]
@@ -2670,7 +2650,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.10",
  "ic-btc-test-utils",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "serde",
 ]
@@ -2682,7 +2662,7 @@ dependencies = [
  "bitcoin",
  "candid 0.9.10",
  "ic-btc-test-utils",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "serde",
 ]
@@ -3395,7 +3375,7 @@ dependencies = [
  "clap",
  "garcon",
  "ic-agent",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "serde",
  "sha256",
@@ -3556,7 +3536,7 @@ dependencies = [
  "futures",
  "hex",
  "ic-btc-interface",
- "ic-cdk 0.11.3",
+ "ic-cdk 0.10.0",
  "ic-cdk-macros 0.7.0",
  "ic-cdk-timers",
  "ic-http",
