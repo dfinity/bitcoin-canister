@@ -18,6 +18,7 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
+    // Burn any cycles in the canister's balance (to count towards the IC's cycles burn rate)
     let cycles_burnt = cycles_burn();
     add_cycles_burnt_to_metric(cycles_burnt);
 
