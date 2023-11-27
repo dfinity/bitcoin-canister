@@ -549,6 +549,8 @@ jobs:
           ./e2e-tests/reproducibility.sh Dockerfile
 
   checks-pass:
+    # Always run this job!
+    if: always()
     needs:
       - cargo-tests
       - shell-checks
