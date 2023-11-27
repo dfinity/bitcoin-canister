@@ -71,10 +71,10 @@ check_health_status_fields() {
 
 # Function to check if health status data is available.
 check_health_status_data() {
-  ITERATIONS=45
-  DELAY_SEC=10
+  ITERATIONS=15
+  DELAY_SEC=2
   has_enough_data=0
-  for ((i=1; i<=ITERATIONS; i++))
+  for i in {1..ITERATIONS}
   do
     health_status=$(dfx canister call watchdog health_status --query)
     if ! [[ $health_status == *"height_status = variant { not_enough_data }"* ]]; then
