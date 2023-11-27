@@ -71,8 +71,8 @@ check_health_status_fields() {
 
 # Function to check if health status data is available.
 check_health_status_data() {
-  ITERATIONS=15
-  DELAY_SEC=2
+  ITERATIONS=45
+  DELAY_SEC=10
   has_enough_data=0
   for ((i=1; i<=ITERATIONS; i++))
   do

@@ -550,27 +550,24 @@ jobs:
 
   checks-pass:
     # Always run this job!
-    if: always()
-    needs:
-      - cargo-tests
-      - shell-checks
-      - cargo-clippy
-      - rustfmt
-      - e2e-disable-api-if-not-fully-synced-flag
-      - e2e-scenario-1
-      - e2e-scenario-2
-      - e2e-scenario-3
-      - charge-cycles-on-reject
-      - upgradability
-      - set_config
-      - cycles_burn
-      - benchmark
-      - watchdog_health_status
-      - watchdog_get_config
-      - watchdog_metrics
-      - watchdog_upgradability
-      - canister-build-reproducibility
+    if: ${{ always() }}
+    needs: [cargo-tests, shell-checks, cargo-clippy, rustfmt, e2e-disable-api-if-not-fully-synced-flag, e2e-scenario-1, e2e-scenario-2,
+      e2e-scenario-3, charge-cycles-on-reject, upgradability, set_config, cycles_burn, benchmark, watchdog_health_status, 
+      watchdog_get_config, watchdog_metrics, watchdog_upgradability, canister-build-reproducibility]
     runs-on: ubuntu-20.04
     steps:
-       - name: Checks workflow passes
-         run: echo OK
+      - name: check cargo-tests result
+        if: ${{ needs.cargo-tests.result != 'success' }}
+        run: exit 1
+      - name: check shell-checks result
+        if: ${{ needs.shell-checks.result != 'success' }}
+        run: exit 1      
+      - name: check cargo-clippy result
+        if: ${{ needs.cargo-clippy.result != 'success' }}
+        run: exit 1
+      - name: check watchdog_health_status result
+        if: ${{ needs.watchdog_health_status.result != 'success' }}
+        run: exit 1
+      - name: check watchdog_metrics result
+        if: ${{ needs.watchdog_metrics.result != 'success' }}
+        run: exit 1
