@@ -300,7 +300,7 @@ fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpRe
         status: raw.response.status.clone(),
         ..Default::default()
     };
-    if response.status == 200 {
+    if response.status == 200u8 {
         match String::from_utf8(raw.response.body) {
             Err(e) => {
                 print(&format!("Failed to parse response body: err = {:?}", e));

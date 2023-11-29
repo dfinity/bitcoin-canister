@@ -26,7 +26,7 @@ members = [
 [workspace.dependencies]
 bitcoin = "0.28.1"
 byteorder = "1.4.3"
-candid = "0.9.10"
+candid = "0.10.0"
 ciborium = "0.2.1"
 clap = { version = "4.0.11", features = ["derive"] }
 futures = "0.3.28"
@@ -36,8 +36,8 @@ ic-btc-interface = { path = "./interface" }
 ic-btc-types = { path = "./types" }
 ic-btc-test-utils = { path = "./test-utils" }
 ic-btc-validation = { path = "./validation" }
-ic-cdk = "0.11.2"
-ic-cdk-macros = "0.7.0"
+ic-cdk = "0.12.0"
+ic-cdk-macros = "0.8.2"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
 ic-stable-structures = "0.5.2"
