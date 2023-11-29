@@ -581,7 +581,7 @@ mod test {
 
     #[tokio::test]
     async fn test_http_response_404() {
-        let expected_status = candid::Nat::from(404);
+        let expected_status = candid::Nat::from(404u16);
         let test_cases = [
             endpoint_api_blockchair_com_block_mainnet(),
             endpoint_api_blockchair_com_block_testnet(),

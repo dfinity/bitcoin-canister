@@ -26,7 +26,7 @@ fn transform_quote(raw: TransformArgs) -> HttpResponse {
         status: raw.response.status.clone(),
         ..Default::default()
     };
-    if response.status == 200 {
+    if response.status == 200u8 {
         let original = parse_json(raw.response.body);
 
         // Extract the author from the JSON response.
@@ -124,7 +124,7 @@ mod test {
             .unwrap();
 
         // Assert.
-        assert_eq!(response.status, 404);
+        assert_eq!(response.status, 404u16);
         assert_eq!(ic_http::mock::times_called(request), 1);
     }
 
