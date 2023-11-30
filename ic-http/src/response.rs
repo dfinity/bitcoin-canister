@@ -18,7 +18,7 @@ pub struct HttpResponseBuilder {
 impl HttpResponseBuilder {
     pub fn new() -> Self {
         Self {
-            status: candid::Nat::from(200),
+            status: candid::Nat::from(200u8),
             headers: Vec::new(),
             body: Vec::new(),
         }

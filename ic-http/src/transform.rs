@@ -112,7 +112,7 @@ mod test {
         let (response,) = crate::mock::http_request(request.clone()).await.unwrap();
 
         // Assert
-        assert_eq!(response.status, 200);
+        assert_eq!(response.status, 200u8);
         assert_eq!(crate::mock::times_called(request), 1);
         assert_eq!(
             crate::mock::registered_transform_function_names(),

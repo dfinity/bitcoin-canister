@@ -209,7 +209,7 @@ async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Val
     let result = ic_http::http_request(config.request(), cycles).await;
 
     match result {
-        Ok((response,)) if response.status == 200 => parse_response(response),
+        Ok((response,)) if response.status == 200u8 => parse_response(response),
         Ok(_) => json!({}),
         Err(error) => {
             print(&format!("HTTP request failed: {:?}", error));

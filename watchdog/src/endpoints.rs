@@ -300,7 +300,7 @@ fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpRe
         status: raw.response.status.clone(),
         ..Default::default()
     };
-    if response.status == 200 {
+    if response.status == 200u8 {
         match String::from_utf8(raw.response.body) {
             Err(e) => {
                 print(&format!("Failed to parse response body: err = {:?}", e));
@@ -581,7 +581,7 @@ mod test {
 
     #[tokio::test]
     async fn test_http_response_404() {
-        let expected_status = candid::Nat::from(404);
+        let expected_status = candid::Nat::from(404u16);
         let test_cases = [
             endpoint_api_blockchair_com_block_mainnet(),
             endpoint_api_blockchair_com_block_testnet(),
