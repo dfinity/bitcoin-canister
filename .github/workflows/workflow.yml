@@ -2,7 +2,7 @@ name: CI Checks
 
 env:
   RUST_VERSION: 1.68.0
-  DFX_VERSION: 0.15.2-beta.0
+  DFX_VERSION: 0.15.2
 
 on:
   push:
@@ -595,10 +595,9 @@ jobs:
       - name: check benchmark result
         if: ${{ needs.benchmark.result != 'success' }}
         run: exit 1
-      # After EXC-1514 (fixing watchdog_health_status test) remove comments.
-      #- name: check watchdog_health_status result
-      #  if: ${{ needs.watchdog_health_status.result != 'success' }}
-      #  run: exit 1
+      - name: check watchdog_health_status result
+        if: ${{ needs.watchdog_health_status.result != 'success' }}
+        run: exit 1
       - name: check watchdog_get_config result
         if: ${{ needs.watchdog_get_config.result != 'success' }}
         run: exit 1
