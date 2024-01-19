@@ -3,16 +3,6 @@ use candid::CandidType;
 use candid::Principal;
 use serde::{Deserialize, Serialize};
 
-/// The Bitcoin network to use.
-const BITCOIN_NETWORK: BitcoinNetwork = BitcoinNetwork::Mainnet;
-
-/// Below this threshold, the canister is considered to be behind.
-/// This value is positive, but it will be converted to negative.
-const BLOCKS_BEHIND_THRESHOLD: u64 = 2;
-
-/// Above this threshold, the canister is considered to be ahead.
-const BLOCKS_AHEAD_THRESHOLD: u64 = 2;
-
 /// The minimum number of explorers to compare against.
 const MIN_EXPLORERS: u64 = 3;
 
@@ -67,20 +57,12 @@ pub struct Config {
 }
 
 impl Config {
-    /// Creates a new configuration depending on the Bitcoin network.
-    pub fn new() -> Self {
-        match BITCOIN_NETWORK {
-            BitcoinNetwork::Mainnet => Self::mainnet(),
-            BitcoinNetwork::Testnet => Self::testnet(),
-        }
-    }
-
     /// Creates a new configuration for the mainnet.
     pub fn mainnet() -> Self {
         Self {
             bitcoin_network: BitcoinNetwork::Mainnet,
-            blocks_behind_threshold: BLOCKS_BEHIND_THRESHOLD,
-            blocks_ahead_threshold: BLOCKS_AHEAD_THRESHOLD,
+            blocks_behind_threshold: 2,
+            blocks_ahead_threshold: 2,
             min_explorers: MIN_EXPLORERS,
             bitcoin_canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
@@ -101,8 +83,8 @@ impl Config {
     pub fn testnet() -> Self {
         Self {
             bitcoin_network: BitcoinNetwork::Testnet,
-            blocks_behind_threshold: BLOCKS_BEHIND_THRESHOLD,
-            blocks_ahead_threshold: BLOCKS_AHEAD_THRESHOLD,
+            blocks_behind_threshold: 100,
+            blocks_ahead_threshold: 100,
             min_explorers: MIN_EXPLORERS,
             bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
@@ -131,12 +113,6 @@ impl Config {
     pub fn get_bitcoin_canister_endpoint(&self) -> String {
         let principal = self.bitcoin_canister_principal.to_text();
         format!("https://{principal}.raw.ic0.app/metrics")
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
