@@ -3,12 +3,6 @@ use candid::CandidType;
 use candid::Principal;
 use serde::{Deserialize, Serialize};
 
-/// The minimum number of explorers to compare against.
-#[cfg(not(feature = "health_status_test"))]
-const MIN_EXPLORERS: u64 = 3;
-#[cfg(feature = "health_status_test")]
-const MIN_EXPLORERS: u64 = 2;
-
 /// Mainnet bitcoin canister principal.
 const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
 
@@ -62,6 +56,14 @@ pub struct Config {
 impl Config {
     /// Creates a new configuration for the mainnet.
     pub fn mainnet() -> Self {
+        #[cfg(not(feature = "health_status_test"))]
+        const MIN_EXPLORERS: u64 = 3;
+
+        // Due to dfx not supporting ipv4, only two explorers support ipv6 and
+        // can be part of the health_status_test.
+        #[cfg(feature = "health_status_test")]
+        const MIN_EXPLORERS: u64 = 2;
+
         Self {
             bitcoin_network: BitcoinNetwork::Mainnet,
             blocks_behind_threshold: 2,
@@ -88,13 +90,12 @@ impl Config {
             bitcoin_network: BitcoinNetwork::Testnet,
             blocks_behind_threshold: 100,
             blocks_ahead_threshold: 100,
-            min_explorers: MIN_EXPLORERS,
+            min_explorers: 2,
             bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
             explorers: vec![
-                BitcoinBlockApi::ApiBitapsComTestnet,
                 BitcoinBlockApi::ApiBlockchairComTestnet,
                 BitcoinBlockApi::ApiBlockcypherComTestnet,
                 BitcoinBlockApi::BlockstreamInfoTestnet,

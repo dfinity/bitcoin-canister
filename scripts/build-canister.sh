@@ -22,7 +22,7 @@ if [[ -z "$FEATURES" ]]; then
   cargo build --bin "$CANISTER" --target "$TARGET" --release
 else
   # Features provided
-  cargo build --bin "$CANISTER" --target "$TARGET" --release --features $FEATURES
+  cargo build --bin "$CANISTER" --target "$TARGET" --release --features "$FEATURES"
 fi
 
 # Navigate to root directory.
