@@ -2,8 +2,6 @@
 
 # Function to deploy the watchdog canister for mainnet bitcoin_canister.
 deploy_watchdog_canister_mainnet() {
-  BITCOIN_NETWORK=mainnet
-  BITCOIN_CANISTER_ID=ghsi2-tqaaa-aaaan-aaaca-cai
   dfx deploy --no-wallet watchdog --argument "(variant { mainnet })"
 }
 
