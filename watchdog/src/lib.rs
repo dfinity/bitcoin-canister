@@ -13,7 +13,7 @@ mod types;
 mod test_utils;
 
 use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::Config;
+use crate::config::{BitcoinNetwork, Config};
 use crate::endpoints::*;
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
@@ -21,6 +21,7 @@ use crate::types::{CandidHttpRequest, CandidHttpResponse};
 use ic_btc_interface::Flag;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};
+use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -28,7 +29,7 @@ use std::time::Duration;
 
 thread_local! {
     /// The local storage for the configuration.
-    static CONFIG: RefCell<Config> = RefCell::new(Config::new());
+    static CONFIG: RefCell<Config> = RefCell::new(Config::mainnet());
 
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
@@ -39,12 +40,14 @@ thread_local! {
 
 /// This function is called when the canister is created.
 #[init]
-fn init(config: Option<Config>) {
-    if let Some(config) = config {
-        crate::storage::set_config(config);
-    }
+fn init(network: BitcoinNetwork) {
+    let config = match network {
+        BitcoinNetwork::Mainnet => Config::mainnet(),
+        BitcoinNetwork::Testnet => Config::testnet(),
+    };
+    crate::storage::set_config(config);
 
-    ic_cdk_timers::set_timer(
+    set_timer(
         Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
         || {
             ic_cdk::spawn(async {
@@ -60,8 +63,8 @@ fn init(config: Option<Config>) {
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade(config: Option<Config>) {
-    init(config)
+fn post_upgrade(network: BitcoinNetwork) {
+    init(network)
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
@@ -109,13 +112,22 @@ pub fn http_request(request: CandidHttpRequest) -> CandidHttpResponse {
     }
 }
 
-/// Prints a message to the console.
-pub fn print(msg: &str) {
+// Prints a message to the console.
+fn print(msg: &str) {
     #[cfg(target_arch = "wasm32")]
     ic_cdk::api::print(msg);
 
     #[cfg(not(target_arch = "wasm32"))]
     println!("{}", msg);
+}
+
+#[allow(unused_variables)]
+fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
+    #[cfg(target_arch = "wasm32")]
+    return ic_cdk_timers::set_timer(delay, func);
+
+    #[cfg(not(target_arch = "wasm32"))]
+    TimerId::default()
 }
 
 // Exposing the endpoints in `lib.rs` (not in `main.rs`) to make them available
@@ -164,4 +176,21 @@ fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
 #[query]
 fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
     endpoint_chain_api_btc_com_block_mainnet().transform(raw)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn init_with_testnet_uses_testnet_config() {
+        init(BitcoinNetwork::Testnet);
+        assert_eq!(get_config(), Config::testnet());
+    }
+
+    #[test]
+    fn init_with_mainnet_uses_mainnet_config() {
+        init(BitcoinNetwork::Mainnet);
+        assert_eq!(get_config(), Config::mainnet());
+    }
 }

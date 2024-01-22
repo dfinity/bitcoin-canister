@@ -5,6 +5,7 @@ TARGET="wasm32-unknown-unknown"
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 CANISTER=$1
+FEATURES=${2:-}
 
 pushd "$SCRIPT_DIR"
 
@@ -16,7 +17,13 @@ if [ "$(uname)" == "Darwin" ]; then
   export CC="${LLVM_PATH}/bin/clang"
 fi
 
-cargo build --bin "$CANISTER" --target "$TARGET" --release
+if [[ -z "$FEATURES" ]]; then
+  # No features provided
+  cargo build --bin "$CANISTER" --target "$TARGET" --release
+else
+  # Features provided
+  cargo build --bin "$CANISTER" --target "$TARGET" --release --features "$FEATURES"
+fi
 
 # Navigate to root directory.
 cd ..

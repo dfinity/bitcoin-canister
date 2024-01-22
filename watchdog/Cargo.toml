@@ -25,6 +25,9 @@ ic-http = { workspace = true }
 serde_bytes = { workspace = true }
 ic-btc-interface = { workspace = true }
 
+[features]
+health_status_test = []
+
 [dev-dependencies]
 tokio = { workspace = true }
 assert-json-diff = "2.0.2"

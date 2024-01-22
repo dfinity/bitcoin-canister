@@ -2,24 +2,7 @@
 
 # Function to deploy the watchdog canister for mainnet bitcoin_canister.
 deploy_watchdog_canister_mainnet() {
-  BITCOIN_NETWORK=mainnet
-  BITCOIN_CANISTER_ID=ghsi2-tqaaa-aaaan-aaaca-cai
-  dfx deploy --no-wallet watchdog --argument "(opt record {
-    bitcoin_network = variant { ${BITCOIN_NETWORK} };
-    blocks_behind_threshold = 2;
-    blocks_ahead_threshold = 2;
-    min_explorers = 2;
-    bitcoin_canister_principal = principal \"${BITCOIN_CANISTER_ID}\";
-    delay_before_first_fetch_sec = 1;
-    interval_between_fetches_sec = 300;
-    explorers = vec {
-      variant { api_blockchair_com_mainnet };
-      variant { api_blockcypher_com_mainnet };
-      variant { blockchain_info_mainnet };
-      variant { blockstream_info_mainnet };
-      variant { chain_api_btc_com_mainnet };
-    };
-  })"
+  dfx deploy --no-wallet watchdog --argument "(variant { mainnet })"
 }
 
 # Function to get watchdog canister metrics.
@@ -60,7 +43,7 @@ check_health_status_fields() {
     "explorers"
   )
   
-  health_status=$(dfx canister call watchdog health_status --query)
+  health_status=$(dfx canister call watchdog-health-status-test health_status --query)
   for field in "${FIELDS[@]}"; do
     if ! [[ $health_status == *"$field = "* ]]; then
       echo "FAIL: $field not found in health status of ${0##*/}"
@@ -76,7 +59,7 @@ check_health_status_data() {
   has_enough_data=0
   for ((i=1; i<=ITERATIONS; i++))
   do
-    health_status=$(dfx canister call watchdog health_status --query)
+    health_status=$(dfx canister call watchdog-health-status-test health_status --query)
     if ! [[ $health_status == *"height_status = variant { not_enough_data }"* ]]; then
       has_enough_data=1
       break
