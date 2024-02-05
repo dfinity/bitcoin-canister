@@ -13,7 +13,7 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the watchdog canister.
-dfx deploy --no-wallet watchdog-health-status-test --argument "(variant { mainnet })"
+deploy_watchdog_canister_mainnet
 
 # Check health status has specific fields.
 check_health_status_fields

@@ -56,19 +56,11 @@ pub struct Config {
 impl Config {
     /// Creates a new configuration for the mainnet.
     pub fn mainnet() -> Self {
-        #[cfg(not(feature = "health_status_test"))]
-        const MIN_EXPLORERS: u64 = 3;
-
-        // Due to dfx not supporting ipv4, only two explorers support ipv6 and
-        // can be part of the health_status_test.
-        #[cfg(feature = "health_status_test")]
-        const MIN_EXPLORERS: u64 = 2;
-
         Self {
             bitcoin_network: BitcoinNetwork::Mainnet,
             blocks_behind_threshold: 2,
             blocks_ahead_threshold: 2,
-            min_explorers: MIN_EXPLORERS,
+            min_explorers: 3,
             bitcoin_canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
