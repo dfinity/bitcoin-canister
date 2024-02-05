@@ -43,7 +43,7 @@ check_health_status_fields() {
     "explorers"
   )
   
-  health_status=$(dfx canister call watchdog-health-status-test health_status --query)
+  health_status=$(dfx canister call watchdog health_status --query)
   for field in "${FIELDS[@]}"; do
     if ! [[ $health_status == *"$field = "* ]]; then
       echo "FAIL: $field not found in health status of ${0##*/}"
@@ -59,7 +59,7 @@ check_health_status_data() {
   has_enough_data=0
   for ((i=1; i<=ITERATIONS; i++))
   do
-    health_status=$(dfx canister call watchdog-health-status-test health_status --query)
+    health_status=$(dfx canister call watchdog health_status --query)
     if ! [[ $health_status == *"height_status = variant { not_enough_data }"* ]]; then
       has_enough_data=1
       break
