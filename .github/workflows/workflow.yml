@@ -1,8 +1,8 @@
 name: CI Checks
 
 env:
-  RUST_VERSION: 1.68.0
-  DFX_VERSION: 0.15.2
+  RUST_VERSION: 1.70.0
+  DFX_VERSION: 0.16.0
 
 on:
   push:
