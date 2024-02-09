@@ -1,5 +1,5 @@
 {
-  "dfx": "0.15.2",
+  "dfx": "0.16.0",
   "canisters": {
     "bitcoin": {
       "type": "custom",
@@ -11,12 +11,6 @@
       "type": "custom",
       "candid": "./watchdog/candid.did",
       "build": "./scripts/build-canister.sh watchdog-canister",
-      "wasm": "./target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz"
-    },
-    "watchdog-health-status-test": {
-      "type": "custom",
-      "candid": "./watchdog/candid.did",
-      "build": "./scripts/build-canister.sh watchdog-canister health_status_test",
       "wasm": "./target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz"
     },
     "watchdog-upgradability-test": {

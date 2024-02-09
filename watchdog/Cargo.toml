@@ -15,7 +15,7 @@ ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
 ic-metrics-encoder = { workspace = true }
 ic-cdk-timers = "0.1"
-serde = { workspace = true, features = [ "derive" ] }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 hex = { workspace = true }
 async-trait = "0.1.67"
@@ -24,9 +24,6 @@ futures = { workspace = true }
 ic-http = { workspace = true }
 serde_bytes = { workspace = true }
 ic-btc-interface = { workspace = true }
-
-[features]
-health_status_test = []
 
 [dev-dependencies]
 tokio = { workspace = true }
