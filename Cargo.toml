@@ -23,6 +23,8 @@ members = [
     "ic-http/example_canister/src/canister_backend",
 ]
 
+resolver = "2"
+
 [workspace.dependencies]
 bitcoin = "0.28.1"
 byteorder = "1.4.3"
