@@ -13,7 +13,7 @@ pub struct NextBlockHeaders {
 impl NextBlockHeaders {
     pub fn insert(&mut self, block_header: BlockHeader, height: Height) {
         let block_hash = BlockHash::from(block_header.block_hash());
-        let hash_vec = self.height_to_hash.entry(height).or_insert_with(Vec::new);
+        let hash_vec = self.height_to_hash.entry(height).or_default();
 
         if !hash_vec.contains(&block_hash) {
             hash_vec.push(block_hash.clone());

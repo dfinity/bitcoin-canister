@@ -33,7 +33,7 @@ impl UtxosDelta {
     pub fn insert(&mut self, address: Address, outpoint: OutPoint, tx_out: TxOut, height: Height) {
         self.added_outpoints
             .entry(address.clone())
-            .or_insert(BTreeSet::new())
+            .or_default()
             .insert(outpoint.clone());
 
         self.all_added_outpoints.insert(outpoint.clone(), address);
@@ -65,7 +65,7 @@ impl UtxosDelta {
 
         self.removed_outpoints
             .entry(address)
-            .or_insert(BTreeSet::new())
+            .or_default()
             .insert(outpoint.clone());
 
         self.all_removed_outpoints.insert(outpoint.clone());

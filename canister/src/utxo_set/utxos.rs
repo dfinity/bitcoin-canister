@@ -137,9 +137,7 @@ impl Utxos {
             return Some(<(TxOut, Height)>::from_bytes(value.as_slice().to_vec()));
         }
 
-        self.large_utxos
-            .remove(key)
-            .map(|(txout, height)| (txout, height))
+        self.large_utxos.remove(key)
     }
 
     /// Gets an iterator over the entries of the map.

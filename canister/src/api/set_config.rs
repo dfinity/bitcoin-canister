@@ -152,10 +152,7 @@ mod test {
                 ..Default::default()
             });
 
-            assert_eq!(
-                with_state(|s| s.syncing_state.syncing),
-                *flag
-            );
+            assert_eq!(with_state(|s| s.syncing_state.syncing), *flag);
         }
     }
 
@@ -205,10 +202,7 @@ mod test {
                 ..Default::default()
             });
 
-            assert_eq!(
-                with_state(|s| s.api_access),
-                *flag
-            );
+            assert_eq!(with_state(|s| s.api_access), *flag);
         }
     }
 
