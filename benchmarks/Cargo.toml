@@ -10,6 +10,7 @@ bench = false
 
 [dependencies]
 bitcoin = { workspace = true, features = ["use-serde"]}
+canbench = { path = "../../canbench/canbench-rs" }
 candid = { workspace = true }
 hex = { workspace = true }
 ic-cdk = { workspace = true }
@@ -17,16 +18,3 @@ ic-cdk-macros = { workspace = true }
 ic-btc-canister = { workspace = true }
 ic-btc-interface = { workspace = true }
 ic-btc-types = { workspace = true }
-maplit = "1.0.2"
-serde = "1.0"
-
-[dev-dependencies]
-clap = { workspace = true }
-colored = "2.0.4"
-lazy_static = { workspace = true }
-serde_yaml = "0.9"
-
-[[bench]]
-name = "benches"
-harness = false
-path = "benches.rs"

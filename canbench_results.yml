@@ -1,0 +1,26 @@
+benches:
+  get_metrics:
+    total:
+      instructions: 86997911
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
+  insert_300_blocks:
+    total:
+      instructions: 561768522
+      heap_increase: 6
+      stable_memory_increase: 0
+    scopes: {}
+  insert_block_headers:
+    total:
+      instructions: 3895777371
+      heap_increase: 2
+      stable_memory_increase: 0
+    scopes: {}
+  insert_block_headers_multiple_times:
+    total:
+      instructions: 13898429217
+      heap_increase: 7
+      stable_memory_increase: 0
+    scopes: {}
+version: 0.1.0

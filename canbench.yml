@@ -1,0 +1,5 @@
+build_cmd:
+  ./scripts/build-canister.sh benchmarks
+
+wasm_path:
+  ./target/wasm32-unknown-unknown/release/benchmarks.wasm.gz
