@@ -23,4 +23,4 @@ benches:
       heap_increase: 7
       stable_memory_increase: 0
     scopes: {}
-version: 0.1.0
+version: 0.1.1

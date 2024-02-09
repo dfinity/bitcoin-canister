@@ -1,6 +1,6 @@
 use bitcoin::consensus::Decodable;
 use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
-use canbench::{bench, BenchResult};
+use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{Config, Network};
 use ic_btc_types::Block;
@@ -37,7 +37,7 @@ fn insert_300_blocks() -> BenchResult {
         ..Config::default()
     });
 
-    canbench::bench_fn(|| {
+    bench_fn(|| {
         with_state_mut(|s| {
             for i in 0..300 {
                 ic_btc_canister::state::insert_block(
@@ -69,7 +69,7 @@ fn get_metrics() -> BenchResult {
         }
     });
 
-    canbench::bench_fn(|| {
+    bench_fn(|| {
         ic_btc_canister::get_metrics();
     })
 }
@@ -111,7 +111,7 @@ fn insert_block_headers() -> BenchResult {
     });
 
     // Benchmark inserting the block headers.
-    canbench::bench_fn(|| {
+    bench_fn(|| {
         with_state_mut(|s| {
             ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
         });
@@ -141,7 +141,7 @@ fn insert_block_headers_multiple_times() -> BenchResult {
     });
 
     // Benchmark inserting the block headers.
-    canbench::bench_fn(|| {
+    bench_fn(|| {
         with_state_mut(|s| {
             for _ in 0..10 {
                 ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
