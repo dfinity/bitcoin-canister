@@ -495,7 +495,7 @@ mod test {
         .collect();
         let all_providers = BitcoinBlockApi::providers_mainnet()
             .into_iter()
-            .chain(BitcoinBlockApi::providers_testnet().into_iter())
+            .chain(BitcoinBlockApi::providers_testnet())
             .collect::<Vec<_>>();
         for provider in all_providers {
             assert_eq!(provider.to_string(), expected[&provider].to_string());

@@ -106,7 +106,7 @@ fn insert_block_headers() -> BenchResult {
             let mut block_header_blob = vec![];
             BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
                 .unwrap();
-            next_block_headers.push(BlockHeaderBlob::try_from(block_header_blob).unwrap());
+            next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 
         next_block_headers
@@ -136,7 +136,7 @@ fn insert_block_headers_multiple_times() -> BenchResult {
             let mut block_header_blob = vec![];
             BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
                 .unwrap();
-            next_block_headers.push(BlockHeaderBlob::try_from(block_header_blob).unwrap());
+            next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 
         next_block_headers
