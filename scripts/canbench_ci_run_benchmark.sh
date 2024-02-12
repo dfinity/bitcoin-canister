@@ -57,7 +57,7 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   canbench --less-verbose > $CANBENCH_OUTPUT
   popd
 
-  if grep -q "(regressed by \|(improved by" "${CANBENCH_OUTPUT}"; then
+  if grep -q "(regress\|(improved by" "${CANBENCH_OUTPUT}"; then
     echo "**Significant performance change detected! ⚠️**
     " >> $COMMENT_MESSAGE_PATH;
   else
