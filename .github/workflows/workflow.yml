@@ -386,11 +386,20 @@ jobs:
             bash e2e-tests/cycles_burn.sh
 
   benchmark:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: cargo-build
-
+    env:
+      PROJECT_DIR: .
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout current PR
+        uses: actions/checkout@v4
+
+      - name: Checkout master branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: _canbench_main_branch
+
       - uses: actions/cache@v3
         with:
           path: |
@@ -401,13 +410,23 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
+          rustup update $RUST_VERSION --no-self-update
+          rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
 
-      - name: Run benchmark test
+      - name: Benchmark
         run: |
-          bash e2e-tests/benchmark.sh
+          bash ./scripts/canbench_ci_run_benchmark.sh $PROJECT_DIR
+
+      - name: Post comment
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: /tmp/canbench_comment_message.txt
+          comment_tag: ${{ env.PROJECT_DIR }}
+
+      - name: Pass or fail
+        run: |
+          bash ./scripts/canbench_ci_post_run_benchmark.sh
 
   watchdog_health_status:
     runs-on: ubuntu-20.04

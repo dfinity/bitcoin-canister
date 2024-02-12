@@ -1,13 +1,11 @@
 use bitcoin::consensus::Decodable;
 use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
-use candid::CandidType;
+use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{Config, Network};
 use ic_btc_types::Block;
-use ic_cdk_macros::{init, query};
-use maplit::btreemap;
-use serde::Deserialize;
-use std::{cell::RefCell, collections::BTreeMap};
+use ic_cdk_macros::init;
+use std::cell::RefCell;
 
 thread_local! {
     static TESTNET_BLOCKS: RefCell<Vec<Block>> =  RefCell::new(vec![]);
@@ -31,7 +29,7 @@ fn init() {
 }
 
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
-#[query]
+#[bench(raw)]
 fn insert_300_blocks() -> BenchResult {
     ic_btc_canister::init(Config {
         network: Network::Testnet,
@@ -39,7 +37,7 @@ fn insert_300_blocks() -> BenchResult {
         ..Config::default()
     });
 
-    benchmark(|| {
+    bench_fn(|| {
         with_state_mut(|s| {
             for i in 0..300 {
                 ic_btc_canister::state::insert_block(
@@ -53,7 +51,7 @@ fn insert_300_blocks() -> BenchResult {
 }
 
 // Benchmarks gettings the metrics when there are many unstable blocks..
-#[query]
+#[bench(raw)]
 fn get_metrics() -> BenchResult {
     ic_btc_canister::init(Config {
         network: Network::Testnet,
@@ -71,13 +69,13 @@ fn get_metrics() -> BenchResult {
         }
     });
 
-    benchmark(|| {
+    bench_fn(|| {
         ic_btc_canister::get_metrics();
     })
 }
 
 // Benchmarks inserting 100 block headers into a tree containing 1000 blocks
-#[query]
+#[bench(raw)]
 fn insert_block_headers() -> BenchResult {
     let blocks_to_insert = 1000;
     let block_headers_to_insert = 100;
@@ -113,7 +111,7 @@ fn insert_block_headers() -> BenchResult {
     });
 
     // Benchmark inserting the block headers.
-    benchmark(|| {
+    bench_fn(|| {
         with_state_mut(|s| {
             ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
         });
@@ -121,7 +119,7 @@ fn insert_block_headers() -> BenchResult {
 }
 
 // Inserts the same block headers multiple times.
-#[query]
+#[bench(raw)]
 fn insert_block_headers_multiple_times() -> BenchResult {
     ic_btc_canister::init(Config {
         network: Network::Testnet,
@@ -143,32 +141,13 @@ fn insert_block_headers_multiple_times() -> BenchResult {
     });
 
     // Benchmark inserting the block headers.
-    benchmark(|| {
+    bench_fn(|| {
         with_state_mut(|s| {
             for _ in 0..10 {
                 ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
             }
         });
     })
-}
-
-#[derive(Debug, PartialEq, Deserialize, CandidType)]
-pub struct BenchResult {
-    measurements: BTreeMap<String, u64>,
-}
-
-/// Benchmarks the given function.
-pub(crate) fn benchmark<R>(f: impl FnOnce() -> R) -> BenchResult {
-    let start = ic_cdk::api::performance_counter(0);
-    f();
-    let total_instructions = ic_cdk::api::performance_counter(0) - start;
-
-    let measurements = btreemap! {
-        "instructions".to_string() => total_instructions,
-        "stable_memory_size".to_string() => ic_cdk::api::stable::stable64_size()
-    };
-
-    BenchResult { measurements }
 }
 
 fn main() {}
