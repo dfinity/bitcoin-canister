@@ -45,7 +45,7 @@ fi
 popd
 
 
-echo "# \`canbench\` 🏋 (dir: $CANISTER_PATH)" > $COMMENT_MESSAGE_PATH
+echo "# \`canbench\` 🏋" > $COMMENT_MESSAGE_PATH
 
 # Detect if there are performance changes relative to the main branch.
 if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
