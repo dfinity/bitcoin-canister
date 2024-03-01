@@ -7,7 +7,10 @@ use crate::{
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Network, Satoshi};
 use ic_btc_types::{Block, BlockHash, OutPoint, Transaction, Txid};
-use ic_stable_structures::{storable::Blob, BoundedStorable, StableBTreeMap, Storable as _};
+use ic_stable_structures::{
+    storable::{max_size, Blob},
+    StableBTreeMap, Storable as _,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeSet, iter::Iterator, str::FromStr};
 mod utxos;
@@ -32,7 +35,7 @@ pub struct UtxoSet {
     // An index for fast retrievals of an address's UTXOs.
     // NOTE: Stable structures don't need to be serialized.
     #[serde(skip, default = "init_address_utxos")]
-    address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory>,
+    address_utxos: StableBTreeMap<Blob<{ max_size::<AddressUtxo>() as usize }>, (), Memory>,
 
     // A map of an address and its current balance.
     // NOTE: Stable structures don't need to be serialized.
@@ -446,7 +449,8 @@ impl UtxoSet {
     }
 }
 
-fn init_address_utxos() -> StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), Memory> {
+fn init_address_utxos() -> StableBTreeMap<Blob<{ max_size::<AddressUtxo>() as usize }>, (), Memory>
+{
     StableBTreeMap::init(crate::memory::get_address_utxos_memory())
 }
 
