@@ -150,9 +150,9 @@ jobs:
           rustup target add wasm32-unknown-unknown
 
       - name: Install dfx
-      - uses: dfinity/setup-dfx@main
-        with:
-          dfx-version: $DFX_VERSION
+        uses: dfinity/setup-dfx@main
+          with:
+            dfx-version: $DFX_VERSION
 
       - name: Run scenario 1
         run: |
