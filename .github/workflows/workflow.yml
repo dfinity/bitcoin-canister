@@ -131,7 +131,7 @@ jobs:
 
   e2e-scenario-1:
     runs-on: ubuntu-20.04
-    needs: cargo-build
+      #needs: cargo-build
 
     steps:
       - uses: actions/checkout@v3
