@@ -152,7 +152,7 @@ jobs:
       - name: Install DFX
         run: |
           wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
+          echo | bash install-dfx.sh
           rm install-dfx.sh
           dfx cache install
           echo "$HOME/bin" >> $GITHUB_PATH
