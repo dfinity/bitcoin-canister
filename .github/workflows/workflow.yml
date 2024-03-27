@@ -149,13 +149,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          echo | bash install-dfx.sh
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+     - name: Install dfx
+       uses: dfinity/setup-dfx@main
+       with:
+         dfx-version: $DFX_VERSION
 
       - name: Run scenario 1
         run: |
