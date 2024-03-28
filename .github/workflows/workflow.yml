@@ -149,13 +149,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run scenario 1
         run: |
@@ -181,13 +178,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run scenario 2
         run: |
@@ -213,13 +207,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run scenario 3
         run: |
@@ -245,13 +236,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run disable api if not fully synced flag
         run: |
@@ -277,13 +265,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run charge cycles on reject
         run: |
@@ -309,13 +294,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run upgradability test
         run: |
@@ -341,49 +323,42 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run set_config test
         run: |
           bash e2e-tests/set_config.sh
 
   cycles_burn:
-      runs-on: ubuntu-20.04
-      needs: cargo-build
+    runs-on: ubuntu-20.04
+    needs: cargo-build
 
-      steps:
-        - uses: actions/checkout@v3
-        - uses: actions/cache@v3
-          with:
-            path: |
-              ~/.cargo/registry
-              ~/.cargo/git
-              target
-            key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
-        - name: Install Rust
-          run: |
-            rustup update ${{ matrix.rust }} --no-self-update
-            rustup default ${{ matrix.rust }}
-            rustup target add wasm32-unknown-unknown
+      - name: Install Rust
+        run: |
+          rustup update ${{ matrix.rust }} --no-self-update
+          rustup default ${{ matrix.rust }}
+          rustup target add wasm32-unknown-unknown
 
-        - name: Install DFX
-          run: |
-            wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-            bash install-dfx.sh < <(yes Y)
-            rm install-dfx.sh
-            dfx cache install
-            echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
-        - name: Run cycles_burn test
-          run: |
-            bash e2e-tests/cycles_burn.sh
+      - name: Run cycles_burn test
+        run: bash e2e-tests/cycles_burn.sh
 
   benchmark:
     runs-on: ubuntu-latest
@@ -448,13 +423,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run health_status test
         run: |
@@ -480,13 +452,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run get_config test
         run: |
@@ -512,13 +481,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run metrics test
         run: |
@@ -544,13 +510,10 @@ jobs:
           rustup default ${{ matrix.rust }}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install DFX
-        run: |
-          wget --output-document install-dfx.sh "https://internetcomputer.org/install.sh"
-          bash install-dfx.sh < <(yes Y)
-          rm install-dfx.sh
-          dfx cache install
-          echo "$HOME/bin" >> $GITHUB_PATH
+      - name: Install dfx
+        uses: dfinity/setup-dfx@main
+        with:
+          dfx-version: $DFX_VERSION
 
       - name: Run upgradability test
         run: |
