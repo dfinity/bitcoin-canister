@@ -93,6 +93,7 @@ pub fn init(config: Config) {
     with_state_mut(|s| s.syncing_state.syncing = config.syncing);
     with_state_mut(|s| s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced);
     with_state_mut(|s| s.watchdog_canister = config.watchdog_canister);
+    with_state_mut(|s| s.burn_cycles = config.burn_cycles);
     with_state_mut(|s| s.fees = config.fees);
 }
 
@@ -143,6 +144,7 @@ pub fn get_config() -> Config {
         api_access: s.api_access,
         disable_api_if_not_fully_synced: s.disable_api_if_not_fully_synced,
         watchdog_canister: s.watchdog_canister,
+        burn_cycles: s.burn_cycles,
     })
 }
 

@@ -18,9 +18,7 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
-    // Burn any cycles in the canister's balance (to count towards the IC's cycles burn rate)
-    let cycles_burnt = cycles_burn();
-    add_cycles_burnt_to_metric(cycles_burnt);
+    maybe_burn_cycles();
 
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
@@ -241,6 +239,14 @@ fn add_cycles_burnt_to_metric(cycles_burnt: u128) {
             s.metrics.cycles_burnt = Some(cycles_burnt);
         }
     });
+}
+
+/// Burns any cycles in the canister's balance (to count towards the IC's cycles burn rate).
+fn maybe_burn_cycles() {
+    if with_state(|s| s.burn_cycles == Flag::Enabled) {
+        let cycles_burnt = cycles_burn();
+        add_cycles_burnt_to_metric(cycles_burnt);
+    }
 }
 
 #[cfg(test)]
