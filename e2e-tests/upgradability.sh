@@ -32,6 +32,7 @@ ARGUMENT="(record {
  api_access = variant { enabled };
  disable_api_if_not_fully_synced = variant { enabled };
  watchdog_canister = null;
+ burn_cycles = variant { enabled };
 })"
 
 # Run dfx stop if we run into errors and remove the downloaded wasm.

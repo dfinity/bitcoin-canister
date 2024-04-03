@@ -35,6 +35,7 @@ type config = record {
   api_access : flag;
   disable_api_if_not_fully_synced : flag;
   watchdog_canister : opt principal;
+  burn_cycles : flag;
 };
 
 type fees = record {
@@ -89,6 +90,7 @@ type set_config_request = record {
   api_access : opt flag;
   disable_api_if_not_fully_synced : opt flag;
   watchdog_canister : opt opt principal;
+  burn_cycles : opt bool;
 };
 
 service bitcoin : (config) -> {
