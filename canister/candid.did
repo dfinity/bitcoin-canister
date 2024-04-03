@@ -90,7 +90,7 @@ type set_config_request = record {
   api_access : opt flag;
   disable_api_if_not_fully_synced : opt flag;
   watchdog_canister : opt opt principal;
-  burn_cycles : opt bool;
+  burn_cycles : opt flag;
 };
 
 service bitcoin : (config) -> {
