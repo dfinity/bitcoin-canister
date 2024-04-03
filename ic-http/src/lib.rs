@@ -35,7 +35,7 @@
 //!         status: raw.response.status.clone(),
 //!         ..Default::default()
 //!     };
-//!     if response.status == 200 {
+//!     if response.status == 200_u8 {
 //!         let original = parse_json(raw.response.body);
 //!
 //!         // Extract the author from the JSON response.
