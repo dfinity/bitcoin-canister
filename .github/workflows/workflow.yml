@@ -391,13 +391,21 @@ jobs:
 
       - name: Benchmark
         run: |
-          bash ./scripts/canbench_ci_run_benchmark.sh $PROJECT_DIR
+          bash ./scripts/ci_run_benchmark.sh $PROJECT_DIR ${{ github.job }}
 
-      - name: Post comment
-        uses: thollander/actions-comment-pull-request@v2
+      - uses: actions/upload-artifact@v4
         with:
-          filePath: /tmp/canbench_comment_message.txt
-          comment_tag: ${{ env.PROJECT_DIR }}
+          name: canbench_result_${{github.job}}
+          path: /tmp/canbench_result_${{ github.job }}
+
+      - name: Save PR number
+        run: |
+          echo ${{ github.event.number }} > /tmp/pr_number
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr_number
+          path: /tmp/pr_number
 
       - name: Pass or fail
         run: |
