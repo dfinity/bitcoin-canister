@@ -91,8 +91,7 @@ fn main() {
                     )
                     .unwrap(),
                     (),
-                )
-                .unwrap();
+                );
         }
     }
 
