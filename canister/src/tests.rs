@@ -461,7 +461,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
     // Set a large step for the performance_counter to exceed the instructions limit quickly.
     // This value allows ingesting 2 transactions inputs/outputs per round.
-    runtime::set_performance_counter_step(1_500_000_000);
+    runtime::set_performance_counter_step(750_000_000);
 
     // Fetch blocks.
     heartbeat().await;
