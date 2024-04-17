@@ -555,8 +555,9 @@ impl PartialEq for UtxoSet {
 // Checks that we're not approaching the instructions limit.
 fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
     // The threshold at which time slicing kicks in.
-    // At the time of this writing it is equivalent to 80% of the maximum instructions limit.
-    const MAX_INSTRUCTIONS_THRESHOLD: u64 = 4_000_000_000;
+    // At the time of this writing it is equivalent to 40% of the maximum instructions limit.
+    // NOTE: We've reduced this limit from 4B to 2B in an effort to keep the FR stable.
+    const MAX_INSTRUCTIONS_THRESHOLD: u64 = 2_000_000_000;
 
     // NOTE: We're using `inc_performance_counter` here to also increment the mock performance
     // counter in the unit tests.
