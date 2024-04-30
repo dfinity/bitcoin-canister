@@ -391,7 +391,7 @@ mod test {
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 inputs/outputs per round.
-        runtime::set_performance_counter_step(1_000_000_000);
+        runtime::set_performance_counter_step(250_000_000);
 
         // Fetch blocks.
         heartbeat().await;
@@ -508,7 +508,7 @@ mod test {
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 transactions inputs/outputs per round.
-        runtime::set_performance_counter_step(1_000_000_000);
+        runtime::set_performance_counter_step(250_000_000);
 
         // Fetch blocks.
         heartbeat().await;
