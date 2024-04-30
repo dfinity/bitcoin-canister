@@ -1,4 +1,4 @@
-name: CI Checks
+name: CI
 
 env:
   RUST_VERSION: 1.76.0
