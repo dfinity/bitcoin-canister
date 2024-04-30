@@ -80,8 +80,8 @@ impl Config {
     pub fn testnet() -> Self {
         Self {
             bitcoin_network: BitcoinNetwork::Testnet,
-            blocks_behind_threshold: 100,
-            blocks_ahead_threshold: 100,
+            blocks_behind_threshold: 1000,
+            blocks_ahead_threshold: 1000,
             min_explorers: 2,
             bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
