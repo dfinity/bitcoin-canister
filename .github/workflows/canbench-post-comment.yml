@@ -20,7 +20,7 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
 
       - id: set-benchmarks
-        run: bash ./scripts/canbench_ci_download_canbench.sh
+        run: bash ./scripts/canbench_ci_download_artifacts.sh
 
   post-comment:
     runs-on: ubuntu-latest
