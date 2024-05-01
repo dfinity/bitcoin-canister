@@ -400,7 +400,7 @@ mod test {
 
         // Ingest the next block. This time, the performance counter is set so that
         // the ingestion is time-sliced.
-        crate::runtime::set_performance_counter_step(1_000_000_000);
+        crate::runtime::set_performance_counter_step(100_000_000);
 
         insert_block(&mut state, blocks[2].clone()).unwrap();
         let metrics_before = state.metrics.block_ingestion_stats.clone();
