@@ -472,7 +472,7 @@ pub enum Flag {
     Disabled,
 }
 
-/// The payload used to initialize the canister.
+/// The config and payload used to initialize the canister.
 #[derive(CandidType, Deserialize, Debug)]
 pub struct Config {
     pub stability_threshold: u128,
@@ -499,6 +499,10 @@ pub struct Config {
     /// The watchdog canister has the authority to disable the Bitcoin canister's API
     /// if it suspects that there is a problem.
     pub watchdog_canister: Option<Principal>,
+
+    /// If enabled, continuously burns all cycles in its balance
+    /// (to count towards the IC's burn rate).
+    pub burn_cycles: Flag,
 }
 
 impl Default for Config {
@@ -512,6 +516,7 @@ impl Default for Config {
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
             watchdog_canister: None,
+            burn_cycles: Flag::Disabled,
         }
     }
 }

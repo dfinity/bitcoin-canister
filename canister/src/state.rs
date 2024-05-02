@@ -60,6 +60,12 @@ pub struct State {
     /// The watchdog canister has the authority to disable the Bitcoin canister's API
     /// if it suspects that there is a problem.
     pub watchdog_canister: Option<Principal>,
+
+    /// If enabled, continuously burns all cycles in the canister's balance
+    /// to count towards the IC's burn rate.
+    /// NOTE: serde(default) is used here for backward-compatibility.
+    #[serde(default)]
+    pub burn_cycles: Flag,
 }
 
 impl State {
@@ -85,6 +91,7 @@ impl State {
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
             watchdog_canister: None,
+            burn_cycles: Flag::Disabled,
         }
     }
 
@@ -393,7 +400,7 @@ mod test {
 
         // Ingest the next block. This time, the performance counter is set so that
         // the ingestion is time-sliced.
-        crate::runtime::set_performance_counter_step(1_000_000_000);
+        crate::runtime::set_performance_counter_step(100_000_000);
 
         insert_block(&mut state, blocks[2].clone()).unwrap();
         let metrics_before = state.metrics.block_ingestion_stats.clone();

@@ -15,7 +15,7 @@ use crate::{init, test_utils::random_p2pkh_address, Config};
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_interface::{GetUtxosResponse, Network, Txid, UtxosFilter};
+use ic_btc_interface::{Flag, GetUtxosResponse, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_btc_types::{Block, BlockHash};
 use ic_cdk::api::call::RejectionCode;
@@ -461,7 +461,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
     // Set a large step for the performance_counter to exceed the instructions limit quickly.
     // This value allows ingesting 2 transactions inputs/outputs per round.
-    runtime::set_performance_counter_step(1_500_000_000);
+    runtime::set_performance_counter_step(375_000_000);
 
     // Fetch blocks.
     heartbeat().await;
@@ -719,7 +719,10 @@ async fn test_syncing_with_next_block_headers() {
 
 #[async_std::test]
 async fn cycles_burnt_are_tracked_in_metrics() {
-    crate::init(crate::Config::default());
+    crate::init(crate::Config {
+        burn_cycles: Flag::Enabled,
+        ..Default::default()
+    });
 
     let cycles_burnt_0 = crate::with_state(|state| state.metrics.cycles_burnt);
 
@@ -747,4 +750,26 @@ async fn cycles_burnt_are_tracked_in_metrics() {
     let cycles_burnt_3 = crate::with_state(|state| state.metrics.cycles_burnt);
 
     assert_eq!(cycles_burnt_3, Some(3 * burn_amount));
+}
+
+#[async_std::test]
+async fn cycles_are_not_burnt_when_flag_is_disabled() {
+    crate::init(crate::Config {
+        burn_cycles: Flag::Disabled,
+        ..Default::default()
+    });
+
+    assert_eq!(
+        crate::with_state(|state| state.metrics.cycles_burnt),
+        Some(0)
+    );
+
+    // Run the heartbeat.
+    heartbeat().await;
+
+    // No cycles should be burnt.
+    assert_eq!(
+        crate::with_state(|state| state.metrics.cycles_burnt),
+        Some(0)
+    );
 }

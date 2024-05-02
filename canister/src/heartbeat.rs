@@ -18,9 +18,7 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
-    // Burn any cycles in the canister's balance (to count towards the IC's cycles burn rate)
-    let cycles_burnt = cycles_burn();
-    add_cycles_burnt_to_metric(cycles_burnt);
+    maybe_burn_cycles();
 
     if ingest_stable_blocks_into_utxoset() {
         // Exit the heartbeat if stable blocks had been ingested.
@@ -243,6 +241,14 @@ fn add_cycles_burnt_to_metric(cycles_burnt: u128) {
     });
 }
 
+/// Burns any cycles in the canister's balance (to count towards the IC's cycles burn rate).
+fn maybe_burn_cycles() {
+    if with_state(|s| s.burn_cycles == Flag::Enabled) {
+        let cycles_burnt = cycles_burn();
+        add_cycles_burnt_to_metric(cycles_burnt);
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -385,7 +391,7 @@ mod test {
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 inputs/outputs per round.
-        runtime::set_performance_counter_step(1_000_000_000);
+        runtime::set_performance_counter_step(250_000_000);
 
         // Fetch blocks.
         heartbeat().await;
@@ -502,7 +508,7 @@ mod test {
 
         // Set a large step for the performance_counter to exceed the instructions limit quickly.
         // This value allows ingesting 3 transactions inputs/outputs per round.
-        runtime::set_performance_counter_step(1_000_000_000);
+        runtime::set_performance_counter_step(250_000_000);
 
         // Fetch blocks.
         heartbeat().await;

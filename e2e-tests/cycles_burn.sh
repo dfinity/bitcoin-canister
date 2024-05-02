@@ -35,6 +35,7 @@ dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(rec
   api_access = variant { enabled };
   disable_api_if_not_fully_synced = variant { enabled };
   watchdog_canister = null;
+  burn_cycles = variant { enabled };
 })"
 
 sleep 3

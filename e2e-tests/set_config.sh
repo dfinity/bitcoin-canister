@@ -27,6 +27,7 @@ dfx deploy --no-wallet bitcoin --argument "(record {
   api_access = variant { enabled };
   disable_api_if_not_fully_synced = variant { enabled };
   watchdog_canister = null;
+  burn_cycles = variant { enabled };
 })"
 
 # The stability threshold is zero

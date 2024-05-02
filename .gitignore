@@ -6,5 +6,6 @@
 target
 .dfx
 canister_ids.json
+.canbench
 
 *.wasm.gz

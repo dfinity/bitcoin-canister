@@ -1,4 +1,4 @@
-name: CI Checks
+name: CI
 
 env:
   RUST_VERSION: 1.76.0
@@ -19,8 +19,8 @@ jobs:
         os: [ ubuntu-20.04, macos-12 ]
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -51,10 +51,10 @@ jobs:
         os: [ ubuntu-20.04, macos-12 ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -78,8 +78,8 @@ jobs:
   cargo-clippy:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -102,7 +102,7 @@ jobs:
   rustfmt:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Rust + Clippy
         run: |
           rustup update $RUST_VERSION --no-self-update
@@ -123,7 +123,7 @@ jobs:
     name: ShellCheck
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Run ShellCheck
       uses: ludeeus/action-shellcheck@master
       env:
@@ -134,8 +134,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -163,8 +163,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -192,8 +192,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -221,8 +221,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -250,8 +250,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -279,8 +279,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -308,8 +308,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -337,8 +337,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -362,7 +362,6 @@ jobs:
 
   benchmark:
     runs-on: ubuntu-latest
-    needs: cargo-build
     env:
       PROJECT_DIR: .
     steps:
@@ -375,7 +374,7 @@ jobs:
           ref: master
           path: _canbench_main_branch
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -391,13 +390,21 @@ jobs:
 
       - name: Benchmark
         run: |
-          bash ./scripts/canbench_ci_run_benchmark.sh $PROJECT_DIR
+          bash ./scripts/canbench_ci_run_benchmark.sh $PROJECT_DIR ${{ github.job }}
 
-      - name: Post comment
-        uses: thollander/actions-comment-pull-request@v2
+      - uses: actions/upload-artifact@v4
         with:
-          filePath: /tmp/canbench_comment_message.txt
-          comment_tag: ${{ env.PROJECT_DIR }}
+          name: canbench_result_${{github.job}}
+          path: /tmp/canbench_result_${{ github.job }}
+
+      - name: Save PR number
+        run: |
+          echo ${{ github.event.number }} > /tmp/pr_number
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr_number
+          path: /tmp/pr_number
 
       - name: Pass or fail
         run: |
@@ -408,8 +415,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -437,8 +444,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -466,8 +473,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -495,8 +502,8 @@ jobs:
     needs: cargo-build
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
@@ -524,7 +531,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Verify Reproducibility
         run: |
@@ -543,7 +550,7 @@ jobs:
         run: exit 1
       - name: check shell-checks result
         if: ${{ needs.shell-checks.result != 'success' }}
-        run: exit 1      
+        run: exit 1
       - name: check cargo-clippy result
         if: ${{ needs.cargo-clippy.result != 'success' }}
         run: exit 1
