@@ -24,7 +24,8 @@ fn verify_get_block_headers_request(
     Ok(())
 }
 
-/// Retrieves the block headers of the given starting height.
+/// Retrieves the block headers from the given starting height
+/// up to the optional end height.
 pub fn get_block_headers(
     request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
