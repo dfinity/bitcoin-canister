@@ -80,7 +80,7 @@ pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) {
 pub fn bitcoin_get_block_headers(request: GetBlockHeadersRequest) {
     match ic_btc_canister::get_block_headers(request) {
         Ok(response) => reply((response,)),
-        Err(e) => reject(format!("get_utxos failed: {:?}", e).as_str()),
+        Err(e) => reject(format!("get_block_headers failed: {:?}", e).as_str()),
     };
 }
 
