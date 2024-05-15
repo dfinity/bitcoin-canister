@@ -22,7 +22,7 @@ type outpoint = record {
 type utxo = record {
   outpoint : outpoint;
   value : satoshi;
-  height : nat32;
+  height : block_height;
 };
 
 type flag = variant {
