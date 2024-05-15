@@ -12,6 +12,7 @@ pub type MillisatoshiPerByte = u64;
 pub type BlockHash = Vec<u8>;
 pub type Height = u32;
 pub type Page = ByteBuf;
+pub type BlockHeader = Vec<u8>;
 
 #[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
 pub enum Network {
@@ -272,7 +273,7 @@ pub struct OutPoint {
 pub struct Utxo {
     pub outpoint: OutPoint,
     pub value: Satoshi,
-    pub height: u32,
+    pub height: Height,
 }
 
 impl std::cmp::PartialOrd for Utxo {
@@ -333,7 +334,7 @@ pub struct GetUtxosRequest {
 pub struct GetUtxosResponse {
     pub utxos: Vec<Utxo>,
     pub tip_block_hash: BlockHash,
-    pub tip_height: u32,
+    pub tip_height: Height,
     pub next_page: Option<Page>,
 }
 
@@ -344,6 +345,44 @@ pub enum GetUtxosError {
     MinConfirmationsTooLarge { given: u32, max: u32 },
     UnknownTipBlockHash { tip_block_hash: BlockHash },
     MalformedPage { err: String },
+}
+
+/// A request for getting the block headers from a given height.
+#[derive(CandidType, Debug, Deserialize, PartialEq, Eq)]
+pub struct GetBlockHeadersRequest {
+    pub start_height: Height,
+    pub end_height: Option<Height>,
+}
+
+/// The response returned for a request for getting the block headers from a given height.
+#[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
+pub struct GetBlockHeadersResponse {
+    pub tip_height: Height,
+    pub block_headers: Vec<BlockHeader>,
+}
+
+/// Errors when processing a `get_block_headers` request.
+#[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
+pub enum GetBlockHeadersError {
+    StartHeightDoesNotExists,
+    EndHeightDoesNotExists,
+    StartHeightLagrerThanEndHeight,
+}
+
+impl fmt::Display for GetBlockHeadersError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::StartHeightDoesNotExists => {
+                write!(f, "Start height does not exists.")
+            }
+            Self::EndHeightDoesNotExists => {
+                write!(f, "End height does not exists.")
+            }
+            Self::StartHeightLagrerThanEndHeight => {
+                write!(f, "Start height lagrer than end height.")
+            }
+        }
+    }
 }
 
 /// A request for getting the current fee percentiles.

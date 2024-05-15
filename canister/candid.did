@@ -10,6 +10,10 @@ type address = text;
 
 type block_hash = blob;
 
+type block_header = blob;
+
+type block_height = nat32;
+
 type outpoint = record {
   txid : blob;
   vout : nat32;
@@ -68,7 +72,7 @@ type get_utxos_request = record {
 type get_utxos_response = record {
   utxos : vec utxo;
   tip_block_hash : block_hash;
-  tip_height : nat32;
+  tip_height : block_height;
   next_page : opt blob;
 };
 
@@ -93,6 +97,16 @@ type set_config_request = record {
   burn_cycles : opt flag;
 };
 
+type get_block_headers_request = record {
+  start_height : block_height;
+  end_height : opt block_height;
+};
+
+type get_block_headers_response = record {
+  tip_height : block_height;
+  block_headers : vec block_header;
+};
+
 service bitcoin : (config) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
@@ -103,6 +117,8 @@ service bitcoin : (config) -> {
   bitcoin_get_utxos_query : (get_utxos_request) -> (get_utxos_response) query;
 
   bitcoin_get_current_fee_percentiles : (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+
+  bitcoin_get_block_headers : (get_block_headers_request) -> (get_block_headers_response);
 
   bitcoin_send_transaction : (send_transaction_request) -> ();
 

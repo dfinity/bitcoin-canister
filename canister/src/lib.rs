@@ -28,8 +28,9 @@ pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
 use ic_btc_interface::{
-    Config, Flag, GetBalanceError, GetBalanceRequest, GetCurrentFeePercentilesRequest,
-    GetUtxosError, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte, Network, Satoshi,
+    Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
+    GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
+    GetUtxosResponse, MillisatoshiPerByte, Network, Satoshi,
 };
 use ic_btc_types::Block;
 use ic_stable_structures::Memory;
@@ -132,6 +133,14 @@ pub fn get_utxos_query(request: GetUtxosRequest) -> Result<GetUtxosResponse, Get
     verify_network(request.network.into());
     verify_synced();
     api::get_utxos_query(request.into())
+}
+
+pub fn get_block_headers(
+    request: GetBlockHeadersRequest,
+) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
+    verify_api_access();
+    verify_synced();
+    api::get_block_headers(request)
 }
 
 pub fn get_config() -> Config {
@@ -480,6 +489,22 @@ mod test {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
             filter: None,
+        })
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Bitcoin API is disabled")]
+    fn get_block_headers_access_disabled() {
+        init(Config {
+            stability_threshold: 0,
+            network: Network::Mainnet,
+            api_access: Flag::Disabled,
+            ..Default::default()
+        });
+        get_block_headers(GetBlockHeadersRequest {
+            start_height: 3,
+            end_height: None,
         })
         .unwrap();
     }
