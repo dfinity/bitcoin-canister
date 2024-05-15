@@ -387,7 +387,7 @@ impl fmt::Display for GetBlockHeadersError {
             } => {
                 write!(
                     f,
-                    "The requested start_height is larger than height of chain. Requested: {}, height of chain: {}",
+                    "The requested start_height is larger than the height of the chain. Requested: {}, height of chain: {}",
                     requested, chain_height
                 )
             }
@@ -397,7 +397,7 @@ impl fmt::Display for GetBlockHeadersError {
             } => {
                 write!(
                     f,
-                    "The requested start_height is larger than height of chain. Requested: {}, height of chain: {}",
+                    "The requested start_height is larger than the height of the chain. Requested: {}, height of chain: {}",
                     requested, chain_height
                 )
             }
@@ -407,7 +407,7 @@ impl fmt::Display for GetBlockHeadersError {
             } => {
                 write!(
                     f,
-                    "The requested start_height is larger than requested end_height. start_height: {}, end_height: {}", start_height, end_height)
+                    "The requested start_height is larger than the requested end_height. start_height: {}, end_height: {}", start_height, end_height)
             }
         }
     }
