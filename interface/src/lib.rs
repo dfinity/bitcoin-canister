@@ -364,22 +364,50 @@ pub struct GetBlockHeadersResponse {
 /// Errors when processing a `get_block_headers` request.
 #[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
 pub enum GetBlockHeadersError {
-    StartHeightDoesNotExists,
-    EndHeightDoesNotExists,
-    StartHeightLagrerThanEndHeight,
+    StartHeightTooLarge {
+        requested: Height,
+        chain_height: Height,
+    },
+    EndHeightTooLarge {
+        requested: Height,
+        chain_height: Height,
+    },
+    StartHeightLagerThanEndHeight {
+        start_height: Height,
+        end_height: Height,
+    },
 }
 
 impl fmt::Display for GetBlockHeadersError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::StartHeightDoesNotExists => {
-                write!(f, "Start height does not exists.")
+            Self::StartHeightTooLarge {
+                requested,
+                chain_height,
+            } => {
+                write!(
+                    f,
+                    "The requested start_height is larger than height of chain. Requested: {}, height of chain: {}",
+                    requested, chain_height
+                )
             }
-            Self::EndHeightDoesNotExists => {
-                write!(f, "End height does not exists.")
+            Self::EndHeightTooLarge {
+                requested,
+                chain_height,
+            } => {
+                write!(
+                    f,
+                    "The requested start_height is larger than height of chain. Requested: {}, height of chain: {}",
+                    requested, chain_height
+                )
             }
-            Self::StartHeightLagrerThanEndHeight => {
-                write!(f, "Start height lagrer than end height.")
+            Self::StartHeightLagerThanEndHeight {
+                start_height,
+                end_height,
+            } => {
+                write!(
+                    f,
+                    "The requested start_height is larger than requested end_height. start_height: {}, end_height: {}", start_height, end_height)
             }
         }
     }

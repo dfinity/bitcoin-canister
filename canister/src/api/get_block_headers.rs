@@ -10,11 +10,26 @@ struct Stats {
     _ins_build_block_headers_vec: u64,
 }
 
+fn verify_get_block_headers_request(
+    request: GetBlockHeadersRequest,
+) -> Result<(), GetBlockHeadersError> {
+    if let Some(end_height) = request.end_height {
+        if end_height < request.start_height {
+            return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
+                start_height: request.start_height,
+                end_height,
+            });
+        }
+    }
+    Ok(())
+}
+
 /// Retrieves the block headers of the given starting height.
 pub fn get_block_headers(
-    _request: GetBlockHeadersRequest,
+    request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
-    Err(GetBlockHeadersError::StartHeightLagrerThanEndHeight)
+    verify_get_block_headers_request(request)?;
+    unimplemented!("get_block_headers is not implemented")
 }
 
 #[cfg(test)]
@@ -30,12 +45,22 @@ mod test {
             network: Network::Mainnet,
             ..Default::default()
         });
+
+        let start_height = 3;
+        let end_height = 2;
+
+        let err = get_block_headers(GetBlockHeadersRequest {
+            start_height,
+            end_height: Some(end_height),
+        })
+        .unwrap_err();
+
         assert_eq!(
-            get_block_headers(GetBlockHeadersRequest {
-                start_height: 3,
-                end_height: Some(2),
-            }),
-            Err(GetBlockHeadersError::StartHeightLagrerThanEndHeight)
+            err,
+            GetBlockHeadersError::StartHeightLagerThanEndHeight {
+                start_height,
+                end_height,
+            }
         );
     }
 }
