@@ -24,8 +24,16 @@ fn verify_get_block_headers_request(
     Ok(())
 }
 
-/// Retrieves the block headers from the given starting height
-/// up to the optional end height.
+/// Given a start height and an optional end height from request,
+/// the function returns the block headers in the provided range.
+/// The range is inclusive, i.e., the block headers at the start
+/// and end heights are returned as well.
+
+/// If no end height is specified, all blocks until the tip height,
+/// i.e., the largest available height, are returned. However, if
+/// the range from the start height to the end height or the tip
+/// height is large, only a prefix of the requested block headers
+/// may be returned in order to bound the size of the response.
 pub fn get_block_headers(
     request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {

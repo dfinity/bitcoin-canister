@@ -364,11 +364,11 @@ pub struct GetBlockHeadersResponse {
 /// Errors when processing a `get_block_headers` request.
 #[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
 pub enum GetBlockHeadersError {
-    StartHeightTooLarge {
+    StartHeightDoesNotExist {
         requested: Height,
         chain_height: Height,
     },
-    EndHeightTooLarge {
+    EndHeightDoesNotExist {
         requested: Height,
         chain_height: Height,
     },
@@ -381,7 +381,7 @@ pub enum GetBlockHeadersError {
 impl fmt::Display for GetBlockHeadersError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::StartHeightTooLarge {
+            Self::StartHeightDoesNotExist {
                 requested,
                 chain_height,
             } => {
@@ -391,7 +391,7 @@ impl fmt::Display for GetBlockHeadersError {
                     requested, chain_height
                 )
             }
-            Self::EndHeightTooLarge {
+            Self::EndHeightDoesNotExist {
                 requested,
                 chain_height,
             } => {
