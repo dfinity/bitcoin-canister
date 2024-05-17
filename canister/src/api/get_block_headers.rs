@@ -1,15 +1,5 @@
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
-// Various profiling stats for tracking the performance of `get_block_headers`.
-#[derive(Default, Debug)]
-struct Stats {
-    // The total number of instructions used to process the request.
-    _ins_total: u64,
-
-    // The number of instructions used to build the block headers vec.
-    _ins_build_block_headers_vec: u64,
-}
-
 fn verify_get_block_headers_request(
     request: GetBlockHeadersRequest,
 ) -> Result<(), GetBlockHeadersError> {
