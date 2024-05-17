@@ -1,17 +1,19 @@
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
+use crate::{charge_cycles, runtime::print, verify_has_enough_cycles, with_state, with_state_mut};
+
 // Various profiling stats for tracking the performance of `get_block_headers`.
 #[derive(Default, Debug)]
 struct Stats {
     // The total number of instructions used to process the request.
-    _ins_total: u64,
+    ins_total: u64,
 
     // The number of instructions used to build the block headers vec.
-    _ins_build_block_headers_vec: u64,
+    ins_build_block_headers_vec: u64,
 }
 
 fn verify_get_block_headers_request(
-    request: GetBlockHeadersRequest,
+    request: &GetBlockHeadersRequest,
 ) -> Result<(), GetBlockHeadersError> {
     if let Some(end_height) = request.end_height {
         if end_height < request.start_height {
@@ -22,6 +24,12 @@ fn verify_get_block_headers_request(
         }
     }
     Ok(())
+}
+
+fn get_block_headers_internal(
+    request: &GetBlockHeadersRequest,
+) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
+    unimplemented!("get_block_headers_internal");
 }
 
 /// Given a start height and an optional end height from request,
@@ -37,8 +45,36 @@ fn verify_get_block_headers_request(
 pub fn get_block_headers(
     request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
-    verify_get_block_headers_request(request)?;
-    unimplemented!("get_block_headers is not implemented")
+    verify_has_enough_cycles(with_state(|s| s.fees.get_block_headers_maximum));
+    // Charge the base fee.
+    charge_cycles(with_state(|s| s.fees.get_block_headers_base));
+
+    verify_get_block_headers_request(&request)?;
+
+    let (res, stats) = get_block_headers_internal(&request)?;
+
+    // Observe metrics
+    with_state_mut(|s| {
+        s.metrics.get_block_headers_total.observe(stats.ins_total);
+
+        s.metrics
+            .get_block_headers_build_block_headers_vec
+            .observe(stats.ins_build_block_headers_vec);
+    });
+
+    // Charge the fee based on the number of the instructions.
+    with_state(|s| {
+        let fee = std::cmp::min(
+            (stats.ins_total / 10) as u128 * s.fees.get_block_headers_cycles_per_ten_instructions,
+            s.fees.get_block_headers_maximum - s.fees.get_block_headers_base,
+        );
+
+        charge_cycles(fee);
+    });
+
+    // Print the number of instructions it took to process this request.
+    print(&format!("[INSTRUCTION COUNT] {:?}: {:?}", request, stats));
+    Ok(res)
 }
 
 #[cfg(test)]

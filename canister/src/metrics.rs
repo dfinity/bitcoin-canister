@@ -13,6 +13,9 @@ pub struct Metrics {
     pub get_utxos_apply_unstable_blocks: InstructionHistogram,
     pub get_utxos_build_utxos_vec: InstructionHistogram,
 
+    pub get_block_headers_total: InstructionHistogram,
+    pub get_block_headers_build_block_headers_vec: InstructionHistogram,
+
     pub get_balance_total: InstructionHistogram,
     pub get_balance_apply_unstable_blocks: InstructionHistogram,
 
@@ -45,6 +48,15 @@ impl Default for Metrics {
             get_utxos_build_utxos_vec: InstructionHistogram::new(
                 "inst_count_get_utxos_build_utxos_vec",
                 "Instructions needed to build the UTXOs vec in a get_utxos request.",
+            ),
+
+            get_block_headers_total: InstructionHistogram::new(
+                "ins_block_headers_total",
+                "Instructions needed to execute a get_block_headers request.",
+            ),
+            get_block_headers_build_block_headers_vec: InstructionHistogram::new(
+                "inst_count_get_block_headers_build_block_headers_vec",
+                "Instructions needed to build the block headers vec in a get_block_headers request.",
             ),
 
             get_balance_total: InstructionHistogram::new(
