@@ -1,5 +1,6 @@
 mod fee_percentiles;
 mod get_balance;
+mod get_block_headers;
 mod get_utxos;
 mod metrics;
 mod send_transaction;
@@ -7,6 +8,7 @@ mod set_config;
 pub use fee_percentiles::get_current_fee_percentiles;
 pub use get_balance::get_balance;
 pub use get_balance::get_balance_query;
+pub use get_block_headers::get_block_headers;
 pub use get_utxos::get_utxos;
 pub use get_utxos::get_utxos_query;
 pub use metrics::get_metrics;
