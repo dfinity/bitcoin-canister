@@ -342,6 +342,12 @@ impl From<Vec<u8>> for BlockHeaderBlob {
     }
 }
 
+impl From<BlockHeaderBlob> for Vec<u8> {
+    fn from(block_header: BlockHeaderBlob) -> Vec<u8> {
+        block_header.0
+    }
+}
+
 type PageNumber = u8;
 
 #[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

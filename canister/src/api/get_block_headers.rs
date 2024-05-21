@@ -15,6 +15,15 @@ struct Stats {
 fn verify_get_block_headers_request(
     request: &GetBlockHeadersRequest,
 ) -> Result<(), GetBlockHeadersError> {
+    let chain_height = with_state(|s| s.stable_block_headers.chain_height().unwrap_or(0));
+
+    if request.start_height < chain_height {
+        return Err(GetBlockHeadersError::StartHeightDoesNotExist {
+            requested: request.start_height,
+            chain_height,
+        });
+    }
+
     if let Some(end_height) = request.end_height {
         if end_height < request.start_height {
             return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
@@ -22,14 +31,45 @@ fn verify_get_block_headers_request(
                 end_height,
             });
         }
+
+        if end_height < chain_height {
+            return Err(GetBlockHeadersError::EndHeightDoesNotExist {
+                requested: end_height,
+                chain_height,
+            });
+        }
     }
+
     Ok(())
 }
 
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    unimplemented!("get_block_headers_internal");
+    verify_get_block_headers_request(&request)?;
+
+    let start_height = request.start_height;
+
+    let end_height = request.end_height.unwrap_or(with_state(|s| {
+        s.stable_block_headers.chain_height().unwrap_or(0)
+    }));
+
+    let vec_headers = with_state(|s| {
+        let block_heights = &s.stable_block_headers.block_heights;
+        let block_headers = &s.stable_block_headers.block_headers;
+        block_heights
+            .range(start_height..end_height)
+            .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
+            .collect()
+    });
+
+    Ok((
+        GetBlockHeadersResponse {
+            tip_height: end_height,
+            block_headers: vec_headers,
+        },
+        Stats::default(),
+    ))
 }
 
 /// Given a start height and an optional end height from request,
@@ -48,8 +88,6 @@ pub fn get_block_headers(
     verify_has_enough_cycles(with_state(|s| s.fees.get_block_headers_maximum));
     // Charge the base fee.
     charge_cycles(with_state(|s| s.fees.get_block_headers_base));
-
-    verify_get_block_headers_request(&request)?;
 
     let (res, stats) = get_block_headers_internal(&request)?;
 

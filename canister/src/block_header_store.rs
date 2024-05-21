@@ -71,6 +71,10 @@ impl BlockHeaderStore {
                 .expect("block header must exist")
         })
     }
+
+    pub fn chain_height(&self) -> Option<u32> {
+        self.block_heights.last_key_value().map(|(k, _)| k)
+    }
 }
 
 fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {

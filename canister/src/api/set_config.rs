@@ -170,6 +170,9 @@ mod test {
             get_current_fee_percentiles_maximum in 0..1_000_000_000_000u128,
             send_transaction_base in 0..1_000_000_000_000u128,
             send_transaction_per_byte in 0..1_000_000_000_000u128,
+            get_block_headers_base in 0..1_000_000_000_000u128,
+            get_block_headers_cycles_per_ten_instructions in 0..1_000_000_000_000u128,
+            get_block_headers_maximum in 0..1_000_000_000_000u128,
         )| {
             let fees = Fees {
                 get_utxos_base,
@@ -180,7 +183,10 @@ mod test {
                 get_current_fee_percentiles,
                 get_current_fee_percentiles_maximum,
                 send_transaction_base,
-                send_transaction_per_byte
+                send_transaction_per_byte,
+                get_block_headers_base,
+                get_block_headers_cycles_per_ten_instructions,
+                get_block_headers_maximum
             };
 
             set_config_no_verification(SetConfigRequest {
