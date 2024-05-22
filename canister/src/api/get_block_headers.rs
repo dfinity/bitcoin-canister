@@ -50,7 +50,7 @@ fn verify_get_block_headers_request(
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    verify_get_block_headers_request(&request)?;
+    verify_get_block_headers_request(request)?;
 
     let mut stats: Stats = Stats::default();
 
