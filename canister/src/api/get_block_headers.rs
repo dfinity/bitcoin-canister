@@ -21,7 +21,7 @@ fn verify_get_block_headers_request(
 ) -> Result<(), GetBlockHeadersError> {
     let chain_height = with_state(|s| s.stable_block_headers.chain_height().unwrap_or(0));
 
-    if request.start_height < chain_height {
+    if request.start_height > chain_height {
         return Err(GetBlockHeadersError::StartHeightDoesNotExist {
             requested: request.start_height,
             chain_height,
@@ -36,7 +36,7 @@ fn verify_get_block_headers_request(
             });
         }
 
-        if end_height < chain_height {
+        if end_height > chain_height {
             return Err(GetBlockHeadersError::EndHeightDoesNotExist {
                 requested: end_height,
                 chain_height,
@@ -129,9 +129,15 @@ pub fn get_block_headers(
 
 #[cfg(test)]
 mod test {
-    use ic_btc_interface::{Config, GetBlockHeadersError, GetBlockHeadersRequest, Network};
-
-    use crate::api::get_block_headers;
+    use super::*;
+    use crate::{
+        genesis_block,
+        state::{ingest_stable_blocks_into_utxoset, insert_block},
+        test_utils::BlockBuilder,
+        with_state_mut,
+    };
+    use bitcoin::consensus::Encodable;
+    use ic_btc_interface::{Config, Network};
 
     #[test]
     fn get_block_headers_malformed_heights() {
@@ -155,6 +161,103 @@ mod test {
             GetBlockHeadersError::StartHeightLagerThanEndHeight {
                 start_height,
                 end_height,
+            }
+        );
+    }
+
+    fn get_block_headers_helper_one_stable_block() {
+        let network = Network::Regtest;
+        crate::init(Config {
+            stability_threshold: 1,
+            network,
+            ..Default::default()
+        });
+
+        let block1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+        let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
+
+        // Insert the block.
+        with_state_mut(|state| {
+            insert_block(state, block1).unwrap();
+            insert_block(state, block2).unwrap();
+            ingest_stable_blocks_into_utxoset(state);
+        });
+    }
+
+    #[test]
+    fn start_height_does_not_exist() {
+        get_block_headers_helper_one_stable_block();
+
+        let start_height: u32 = 3;
+
+        let err = get_block_headers(GetBlockHeadersRequest {
+            start_height,
+            end_height: None,
+        })
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            GetBlockHeadersError::StartHeightDoesNotExist {
+                requested: start_height,
+                chain_height: 1
+            }
+        );
+    }
+
+    #[test]
+    fn end_height_does_not_exist() {
+        get_block_headers_helper_one_stable_block();
+
+        let start_height: u32 = 1;
+        let end_height: u32 = 3;
+
+        let err = get_block_headers(GetBlockHeadersRequest {
+            start_height,
+            end_height: Some(end_height),
+        })
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            GetBlockHeadersError::EndHeightDoesNotExist {
+                requested: end_height,
+                chain_height: 1
+            }
+        );
+    }
+
+    #[test]
+    fn get_block_headers_single_block() {
+        let network = Network::Regtest;
+        crate::init(Config {
+            stability_threshold: 1,
+            network,
+            ..Default::default()
+        });
+
+        let block1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+        let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
+
+        // Insert the block.
+        with_state_mut(|state| {
+            insert_block(state, block1.clone()).unwrap();
+            insert_block(state, block2).unwrap();
+            ingest_stable_blocks_into_utxoset(state);
+        });
+
+        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+        })
+        .unwrap();
+        let mut header_blob = vec![];
+        block1.header().consensus_encode(&mut header_blob);
+        assert_eq!(
+            response,
+            GetBlockHeadersResponse {
+                tip_height: 1,
+                block_headers: vec![header_blob]
             }
         );
     }
