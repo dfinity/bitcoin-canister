@@ -1,6 +1,10 @@
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
-use crate::{charge_cycles, runtime::print, verify_has_enough_cycles, with_state, with_state_mut};
+use crate::{
+    charge_cycles,
+    runtime::{performance_counter, print},
+    verify_has_enough_cycles, with_state, with_state_mut,
+};
 
 // Various profiling stats for tracking the performance of `get_block_headers`.
 #[derive(Default, Debug)]
@@ -48,11 +52,16 @@ fn get_block_headers_internal(
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
     verify_get_block_headers_request(&request)?;
 
+    let mut stats: Stats = Stats::default();
+
     let start_height = request.start_height;
 
     let end_height = request.end_height.unwrap_or(with_state(|s| {
         s.stable_block_headers.chain_height().unwrap_or(0)
     }));
+
+    // Build block headers vec.
+    let ins_start = performance_counter();
 
     let vec_headers = with_state(|s| {
         let block_heights = &s.stable_block_headers.block_heights;
@@ -63,12 +72,15 @@ fn get_block_headers_internal(
             .collect()
     });
 
+    stats.ins_build_block_headers_vec = performance_counter() - ins_start;
+    stats.ins_total = performance_counter();
+
     Ok((
         GetBlockHeadersResponse {
             tip_height: end_height,
             block_headers: vec_headers,
         },
-        Stats::default(),
+        stats,
     ))
 }
 
