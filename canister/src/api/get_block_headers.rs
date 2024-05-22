@@ -16,14 +16,14 @@ struct Stats {
     ins_build_block_headers_vec: u64,
 }
 
-fn verify_requested_heights_range_and_return_effective_range(
+fn verify_requested_height_range_and_return_effective_range(
     request: &GetBlockHeadersRequest,
 ) -> Result<(u32, u32), GetBlockHeadersError> {
     let chain_height =
         if let Some(chain_height) = with_state(|s| s.stable_block_headers.chain_height()) {
             chain_height
         } else {
-            return Err(GetBlockHeadersError::ChainDoesNotHaveStableBlocks);
+            return Err(GetBlockHeadersError::ChainIsEmpty);
         };
 
     if request.start_height > chain_height {
@@ -61,7 +61,7 @@ fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
     let (start_height, end_height) =
-        verify_requested_heights_range_and_return_effective_range(request)?;
+        verify_requested_height_range_and_return_effective_range(request)?;
 
     let mut stats: Stats = Stats::default();
 
@@ -145,7 +145,7 @@ mod test {
     use ic_btc_interface::{Config, Network};
 
     #[test]
-    fn get_block_headers_chain_does_not_have_blocks() {
+    fn get_block_headers_chain_is_empty() {
         crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
@@ -161,7 +161,7 @@ mod test {
         })
         .unwrap_err();
 
-        assert_eq!(err, GetBlockHeadersError::ChainDoesNotHaveStableBlocks);
+        assert_eq!(err, GetBlockHeadersError::ChainIsEmpty);
     }
 
     fn get_block_headers_helper_one_stable_block() {
