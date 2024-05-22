@@ -16,10 +16,15 @@ struct Stats {
     ins_build_block_headers_vec: u64,
 }
 
-fn verify_get_block_headers_request(
+fn verify_requested_heights_range_and_return_effective_range(
     request: &GetBlockHeadersRequest,
-) -> Result<(), GetBlockHeadersError> {
-    let chain_height = with_state(|s| s.stable_block_headers.chain_height().unwrap_or(0));
+) -> Result<(u32, u32), GetBlockHeadersError> {
+    let chain_height =
+        if let Some(chain_height) = with_state(|s| s.stable_block_headers.chain_height()) {
+            chain_height
+        } else {
+            return Err(GetBlockHeadersError::ChainDoesNotHaveStableBlocks);
+        };
 
     if request.start_height > chain_height {
         return Err(GetBlockHeadersError::StartHeightDoesNotExist {
@@ -42,23 +47,23 @@ fn verify_get_block_headers_request(
                 chain_height,
             });
         }
+        // If end_height is provided then it should be the
+        // end boundary of effective height range.
+        Ok((request.start_height, end_height))
+    } else {
+        // If end_height is not provided than the end of
+        // effective range should be the last block of chain.
+        Ok((request.start_height, chain_height))
     }
-
-    Ok(())
 }
 
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    verify_get_block_headers_request(request)?;
+    let (start_height, end_height) =
+        verify_requested_heights_range_and_return_effective_range(request)?;
 
     let mut stats: Stats = Stats::default();
-
-    let start_height = request.start_height;
-
-    let end_height = request.end_height.unwrap_or(with_state(|s| {
-        s.stable_block_headers.chain_height().unwrap_or(0)
-    }));
 
     // Build block headers vec.
     let ins_start = performance_counter();
@@ -140,7 +145,7 @@ mod test {
     use ic_btc_interface::{Config, Network};
 
     #[test]
-    fn get_block_headers_malformed_heights() {
+    fn get_block_headers_chain_does_not_have_blocks() {
         crate::init(Config {
             stability_threshold: 1,
             network: Network::Mainnet,
@@ -156,13 +161,7 @@ mod test {
         })
         .unwrap_err();
 
-        assert_eq!(
-            err,
-            GetBlockHeadersError::StartHeightLagerThanEndHeight {
-                start_height,
-                end_height,
-            }
-        );
+        assert_eq!(err, GetBlockHeadersError::ChainDoesNotHaveStableBlocks);
     }
 
     fn get_block_headers_helper_one_stable_block() {
@@ -182,6 +181,28 @@ mod test {
             insert_block(state, block2).unwrap();
             ingest_stable_blocks_into_utxoset(state);
         });
+    }
+
+    #[test]
+    fn get_block_headers_malformed_heights() {
+        get_block_headers_helper_one_stable_block();
+
+        let start_height = 1;
+        let end_height = 0;
+
+        let err = get_block_headers(GetBlockHeadersRequest {
+            start_height,
+            end_height: Some(end_height),
+        })
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            GetBlockHeadersError::StartHeightLagerThanEndHeight {
+                start_height,
+                end_height,
+            }
+        );
     }
 
     #[test]
@@ -228,7 +249,7 @@ mod test {
     }
 
     #[test]
-    fn get_block_headers_single_block() {
+    fn get_block_headers_simple_chain() {
         let network = Network::Regtest;
         crate::init(Config {
             stability_threshold: 1,
@@ -238,26 +259,42 @@ mod test {
 
         let block1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
         let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
+        let block3 = BlockBuilder::with_prev_header(block2.clone().header()).build();
 
-        // Insert the block.
+        // Insert the blocks.
+        // After inserting genesis and block1 should be stable.
         with_state_mut(|state| {
             insert_block(state, block1.clone()).unwrap();
             insert_block(state, block2).unwrap();
+            insert_block(state, block3).unwrap();
             ingest_stable_blocks_into_utxoset(state);
         });
 
+        // We request all block headers starting from height 0, until the end of the chain.
         let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
         })
         .unwrap();
-        let mut header_blob = vec![];
-        block1.header().consensus_encode(&mut header_blob);
+
+        let mut genesis_header_blob = vec![];
+        genesis_block(network)
+            .header()
+            .consensus_encode(&mut genesis_header_blob)
+            .unwrap();
+
+        let mut block1_header_blob = vec![];
+        block1
+            .header()
+            .consensus_encode(&mut block1_header_blob)
+            .unwrap();
+
+        // The result should contain headers of genesis block and block1.
         assert_eq!(
             response,
             GetBlockHeadersResponse {
-                tip_height: 1,
-                block_headers: vec![header_blob]
+                tip_height: 2,
+                block_headers: vec![genesis_header_blob, block1_header_blob]
             }
         );
     }
