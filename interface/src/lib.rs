@@ -364,7 +364,6 @@ pub struct GetBlockHeadersResponse {
 /// Errors when processing a `get_block_headers` request.
 #[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
 pub enum GetBlockHeadersError {
-    ChainIsEmpty,
     StartHeightDoesNotExist {
         requested: Height,
         chain_height: Height,
@@ -382,9 +381,6 @@ pub enum GetBlockHeadersError {
 impl fmt::Display for GetBlockHeadersError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ChainIsEmpty => {
-                write!(f, "Chain does not have any stable blocks.",)
-            }
             Self::StartHeightDoesNotExist {
                 requested,
                 chain_height,

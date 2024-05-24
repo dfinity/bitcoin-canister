@@ -72,8 +72,8 @@ impl BlockHeaderStore {
         })
     }
 
-    pub fn chain_height(&self) -> Option<u32> {
-        self.block_heights.last_key_value().map(|(k, _)| k)
+    pub fn chain_height(&self) -> u32 {
+        self.block_heights.last_key_value().unwrap().0
     }
 }
 

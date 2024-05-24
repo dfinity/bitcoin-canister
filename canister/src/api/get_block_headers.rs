@@ -19,13 +19,7 @@ struct Stats {
 fn verify_requested_height_range_and_return_effective_range(
     request: &GetBlockHeadersRequest,
 ) -> Result<(u32, u32), GetBlockHeadersError> {
-    let chain_height =
-        if let Some(chain_height) = with_state(|s| s.stable_block_headers.chain_height()) {
-            chain_height
-        } else {
-            return Err(GetBlockHeadersError::ChainIsEmpty);
-        };
-
+    let chain_height = with_state(|s| s.stable_block_headers.chain_height());
     if request.start_height > chain_height {
         return Err(GetBlockHeadersError::StartHeightDoesNotExist {
             requested: request.start_height,
@@ -144,27 +138,7 @@ mod test {
     use bitcoin::consensus::Encodable;
     use ic_btc_interface::{Config, Network};
 
-    #[test]
-    fn get_block_headers_chain_is_empty() {
-        crate::init(Config {
-            stability_threshold: 1,
-            network: Network::Mainnet,
-            ..Default::default()
-        });
-
-        let start_height = 3;
-        let end_height = 2;
-
-        let err = get_block_headers(GetBlockHeadersRequest {
-            start_height,
-            end_height: Some(end_height),
-        })
-        .unwrap_err();
-
-        assert_eq!(err, GetBlockHeadersError::ChainIsEmpty);
-    }
-
-    fn get_block_headers_helper_one_stable_block() {
+    fn get_block_headers_helper_two_stable_block() {
         let network = Network::Regtest;
         crate::init(Config {
             stability_threshold: 1,
@@ -175,7 +149,8 @@ mod test {
         let block1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
         let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
 
-        // Insert the block.
+        // Insert the blocks.
+        //Genesis block and block1 should be stable.
         with_state_mut(|state| {
             insert_block(state, block1).unwrap();
             insert_block(state, block2).unwrap();
@@ -185,7 +160,7 @@ mod test {
 
     #[test]
     fn get_block_headers_malformed_heights() {
-        get_block_headers_helper_one_stable_block();
+        get_block_headers_helper_two_stable_block();
 
         let start_height = 1;
         let end_height = 0;
@@ -207,7 +182,7 @@ mod test {
 
     #[test]
     fn start_height_does_not_exist() {
-        get_block_headers_helper_one_stable_block();
+        get_block_headers_helper_two_stable_block();
 
         let start_height: u32 = 3;
 
@@ -228,7 +203,7 @@ mod test {
 
     #[test]
     fn end_height_does_not_exist() {
-        get_block_headers_helper_one_stable_block();
+        get_block_headers_helper_two_stable_block();
 
         let start_height: u32 = 1;
         let end_height: u32 = 3;
