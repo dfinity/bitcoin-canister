@@ -47,11 +47,22 @@ fn get_current_fee_percentiles_internal(
     }
 
     // If tip block changed recalculate and cache results.
-    let fee_percentiles = percentiles(get_fees_per_byte(
+    let fees_per_byte = get_fees_per_byte(
         main_chain.into_chain(),
         &state.unstable_blocks,
         number_of_transactions,
-    ));
+    );
+
+    // There are no fees to report when there are no transactions in unstable blocks.
+    // This doesn't realistically happen on mainnet, but may happen in local development
+    // with regtest. In which case, the last cached result of fees is returned.
+    if fees_per_byte.is_empty() {
+        if let Some(cache) = &state.fee_percentiles_cache {
+            return cache.fee_percentiles.clone();
+        }
+    }
+
+    let fee_percentiles = percentiles(fees_per_byte);
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
         tip_block_hash,
@@ -148,10 +159,11 @@ fn percentiles(mut values: Vec<u64>) -> Vec<u64> {
 mod test {
     use super::*;
     use crate::{
-        genesis_block, state,
+        genesis_block, heartbeat, state,
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         with_state,
     };
+    use async_std::task::block_on;
     use bitcoin::Witness;
     use ic_btc_interface::{Config, Fees, Network, Satoshi};
     use ic_btc_types::OutPoint;
@@ -362,6 +374,57 @@ mod test {
                 vec![fee_in_millisatoshi / tx_2.vsize() as u64; PERCENTILE_BUCKETS]
             );
         });
+    }
+
+    #[async_std::test]
+    async fn returns_cached_result_if_no_transactions_in_unstable_blocks() {
+        let stability_threshold = 0;
+        let network = Network::Regtest;
+
+        crate::init(Config {
+            stability_threshold,
+            network: Network::Regtest,
+            ..Default::default()
+        });
+
+        // Create a block with a transaction that has fees.
+        let block_0 = {
+            let fee = 1;
+            let balance = 1000;
+
+            let tx_1 = TransactionBuilder::coinbase()
+                .with_output(&random_p2pkh_address(Network::Regtest), balance)
+                .build();
+            let tx_2 = TransactionBuilder::new()
+                .with_input(OutPoint::new(tx_1.txid(), 0))
+                .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+                .build();
+
+            BlockBuilder::with_prev_header(genesis_block(network).header())
+                .with_transaction(tx_1)
+                .with_transaction(tx_2.clone())
+                .build()
+        };
+
+        with_state_mut(|s| state::insert_block(s, block_0.clone()).unwrap());
+
+        let fees = get_current_fee_percentiles();
+
+        // Fee percentiles are returned.
+        assert_eq!(fees.len(), 101);
+
+        // Mine one more block, which removes the previous block from the unstable blocks.
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        with_state_mut(|state| {
+            state::insert_block(state, block_1).unwrap();
+        });
+
+        // Process stable blocks, removing block 0 from the unstable blocks.
+        block_on(async { heartbeat().await });
+
+        // Fees are still available.
+        let fees = get_current_fee_percentiles();
+        assert_eq!(fees.len(), 101);
     }
 
     #[test]
