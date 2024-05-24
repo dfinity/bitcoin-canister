@@ -29,6 +29,9 @@ dfx deploy bitcoin --argument "(record {
     get_current_fee_percentiles_maximum = 1;
     send_transaction_base = 1;
     send_transaction_per_byte = 1;
+    get_block_headers_base = 1;
+    get_block_headers_cycles_per_ten_instructions = 1;
+    get_block_headers_maximum = 1;
   };
   api_access = variant { enabled };
   disable_api_if_not_fully_synced = variant { enabled };
