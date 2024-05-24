@@ -82,6 +82,18 @@ if ! [[ $MSG = *"Canister state is not fully synced."* ]]; then
   exit 1
 fi
 
+# bitcoin_get_block_headers should panic.
+set +e
+MSG=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
+  start_height = 0;
+})' 2>&1);
+set -e
+
+if ! [[ $MSG = *"Canister state is not fully synced."* ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
 # bitcoin_get_utxos_query should panic.
 set +e
 MSG=$(dfx canister call --query bitcoin bitcoin_get_utxos_query '(record {
