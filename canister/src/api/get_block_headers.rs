@@ -1,8 +1,10 @@
+use bitcoin::consensus::Encodable;
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
 use crate::{
     charge_cycles,
     runtime::{performance_counter, print},
+    state::main_chain_height,
     verify_has_enough_cycles, with_state, with_state_mut,
 };
 
@@ -19,7 +21,7 @@ struct Stats {
 fn verify_requested_height_range_and_return_effective_range(
     request: &GetBlockHeadersRequest,
 ) -> Result<(u32, u32), GetBlockHeadersError> {
-    let chain_height = with_state(|s| s.stable_block_headers.chain_height());
+    let chain_height = with_state(main_chain_height);
     if request.start_height > chain_height {
         return Err(GetBlockHeadersError::StartHeightDoesNotExist {
             requested: request.start_height,
@@ -51,25 +53,56 @@ fn verify_requested_height_range_and_return_effective_range(
     }
 }
 
+// TODO: return stable and unstable blocks
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
     let (start_height, end_height) =
         verify_requested_height_range_and_return_effective_range(request)?;
 
+    let height_of_last_block_in_stable_blocks = with_state(|s| s.stable_height() - 1);
+
     let mut stats: Stats = Stats::default();
 
     // Build block headers vec.
     let ins_start = performance_counter();
 
-    let vec_headers = with_state(|s| {
-        let block_heights = &s.stable_block_headers.block_heights;
-        let block_headers = &s.stable_block_headers.block_headers;
-        block_heights
-            .range(start_height..end_height)
-            .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
-            .collect()
-    });
+    let mut vec_headers = vec![];
+
+    if start_height <= height_of_last_block_in_stable_blocks {
+        let end_range = std::cmp::min(height_of_last_block_in_stable_blocks, end_height);
+        vec_headers = with_state(|s| {
+            let block_heights = &s.stable_block_headers.block_heights;
+            let block_headers = &s.stable_block_headers.block_headers;
+            block_heights
+                .range(start_height..end_range + 1)
+                .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
+                .collect()
+        });
+    }
+
+    if end_height > height_of_last_block_in_stable_blocks {
+        let start_range = std::cmp::max(start_height, height_of_last_block_in_stable_blocks + 1);
+
+        with_state(|s| {
+            let unstable_blocks = s.get_unstable_blocks_in_main_chain().into_chain();
+            let mut curr_height = height_of_last_block_in_stable_blocks + 1;
+
+            for block in unstable_blocks {
+                if curr_height > end_height {
+                    break;
+                }
+
+                if curr_height >= start_range {
+                    let mut header_blob = vec![];
+                    block.header().consensus_encode(&mut header_blob).unwrap();
+                    vec_headers.push(header_blob);
+                }
+
+                curr_height += 1;
+            }
+        });
+    }
 
     stats.ins_build_block_headers_vec = performance_counter() - ins_start;
     stats.ins_total = performance_counter();
@@ -138,7 +171,7 @@ mod test {
     use bitcoin::consensus::Encodable;
     use ic_btc_interface::{Config, Network};
 
-    fn get_block_headers_helper_two_stable_block() {
+    fn get_block_headers_helper() {
         let network = Network::Regtest;
         crate::init(Config {
             stability_threshold: 1,
@@ -150,7 +183,8 @@ mod test {
         let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
 
         // Insert the blocks.
-        //Genesis block and block1 should be stable.
+        // Genesis block and block1 should be stable,
+        // while block2 should be unstable.
         with_state_mut(|state| {
             insert_block(state, block1).unwrap();
             insert_block(state, block2).unwrap();
@@ -160,7 +194,7 @@ mod test {
 
     #[test]
     fn get_block_headers_malformed_heights() {
-        get_block_headers_helper_two_stable_block();
+        get_block_headers_helper();
 
         let start_height = 1;
         let end_height = 0;
@@ -182,7 +216,7 @@ mod test {
 
     #[test]
     fn start_height_does_not_exist() {
-        get_block_headers_helper_two_stable_block();
+        get_block_headers_helper();
 
         let start_height: u32 = 3;
 
@@ -196,17 +230,17 @@ mod test {
             err,
             GetBlockHeadersError::StartHeightDoesNotExist {
                 requested: start_height,
-                chain_height: 1
+                chain_height: 2
             }
         );
     }
 
     #[test]
     fn end_height_does_not_exist() {
-        get_block_headers_helper_two_stable_block();
+        get_block_headers_helper();
 
         let start_height: u32 = 1;
-        let end_height: u32 = 3;
+        let end_height: u32 = 4;
 
         let err = get_block_headers(GetBlockHeadersRequest {
             start_height,
@@ -218,7 +252,7 @@ mod test {
             err,
             GetBlockHeadersError::EndHeightDoesNotExist {
                 requested: end_height,
-                chain_height: 1
+                chain_height: 2
             }
         );
     }
@@ -240,8 +274,8 @@ mod test {
         // After inserting genesis and block1 should be stable.
         with_state_mut(|state| {
             insert_block(state, block1.clone()).unwrap();
-            insert_block(state, block2).unwrap();
-            insert_block(state, block3).unwrap();
+            insert_block(state, block2.clone()).unwrap();
+            insert_block(state, block3.clone()).unwrap();
             ingest_stable_blocks_into_utxoset(state);
         });
 
@@ -264,12 +298,29 @@ mod test {
             .consensus_encode(&mut block1_header_blob)
             .unwrap();
 
-        // The result should contain headers of genesis block and block1.
+        let mut block2_header_blob = vec![];
+        block2
+            .header()
+            .consensus_encode(&mut block2_header_blob)
+            .unwrap();
+
+        let mut block3_header_blob = vec![];
+        block3
+            .header()
+            .consensus_encode(&mut block3_header_blob)
+            .unwrap();
+
+        // The result should contain headers of all blocks.
         assert_eq!(
             response,
             GetBlockHeadersResponse {
-                tip_height: 2,
-                block_headers: vec![genesis_header_blob, block1_header_blob]
+                tip_height: 3,
+                block_headers: vec![
+                    genesis_header_blob,
+                    block1_header_blob,
+                    block2_header_blob,
+                    block3_header_blob
+                ]
             }
         );
     }
