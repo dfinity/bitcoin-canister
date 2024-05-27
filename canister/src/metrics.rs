@@ -13,7 +13,9 @@ pub struct Metrics {
     pub get_utxos_apply_unstable_blocks: InstructionHistogram,
     pub get_utxos_build_utxos_vec: InstructionHistogram,
 
+    #[serde(default = "default_get_block_headers_total")]
     pub get_block_headers_total: InstructionHistogram,
+    #[serde(default = "default_get_block_headers_build_block_headers_vec")]
     pub get_block_headers_build_block_headers_vec: InstructionHistogram,
 
     pub get_balance_total: InstructionHistogram,
@@ -32,6 +34,20 @@ pub struct Metrics {
 
     /// The total number of cycles burnt.
     pub cycles_burnt: Option<u128>,
+}
+
+fn default_get_block_headers_total() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "ins_block_headers_total",
+        "Instructions needed to execute a get_block_headers request.",
+    )
+}
+
+fn default_get_block_headers_build_block_headers_vec() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "inst_count_get_block_headers_build_block_headers_vec",
+        "Instructions needed to build the block headers vec in a get_block_headers request.",
+    )
 }
 
 impl Default for Metrics {
