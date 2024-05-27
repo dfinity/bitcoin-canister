@@ -59,7 +59,7 @@ fn get_block_headers_internal(
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
     let (start_height, end_height) =
         verify_requested_height_range_and_return_effective_range(request)?;
-    // Since the last stable block is located in the unstable_blocks, height of
+    // The last stable block is located in the unstable_blocks, hence height of
     // the last block located in stable_blocks is `s.stable_height() - 1`.
     let height_of_last_block_in_stable_blocks = with_state(|s| s.stable_height() - 1);
 
@@ -79,7 +79,7 @@ fn get_block_headers_internal(
             let block_heights = &s.stable_block_headers.block_heights;
             let block_headers = &s.stable_block_headers.block_headers;
             block_heights
-                .range(start_height..end_range_in_stable_blocks + 1)
+                .range(start_height..=end_range_in_stable_blocks)
                 .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
                 .collect()
         });
@@ -89,15 +89,14 @@ fn get_block_headers_internal(
     if end_height > height_of_last_block_in_stable_blocks {
         let start_range = std::cmp::max(start_height, height_of_last_block_in_stable_blocks + 1);
 
+        let height_of_first_block_in_unstable_blocks = height_of_last_block_in_stable_blocks + 1;
+
+        let (start_range_in_unstable_blocks, end_range_in_unstable_blocks) = (
+            start_range - height_of_first_block_in_unstable_blocks,
+            end_height - height_of_first_block_in_unstable_blocks,
+        );
+
         with_state(|s| {
-            let height_of_first_block_in_unstable_blocks =
-                height_of_last_block_in_stable_blocks + 1;
-
-            let (start_range_in_unstable_blocks, end_range_in_unstable_blocks) = (
-                start_range - height_of_first_block_in_unstable_blocks,
-                end_height - height_of_first_block_in_unstable_blocks,
-            );
-
             let unstable_blocks = s.get_unstable_blocks_in_main_chain().into_chain();
 
             for i in start_range_in_unstable_blocks..=end_range_in_unstable_blocks {
