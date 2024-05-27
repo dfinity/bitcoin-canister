@@ -87,25 +87,26 @@ fn get_block_headers_internal(
 
     // Add requested block headers located in unstable_blocks.
     if end_height > height_of_last_block_in_stable_blocks {
-        let start_range_in_unstable_blocks =
-            std::cmp::max(start_height, height_of_last_block_in_stable_blocks + 1);
+        let start_range = std::cmp::max(start_height, height_of_last_block_in_stable_blocks + 1);
 
         with_state(|s| {
+            let height_of_first_block_in_unstable_blocks =
+                height_of_last_block_in_stable_blocks + 1;
+
+            let (start_range_in_unstable_blocks, end_range_in_unstable_blocks) = (
+                start_range - height_of_first_block_in_unstable_blocks,
+                end_height - height_of_first_block_in_unstable_blocks,
+            );
+
             let unstable_blocks = s.get_unstable_blocks_in_main_chain().into_chain();
-            let mut curr_height = height_of_last_block_in_stable_blocks + 1;
 
-            for block in unstable_blocks {
-                if curr_height > end_height {
-                    break;
-                }
-
-                if curr_height >= start_range_in_unstable_blocks {
-                    let mut header_blob = vec![];
-                    block.header().consensus_encode(&mut header_blob).unwrap();
-                    vec_headers.push(header_blob);
-                }
-
-                curr_height += 1;
+            for i in start_range_in_unstable_blocks..=end_range_in_unstable_blocks {
+                let mut header_blob = vec![];
+                unstable_blocks[i as usize]
+                    .header()
+                    .consensus_encode(&mut header_blob)
+                    .unwrap();
+                vec_headers.push(header_blob);
             }
         });
     }
