@@ -36,20 +36,6 @@ pub struct Metrics {
     pub cycles_burnt: Option<u128>,
 }
 
-fn default_get_block_headers_total() -> InstructionHistogram {
-    InstructionHistogram::new(
-        "ins_block_headers_total",
-        "Instructions needed to execute a get_block_headers request.",
-    )
-}
-
-fn default_get_block_headers_build_block_headers_vec() -> InstructionHistogram {
-    InstructionHistogram::new(
-        "inst_count_get_block_headers_build_block_headers_vec",
-        "Instructions needed to build the block headers vec in a get_block_headers request.",
-    )
-}
-
 impl Default for Metrics {
     fn default() -> Self {
         Self {
@@ -66,14 +52,9 @@ impl Default for Metrics {
                 "Instructions needed to build the UTXOs vec in a get_utxos request.",
             ),
 
-            get_block_headers_total: InstructionHistogram::new(
-                "ins_block_headers_total",
-                "Instructions needed to execute a get_block_headers request.",
-            ),
-            get_block_headers_build_block_headers_vec: InstructionHistogram::new(
-                "inst_count_get_block_headers_build_block_headers_vec",
-                "Instructions needed to build the block headers vec in a get_block_headers request.",
-            ),
+            get_block_headers_total: default_get_block_headers_total(),
+            get_block_headers_build_block_headers_vec:
+                default_get_block_headers_build_block_headers_vec(),
 
             get_balance_total: InstructionHistogram::new(
                 "ins_get_balance_total",
@@ -156,6 +137,20 @@ impl InstructionHistogram {
         let idx = (value - 1) / BUCKET_SIZE;
         std::cmp::min(idx, NUM_BUCKETS - 1) as usize
     }
+}
+
+fn default_get_block_headers_total() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "ins_block_headers_total",
+        "Instructions needed to execute a get_block_headers request.",
+    )
+}
+
+fn default_get_block_headers_build_block_headers_vec() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "inst_count_get_block_headers_build_block_headers_vec",
+        "Instructions needed to build the block headers vec in a get_block_headers request.",
+    )
 }
 
 #[cfg(test)]
