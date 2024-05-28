@@ -44,12 +44,12 @@ fn verify_requested_height_range_and_return_effective_range(
                 chain_height,
             });
         }
-        // If end_height is provided then it should be the
-        // end boundary of effective height range.
+        // If `end_height` is provided then it should be the
+        // end of effective height range.
         Ok((request.start_height, end_height))
     } else {
-        // If end_height is not provided than the end of
-        // effective range should be the last block of chain.
+        // If `end_height`` is not provided then the end of effective
+        // range should be the last block of the chain.
         Ok((request.start_height, chain_height))
     }
 }
@@ -59,8 +59,8 @@ fn get_block_headers_internal(
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
     let (start_height, end_height) =
         verify_requested_height_range_and_return_effective_range(request)?;
-    // The last stable block is located in the unstable_blocks, hence height of the
-    // last block located in stable_blocks if it exist is is `s.stable_height() - 1`.
+    // The last stable block is located in the unstable_blocks, hence the height of the
+    // last block located in stable_blocks if it exists is `s.stable_height() - 1`.
     let height_of_last_block_in_stable_blocks = with_state(|s| {
         let stable_height = s.stable_height();
         if stable_height > 0 {
@@ -155,7 +155,7 @@ pub fn get_block_headers(
 
     let (res, stats) = get_block_headers_internal(&request)?;
 
-    // Observe metrics
+    // Observe metrics.
     with_state_mut(|s| {
         s.metrics.get_block_headers_total.observe(stats.ins_total);
 
@@ -204,8 +204,7 @@ mod test {
         let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
 
         // Insert the blocks.
-        // Genesis block and block1 should be stable,
-        // while block2 should be unstable.
+        // Genesis block and block1 should be stable, while block2 should be unstable.
         with_state_mut(|state| {
             insert_block(state, block1).unwrap();
             insert_block(state, block2).unwrap();
@@ -300,7 +299,23 @@ mod test {
         })
         .unwrap();
 
-        // The result should contain headers of all blocks.
+        // The result should contain the header of the genesis block since it is the only block in the chain.
+        assert_eq!(
+            response,
+            GetBlockHeadersResponse {
+                tip_height: 0,
+                block_headers: vec![genesis_header_blob.clone()]
+            }
+        );
+
+        // We request a block at height 0.
+        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: Some(0),
+        })
+        .unwrap();
+
+        // The result should contain the header of the genesis block.
         assert_eq!(
             response,
             GetBlockHeadersResponse {
@@ -332,7 +347,7 @@ mod test {
             .consensus_encode(&mut genesis_header_blob)
             .unwrap();
 
-        // The result should contain header of genesis block.
+        // The response should contain the header of the genesis block.
         assert_eq!(
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 0,
@@ -351,7 +366,7 @@ mod test {
             .consensus_encode(&mut block_header_blob)
             .unwrap();
 
-        // The result should contain header of `block`.
+        // The response should contain the header of `block`.
         assert_eq!(
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 1,
@@ -364,7 +379,7 @@ mod test {
             }
         );
 
-        // The result should contain header of `block`.
+        // The response should contain the header of `block`.
         assert_eq!(
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 1,
@@ -377,7 +392,7 @@ mod test {
             }
         );
 
-        // The result should contain headers of all blocks.
+        // The response should contain headers of all blocks.
         assert_eq!(
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 0,
@@ -390,7 +405,7 @@ mod test {
             }
         );
 
-        // The result should contain headers of all blocks.
+        // The response should contain headers of all blocks.
         assert_eq!(
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 0,
@@ -414,16 +429,18 @@ mod test {
             network,
             ..Default::default()
         });
+        let genesis_block = genesis_block(network);
 
-        let mut prev_block_header = *genesis_block(network).header();
+        let mut prev_block_header = *genesis_block.header();
         let mut genesis_header_blob = vec![];
-        genesis_block(network)
+        genesis_block
             .header()
             .consensus_encode(&mut genesis_header_blob)
             .unwrap();
 
         let mut blobs = vec![genesis_header_blob];
-        // Genesis block is already added hence we need to add block_num - 1 more blocks.
+
+        // Genesis block is already added hence we need to add `block_num - 1`` more blocks.
         for _ in 0..block_num - 1 {
             let block = BlockBuilder::with_prev_header(&prev_block_header).build();
             with_state_mut(|state| insert_block(state, block.clone()).unwrap());
@@ -457,7 +474,7 @@ mod test {
         })
         .unwrap();
 
-        // If requested end_height is None, tip should be the last block.
+        // If the requested `end_height` is `None`, the tip should be the last block.
         let tip_height = end_height.unwrap_or(total_num_blocks - 1);
 
         assert_eq!(
