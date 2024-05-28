@@ -59,9 +59,16 @@ fn get_block_headers_internal(
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
     let (start_height, end_height) =
         verify_requested_height_range_and_return_effective_range(request)?;
-    // The last stable block is located in the unstable_blocks, hence height of
-    // the last block located in stable_blocks is `s.stable_height() - 1`.
-    let height_of_last_block_in_stable_blocks = with_state(|s| s.stable_height() - 1);
+    // The last stable block is located in the unstable_blocks, hence height of the
+    // last block located in stable_blocks if it exist is is `s.stable_height() - 1`.
+    let height_of_last_block_in_stable_blocks = with_state(|s| {
+        let stable_height = s.stable_height();
+        if stable_height > 0 {
+            Some(stable_height - 1)
+        } else {
+            None
+        }
+    });
 
     let mut stats: Stats = Stats::default();
 
@@ -71,25 +78,30 @@ fn get_block_headers_internal(
     let mut vec_headers = vec![];
 
     // Add requested block headers located in stable_blocks.
-    if start_height <= height_of_last_block_in_stable_blocks {
-        let end_range_in_stable_blocks =
-            std::cmp::min(height_of_last_block_in_stable_blocks, end_height);
+    if let Some(height_of_last_block_in_stable_blocks) = height_of_last_block_in_stable_blocks {
+        if start_height <= height_of_last_block_in_stable_blocks {
+            let end_range_in_stable_blocks =
+                std::cmp::min(height_of_last_block_in_stable_blocks, end_height);
 
-        vec_headers = with_state(|s| {
-            let block_heights = &s.stable_block_headers.block_heights;
-            let block_headers = &s.stable_block_headers.block_headers;
-            block_heights
-                .range(start_height..=end_range_in_stable_blocks)
-                .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
-                .collect()
-        });
+            vec_headers = with_state(|s| {
+                let block_heights = &s.stable_block_headers.block_heights;
+                let block_headers = &s.stable_block_headers.block_headers;
+                block_heights
+                    .range(start_height..=end_range_in_stable_blocks)
+                    .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
+                    .collect()
+            });
+        }
     }
 
-    // Add requested block headers located in unstable_blocks.
-    if end_height > height_of_last_block_in_stable_blocks {
-        let start_range = std::cmp::max(start_height, height_of_last_block_in_stable_blocks + 1);
+    // How the last stable block is located in unstable_blocks, there will always
+    // be the block in unstable_blocks.
+    let height_of_first_block_in_unstable_blocks =
+        height_of_last_block_in_stable_blocks.map_or(0, |h| h + 1);
 
-        let height_of_first_block_in_unstable_blocks = height_of_last_block_in_stable_blocks + 1;
+    // Add requested block headers located in unstable_blocks.
+    if end_height >= height_of_first_block_in_unstable_blocks {
+        let start_range = std::cmp::max(start_height, height_of_first_block_in_unstable_blocks);
 
         let (start_range_in_unstable_blocks, end_range_in_unstable_blocks) = (
             start_range - height_of_first_block_in_unstable_blocks,
@@ -264,6 +276,38 @@ mod test {
     }
 
     #[test]
+    fn genesis_block_only() {
+        let network = Network::Regtest;
+        crate::init(Config {
+            stability_threshold: 1,
+            network,
+            ..Default::default()
+        });
+
+        let mut genesis_header_blob = vec![];
+        genesis_block(network)
+            .header()
+            .consensus_encode(&mut genesis_header_blob)
+            .unwrap();
+
+        // We request all block headers starting from height 0, until the end of the chain.
+        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+        })
+        .unwrap();
+
+        // The result should contain headers of all blocks.
+        assert_eq!(
+            response,
+            GetBlockHeadersResponse {
+                tip_height: 0,
+                block_headers: vec![genesis_header_blob]
+            }
+        );
+    }
+
+    #[test]
     fn get_block_headers_simple_chain() {
         let network = Network::Regtest;
         crate::init(Config {
@@ -284,13 +328,6 @@ mod test {
             insert_block(state, block3.clone()).unwrap();
             ingest_stable_blocks_into_utxoset(state);
         });
-
-        // We request all block headers starting from height 0, until the end of the chain.
-        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
-            start_height: 0,
-            end_height: None,
-        })
-        .unwrap();
 
         let mut genesis_header_blob = vec![];
         genesis_block(network)
@@ -315,6 +352,13 @@ mod test {
             .header()
             .consensus_encode(&mut block3_header_blob)
             .unwrap();
+
+        // We request all block headers starting from height 0, until the end of the chain.
+        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+        })
+        .unwrap();
 
         // The result should contain headers of all blocks.
         assert_eq!(
