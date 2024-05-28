@@ -101,12 +101,14 @@ fn get_block_headers_internal(
 
     // Add requested block headers located in unstable_blocks.
     if end_height >= height_of_first_block_in_unstable_blocks {
-        let start_range = std::cmp::max(start_height, height_of_first_block_in_unstable_blocks);
+        let start_range_in_unstable_blocks =
+            if start_height < height_of_first_block_in_unstable_blocks {
+                0
+            } else {
+                start_height - height_of_first_block_in_unstable_blocks
+            };
 
-        let (start_range_in_unstable_blocks, end_range_in_unstable_blocks) = (
-            start_range - height_of_first_block_in_unstable_blocks,
-            end_height - height_of_first_block_in_unstable_blocks,
-        );
+        let end_range_in_unstable_blocks = end_height - height_of_first_block_in_unstable_blocks;
 
         with_state(|s| {
             let unstable_blocks = s.get_unstable_blocks_in_main_chain().into_chain();
