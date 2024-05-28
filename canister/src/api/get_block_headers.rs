@@ -190,6 +190,7 @@ mod test {
     };
     use bitcoin::consensus::Encodable;
     use ic_btc_interface::{Config, Network};
+    use proptest::prelude::*;
 
     fn get_block_headers_helper() {
         let network = Network::Regtest;
@@ -403,12 +404,11 @@ mod test {
         );
     }
 
-    #[test]
-    fn get_block_headers_simple_chain() {
-        let stability_threshold = 10;
-        let block_num = 100;
-
-        let network = Network::Regtest;
+    fn helper_initialize_and_get_heder_blobs(
+        stability_threshold: u128,
+        block_num: u32,
+        network: Network,
+    ) -> Vec<Vec<u8>> {
         crate::init(Config {
             stability_threshold,
             network,
@@ -442,9 +442,34 @@ mod test {
 
         with_state_mut(|state| ingest_stable_blocks_into_utxoset(state));
 
-        // We have `block_num` blocks added and genesis block.
-        let total_num_blocks = block_num + 1;
+        blobs
+    }
 
+    fn check_response(
+        blobs: &Vec<Vec<u8>>,
+        start_height: u32,
+        end_height: Option<u32>,
+        total_num_blocks: u32,
+    ) {
+        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
+            start_height,
+            end_height,
+        })
+        .unwrap();
+
+        // If requested end_height is None, tip should be the last block.
+        let tip_height = end_height.unwrap_or(total_num_blocks - 1);
+
+        assert_eq!(
+            response,
+            GetBlockHeadersResponse {
+                tip_height,
+                block_headers: blobs[start_height as usize..=tip_height as usize].into()
+            }
+        );
+    }
+
+    fn test_all_valid_combination_or_height_range(blobs: &Vec<Vec<u8>>, total_num_blocks: u32) {
         for start_height in 0..total_num_blocks {
             let mut end_height_range: Vec<Option<u32>> = (start_height..total_num_blocks)
                 .into_iter()
@@ -452,23 +477,51 @@ mod test {
                 .collect::<Vec<_>>();
             end_height_range.push(None);
             for end_height in end_height_range {
-                let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
-                    start_height,
-                    end_height,
-                })
-                .unwrap();
-
-                // If requested end_height is None, tip should be the last block.
-                let tip_height = end_height.unwrap_or(total_num_blocks - 1);
-
-                assert_eq!(
-                    response,
-                    GetBlockHeadersResponse {
-                        tip_height,
-                        block_headers: blobs[start_height as usize..=tip_height as usize].into()
-                    }
-                );
+                check_response(&blobs, start_height, end_height, total_num_blocks);
             }
+        }
+    }
+
+    #[test]
+    fn get_block_headers_chain_10_blocks_all_combinations() {
+        let stability_threshold = 3;
+        let block_num: u32 = 10;
+        let network = Network::Regtest;
+
+        let blobs: Vec<Vec<u8>> =
+            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
+
+        // We have `block_num` blocks added and genesis block.
+        let total_num_blocks = block_num + 1;
+
+        test_all_valid_combination_or_height_range(&blobs, total_num_blocks);
+    }
+
+    proptest! {
+    #![proptest_config(ProptestConfig::with_cases(10))]
+    #[test]
+    fn get_block_headers_proptest(
+        stability_threshold in 1..150u128,
+        total_num_blocks in 1..200u32,
+        start_height in 0..199u32,
+        length in 1..200u32,
+        network in prop_oneof![
+            Just(Network::Mainnet),
+            Just(Network::Testnet),
+            Just(Network::Regtest),
+        ]) {
+            let blobs: Vec<Vec<u8>> =
+                helper_initialize_and_get_heder_blobs(stability_threshold, total_num_blocks - 1, network);
+
+            let target_end_height = start_height + length - 1;
+
+            let end_height = if target_end_height >= total_num_blocks {
+                None
+            } else {
+                Some(target_end_height)
+            };
+
+            check_response(&blobs, start_height, end_height, total_num_blocks);
         }
     }
 }
