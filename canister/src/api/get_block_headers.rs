@@ -184,7 +184,7 @@ mod test {
     use super::*;
     use crate::{
         genesis_block,
-        state::{ingest_stable_blocks_into_utxoset, insert_block},
+        state::{self, ingest_stable_blocks_into_utxoset, insert_block},
         test_utils::BlockBuilder,
         with_state_mut,
     };
@@ -310,7 +310,7 @@ mod test {
     }
 
     #[test]
-    fn get_block_headers_simple_chain() {
+    fn single_block() {
         let network = Network::Regtest;
         crate::init(Config {
             stability_threshold: 1,
@@ -318,17 +318,11 @@ mod test {
             ..Default::default()
         });
 
-        let block1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
-        let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
-        let block3 = BlockBuilder::with_prev_header(block2.clone().header()).build();
+        let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
-        // Insert the blocks.
-        // After inserting genesis and block1 should be stable.
+        // Insert the block.
         with_state_mut(|state| {
-            insert_block(state, block1.clone()).unwrap();
-            insert_block(state, block2.clone()).unwrap();
-            insert_block(state, block3.clone()).unwrap();
-            ingest_stable_blocks_into_utxoset(state);
+            state::insert_block(state, block.clone()).unwrap();
         });
 
         let mut genesis_header_blob = vec![];
@@ -337,43 +331,140 @@ mod test {
             .consensus_encode(&mut genesis_header_blob)
             .unwrap();
 
-        let mut block1_header_blob = vec![];
-        block1
+        // The result should contain header of genesis block.
+        assert_eq!(
+            get_block_headers(GetBlockHeadersRequest {
+                start_height: 0,
+                end_height: Some(0),
+            })
+            .unwrap(),
+            GetBlockHeadersResponse {
+                tip_height: 0,
+                block_headers: vec![genesis_header_blob.clone()]
+            }
+        );
+
+        let mut block_header_blob = vec![];
+        block
             .header()
-            .consensus_encode(&mut block1_header_blob)
+            .consensus_encode(&mut block_header_blob)
             .unwrap();
 
-        let mut block2_header_blob = vec![];
-        block2
-            .header()
-            .consensus_encode(&mut block2_header_blob)
-            .unwrap();
+        // The result should contain header of `block`.
+        assert_eq!(
+            get_block_headers(GetBlockHeadersRequest {
+                start_height: 1,
+                end_height: Some(1),
+            })
+            .unwrap(),
+            GetBlockHeadersResponse {
+                tip_height: 1,
+                block_headers: vec![block_header_blob.clone()]
+            }
+        );
 
-        let mut block3_header_blob = vec![];
-        block3
-            .header()
-            .consensus_encode(&mut block3_header_blob)
-            .unwrap();
-
-        // We request all block headers starting from height 0, until the end of the chain.
-        let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
-            start_height: 0,
-            end_height: None,
-        })
-        .unwrap();
+        // The result should contain header of `block`.
+        assert_eq!(
+            get_block_headers(GetBlockHeadersRequest {
+                start_height: 1,
+                end_height: None,
+            })
+            .unwrap(),
+            GetBlockHeadersResponse {
+                tip_height: 1,
+                block_headers: vec![block_header_blob.clone()]
+            }
+        );
 
         // The result should contain headers of all blocks.
         assert_eq!(
-            response,
+            get_block_headers(GetBlockHeadersRequest {
+                start_height: 0,
+                end_height: Some(1),
+            })
+            .unwrap(),
             GetBlockHeadersResponse {
-                tip_height: 3,
-                block_headers: vec![
-                    genesis_header_blob,
-                    block1_header_blob,
-                    block2_header_blob,
-                    block3_header_blob
-                ]
+                tip_height: 1,
+                block_headers: vec![genesis_header_blob.clone(), block_header_blob.clone()]
             }
         );
+
+        // The result should contain headers of all blocks.
+        assert_eq!(
+            get_block_headers(GetBlockHeadersRequest {
+                start_height: 0,
+                end_height: None,
+            })
+            .unwrap(),
+            GetBlockHeadersResponse {
+                tip_height: 1,
+                block_headers: vec![genesis_header_blob.clone(), block_header_blob.clone()]
+            }
+        );
+    }
+
+    #[test]
+    fn get_block_headers_simple_chain() {
+        let stability_threshold = 1;
+        let block_num = 5;
+
+        let network = Network::Regtest;
+        crate::init(Config {
+            stability_threshold,
+            network,
+            ..Default::default()
+        });
+
+        let mut prev_block_header = *genesis_block(network).header();
+        let mut genesis_header_blob = vec![];
+        genesis_block(network)
+            .header()
+            .consensus_encode(&mut genesis_header_blob)
+            .unwrap();
+
+        let mut blobs = vec![genesis_header_blob];
+
+        for _ in 0..block_num {
+            let block = BlockBuilder::with_prev_header(&prev_block_header).build();
+            with_state_mut(|state| insert_block(state, block.clone()).unwrap());
+
+            prev_block_header = block.header().clone();
+
+            let mut block_blob = vec![];
+            block
+                .clone()
+                .header()
+                .consensus_encode(&mut block_blob)
+                .unwrap();
+
+            blobs.push(block_blob);
+        }
+
+        with_state_mut(|state| ingest_stable_blocks_into_utxoset(state));
+
+        for i in 0..blobs.len() {
+            for j in i..blobs.len() + 1 {
+                // j =
+                let end_height = if j < blobs.len() {
+                    Some(j as u32)
+                } else {
+                    None
+                };
+
+                let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
+                    start_height: i as u32,
+                    end_height: end_height,
+                })
+                .unwrap();
+
+                assert_eq!(
+                    response,
+                    GetBlockHeadersResponse {
+                        tip_height: std::cmp::min(j, blobs.len() - 1) as u32,
+                        block_headers: blobs[i..=std::cmp::min(j, blobs.len() - 1)].into()
+                    }
+                );
+            }
+        }
     }
 }
