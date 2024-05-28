@@ -423,8 +423,8 @@ mod test {
             .unwrap();
 
         let mut blobs = vec![genesis_header_blob];
-
-        for _ in 0..block_num {
+        // Genesis block is already added hence we need to add block_num - 1 more blocks.
+        for _ in 0..block_num - 1 {
             let block = BlockBuilder::with_prev_header(&prev_block_header).build();
             with_state_mut(|state| insert_block(state, block.clone()).unwrap());
 
@@ -469,15 +469,15 @@ mod test {
         );
     }
 
-    fn test_all_valid_combination_or_height_range(blobs: &Vec<Vec<u8>>, total_num_blocks: u32) {
-        for start_height in 0..total_num_blocks {
-            let mut end_height_range: Vec<Option<u32>> = (start_height..total_num_blocks)
+    fn test_all_valid_combination_or_height_range(blobs: &Vec<Vec<u8>>, block_num: u32) {
+        for start_height in 0..block_num {
+            let mut end_height_range: Vec<Option<u32>> = (start_height..block_num)
                 .into_iter()
                 .map(|v| Some(v))
                 .collect::<Vec<_>>();
             end_height_range.push(None);
             for end_height in end_height_range {
-                check_response(&blobs, start_height, end_height, total_num_blocks);
+                check_response(&blobs, start_height, end_height, block_num);
             }
         }
     }
@@ -491,10 +491,7 @@ mod test {
         let blobs: Vec<Vec<u8>> =
             helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
 
-        // We have `block_num` blocks added and genesis block.
-        let total_num_blocks = block_num + 1;
-
-        test_all_valid_combination_or_height_range(&blobs, total_num_blocks);
+        test_all_valid_combination_or_height_range(&blobs, block_num);
     }
 
     proptest! {
@@ -522,6 +519,22 @@ mod test {
             };
 
             check_response(&blobs, start_height, end_height, total_num_blocks);
+        }
+    }
+
+    #[ignore]
+    #[test]
+    fn test_all_combinations_large() {
+        for stability_threshold in [3, 10, 100] {
+            for block_num in [1, 3, 10, 20, 50, 100, 200] {
+                let blobs: Vec<Vec<u8>> = helper_initialize_and_get_heder_blobs(
+                    stability_threshold,
+                    block_num,
+                    Network::Regtest,
+                );
+
+                test_all_valid_combination_or_height_range(&blobs, block_num);
+            }
         }
     }
 }
