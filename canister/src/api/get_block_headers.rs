@@ -428,7 +428,7 @@ mod test {
             let block = BlockBuilder::with_prev_header(&prev_block_header).build();
             with_state_mut(|state| insert_block(state, block.clone()).unwrap());
 
-            prev_block_header = block.header().clone();
+            prev_block_header = *block.header();
 
             let mut block_blob = vec![];
             block
@@ -440,13 +440,13 @@ mod test {
             blobs.push(block_blob);
         }
 
-        with_state_mut(|state| ingest_stable_blocks_into_utxoset(state));
+        with_state_mut(ingest_stable_blocks_into_utxoset);
 
         blobs
     }
 
     fn check_response(
-        blobs: &Vec<Vec<u8>>,
+        blobs: &[Vec<u8>],
         start_height: u32,
         end_height: Option<u32>,
         total_num_blocks: u32,
@@ -469,15 +469,13 @@ mod test {
         );
     }
 
-    fn test_all_valid_combination_or_height_range(blobs: &Vec<Vec<u8>>, block_num: u32) {
+    fn test_all_valid_combination_or_height_range(blobs: &[Vec<u8>], block_num: u32) {
         for start_height in 0..block_num {
-            let mut end_height_range: Vec<Option<u32>> = (start_height..block_num)
-                .into_iter()
-                .map(|v| Some(v))
-                .collect::<Vec<_>>();
+            let mut end_height_range: Vec<Option<u32>> =
+                (start_height..block_num).map(Some).collect::<Vec<_>>();
             end_height_range.push(None);
             for end_height in end_height_range {
-                check_response(&blobs, start_height, end_height, block_num);
+                check_response(blobs, start_height, end_height, block_num);
             }
         }
     }
