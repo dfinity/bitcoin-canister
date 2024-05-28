@@ -510,13 +510,13 @@ mod test {
     }
 
     proptest! {
-    #![proptest_config(ProptestConfig::with_cases(3))]
+    #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
     fn get_block_headers_proptest(
-        stability_threshold in 1..75u128,
-        total_num_blocks in 1..100u32,
-        start_height in 0..99u32,
-        length in 1..100u32,
+        stability_threshold in 1..150u128,
+        total_num_blocks in 1..200u32,
+        start_height in 0..199u32,
+        length in 1..200u32,
         network in prop_oneof![
             Just(Network::Mainnet),
             Just(Network::Testnet),
