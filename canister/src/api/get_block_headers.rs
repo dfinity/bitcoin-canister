@@ -525,12 +525,12 @@ mod test {
             let blobs: Vec<Vec<u8>> =
                 helper_initialize_and_get_heder_blobs(stability_threshold, total_num_blocks - 1, network);
 
-            let start_height = std::cmp::min(start_height, total_num_blocks - 1);
+            let target_end_height = start_height + length - 1;
 
-            let end_height = if start_height + length - 1 >= total_num_blocks {
+            let end_height = if target_end_height >= total_num_blocks {
                 None
             } else {
-                Some(start_height + length - 1)
+                Some(target_end_height)
             };
 
             check_response(&blobs, start_height, end_height, total_num_blocks);
