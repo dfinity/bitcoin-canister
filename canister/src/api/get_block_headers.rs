@@ -405,8 +405,8 @@ mod test {
 
     #[test]
     fn get_block_headers_simple_chain() {
-        let stability_threshold = 1;
-        let block_num = 5;
+        let stability_threshold = 10;
+        let block_num = 100;
 
         let network = Network::Regtest;
         crate::init(Config {
@@ -442,26 +442,30 @@ mod test {
 
         with_state_mut(|state| ingest_stable_blocks_into_utxoset(state));
 
-        for i in 0..blobs.len() {
-            for j in i..blobs.len() + 1 {
-                // j =
-                let end_height = if j < blobs.len() {
-                    Some(j as u32)
-                } else {
-                    None
-                };
+        // We have `block_num` blocks added and genesis block.
+        let total_num_blocks = block_num + 1;
 
+        for start_height in 0..total_num_blocks {
+            let mut end_height_range: Vec<Option<u32>> = (start_height..total_num_blocks)
+                .into_iter()
+                .map(|v| Some(v))
+                .collect::<Vec<_>>();
+            end_height_range.push(None);
+            for end_height in end_height_range {
                 let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
-                    start_height: i as u32,
-                    end_height: end_height,
+                    start_height,
+                    end_height,
                 })
                 .unwrap();
+
+                // If requested end_height is None, tip should be the last block.
+                let tip_height = end_height.unwrap_or(total_num_blocks - 1);
 
                 assert_eq!(
                     response,
                     GetBlockHeadersResponse {
-                        tip_height: std::cmp::min(j, blobs.len() - 1) as u32,
-                        block_headers: blobs[i..=std::cmp::min(j, blobs.len() - 1)].into()
+                        tip_height,
+                        block_headers: blobs[start_height as usize..=tip_height as usize].into()
                     }
                 );
             }
