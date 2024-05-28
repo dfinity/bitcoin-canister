@@ -138,15 +138,15 @@ mod tests {
         use std::path::PathBuf;
 
         candid::export_service!();
-        let new_interface = __export_service();
+        let rust_interface = __export_service();
 
-        let old_interface =
+        let candid_interface =
             PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("candid.did");
 
         service_compatible(
-            CandidSource::Text(&new_interface),
-            CandidSource::File(old_interface.as_path()),
+            CandidSource::Text(&rust_interface),
+            CandidSource::File(candid_interface.as_path()),
         )
-        .expect("The Bitcoin canister interface is not compatible with the candid.did file");
+        .expect("The canister implementation is not compatible with the candid.did file");
     }
 }
