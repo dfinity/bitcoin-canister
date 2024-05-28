@@ -510,20 +510,15 @@ mod test {
     }
 
     proptest! {
-    #![proptest_config(ProptestConfig::with_cases(3))]
+    //#![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
     fn get_block_headers_proptest(
-        stability_threshold in 1..75u128,
-        block_num in 1..100u32,
-        start_height in 0..99u32,
-        length in 1..100u32,
-        network in prop_oneof![
-            Just(Network::Mainnet),
-            Just(Network::Testnet),
-            Just(Network::Regtest),
-        ]) {
+        stability_threshold in 1..150u128,
+        block_num in 1..200u32,
+        start_height in 0..199u32,
+        length in 1..200u32) {
             let blobs: Vec<Vec<u8>> =
-                helper_initialize_and_get_heder_blobs(stability_threshold, block_num - 1, network);
+                helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Regtest);
 
             let start_height = std::cmp::min(start_height, block_num - 1);
 
