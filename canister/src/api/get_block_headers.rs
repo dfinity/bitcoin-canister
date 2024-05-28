@@ -514,7 +514,7 @@ mod test {
     #[test]
     fn get_block_headers_proptest(
         stability_threshold in 1..75u128,
-        total_num_blocks in 1..100u32,
+        block_num in 1..100u32,
         start_height in 0..99u32,
         length in 1..100u32,
         network in prop_oneof![
@@ -523,17 +523,17 @@ mod test {
             Just(Network::Regtest),
         ]) {
             let blobs: Vec<Vec<u8>> =
-                helper_initialize_and_get_heder_blobs(stability_threshold, total_num_blocks - 1, network);
+                helper_initialize_and_get_heder_blobs(stability_threshold, block_num - 1, network);
 
-            let start_height = std::cmp::min(start_height, total_num_blocks - 1);
+            let start_height = std::cmp::min(start_height, block_num - 1);
 
-            let end_height = if start_height + length - 1 < total_num_blocks {
+            let end_height = if start_height + length - 1 < block_num {
                 Some(start_height + length - 1)
             } else {
                 None
             };
 
-            check_response(&blobs, start_height, end_height, total_num_blocks);
+            check_response(&blobs, start_height, end_height, block_num);
         }
     }
 
