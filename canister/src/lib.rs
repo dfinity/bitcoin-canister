@@ -96,6 +96,7 @@ pub fn init(init_config: InitConfig) {
     with_state_mut(|s| s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced);
     with_state_mut(|s| s.watchdog_canister = config.watchdog_canister);
     with_state_mut(|s| s.burn_cycles = config.burn_cycles);
+    with_state_mut(|s| s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles);
     with_state_mut(|s| s.fees = config.fees);
 }
 
@@ -155,6 +156,7 @@ pub fn get_config() -> Config {
         disable_api_if_not_fully_synced: s.disable_api_if_not_fully_synced,
         watchdog_canister: s.watchdog_canister,
         burn_cycles: s.burn_cycles,
+        lazily_evaluate_fee_percentiles: s.lazily_evaluate_fee_percentiles,
     })
 }
 

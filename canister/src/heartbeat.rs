@@ -1,4 +1,5 @@
 use crate::{
+    api::get_current_fee_percentiles_impl,
     runtime::{call_get_successors, cycles_burn, print},
     state::{self, ResponseToProcess},
     types::{
@@ -35,6 +36,8 @@ pub async fn heartbeat() {
     }
 
     maybe_process_response();
+
+    maybe_compute_fee_percentiles();
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
@@ -198,6 +201,14 @@ fn maybe_process_response() {
             }
         }
     });
+}
+
+fn maybe_compute_fee_percentiles() {
+    if with_state(|s| s.lazily_evaluate_fee_percentiles == Flag::Enabled) {
+        return;
+    }
+
+    with_state_mut(|s| get_current_fee_percentiles_impl(s));
 }
 
 // Retrieves a `GetSuccessorsRequest` to send to the adapter.

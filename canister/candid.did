@@ -40,6 +40,7 @@ type init_config = record {
   disable_api_if_not_fully_synced : opt flag;
   watchdog_canister : opt opt principal;
   burn_cycles : opt flag;
+  lazily_evaluate_fee_percentiles : flag;
 };
 
 type config = record {
@@ -52,6 +53,7 @@ type config = record {
   disable_api_if_not_fully_synced : flag;
   watchdog_canister : opt principal;
   burn_cycles : flag;
+  lazily_evaluate_fee_percentiles : flag;
 };
 
 type fees = record {
