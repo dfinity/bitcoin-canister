@@ -2,7 +2,7 @@ use bitcoin::consensus::Decodable;
 use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
 use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
-use ic_btc_interface::{Config, Network};
+use ic_btc_interface::{InitConfig, Network};
 use ic_btc_types::Block;
 use ic_cdk_macros::init;
 use std::cell::RefCell;
@@ -31,10 +31,10 @@ fn init() {
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
 #[bench(raw)]
 fn insert_300_blocks() -> BenchResult {
-    ic_btc_canister::init(Config {
-        network: Network::Testnet,
-        stability_threshold: 144,
-        ..Config::default()
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Testnet),
+        stability_threshold: Some(144),
+        ..Default::default()
     });
 
     bench_fn(|| {
@@ -53,10 +53,10 @@ fn insert_300_blocks() -> BenchResult {
 // Benchmarks gettings the metrics when there are many unstable blocks..
 #[bench(raw)]
 fn get_metrics() -> BenchResult {
-    ic_btc_canister::init(Config {
-        network: Network::Testnet,
-        stability_threshold: 3000,
-        ..Config::default()
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Testnet),
+        stability_threshold: Some(3000),
+        ..Default::default()
     });
 
     with_state_mut(|s| {
@@ -80,9 +80,9 @@ fn insert_block_headers() -> BenchResult {
     let blocks_to_insert = 1000;
     let block_headers_to_insert = 100;
 
-    ic_btc_canister::init(Config {
-        network: Network::Testnet,
-        ..Config::default()
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Testnet),
+        ..Default::default()
     });
 
     // Insert the blocks.
@@ -121,9 +121,9 @@ fn insert_block_headers() -> BenchResult {
 // Inserts the same block headers multiple times.
 #[bench(raw)]
 fn insert_block_headers_multiple_times() -> BenchResult {
-    ic_btc_canister::init(Config {
-        network: Network::Testnet,
-        ..Config::default()
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Testnet),
+        ..Default::default()
     });
 
     // Compute the next block headers.
