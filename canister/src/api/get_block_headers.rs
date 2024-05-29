@@ -443,18 +443,13 @@ mod test {
         // Genesis block is already added hence we need to add `block_num - 1`` more blocks.
         for _ in 0..block_num - 1 {
             let block = BlockBuilder::with_prev_header(&prev_block_header).build();
-            with_state_mut(|state| insert_block(state, block.clone()).unwrap());
-
             prev_block_header = *block.header();
 
             let mut block_blob = vec![];
-            block
-                .clone()
-                .header()
-                .consensus_encode(&mut block_blob)
-                .unwrap();
-
+            block.header().consensus_encode(&mut block_blob).unwrap();
             blobs.push(block_blob);
+
+            with_state_mut(|state| insert_block(state, block).unwrap());
         }
 
         with_state_mut(ingest_stable_blocks_into_utxoset);
@@ -510,7 +505,7 @@ mod test {
     }
 
     proptest! {
-    //#![proptest_config(ProptestConfig::with_cases(10))]
+    #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
     fn get_block_headers_proptest(
         stability_threshold in 1..150u128,
