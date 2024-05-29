@@ -1,9 +1,10 @@
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
-    Config, GetBalanceRequest, GetBlockHeadersRequest, GetCurrentFeePercentilesRequest,
-    GetUtxosRequest, MillisatoshiPerByte, SendTransactionRequest, SetConfigRequest,
+    Config, GetBalanceRequest, GetBlockHeadersRequest, GetBlockHeadersResponse,
+    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte,
+    Satoshi, SendTransactionRequest, SetConfigRequest,
 };
-use ic_cdk::api::call::{reject, reply};
+use ic_cdk::api::call::ManualReply;
 use ic_cdk_macros::{heartbeat, init, inspect_message, post_upgrade, pre_upgrade, query, update};
 
 #[cfg(target_arch = "wasm32")]
@@ -37,58 +38,58 @@ async fn heartbeat() {
 }
 
 #[update(manual_reply = true)]
-pub fn bitcoin_get_balance(request: GetBalanceRequest) {
+pub fn bitcoin_get_balance(request: GetBalanceRequest) -> ManualReply<Satoshi> {
     match ic_btc_canister::get_balance(request) {
-        Ok(response) => reply((response,)),
-        Err(e) => reject(format!("get_balance failed: {:?}", e).as_str()),
+        Ok(response) => ManualReply::one(response),
+        Err(e) => ManualReply::reject(format!("get_balance failed: {:?}", e).as_str()),
     }
 }
 
 #[query(manual_reply = true)]
-pub fn bitcoin_get_balance_query(request: GetBalanceRequest) {
+pub fn bitcoin_get_balance_query(request: GetBalanceRequest) -> ManualReply<Satoshi> {
     if ic_cdk::api::data_certificate().is_none() {
-        reject("get_balance_query cannot be called in replicated mode");
-        return;
+        return ManualReply::reject("get_balance_query cannot be called in replicated mode");
     }
     match ic_btc_canister::get_balance_query(request) {
-        Ok(response) => reply((response,)),
-        Err(e) => reject(format!("get_balance_query failed: {:?}", e).as_str()),
+        Ok(response) => ManualReply::one(response),
+        Err(e) => ManualReply::reject(format!("get_balance_query failed: {:?}", e).as_str()),
     }
 }
 
 #[update(manual_reply = true)]
-pub fn bitcoin_get_utxos(request: GetUtxosRequest) {
+pub fn bitcoin_get_utxos(request: GetUtxosRequest) -> ManualReply<GetUtxosResponse> {
     match ic_btc_canister::get_utxos(request) {
-        Ok(response) => reply((response,)),
-        Err(e) => reject(format!("get_utxos failed: {:?}", e).as_str()),
-    };
+        Ok(response) => ManualReply::one(response),
+        Err(e) => ManualReply::reject(format!("get_utxos failed: {:?}", e).as_str()),
+    }
 }
 
 #[query(manual_reply = true)]
-pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) {
+pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) -> ManualReply<GetUtxosResponse> {
     if ic_cdk::api::data_certificate().is_none() {
-        reject("get_utxos_query cannot be called in replicated mode");
-        return;
+        return ManualReply::reject("get_utxos_query cannot be called in replicated mode");
     }
     match ic_btc_canister::get_utxos_query(request) {
-        Ok(response) => reply((response,)),
-        Err(e) => reject(format!("get_utxos_query failed: {:?}", e).as_str()),
-    };
+        Ok(response) => ManualReply::one(response),
+        Err(e) => ManualReply::reject(format!("get_utxos_query failed: {:?}", e).as_str()),
+    }
 }
 
 #[update(manual_reply = true)]
-pub fn bitcoin_get_block_headers(request: GetBlockHeadersRequest) {
+pub fn bitcoin_get_block_headers(
+    request: GetBlockHeadersRequest,
+) -> ManualReply<GetBlockHeadersResponse> {
     match ic_btc_canister::get_block_headers(request) {
-        Ok(response) => reply((response,)),
-        Err(e) => reject(format!("get_block_headers failed: {:?}", e).as_str()),
-    };
+        Ok(response) => ManualReply::one(response),
+        Err(e) => ManualReply::reject(format!("get_block_headers failed: {:?}", e).as_str()),
+    }
 }
 
 #[update(manual_reply = true)]
-async fn bitcoin_send_transaction(request: SendTransactionRequest) {
+async fn bitcoin_send_transaction(request: SendTransactionRequest) -> ManualReply<()> {
     match ic_btc_canister::send_transaction(request).await {
-        Ok(_) => reply(()),
-        Err(e) => reject(format!("send_transaction failed: {:?}", e).as_str()),
+        Ok(_) => ManualReply::all(()),
+        Err(e) => ManualReply::reject(format!("send_transaction failed: {:?}", e).as_str()),
     }
 }
 
@@ -126,3 +127,26 @@ fn inspect_message() {
 }
 
 fn main() {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_candid_interface_compatibility() {
+        use candid_parser::utils::{service_compatible, CandidSource};
+        use std::path::PathBuf;
+
+        candid::export_service!();
+        let rust_interface = __export_service();
+
+        let candid_interface =
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("candid.did");
+
+        service_compatible(
+            CandidSource::Text(&rust_interface),
+            CandidSource::File(candid_interface.as_path()),
+        )
+        .expect("The canister implementation is not compatible with the candid.did file");
+    }
+}
