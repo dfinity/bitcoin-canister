@@ -52,9 +52,6 @@ type fees = record {
   get_current_fee_percentiles_maximum : nat;
   send_transaction_base : nat;
   send_transaction_per_byte : nat;
-  get_block_headers_base : nat;
-  get_block_headers_cycles_per_ten_instructions : nat;
-  get_block_headers_maximum : nat;
 };
 
 type get_balance_request = record {
