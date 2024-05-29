@@ -634,7 +634,7 @@ impl From<InitConfig> for Config {
         if let Some(burn_cycles) = init_config.burn_cycles {
             config.burn_cycles = burn_cycles;
         }
-        
+
         if let Some(lazily_evaluate_fee_percentiles) = init_config.lazily_evaluate_fee_percentiles {
             config.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
         }
