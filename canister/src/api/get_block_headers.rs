@@ -7,6 +7,10 @@ use crate::{
     with_state, with_state_mut,
 };
 
+// The maximum number of block headers that are allowed to be included in a single
+// `GetBlockHeadersResponse`.
+const MAX_BLOCK_HEADERS_PER_RESPONSE: u32 = 100;
+
 // Various profiling stats for tracking the performance of `get_block_headers`.
 #[derive(Default, Debug)]
 struct Stats {
@@ -56,8 +60,14 @@ fn verify_requested_height_range_and_return_effective_range(
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    let (start_height, end_height) =
+    let (start_height, mut end_height) =
         verify_requested_height_range_and_return_effective_range(request)?;
+
+    // Bound the length of block headers vec.
+    end_height = std::cmp::min(
+        end_height,
+        start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1,
+    );
 
     let mut stats: Stats = Stats::default();
 
@@ -435,7 +445,10 @@ mod test {
         .unwrap();
 
         // If the requested `end_height` is `None`, the tip should be the last block.
-        let tip_height = end_height.unwrap_or(total_num_blocks - 1);
+        // The Length of block headers vec in response should be bounded by `MAX_BLOCK_HEADERS_PER_RESPONSE`.
+        let tip_height = end_height
+            .unwrap_or(total_num_blocks - 1)
+            .min(start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1);
 
         assert_eq!(
             response,
@@ -467,6 +480,46 @@ mod test {
             helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
 
         test_all_valid_combination_or_height_range(&blobs, block_num);
+    }
+
+    #[test]
+    fn get_block_headers_test_max_block_headers_per_response() {
+        let stability_threshold = 3;
+        let block_num: u32 = MAX_BLOCK_HEADERS_PER_RESPONSE * 2 + 3;
+        let network = Network::Regtest;
+
+        let blobs: Vec<Vec<u8>> =
+            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
+
+        check_response(&blobs, 0, None, block_num);
+        check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE / 2, None, block_num);
+        check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE, None, block_num);
+
+        check_response(
+            &blobs,
+            0,
+            Some(MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
+            block_num,
+        );
+        check_response(
+            &blobs,
+            MAX_BLOCK_HEADERS_PER_RESPONSE / 2,
+            Some(3 * MAX_BLOCK_HEADERS_PER_RESPONSE / 2 + 1),
+            block_num,
+        );
+        check_response(
+            &blobs,
+            MAX_BLOCK_HEADERS_PER_RESPONSE,
+            Some(2 * MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
+            block_num,
+        );
+
+        check_response(
+            &blobs,
+            0,
+            Some(2 * MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
+            block_num,
+        );
     }
 
     proptest! {
