@@ -74,8 +74,8 @@ fn get_block_headers_internal(
             .collect()
     });
 
-    // How the last stable block is located in unstable_blocks, there will always
-    // be the block in unstable_blocks.
+    // How the last stable block is located in `unstable_blocks`, the height of the
+    // first block in `unstable_blocks` is equal to `stable_height`.
     let height_of_first_block_in_unstable_blocks = with_state(|s| s.stable_height());
 
     // Add requested block headers located in unstable_blocks.
@@ -478,7 +478,7 @@ mod test {
         start_height in 0..199u32,
         length in 1..200u32) {
             let blobs: Vec<Vec<u8>> =
-                helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Testnet);
+                helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Regtest);
 
             let start_height = std::cmp::min(start_height, block_num - 1);
 

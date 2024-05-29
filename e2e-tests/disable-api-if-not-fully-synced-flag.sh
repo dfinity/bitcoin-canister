@@ -31,7 +31,6 @@ dfx deploy --no-wallet bitcoin --argument "(record {
     get_current_fee_percentiles_maximum = 0;
     send_transaction_base = 0;
     send_transaction_per_byte = 0;
-
   };
   api_access = variant { enabled };
   disable_api_if_not_fully_synced = variant { enabled };
@@ -145,7 +144,6 @@ dfx deploy --no-wallet bitcoin --argument "(record {
     get_current_fee_percentiles_maximum = 0;
     send_transaction_base = 0;
     send_transaction_per_byte = 0;
-
   };
   api_access = variant { enabled };
   disable_api_if_not_fully_synced = variant { disabled };
