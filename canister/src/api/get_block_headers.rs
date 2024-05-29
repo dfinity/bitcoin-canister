@@ -33,15 +33,15 @@ pub fn get_block_headers(
 
 #[cfg(test)]
 mod test {
-    use ic_btc_interface::{Config, GetBlockHeadersError, GetBlockHeadersRequest, Network};
+    use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, InitConfig, Network};
 
     use crate::api::get_block_headers;
 
     #[test]
     fn get_block_headers_malformed_heights() {
-        crate::init(Config {
-            stability_threshold: 1,
-            network: Network::Mainnet,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
 

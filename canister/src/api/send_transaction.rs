@@ -41,7 +41,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_btc_interface::{Config, Fees, Flag, Network, NetworkInRequest};
+    use ic_btc_interface::{Fees, Flag, InitConfig, Network, NetworkInRequest};
 
     fn empty_transaction() -> Vec<u8> {
         let mut buf = vec![];
@@ -61,13 +61,13 @@ mod test {
 
     #[async_std::test]
     async fn charges_cycles() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 send_transaction_base: 13,
                 send_transaction_per_byte: 27,
                 ..Default::default()
-            },
-            network: Network::Mainnet,
+            }),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
 
@@ -95,13 +95,13 @@ mod test {
 
     #[async_std::test]
     async fn invalid_tx_error() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 send_transaction_base: 13,
                 send_transaction_per_byte: 27,
                 ..Default::default()
-            },
-            network: Network::Mainnet,
+            }),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
 
@@ -116,14 +116,14 @@ mod test {
     #[async_std::test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     async fn send_transaction_access_disabled() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 send_transaction_base: 13,
                 send_transaction_per_byte: 27,
                 ..Default::default()
-            },
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+            }),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
 

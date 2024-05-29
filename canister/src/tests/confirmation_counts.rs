@@ -18,9 +18,9 @@ proptest! {
     fn single_chain(
         chain_len in 1..10u32,
     ) {
-        crate::init(crate::Config {
-            stability_threshold: 10,
-            network: Network::Regtest,
+        crate::init(crate::InitConfig {
+            stability_threshold: Some(10),
+            network: Some(Network::Regtest),
             ..Default::default()
         });
 
@@ -68,9 +68,9 @@ proptest! {
         // The height of the block present in the fork.
         let fork_height: u32 = fork_idx as u32 + fork_len;
 
-        crate::init(crate::Config {
-            stability_threshold: 10,
-            network: Network::Regtest,
+        crate::init(crate::InitConfig {
+            stability_threshold: Some(10),
+            network: Some(Network::Regtest),
             ..Default::default()
         });
 
@@ -114,9 +114,9 @@ proptest! {
 
 #[async_std::test]
 async fn multiple_forks() {
-    crate::init(crate::Config {
-        stability_threshold: 10,
-        network: Network::Regtest,
+    crate::init(crate::InitConfig {
+        stability_threshold: Some(10),
+        network: Some(Network::Regtest),
         ..Default::default()
     });
 

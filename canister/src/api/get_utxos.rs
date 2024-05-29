@@ -293,16 +293,16 @@ mod test {
         },
         with_state_mut,
     };
-    use ic_btc_interface::{Config, Fees, Network};
+    use ic_btc_interface::{InitConfig, Fees, Network};
     use ic_btc_interface::{OutPoint, Utxo};
     use ic_btc_types::Block;
     use proptest::prelude::*;
 
     #[test]
     fn get_utxos_malformed_address() {
-        crate::init(Config {
-            stability_threshold: 1,
-            network: Network::Mainnet,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         assert_eq!(
@@ -316,9 +316,9 @@ mod test {
 
     #[test]
     fn get_utxos_query_malformed_address() {
-        crate::init(Config {
-            stability_threshold: 1,
-            network: Network::Mainnet,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         assert_eq!(
@@ -333,9 +333,9 @@ mod test {
     #[test]
     fn genesis_block_only() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -357,9 +357,9 @@ mod test {
     #[test]
     fn single_block() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -405,9 +405,9 @@ mod test {
     fn returns_results_in_descending_height_order() {
         let network = Network::Regtest;
 
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -517,8 +517,8 @@ mod test {
 
     // Tests that the provided address is supported and its UTXOs can be fetched.
     fn supports_address(network: Network, address: Address) {
-        crate::init(Config {
-            network,
+        crate::init(InitConfig {
+            network: Some(network),
             ..Default::default()
         });
 
@@ -563,9 +563,9 @@ mod test {
     fn min_confirmations() {
         let network = Network::Regtest;
 
-        crate::init(Config {
-            stability_threshold: 2,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(2),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -675,9 +675,9 @@ mod test {
     #[test]
     fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 2,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(2),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -729,9 +729,9 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        crate::init(Config {
-            stability_threshold: 2,
-            network: Network::Regtest,
+        crate::init(InitConfig {
+            stability_threshold: Some(2),
+            network: Some(Network::Regtest),
             ..Default::default()
         });
 
@@ -953,9 +953,9 @@ mod test {
             .with_transaction(tx.clone())
             .build();
 
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -1226,12 +1226,12 @@ mod test {
 
     #[test]
     fn charges_cycles() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 get_utxos_base: 10,
                 get_utxos_maximum: 100,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
@@ -1246,13 +1246,13 @@ mod test {
 
     #[test]
     fn charges_cycles_capped_at_maximum() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 get_utxos_base: 10,
                 get_utxos_cycles_per_ten_instructions: 10,
                 get_utxos_maximum: 100,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
@@ -1271,13 +1271,13 @@ mod test {
 
     #[test]
     fn charges_cycles_per_instructions() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 get_utxos_base: 10,
                 get_utxos_cycles_per_ten_instructions: 10,
                 get_utxos_maximum: 100_000,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
@@ -1342,7 +1342,7 @@ mod test {
         let chain = BlockChainBuilder::new(6).build();
         let fork = BlockChainBuilder::fork(&chain[0], 5).build();
 
-        crate::init(Config::default());
+        crate::init(InitConfig::default());
 
         // Insert the blocks.
         with_state_mut(|state| {

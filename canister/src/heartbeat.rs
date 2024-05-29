@@ -260,7 +260,7 @@ mod test {
         utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader;
-    use ic_btc_interface::{Config, Network};
+    use ic_btc_interface::{InitConfig, Network};
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
@@ -283,9 +283,9 @@ mod test {
     async fn fetches_blocks_and_processes_response() {
         let network = Network::Regtest;
 
-        init(Config {
-            stability_threshold: 0,
-            network,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -327,9 +327,9 @@ mod test {
     async fn does_not_fetch_blocks_if_syncing_is_disabled() {
         let network = Network::Regtest;
 
-        init(Config {
-            stability_threshold: 0,
-            network,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -361,9 +361,9 @@ mod test {
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
 
-        init(Config {
-            stability_threshold: 0,
-            network,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -448,9 +448,9 @@ mod test {
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
-        init(Config {
-            stability_threshold: 0,
-            network,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -600,9 +600,9 @@ mod test {
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
 
-        init(Config {
-            stability_threshold: 0,
-            network,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -668,7 +668,7 @@ mod test {
 
     #[async_std::test]
     async fn handles_block_deserialize_errors() {
-        init(Config::default());
+        init(InitConfig::default());
 
         runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
@@ -701,7 +701,7 @@ mod test {
 
     #[async_std::test]
     async fn handles_blocks_that_dont_extend_tree() {
-        init(Config::default());
+        init(InitConfig::default());
 
         let mut block_bytes = vec![];
         genesis_block(Network::Regtest)
@@ -738,8 +738,8 @@ mod test {
     async fn block_headers_are_not_inserted_above_instructions_threshold() {
         let network = Network::Regtest;
 
-        init(Config {
-            network,
+        init(InitConfig {
+            network: Some(network),
             ..Default::default()
         });
 
