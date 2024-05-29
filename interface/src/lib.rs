@@ -540,6 +540,7 @@ pub enum Flag {
 }
 
 /// The config used to initialize the canister.
+///
 /// This struct is equivalent to `Config`, except that all its fields are optional.
 /// Fields that are not specified here are loaded with their default value. See
 /// `Config::default()`.

@@ -293,7 +293,7 @@ mod test {
         },
         with_state_mut,
     };
-    use ic_btc_interface::{InitConfig, Fees, Network};
+    use ic_btc_interface::{Fees, InitConfig, Network};
     use ic_btc_interface::{OutPoint, Utxo};
     use ic_btc_types::Block;
     use proptest::prelude::*;
