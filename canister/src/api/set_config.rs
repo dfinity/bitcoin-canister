@@ -180,7 +180,7 @@ mod test {
                 get_current_fee_percentiles,
                 get_current_fee_percentiles_maximum,
                 send_transaction_base,
-                send_transaction_per_byte,
+                send_transaction_per_byte
             };
 
             set_config_no_verification(SetConfigRequest {
