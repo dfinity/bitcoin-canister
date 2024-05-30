@@ -394,7 +394,7 @@ mod test {
         );
     }
 
-    fn helper_initialize_and_get_heder_blobs(
+    fn helper_initialize_and_get_header_blobs(
         stability_threshold: u128,
         block_num: u32,
         network: Network,
@@ -415,7 +415,7 @@ mod test {
 
         let mut blobs = vec![genesis_header_blob];
 
-        // Genesis block is already added hence we need to add `block_num - 1`` more blocks.
+        // Genesis block is already added hence we need to add `block_num - 1` more blocks.
         for _ in 0..block_num - 1 {
             let block = BlockBuilder::with_prev_header(&prev_block_header).build();
             prev_block_header = *block.header();
@@ -477,7 +477,7 @@ mod test {
         let network = Network::Regtest;
 
         let blobs: Vec<Vec<u8>> =
-            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
+            helper_initialize_and_get_header_blobs(stability_threshold, block_num, network);
 
         test_all_valid_combination_or_height_range(&blobs, block_num);
     }
@@ -489,7 +489,7 @@ mod test {
         let network = Network::Regtest;
 
         let blobs: Vec<Vec<u8>> =
-            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
+            helper_initialize_and_get_header_blobs(stability_threshold, block_num, network);
 
         check_response(&blobs, 0, None, block_num);
         check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE / 2, None, block_num);
@@ -526,8 +526,11 @@ mod test {
     fn get_block_headers_proptest() {
         let stability_threshold = 3;
         let block_num = 200;
-        let blobs: Vec<Vec<u8>> =
-            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Regtest);
+        let blobs: Vec<Vec<u8>> = helper_initialize_and_get_header_blobs(
+            stability_threshold,
+            block_num,
+            Network::Regtest,
+        );
 
         proptest!(|(
             start_height in 0..=block_num - 1,
@@ -547,7 +550,7 @@ mod test {
     fn test_all_combinations_large() {
         for stability_threshold in [3, 10, 100] {
             for block_num in [1, 3, 10, 20, 50, 100, 200] {
-                let blobs: Vec<Vec<u8>> = helper_initialize_and_get_heder_blobs(
+                let blobs: Vec<Vec<u8>> = helper_initialize_and_get_header_blobs(
                     stability_threshold,
                     block_num,
                     Network::Regtest,
