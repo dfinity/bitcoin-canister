@@ -11,11 +11,11 @@ use crate::{
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
-use crate::{init, test_utils::random_p2pkh_address, Config};
+use crate::{init, test_utils::random_p2pkh_address};
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::{Block as BitcoinBlock, BlockHeader};
 use byteorder::{LittleEndian, ReadBytesExt};
-use ic_btc_interface::{Flag, GetUtxosResponse, Network, Txid, UtxosFilter};
+use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_btc_types::{Block, BlockHash};
 use ic_cdk::api::call::RejectionCode;
@@ -124,9 +124,9 @@ fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
 
 #[async_std::test]
 async fn mainnet_100k_blocks() {
-    crate::init(crate::Config {
-        stability_threshold: 10,
-        network: Network::Mainnet,
+    crate::init(crate::InitConfig {
+        stability_threshold: Some(10),
+        network: Some(Network::Mainnet),
         ..Default::default()
     });
 
@@ -367,9 +367,9 @@ async fn mainnet_100k_blocks() {
 
 #[async_std::test]
 async fn testnet_10k_blocks() {
-    crate::init(crate::Config {
-        stability_threshold: 2,
-        network: Network::Testnet,
+    crate::init(crate::InitConfig {
+        stability_threshold: Some(2),
+        network: Some(Network::Testnet),
         ..Default::default()
     });
 
@@ -415,9 +415,9 @@ async fn testnet_10k_blocks() {
 #[async_std::test]
 async fn time_slices_large_block_with_multiple_transactions() {
     let network = Network::Regtest;
-    init(Config {
-        stability_threshold: 0,
-        network,
+    init(InitConfig {
+        stability_threshold: Some(0),
+        network: Some(network),
         ..Default::default()
     });
 
@@ -523,7 +523,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
 #[async_std::test]
 async fn test_rejections_counting() {
-    crate::init(crate::Config::default());
+    crate::init(InitConfig::default());
 
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
@@ -564,9 +564,9 @@ fn get_chain_with_n_block_and_header_blobs(
 async fn test_syncing_with_next_block_headers() {
     let network = Network::Regtest;
 
-    init(Config {
-        stability_threshold: 2,
-        network,
+    init(InitConfig {
+        stability_threshold: Some(2),
+        network: Some(network),
         ..Default::default()
     });
 
@@ -719,8 +719,8 @@ async fn test_syncing_with_next_block_headers() {
 
 #[async_std::test]
 async fn cycles_burnt_are_tracked_in_metrics() {
-    crate::init(crate::Config {
-        burn_cycles: Flag::Enabled,
+    crate::init(InitConfig {
+        burn_cycles: Some(Flag::Enabled),
         ..Default::default()
     });
 
@@ -754,8 +754,8 @@ async fn cycles_burnt_are_tracked_in_metrics() {
 
 #[async_std::test]
 async fn cycles_are_not_burnt_when_flag_is_disabled() {
-    crate::init(crate::Config {
-        burn_cycles: Flag::Disabled,
+    crate::init(InitConfig {
+        burn_cycles: Some(Flag::Disabled),
         ..Default::default()
     });
 

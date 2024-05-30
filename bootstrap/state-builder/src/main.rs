@@ -16,7 +16,7 @@ use ic_btc_canister::{
     types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse},
     with_state,
 };
-use ic_btc_interface::{Config, Flag, Network};
+use ic_btc_interface::{Flag, InitConfig, Network};
 use rusty_leveldb::{Options, DB};
 use std::{
     collections::BTreeMap,
@@ -145,11 +145,11 @@ async fn main() {
 
     println!("Initializing...");
 
-    ic_btc_canister::init(Config {
-        stability_threshold: 0,
-        network: args.network,
-        api_access: Flag::Disabled,
-        ..Config::default()
+    ic_btc_canister::init(InitConfig {
+        stability_threshold: Some(0),
+        network: Some(args.network),
+        api_access: Some(Flag::Disabled),
+        ..Default::default()
     });
 
     let mut blocks_path = args.blocks_path.clone();

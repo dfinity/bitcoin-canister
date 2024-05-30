@@ -30,7 +30,7 @@ pub use heartbeat::heartbeat;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
-    GetUtxosResponse, MillisatoshiPerByte, Network, Satoshi,
+    GetUtxosResponse, InitConfig, MillisatoshiPerByte, Network, Satoshi,
 };
 use ic_btc_types::Block;
 use ic_stable_structures::Memory;
@@ -79,7 +79,8 @@ fn set_state(state: State) {
 }
 
 /// Initializes the state of the Bitcoin canister.
-pub fn init(config: Config) {
+pub fn init(init_config: InitConfig) {
+    let config = Config::from(init_config);
     set_state(State::new(
         config
             .stability_threshold
@@ -297,9 +298,9 @@ mod test {
                 Just(Network::Regtest),
             ],
         ) {
-            init(Config {
-                stability_threshold,
-                network,
+            init(InitConfig {
+                stability_threshold: Some(stability_threshold),
+                network: Some(network),
                 ..Default::default()
             });
 
@@ -321,9 +322,9 @@ mod test {
         ) {
             let network = Network::Regtest;
 
-            init(Config {
-                stability_threshold,
-                network,
+            init(InitConfig {
+                stability_threshold: Some(stability_threshold),
+                network: Some(network),
                 ..Default::default()
             });
 
@@ -355,9 +356,9 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_balance_incorrect_network() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         get_balance(GetBalanceRequest {
@@ -371,9 +372,9 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_balance_query_incorrect_network() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         get_balance_query(GetBalanceRequest {
@@ -387,9 +388,9 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_utxos_incorrect_network() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         get_utxos(GetUtxosRequest {
@@ -403,9 +404,9 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_utxos_query_incorrect_network() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         get_utxos_query(GetUtxosRequest {
@@ -419,9 +420,9 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_current_fee_percentiles_incorrect_network() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
@@ -445,10 +446,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_balance_access_disabled() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
         get_balance(GetBalanceRequest {
@@ -462,10 +463,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_balance_query_access_disabled() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
         get_balance_query(GetBalanceRequest {
@@ -479,10 +480,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_access_disabled() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
         get_utxos(GetUtxosRequest {
@@ -496,10 +497,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_block_headers_access_disabled() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
         get_block_headers(GetBlockHeadersRequest {
@@ -512,10 +513,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_query_access_disabled() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
         get_utxos_query(GetUtxosRequest {
@@ -529,10 +530,10 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_current_fee_percentiles_access_disabled() {
-        init(Config {
-            stability_threshold: 0,
-            network: Network::Mainnet,
-            api_access: Flag::Disabled,
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            api_access: Some(Flag::Disabled),
             ..Default::default()
         });
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
@@ -542,8 +543,8 @@ mod test {
 
     #[test]
     fn init_sets_syncing_flag() {
-        init(Config {
-            syncing: Flag::Disabled,
+        init(InitConfig {
+            syncing: Some(Flag::Disabled),
             ..Default::default()
         });
 
@@ -551,8 +552,8 @@ mod test {
             assert!(s.syncing_state.syncing == Flag::Disabled);
         });
 
-        init(Config {
-            syncing: Flag::Enabled,
+        init(InitConfig {
+            syncing: Some(Flag::Enabled),
             ..Default::default()
         });
 
@@ -563,8 +564,8 @@ mod test {
 
     #[test]
     fn init_sets_disable_api_if_not_fully_synced() {
-        init(Config {
-            disable_api_if_not_fully_synced: Flag::Disabled,
+        init(InitConfig {
+            disable_api_if_not_fully_synced: Some(Flag::Disabled),
             ..Default::default()
         });
 
@@ -572,8 +573,8 @@ mod test {
             assert!(s.disable_api_if_not_fully_synced == Flag::Disabled);
         });
 
-        init(Config {
-            disable_api_if_not_fully_synced: Flag::Enabled,
+        init(InitConfig {
+            disable_api_if_not_fully_synced: Some(Flag::Enabled),
             ..Default::default()
         });
 

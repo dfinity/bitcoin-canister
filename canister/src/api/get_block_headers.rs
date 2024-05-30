@@ -164,14 +164,14 @@ mod test {
         with_state_mut,
     };
     use bitcoin::consensus::Encodable;
-    use ic_btc_interface::{Config, Network};
+    use ic_btc_interface::{InitConfig, Network};
     use proptest::prelude::*;
-
-    fn get_block_headers_helper() {
-        let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+  
+    #[test]
+    fn get_block_headers_malformed_heights() {
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
 

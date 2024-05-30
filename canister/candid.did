@@ -30,6 +30,18 @@ type flag = variant {
   disabled;
 };
 
+type init_config = record {
+  stability_threshold : opt nat;
+  network : opt network;
+  blocks_source : opt principal;
+  syncing : opt flag;
+  fees : opt fees;
+  api_access : opt flag;
+  disable_api_if_not_fully_synced : opt flag;
+  watchdog_canister : opt opt principal;
+  burn_cycles : opt flag;
+};
+
 type config = record {
   stability_threshold : nat;
   network : network;
@@ -107,7 +119,7 @@ type get_block_headers_response = record {
   block_headers : vec block_header;
 };
 
-service bitcoin : (config) -> {
+service bitcoin : (init_config) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
   bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;

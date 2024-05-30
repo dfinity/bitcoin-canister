@@ -539,7 +539,25 @@ pub enum Flag {
     Disabled,
 }
 
-/// The config and payload used to initialize the canister.
+/// The config used to initialize the canister.
+///
+/// This struct is equivalent to `Config`, except that all its fields are optional.
+/// Fields that are not specified here are loaded with their default value. See
+/// `Config::default()`.
+#[derive(CandidType, Deserialize, Debug, Default)]
+pub struct InitConfig {
+    pub stability_threshold: Option<u128>,
+    pub network: Option<Network>,
+    pub blocks_source: Option<Principal>,
+    pub syncing: Option<Flag>,
+    pub fees: Option<Fees>,
+    pub api_access: Option<Flag>,
+    pub disable_api_if_not_fully_synced: Option<Flag>,
+    pub watchdog_canister: Option<Option<Principal>>,
+    pub burn_cycles: Option<Flag>,
+}
+
+/// The config of the canister.
 #[derive(CandidType, Deserialize, Debug)]
 pub struct Config {
     pub stability_threshold: u128,
@@ -570,6 +588,50 @@ pub struct Config {
     /// If enabled, continuously burns all cycles in its balance
     /// (to count towards the IC's burn rate).
     pub burn_cycles: Flag,
+}
+
+impl From<InitConfig> for Config {
+    fn from(init_config: InitConfig) -> Self {
+        let mut config = Config::default();
+
+        if let Some(stability_threshold) = init_config.stability_threshold {
+            config.stability_threshold = stability_threshold;
+        }
+
+        if let Some(network) = init_config.network {
+            config.network = network;
+        }
+
+        if let Some(blocks_source) = init_config.blocks_source {
+            config.blocks_source = blocks_source;
+        }
+
+        if let Some(syncing) = init_config.syncing {
+            config.syncing = syncing;
+        }
+
+        if let Some(fees) = init_config.fees {
+            config.fees = fees;
+        }
+
+        if let Some(api_access) = init_config.api_access {
+            config.api_access = api_access;
+        }
+
+        if let Some(disable_api_if_not_fully_synced) = init_config.disable_api_if_not_fully_synced {
+            config.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
+        }
+
+        if let Some(watchdog_canister) = init_config.watchdog_canister {
+            config.watchdog_canister = watchdog_canister;
+        }
+
+        if let Some(burn_cycles) = init_config.burn_cycles {
+            config.burn_cycles = burn_cycles;
+        }
+
+        config
+    }
 }
 
 impl Default for Config {

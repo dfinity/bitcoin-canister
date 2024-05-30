@@ -61,6 +61,8 @@ download_latest_release
 dfx start --background --clean
 
 # Deploy the latest release.
+# Update the candid to point so that it's using the old init arguments.
+sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (config)/' ./canister/candid.did
 dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "${ARGUMENT}"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
@@ -75,14 +77,17 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
+# Update the candid to point back to the new init args.
+sed -i.bak 's/service bitcoin : (config)/service bitcoin : (init_config)/' ./canister/candid.did
+
 # Deploy upgraded canister.
-dfx deploy --no-wallet bitcoin --argument "${ARGUMENT}"
+dfx deploy --no-wallet bitcoin --argument "(record { })"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged bitcoin --argument "${ARGUMENT}"
+dfx deploy --upgrade-unchanged bitcoin --argument "(record { })"
 dfx canister start bitcoin
 
 echo "SUCCESS"
