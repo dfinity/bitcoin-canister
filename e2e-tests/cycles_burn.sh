@@ -17,25 +17,8 @@ INITIAL_BALANCE=100000000000
 
 # Deploy the bitcoin canister.
 dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(record {
-  stability_threshold = 0;
-  network = variant { regtest };
-  blocks_source = principal \"aaaaa-aa\";
-  syncing = variant { enabled };
-  fees = record {
-    get_utxos_base = 0;
-    get_utxos_cycles_per_ten_instructions = 0;
-    get_utxos_maximum = 0;
-    get_balance = 0;
-    get_balance_maximum = 0;
-    get_current_fee_percentiles = 0;
-    get_current_fee_percentiles_maximum = 0;
-    send_transaction_base = 0;
-    send_transaction_per_byte = 0;
-  };
-  api_access = variant { enabled };
-  disable_api_if_not_fully_synced = variant { enabled };
-  watchdog_canister = null;
-  burn_cycles = variant { enabled };
+  network = opt variant { regtest };
+  burn_cycles = opt variant { enabled };
 })"
 
 sleep 3
