@@ -166,12 +166,12 @@ mod test {
     use bitcoin::consensus::Encodable;
     use ic_btc_interface::{InitConfig, Network};
     use proptest::prelude::*;
-  
-    #[test]
-    fn get_block_headers_malformed_heights() {
+
+    fn get_block_headers_helper() {
+        let network = Network::Regtest;
         crate::init(InitConfig {
             stability_threshold: Some(1),
-            network: Some(Network::Mainnet),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -255,9 +255,9 @@ mod test {
     #[test]
     fn genesis_block_only() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -303,9 +303,9 @@ mod test {
     #[test]
     fn single_block() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 1,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -399,9 +399,9 @@ mod test {
         block_num: u32,
         network: Network,
     ) -> Vec<Vec<u8>> {
-        crate::init(Config {
-            stability_threshold,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(stability_threshold),
+            network: Some(network),
             ..Default::default()
         });
         let genesis_block = genesis_block(network);
