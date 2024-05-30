@@ -88,13 +88,13 @@ mod test {
     use super::*;
     use crate::{init, with_state};
     use candid::Principal;
-    use ic_btc_interface::{Config, Fees, Flag};
+    use ic_btc_interface::{Fees, Flag, InitConfig};
     use proptest::prelude::*;
 
     #[test]
     fn test_set_api_access_updates_state() {
         // Arrange
-        init(Config::default());
+        init(InitConfig::default());
         assert_eq!(with_state(|s| s.api_access), Flag::Enabled);
 
         // Act
@@ -110,7 +110,7 @@ mod test {
     #[test]
     fn test_set_api_access_does_not_update_state() {
         // Arrange
-        init(Config::default());
+        init(InitConfig::default());
         assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
 
         // Act
@@ -125,7 +125,7 @@ mod test {
 
     #[test]
     fn test_set_stability_threshold() {
-        init(Config::default());
+        init(InitConfig::default());
 
         proptest!(|(
             stability_threshold in 0..150u128,
@@ -144,7 +144,7 @@ mod test {
 
     #[test]
     fn test_set_syncing() {
-        init(Config::default());
+        init(InitConfig::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -158,7 +158,7 @@ mod test {
 
     #[test]
     fn test_set_fees() {
-        init(Config::default());
+        init(InitConfig::default());
 
         proptest!(|(
             get_utxos_base in 0..1_000_000_000_000u128,
@@ -194,7 +194,7 @@ mod test {
 
     #[test]
     fn test_set_config_no_verification_for_setting_api_access() {
-        init(Config::default());
+        init(InitConfig::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -208,7 +208,7 @@ mod test {
 
     #[test]
     fn test_set_disable_api_if_not_fully_synced() {
-        init(Config::default());
+        init(InitConfig::default());
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -222,7 +222,7 @@ mod test {
 
     #[test]
     fn test_set_watchdog_canister() {
-        init(Config::default());
+        init(InitConfig::default());
 
         for watchdog_canister in [
             None,

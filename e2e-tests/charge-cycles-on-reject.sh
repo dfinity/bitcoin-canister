@@ -15,11 +15,11 @@ dfx deploy e2e-scenario-3
 
 # Deploy the bitcoin canister.
 dfx deploy bitcoin --argument "(record {
-  stability_threshold = 2;
-  network = variant { regtest };
-  blocks_source = principal \"$(dfx canister id e2e-scenario-3)\";
-  syncing = variant { disabled };
-  fees = record {
+  stability_threshold = opt 2;
+  network = opt variant { regtest };
+  blocks_source = opt principal \"$(dfx canister id e2e-scenario-3)\";
+  syncing = opt variant { disabled };
+  fees = opt record {
     get_utxos_base = 1;
     get_utxos_cycles_per_ten_instructions = 1;
     get_utxos_maximum = 1;
@@ -30,10 +30,6 @@ dfx deploy bitcoin --argument "(record {
     send_transaction_base = 1;
     send_transaction_per_byte = 1;
   };
-  api_access = variant { enabled };
-  disable_api_if_not_fully_synced = variant { enabled };
-  watchdog_canister = null;
-  burn_cycles = variant { enabled };
 })"
 
 check_charging()

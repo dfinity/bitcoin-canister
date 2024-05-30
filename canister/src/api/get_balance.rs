@@ -111,14 +111,14 @@ mod test {
         test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
         with_state_mut,
     };
-    use ic_btc_interface::{Config, Fees, Network};
+    use ic_btc_interface::{Fees, InitConfig, Network};
     use ic_btc_types::OutPoint;
 
     #[test]
     fn get_balance_error_on_malformed_address() {
-        crate::init(Config {
-            stability_threshold: 1,
-            network: Network::Mainnet,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
 
@@ -133,9 +133,9 @@ mod test {
 
     #[test]
     fn get_balance_query_error_on_malformed_address() {
-        crate::init(Config {
-            stability_threshold: 1,
-            network: Network::Mainnet,
+        crate::init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Mainnet),
             ..Default::default()
         });
 
@@ -151,9 +151,9 @@ mod test {
     #[test]
     fn retrieves_the_balance_of_address() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 2,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(2),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -196,9 +196,9 @@ mod test {
     #[test]
     fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
-        crate::init(Config {
-            stability_threshold: 2,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(2),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -230,9 +230,9 @@ mod test {
     fn retrieves_balances_of_addresses_with_different_confirmations() {
         let network = Network::Regtest;
 
-        crate::init(Config {
-            stability_threshold: 2,
-            network,
+        crate::init(InitConfig {
+            stability_threshold: Some(2),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -308,11 +308,11 @@ mod test {
 
     #[test]
     fn charges_cycles() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 get_balance: 10,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 
