@@ -208,7 +208,7 @@ fn maybe_compute_fee_percentiles() {
         return;
     }
 
-    with_state_mut(|s| get_current_fee_percentiles_impl(s));
+    with_state_mut(get_current_fee_percentiles_impl);
 }
 
 // Retrieves a `GetSuccessorsRequest` to send to the adapter.

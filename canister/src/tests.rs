@@ -823,7 +823,7 @@ async fn fee_percentiles_evaluation_helper() {
     heartbeat().await;
 
     // Verify the blocks have been ingested.
-    assert_eq!(with_state(|s| main_chain_height(s)), 2);
+    assert_eq!(with_state(main_chain_height), 2);
 
     // New blocks are not yet marked as stable.
     assert_eq!(with_state(|s| s.stable_height()), 0);

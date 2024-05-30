@@ -528,6 +528,10 @@ pub struct SetConfigRequest {
     /// The watchdog canister has the authority to disable the Bitcoin canister's API
     /// if it suspects that there is a problem.
     pub watchdog_canister: Option<Option<Principal>>,
+
+    /// If enabled, fee percentiles are only computed when requested.
+    /// Otherwise, they are computed whenever we receive a new block.
+    pub lazily_evaluate_fee_percentiles: Option<Flag>,
 }
 
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug, Default)]
@@ -637,50 +641,6 @@ impl From<InitConfig> for Config {
 
         if let Some(lazily_evaluate_fee_percentiles) = init_config.lazily_evaluate_fee_percentiles {
             config.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
-        }
-
-        config
-    }
-}
-
-impl From<InitConfig> for Config {
-    fn from(init_config: InitConfig) -> Self {
-        let mut config = Config::default();
-
-        if let Some(stability_threshold) = init_config.stability_threshold {
-            config.stability_threshold = stability_threshold;
-        }
-
-        if let Some(network) = init_config.network {
-            config.network = network;
-        }
-
-        if let Some(blocks_source) = init_config.blocks_source {
-            config.blocks_source = blocks_source;
-        }
-
-        if let Some(syncing) = init_config.syncing {
-            config.syncing = syncing;
-        }
-
-        if let Some(fees) = init_config.fees {
-            config.fees = fees;
-        }
-
-        if let Some(api_access) = init_config.api_access {
-            config.api_access = api_access;
-        }
-
-        if let Some(disable_api_if_not_fully_synced) = init_config.disable_api_if_not_fully_synced {
-            config.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
-        }
-
-        if let Some(watchdog_canister) = init_config.watchdog_canister {
-            config.watchdog_canister = watchdog_canister;
-        }
-
-        if let Some(burn_cycles) = init_config.burn_cycles {
-            config.burn_cycles = burn_cycles;
         }
 
         config

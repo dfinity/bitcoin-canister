@@ -52,11 +52,17 @@ fn set_config_no_verification(request: SetConfigRequest) {
         if let Some(api_access) = request.api_access {
             s.api_access = api_access;
         }
+
         if let Some(disable_api_if_not_fully_synced) = request.disable_api_if_not_fully_synced {
             s.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
         }
+
         if let Some(watchdog_canister) = request.watchdog_canister {
             s.watchdog_canister = watchdog_canister;
+        }
+
+        if let Some(lazily_evaluate_fee_percentiles) = request.lazily_evaluate_fee_percentiles {
+            s.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
         }
     });
 }
@@ -236,6 +242,20 @@ mod test {
             });
 
             assert_eq!(with_state(|s| s.watchdog_canister), watchdog_canister);
+        }
+    }
+
+    #[test]
+    fn test_set_lazily_evaluate_fee_percentiles() {
+        init(InitConfig::default());
+
+        for flag in &[Flag::Enabled, Flag::Disabled] {
+            set_config_no_verification(SetConfigRequest {
+                lazily_evaluate_fee_percentiles: Some(*flag),
+                ..Default::default()
+            });
+
+            assert_eq!(with_state(|s| s.lazily_evaluate_fee_percentiles), *flag);
         }
     }
 }
