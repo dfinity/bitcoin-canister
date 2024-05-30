@@ -15,7 +15,7 @@ use ic_btc_canister::{
     unstable_blocks::{self, UnstableBlocks},
     with_state, with_state_mut,
 };
-use ic_btc_interface::{Config, Flag, Height, Network};
+use ic_btc_interface::{Flag, Height, InitConfig, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use ic_stable_structures::FileMemory;
 use std::{
@@ -76,11 +76,11 @@ fn main() {
             .expect("canister state file must be available"),
     ));
 
-    ic_btc_canister::init(Config {
-        network: args.network,
-        stability_threshold: args.stability_threshold,
-        api_access: Flag::Disabled,
-        ..Config::default()
+    ic_btc_canister::init(InitConfig {
+        network: Some(args.network),
+        stability_threshold: Some(args.stability_threshold),
+        api_access: Some(Flag::Disabled),
+        ..Default::default()
     });
 
     // Load large UTXOs.
@@ -126,7 +126,7 @@ fn main() {
     println!("Inserting block headers...");
     let block_headers_file = BufReader::new(File::open(&args.block_headers).unwrap());
 
-    let block_headers = block_headers_file.lines().filter_map(|s| s.ok()).map(|s| {
+    let block_headers = block_headers_file.lines().map_while(|s| s.ok()).map(|s| {
         let parts = s
             .replace('\n', "")
             .split(',')
