@@ -84,7 +84,7 @@ fn get_block_headers_internal(
             .collect()
     });
 
-    // How the last stable block is located in `unstable_blocks`, the height of the
+    // The last stable block is located in `unstable_blocks`, the height of the
     // first block in `unstable_blocks` is equal to `stable_height`.
     let height_of_first_block_in_unstable_blocks = with_state(|s| s.stable_height());
 
