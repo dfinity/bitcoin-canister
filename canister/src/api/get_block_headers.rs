@@ -522,27 +522,24 @@ mod test {
         );
     }
 
-    proptest! {
-    #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
-    fn get_block_headers_proptest(
-        stability_threshold in 1..150u128,
-        block_num in 1..200u32,
-        start_height in 0..199u32,
-        length in 1..200u32) {
-            let blobs: Vec<Vec<u8>> =
-                helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Regtest);
+    fn get_block_headers_proptest() {
+        let stability_threshold = 3;
+        let block_num = 200;
+        let blobs: Vec<Vec<u8>> =
+            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Regtest);
 
-            let start_height = std::cmp::min(start_height, block_num - 1);
-
-            let end_height = if start_height + length - 1 < block_num {
-                Some(start_height + length - 1)
-            } else {
-                None
-            };
-
-            check_response(&blobs, start_height, end_height, block_num);
-        }
+        proptest!(|(
+            start_height in 0..=block_num - 1,
+            length in 1..=block_num)|{
+                let end_height = if start_height + length - 1 < block_num {
+                    Some(start_height + length - 1)
+                } else {
+                    None
+                };
+                check_response(&blobs, start_height, end_height, block_num);
+            }
+        );
     }
 
     #[ignore]
