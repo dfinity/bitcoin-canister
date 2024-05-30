@@ -2,11 +2,14 @@ use bitcoin::consensus::Encodable;
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
 use crate::{
-    charge_cycles,
     runtime::{performance_counter, print},
     state::main_chain_height,
-    verify_has_enough_cycles, with_state, with_state_mut,
+    with_state, with_state_mut,
 };
+
+// The maximum number of block headers that are allowed to be included in a single
+// `GetBlockHeadersResponse`.
+const MAX_BLOCK_HEADERS_PER_RESPONSE: u32 = 100;
 
 // Various profiling stats for tracking the performance of `get_block_headers`.
 #[derive(Default, Debug)]
@@ -57,47 +60,33 @@ fn verify_requested_height_range_and_return_effective_range(
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    let (start_height, end_height) =
+    let (start_height, mut end_height) =
         verify_requested_height_range_and_return_effective_range(request)?;
-    // The last stable block is located in the unstable_blocks, hence the height of the
-    // last block located in stable_blocks if it exists is `s.stable_height() - 1`.
-    let height_of_last_block_in_stable_blocks = with_state(|s| {
-        let stable_height = s.stable_height();
-        if stable_height > 0 {
-            Some(stable_height - 1)
-        } else {
-            None
-        }
-    });
+
+    // Bound the length of block headers vec.
+    end_height = std::cmp::min(
+        end_height,
+        start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1,
+    );
 
     let mut stats: Stats = Stats::default();
 
     // Build block headers vec.
     let ins_start = performance_counter();
 
-    let mut vec_headers = vec![];
-
     // Add requested block headers located in stable_blocks.
-    if let Some(height_of_last_block_in_stable_blocks) = height_of_last_block_in_stable_blocks {
-        if start_height <= height_of_last_block_in_stable_blocks {
-            let end_range_in_stable_blocks =
-                std::cmp::min(height_of_last_block_in_stable_blocks, end_height);
+    let mut vec_headers: Vec<Vec<u8>> = with_state(|s| {
+        let block_heights = &s.stable_block_headers.block_heights;
+        let block_headers = &s.stable_block_headers.block_headers;
+        block_heights
+            .range(start_height..=end_height)
+            .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
+            .collect()
+    });
 
-            vec_headers = with_state(|s| {
-                let block_heights = &s.stable_block_headers.block_heights;
-                let block_headers = &s.stable_block_headers.block_headers;
-                block_heights
-                    .range(start_height..=end_range_in_stable_blocks)
-                    .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
-                    .collect()
-            });
-        }
-    }
-
-    // How the last stable block is located in unstable_blocks, there will always
-    // be the block in unstable_blocks.
-    let height_of_first_block_in_unstable_blocks =
-        height_of_last_block_in_stable_blocks.map_or(0, |h| h + 1);
+    // How the last stable block is located in `unstable_blocks`, the height of the
+    // first block in `unstable_blocks` is equal to `stable_height`.
+    let height_of_first_block_in_unstable_blocks = with_state(|s| s.stable_height());
 
     // Add requested block headers located in unstable_blocks.
     if end_height >= height_of_first_block_in_unstable_blocks {
@@ -149,10 +138,6 @@ fn get_block_headers_internal(
 pub fn get_block_headers(
     request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
-    verify_has_enough_cycles(with_state(|s| s.fees.get_block_headers_maximum));
-    // Charge the base fee.
-    charge_cycles(with_state(|s| s.fees.get_block_headers_base));
-
     let (res, stats) = get_block_headers_internal(&request)?;
 
     // Observe metrics.
@@ -162,16 +147,6 @@ pub fn get_block_headers(
         s.metrics
             .get_block_headers_build_block_headers_vec
             .observe(stats.ins_build_block_headers_vec);
-    });
-
-    // Charge the fee based on the number of the instructions.
-    with_state(|s| {
-        let fee = std::cmp::min(
-            (stats.ins_total / 10) as u128 * s.fees.get_block_headers_cycles_per_ten_instructions,
-            s.fees.get_block_headers_maximum - s.fees.get_block_headers_base,
-        );
-
-        charge_cycles(fee);
     });
 
     // Print the number of instructions it took to process this request.
@@ -443,18 +418,13 @@ mod test {
         // Genesis block is already added hence we need to add `block_num - 1`` more blocks.
         for _ in 0..block_num - 1 {
             let block = BlockBuilder::with_prev_header(&prev_block_header).build();
-            with_state_mut(|state| insert_block(state, block.clone()).unwrap());
-
             prev_block_header = *block.header();
 
             let mut block_blob = vec![];
-            block
-                .clone()
-                .header()
-                .consensus_encode(&mut block_blob)
-                .unwrap();
-
+            block.header().consensus_encode(&mut block_blob).unwrap();
             blobs.push(block_blob);
+
+            with_state_mut(|state| insert_block(state, block).unwrap());
         }
 
         with_state_mut(ingest_stable_blocks_into_utxoset);
@@ -475,7 +445,10 @@ mod test {
         .unwrap();
 
         // If the requested `end_height` is `None`, the tip should be the last block.
-        let tip_height = end_height.unwrap_or(total_num_blocks - 1);
+        // The Length of block headers vec in response should be bounded by `MAX_BLOCK_HEADERS_PER_RESPONSE`.
+        let tip_height = end_height
+            .unwrap_or(total_num_blocks - 1)
+            .min(start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1);
 
         assert_eq!(
             response,
@@ -509,32 +482,64 @@ mod test {
         test_all_valid_combination_or_height_range(&blobs, block_num);
     }
 
-    proptest! {
-    #![proptest_config(ProptestConfig::with_cases(3))]
     #[test]
-    fn get_block_headers_proptest(
-        stability_threshold in 1..75u128,
-        block_num in 1..100u32,
-        start_height in 0..99u32,
-        length in 1..100u32,
-        network in prop_oneof![
-            Just(Network::Mainnet),
-            Just(Network::Testnet),
-            Just(Network::Regtest),
-        ]) {
-            let blobs: Vec<Vec<u8>> =
-                helper_initialize_and_get_heder_blobs(stability_threshold, block_num - 1, network);
+    fn get_block_headers_test_max_block_headers_per_response() {
+        let stability_threshold = 3;
+        let block_num: u32 = MAX_BLOCK_HEADERS_PER_RESPONSE * 2 + 3;
+        let network = Network::Regtest;
 
-            let start_height = std::cmp::min(start_height, block_num - 1);
+        let blobs: Vec<Vec<u8>> =
+            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, network);
 
-            let end_height = if start_height + length - 1 < block_num {
-                Some(start_height + length - 1)
-            } else {
-                None
-            };
+        check_response(&blobs, 0, None, block_num);
+        check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE / 2, None, block_num);
+        check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE, None, block_num);
 
-            check_response(&blobs, start_height, end_height, block_num);
-        }
+        check_response(
+            &blobs,
+            0,
+            Some(MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
+            block_num,
+        );
+        check_response(
+            &blobs,
+            MAX_BLOCK_HEADERS_PER_RESPONSE / 2,
+            Some(3 * MAX_BLOCK_HEADERS_PER_RESPONSE / 2 + 1),
+            block_num,
+        );
+        check_response(
+            &blobs,
+            MAX_BLOCK_HEADERS_PER_RESPONSE,
+            Some(2 * MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
+            block_num,
+        );
+
+        check_response(
+            &blobs,
+            0,
+            Some(2 * MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
+            block_num,
+        );
+    }
+
+    #[test]
+    fn get_block_headers_proptest() {
+        let stability_threshold = 3;
+        let block_num = 200;
+        let blobs: Vec<Vec<u8>> =
+            helper_initialize_and_get_heder_blobs(stability_threshold, block_num, Network::Regtest);
+
+        proptest!(|(
+            start_height in 0..=block_num - 1,
+            length in 1..=block_num)|{
+                let end_height = if start_height + length - 1 < block_num {
+                    Some(start_height + length - 1)
+                } else {
+                    None
+                };
+                check_response(&blobs, start_height, end_height, block_num);
+            }
+        );
     }
 
     #[ignore]

@@ -619,19 +619,6 @@ pub struct Fees {
 
     /// The number of cycles to charge for each byte in the transaction.
     pub send_transaction_per_byte: u128,
-
-    #[serde(default)]
-    /// The base fee to charge for all `get_block_headers` requests.
-    pub get_block_headers_base: u128,
-
-    #[serde(default)]
-    /// The number of cycles to charge per 10 instructions.
-    pub get_block_headers_cycles_per_ten_instructions: u128,
-
-    #[serde(default)]
-    /// The maximum amount of cycles that can be charged in a `get_block_headers` request.
-    /// A request must send at least this amount for it to be accepted.
-    pub get_block_headers_maximum: u128,
 }
 
 #[cfg(test)]
