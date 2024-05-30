@@ -643,6 +643,50 @@ impl From<InitConfig> for Config {
     }
 }
 
+impl From<InitConfig> for Config {
+    fn from(init_config: InitConfig) -> Self {
+        let mut config = Config::default();
+
+        if let Some(stability_threshold) = init_config.stability_threshold {
+            config.stability_threshold = stability_threshold;
+        }
+
+        if let Some(network) = init_config.network {
+            config.network = network;
+        }
+
+        if let Some(blocks_source) = init_config.blocks_source {
+            config.blocks_source = blocks_source;
+        }
+
+        if let Some(syncing) = init_config.syncing {
+            config.syncing = syncing;
+        }
+
+        if let Some(fees) = init_config.fees {
+            config.fees = fees;
+        }
+
+        if let Some(api_access) = init_config.api_access {
+            config.api_access = api_access;
+        }
+
+        if let Some(disable_api_if_not_fully_synced) = init_config.disable_api_if_not_fully_synced {
+            config.disable_api_if_not_fully_synced = disable_api_if_not_fully_synced;
+        }
+
+        if let Some(watchdog_canister) = init_config.watchdog_canister {
+            config.watchdog_canister = watchdog_canister;
+        }
+
+        if let Some(burn_cycles) = init_config.burn_cycles {
+            config.burn_cycles = burn_cycles;
+        }
+
+        config
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
