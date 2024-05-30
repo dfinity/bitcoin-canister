@@ -165,7 +165,7 @@ mod test {
     };
     use async_std::task::block_on;
     use bitcoin::Witness;
-    use ic_btc_interface::{Config, Fees, Network, Satoshi};
+    use ic_btc_interface::{Fees, InitConfig, Network, Satoshi};
     use ic_btc_types::OutPoint;
     use std::iter::FromIterator;
 
@@ -292,9 +292,9 @@ mod test {
     }
 
     fn init_state(blocks: Vec<Block>, stability_threshold: u128) {
-        crate::init(Config {
-            stability_threshold,
-            network: Network::Regtest,
+        crate::init(InitConfig {
+            stability_threshold: Some(stability_threshold),
+            network: Some(Network::Regtest),
             ..Default::default()
         });
 
@@ -381,9 +381,9 @@ mod test {
         let stability_threshold = 0;
         let network = Network::Regtest;
 
-        crate::init(Config {
-            stability_threshold,
-            network: Network::Regtest,
+        crate::init(InitConfig {
+            stability_threshold: Some(stability_threshold),
+            network: Some(Network::Regtest),
             ..Default::default()
         });
 
@@ -570,11 +570,11 @@ mod test {
 
     #[test]
     fn charges_cycles() {
-        crate::init(Config {
-            fees: Fees {
+        crate::init(InitConfig {
+            fees: Some(Fees {
                 get_current_fee_percentiles: 10,
                 ..Default::default()
-            },
+            }),
             ..Default::default()
         });
 

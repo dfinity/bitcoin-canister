@@ -1,8 +1,8 @@
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
     Config, GetBalanceRequest, GetBlockHeadersRequest, GetBlockHeadersResponse,
-    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte,
-    Satoshi, SendTransactionRequest, SetConfigRequest,
+    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse, InitConfig,
+    MillisatoshiPerByte, Satoshi, SendTransactionRequest, SetConfigRequest,
 };
 use ic_cdk::api::call::ManualReply;
 use ic_cdk_macros::{heartbeat, init, inspect_message, post_upgrade, pre_upgrade, query, update};
@@ -16,9 +16,9 @@ fn hook() {
 }
 
 #[init]
-fn init(config: Config) {
+fn init(init_config: InitConfig) {
     hook();
-    ic_btc_canister::init(config);
+    ic_btc_canister::init(init_config);
 }
 
 #[pre_upgrade]
