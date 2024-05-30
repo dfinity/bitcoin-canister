@@ -21,7 +21,7 @@ struct Stats {
     ins_build_block_headers_vec: u64,
 }
 
-fn verify_requested_height_range_and_return_effective_range(
+fn verify_and_return_effective_range(
     request: &GetBlockHeadersRequest,
 ) -> Result<(u32, u32), GetBlockHeadersError> {
     let chain_height = with_state(main_chain_height);
@@ -33,41 +33,43 @@ fn verify_requested_height_range_and_return_effective_range(
         });
     }
 
-    if let Some(end_height) = request.end_height {
-        if end_height < request.start_height {
-            return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
-                start_height: request.start_height,
-                end_height,
-            });
-        }
+    let (effective_start_height, mut effective_end_height) =
+        if let Some(end_height) = request.end_height {
+            if end_height < request.start_height {
+                return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
+                    start_height: request.start_height,
+                    end_height,
+                });
+            }
 
-        if end_height > chain_height {
-            return Err(GetBlockHeadersError::EndHeightDoesNotExist {
-                requested: end_height,
-                chain_height,
-            });
-        }
-        // If `end_height` is provided then it should be the
-        // end of effective height range.
-        Ok((request.start_height, end_height))
-    } else {
-        // If `end_height`` is not provided then the end of effective
-        // range should be the last block of the chain.
-        Ok((request.start_height, chain_height))
-    }
+            if end_height > chain_height {
+                return Err(GetBlockHeadersError::EndHeightDoesNotExist {
+                    requested: end_height,
+                    chain_height,
+                });
+            }
+            // If `end_height` is provided then it should be the
+            // end of effective height range.
+            (request.start_height, end_height)
+        } else {
+            // If `end_height`` is not provided then the end of effective
+            // range should be the last block of the chain.
+            (request.start_height, chain_height)
+        };
+
+    // Bound the length of block headers vec.
+    effective_end_height = std::cmp::min(
+        effective_end_height,
+        effective_start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1,
+    );
+
+    Ok((effective_start_height, effective_end_height))
 }
 
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    let (start_height, mut end_height) =
-        verify_requested_height_range_and_return_effective_range(request)?;
-
-    // Bound the length of block headers vec.
-    end_height = std::cmp::min(
-        end_height,
-        start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1,
-    );
+    let (start_height, end_height) = verify_and_return_effective_range(request)?;
 
     let mut stats: Stats = Stats::default();
 
