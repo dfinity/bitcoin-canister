@@ -16,7 +16,9 @@ pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
     verify_has_enough_cycles(with_state(|s| s.fees.get_current_fee_percentiles_maximum));
     charge_cycles(with_state(|s| s.fees.get_current_fee_percentiles));
 
-    let res = with_state_mut(|s| get_current_fee_percentiles_internal(s, NUM_TRANSACTIONS));
+    let res = with_state_mut(|s| {
+        get_current_fee_percentiles_with_number_of_transactions(s, NUM_TRANSACTIONS)
+    });
 
     // Observe instruction count.
     let ins_total = performance_counter();
@@ -32,7 +34,11 @@ pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
     res
 }
 
-fn get_current_fee_percentiles_internal(
+pub(crate) fn get_current_fee_percentiles_impl(state: &mut State) -> Vec<MillisatoshiPerByte> {
+    get_current_fee_percentiles_with_number_of_transactions(state, NUM_TRANSACTIONS)
+}
+
+fn get_current_fee_percentiles_with_number_of_transactions(
     state: &mut State,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
@@ -370,7 +376,7 @@ mod test {
             // Get the current fee percentiles for one tx. Coinbase txs are ignored,
             // so the percentiles should be the fee / byte of the second transaction.
             assert_eq!(
-                get_current_fee_percentiles_internal(s, 1),
+                get_current_fee_percentiles_with_number_of_transactions(s, 1),
                 vec![fee_in_millisatoshi / tx_2.vsize() as u64; PERCENTILE_BUCKETS]
             );
         });
@@ -450,7 +456,7 @@ mod test {
             // Fees are in a reversed order, in millisatoshi per byte units.
             assert_eq!(fees, vec![58, 50, 42, 33]);
 
-            let percentiles = get_current_fee_percentiles_internal(state, 4);
+            let percentiles = get_current_fee_percentiles_with_number_of_transactions(state, 4);
             assert_eq!(percentiles.len(), PERCENTILE_BUCKETS);
             assert_eq!(percentiles[0..26], [33; 26]);
             assert_eq!(percentiles[26..51], [42; 25]);
@@ -475,7 +481,10 @@ mod test {
                 &state.unstable_blocks,
                 number_of_transactions,
             );
-            let percentiles = get_current_fee_percentiles_internal(state, number_of_transactions);
+            let percentiles = get_current_fee_percentiles_with_number_of_transactions(
+                state,
+                number_of_transactions,
+            );
 
             // Initial transactions' fees [0, 1, 2, 3, 4] satoshi, with 119 bytes of transaction size
             // transfer into [0, 8, 16, 25, 33] millisatoshi per byte fees in chronological order.
@@ -626,11 +635,11 @@ mod test {
         with_state_mut(|s| {
             // Coinbase txs are ignored, so the percentiles should be the fee / vbyte of the second transaction.
             assert_ne!(
-                get_current_fee_percentiles_internal(s, 1),
+                get_current_fee_percentiles_with_number_of_transactions(s, 1),
                 vec![fee_in_millisatoshi / tx.size() as u64; PERCENTILE_BUCKETS]
             );
             assert_eq!(
-                get_current_fee_percentiles_internal(s, 1),
+                get_current_fee_percentiles_with_number_of_transactions(s, 1),
                 vec![fee_in_millisatoshi / tx.vsize() as u64; PERCENTILE_BUCKETS]
             );
         });
