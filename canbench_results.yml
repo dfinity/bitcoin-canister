@@ -25,20 +25,20 @@ benches:
     scopes: {}
   pre_upgrade_with_many_unstable_blocks:
     total:
-      instructions: 10241277202
-      heap_increase: 10005
+      instructions: 10240847648
+      heap_increase: 9995
       stable_memory_increase: 2944
     scopes:
       serialize_blocktree:
-        instructions: 6556144810
-        heap_increase: 5908
+        instructions: 6555715256
+        heap_increase: 5898
         stable_memory_increase: 0
       serialize_blocktree_flatten:
-        instructions: 735757574
-        heap_increase: 1802
+        instructions: 735694725
+        heap_increase: 1792
         stable_memory_increase: 0
       serialize_blocktree_serialize_seq:
-        instructions: 5820385168
+        instructions: 5820018463
         heap_increase: 4106
         stable_memory_increase: 0
 version: 0.1.1

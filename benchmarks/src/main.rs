@@ -162,8 +162,8 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
 
     // Insert the blocks.
     with_state_mut(|s| {
-        for idx in 1..blocks.len() {
-            ic_btc_canister::state::insert_block(s, blocks[idx].clone()).unwrap();
+        for block in blocks.into_iter().skip(1) {
+            ic_btc_canister::state::insert_block(s, block).unwrap();
         }
     });
 
