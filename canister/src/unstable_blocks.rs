@@ -1020,7 +1020,7 @@ mod test {
     #[test]
     fn test_get_block_headers_in_range() {
         let mut vec_headers = vec![];
-        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(20);
+        let block_0 = BlockBuilder::genesis().build();
         vec_headers.push(*block_0.header());
 
         let network = Network::Mainnet;

@@ -93,3 +93,43 @@ fn init_block_headers() -> StableBTreeMap<BlockHash, BlockHeaderBlob, Memory> {
 fn init_block_heights() -> StableBTreeMap<u32, BlockHash, Memory> {
     StableBTreeMap::init(crate::memory::get_block_heights_memory())
 }
+
+#[cfg(test)]
+mod test {
+    use bitcoin::consensus::Encodable;
+    use proptest::proptest;
+
+    use crate::{block_header_store::BlockHeaderStore, test_utils::BlockBuilder};
+
+    #[test]
+    fn test_get_block_headers_in_range() {
+        let mut vec_headers = vec![];
+        let block_0 = BlockBuilder::genesis().build();
+        vec_headers.push(*block_0.header());
+
+        let mut store = BlockHeaderStore::init();
+        store.insert_block(&block_0, 0);
+        let block_num = 100;
+
+        for i in 1..block_num {
+            let block = BlockBuilder::with_prev_header(&vec_headers[i - 1]).build();
+            vec_headers.push(*block.header());
+            store.insert_block(&block, i as u32);
+        }
+
+        proptest!(|(
+            start_range in 0..=block_num - 1,
+            range_length in 1..=block_num)|{
+                let end_range = std::cmp::min(start_range + range_length - 1, block_num - 1 );
+
+                let res = store.get_block_headers_in_range(start_range as u32, end_range as u32);
+
+                for i in start_range..=end_range{
+                    let mut expected_block_header = vec![];
+                    vec_headers[i].consensus_encode(&mut expected_block_header).unwrap();
+                    assert_eq!(expected_block_header, res[i - start_range]);
+                }
+            }
+        );
+    }
+}
