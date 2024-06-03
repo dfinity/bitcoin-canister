@@ -5,7 +5,7 @@ use crate::{
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader;
+use bitcoin::{consensus::Encodable, BlockHeader};
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
@@ -166,6 +166,24 @@ impl UnstableBlocks {
         }
         chain.reverse();
         chain
+    }
+
+    /// Returns block headers in the inclusive range provided as an argument
+    /// relative to the start of unstable blocks.
+    pub(crate) fn get_block_headers_in_range(
+        &self,
+        start_range_in_unstable_blocks: u32,
+        end_range_in_unstable_blocks: u32,
+    ) -> Vec<Vec<u8>> {
+        get_main_chain(self).into_chain()
+            [start_range_in_unstable_blocks as usize..=end_range_in_unstable_blocks as usize]
+            .iter()
+            .map(|block| {
+                let mut header_blob = vec![];
+                block.header().consensus_encode(&mut header_blob).unwrap();
+                header_blob
+            })
+            .collect()
     }
 }
 
@@ -403,6 +421,7 @@ mod test {
     use super::*;
     use crate::test_utils::{BlockBuilder, BlockChainBuilder};
     use ic_btc_interface::Network;
+    use proptest::proptest;
 
     #[test]
     fn empty() {
@@ -996,5 +1015,38 @@ mod test {
         // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
         // is considered unstable.
         assert_eq!(peek(&unstable_blocks), None);
+    }
+
+    #[test]
+    fn test_get_block_headers_in_range() {
+        let mut vec_headers = vec![];
+        let block_0 = BlockBuilder::genesis().build();
+        vec_headers.push(*block_0.header());
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let block_num = 100;
+
+        for i in 1..block_num {
+            let block = BlockBuilder::with_prev_header(&vec_headers[i - 1]).build();
+            vec_headers.push(*block.header());
+            push(&mut unstable_blocks, &utxos, block).unwrap();
+        }
+
+        proptest!(|(
+            start_range in 0..=block_num - 1,
+            range_length in 1..=block_num)|{
+                let end_range = std::cmp::min(start_range + range_length - 1, block_num - 1 );
+
+                let res = unstable_blocks.get_block_headers_in_range(start_range as u32, end_range as u32);
+
+                for i in start_range..=end_range{
+                    let mut expected_block_header = vec![];
+                    vec_headers[i].consensus_encode(&mut expected_block_header).unwrap();
+                    assert_eq!(expected_block_header, res[i - start_range]);
+                }
+            }
+        );
     }
 }

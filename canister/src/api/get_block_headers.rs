@@ -1,9 +1,8 @@
-use bitcoin::consensus::Encodable;
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
 use crate::{
     runtime::{performance_counter, print},
-    state::main_chain_height,
+    state::{get_unstable_block_headers_in_range, main_chain_height},
     with_state, with_state_mut,
 };
 
@@ -17,11 +16,14 @@ struct Stats {
     // The total number of instructions used to process the request.
     ins_total: u64,
 
-    // The number of instructions used to build the block headers vec.
-    ins_build_block_headers_vec: u64,
+    // The number of instructions used to build the block headers vec from stable blocks.
+    ins_build_block_headers_stable_blocks: u64,
+
+    // The number of instructions used to build the block headers vec from unstable blocks.
+    ins_build_block_headers_unstable_blocks: u64,
 }
 
-fn verify_requested_height_range_and_return_effective_range(
+fn verify_and_return_effective_range(
     request: &GetBlockHeadersRequest,
 ) -> Result<(u32, u32), GetBlockHeadersError> {
     let chain_height = with_state(main_chain_height);
@@ -33,41 +35,43 @@ fn verify_requested_height_range_and_return_effective_range(
         });
     }
 
-    if let Some(end_height) = request.end_height {
-        if end_height < request.start_height {
-            return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
-                start_height: request.start_height,
-                end_height,
-            });
-        }
+    let (effective_start_height, mut effective_end_height) =
+        if let Some(end_height) = request.end_height {
+            if end_height < request.start_height {
+                return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
+                    start_height: request.start_height,
+                    end_height,
+                });
+            }
 
-        if end_height > chain_height {
-            return Err(GetBlockHeadersError::EndHeightDoesNotExist {
-                requested: end_height,
-                chain_height,
-            });
-        }
-        // If `end_height` is provided then it should be the
-        // end of effective height range.
-        Ok((request.start_height, end_height))
-    } else {
-        // If `end_height`` is not provided then the end of effective
-        // range should be the last block of the chain.
-        Ok((request.start_height, chain_height))
-    }
+            if end_height > chain_height {
+                return Err(GetBlockHeadersError::EndHeightDoesNotExist {
+                    requested: end_height,
+                    chain_height,
+                });
+            }
+            // If `end_height` is provided then it should be the
+            // end of effective height range.
+            (request.start_height, end_height)
+        } else {
+            // If `end_height`` is not provided then the end of effective
+            // range should be the last block of the chain.
+            (request.start_height, chain_height)
+        };
+
+    // Bound the length of block headers vec.
+    effective_end_height = std::cmp::min(
+        effective_end_height,
+        effective_start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1,
+    );
+
+    Ok((effective_start_height, effective_end_height))
 }
 
 fn get_block_headers_internal(
     request: &GetBlockHeadersRequest,
 ) -> Result<(GetBlockHeadersResponse, Stats), GetBlockHeadersError> {
-    let (start_height, mut end_height) =
-        verify_requested_height_range_and_return_effective_range(request)?;
-
-    // Bound the length of block headers vec.
-    end_height = std::cmp::min(
-        end_height,
-        start_height + MAX_BLOCK_HEADERS_PER_RESPONSE - 1,
-    );
+    let (start_height, end_height) = verify_and_return_effective_range(request)?;
 
     let mut stats: Stats = Stats::default();
 
@@ -76,44 +80,24 @@ fn get_block_headers_internal(
 
     // Add requested block headers located in stable_blocks.
     let mut vec_headers: Vec<Vec<u8>> = with_state(|s| {
-        let block_heights = &s.stable_block_headers.block_heights;
-        let block_headers = &s.stable_block_headers.block_headers;
-        block_heights
-            .range(start_height..=end_height)
-            .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
-            .collect()
+        s.stable_block_headers
+            .get_block_headers_in_range(start_height, end_height)
     });
 
-    // How the last stable block is located in `unstable_blocks`, the height of the
-    // first block in `unstable_blocks` is equal to `stable_height`.
-    let height_of_first_block_in_unstable_blocks = with_state(|s| s.stable_height());
+    let ins_after_stable_blocks = performance_counter();
+
+    stats.ins_build_block_headers_stable_blocks = ins_after_stable_blocks - ins_start;
 
     // Add requested block headers located in unstable_blocks.
-    if end_height >= height_of_first_block_in_unstable_blocks {
-        let start_range_in_unstable_blocks =
-            if start_height < height_of_first_block_in_unstable_blocks {
-                0
-            } else {
-                start_height - height_of_first_block_in_unstable_blocks
-            };
+    with_state(|s| {
+        vec_headers.append(&mut get_unstable_block_headers_in_range(
+            s,
+            start_height,
+            end_height,
+        ));
+    });
 
-        let end_range_in_unstable_blocks = end_height - height_of_first_block_in_unstable_blocks;
-
-        with_state(|s| {
-            let unstable_blocks = s.get_unstable_blocks_in_main_chain().into_chain();
-
-            for i in start_range_in_unstable_blocks..=end_range_in_unstable_blocks {
-                let mut header_blob = vec![];
-                unstable_blocks[i as usize]
-                    .header()
-                    .consensus_encode(&mut header_blob)
-                    .unwrap();
-                vec_headers.push(header_blob);
-            }
-        });
-    }
-
-    stats.ins_build_block_headers_vec = performance_counter() - ins_start;
+    stats.ins_build_block_headers_unstable_blocks = performance_counter() - ins_after_stable_blocks;
     stats.ins_total = performance_counter();
 
     Ok((
@@ -145,8 +129,12 @@ pub fn get_block_headers(
         s.metrics.get_block_headers_total.observe(stats.ins_total);
 
         s.metrics
-            .get_block_headers_build_block_headers_vec
-            .observe(stats.ins_build_block_headers_vec);
+            .get_block_headers_stable_blocks
+            .observe(stats.ins_build_block_headers_stable_blocks);
+
+        s.metrics
+            .get_block_headers_unstable_blocks
+            .observe(stats.ins_build_block_headers_unstable_blocks);
     });
 
     // Print the number of instructions it took to process this request.
@@ -543,21 +531,5 @@ mod test {
                 check_response(&blobs, start_height, end_height, block_num);
             }
         );
-    }
-
-    #[ignore]
-    #[test]
-    fn test_all_combinations_large() {
-        for stability_threshold in [3, 10, 100] {
-            for block_num in [1, 3, 10, 20, 50, 100, 200] {
-                let blobs: Vec<Vec<u8>> = helper_initialize_and_get_header_blobs(
-                    stability_threshold,
-                    block_num,
-                    Network::Regtest,
-                );
-
-                test_all_valid_combination_or_height_range(&blobs, block_num);
-            }
-        }
     }
 }
