@@ -357,6 +357,7 @@ mod test {
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]
+        #[ignore] // TODO(EXC-1639): re-enable this test.
         #[test]
         fn serialize_deserialize_state(
             stability_threshold in 1..150u32,

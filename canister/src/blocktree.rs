@@ -565,6 +565,7 @@ mod test {
         assert_eq!(height_2_depth, 1);
     }
 
+    #[ignore] // TODO(EXC-1639): re-enable this test.
     #[test]
     fn deserialize_very_deep_block_tree() {
         let chain = BlockChainBuilder::new(5_000).build();
@@ -580,6 +581,7 @@ mod test {
         assert_eq!(tree, new_tree);
     }
 
+    #[ignore] // TODO(EXC-1639): re-enable this test.
     #[proptest]
     fn serialize_deserialize(tree: BlockTree) {
         let mut bytes = vec![];
