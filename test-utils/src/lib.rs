@@ -81,7 +81,7 @@ impl BlockBuilder {
 }
 
 /// Builds a random chain with the given number of block and transactions
-/// and starting with the Regtest genesis block.
+/// starting with the Regtest genesis block.
 pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
     let genesis_block = Block::new(genesis_block(Network::Regtest));
 
