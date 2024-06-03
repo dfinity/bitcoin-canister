@@ -71,6 +71,14 @@ impl BlockHeaderStore {
                 .expect("block header must exist")
         })
     }
+
+    /// Returns block headers in the range [start_hegiht, end_height].
+    pub fn get_block_headers_in_range(&self, start_height: u32, end_height: u32) -> Vec<Vec<u8>> {
+        self.block_heights
+            .range(start_height..=end_height)
+            .map(|(_, block_hash)| self.block_headers.get(&block_hash).unwrap().into())
+            .collect()
+    }
 }
 
 fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {

@@ -1,9 +1,8 @@
-use bitcoin::consensus::Encodable;
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
 use crate::{
     runtime::{performance_counter, print},
-    state::main_chain_height,
+    state::{get_unstable_block_headers_in_range, main_chain_height},
     with_state, with_state_mut,
 };
 
@@ -81,46 +80,22 @@ fn get_block_headers_internal(
 
     // Add requested block headers located in stable_blocks.
     let mut vec_headers: Vec<Vec<u8>> = with_state(|s| {
-        let block_heights = &s.stable_block_headers.block_heights;
-        let block_headers = &s.stable_block_headers.block_headers;
-        block_heights
-            .range(start_height..=end_height)
-            .map(|(_, block_hash)| block_headers.get(&block_hash).unwrap().into())
-            .collect()
+        s.stable_block_headers
+            .get_block_headers_in_range(start_height, end_height)
     });
 
     let ins_after_stable_blocks = performance_counter();
 
     stats.ins_build_block_headers_stable_blocks = ins_after_stable_blocks - ins_start;
 
-    // The last stable block is located in `unstable_blocks`, the height of the
-    // first block in `unstable_blocks` is equal to `stable_height`.
-    let height_of_first_block_in_unstable_blocks = with_state(|s| s.stable_height());
-
     // Add requested block headers located in unstable_blocks.
-    if end_height >= height_of_first_block_in_unstable_blocks {
-        let start_range_in_unstable_blocks =
-            if start_height < height_of_first_block_in_unstable_blocks {
-                0
-            } else {
-                start_height - height_of_first_block_in_unstable_blocks
-            };
-
-        let end_range_in_unstable_blocks = end_height - height_of_first_block_in_unstable_blocks;
-
-        with_state(|s| {
-            let unstable_blocks = s.get_unstable_blocks_in_main_chain().into_chain();
-
-            for i in start_range_in_unstable_blocks..=end_range_in_unstable_blocks {
-                let mut header_blob = vec![];
-                unstable_blocks[i as usize]
-                    .header()
-                    .consensus_encode(&mut header_blob)
-                    .unwrap();
-                vec_headers.push(header_blob);
-            }
-        });
-    }
+    with_state(|s| {
+        vec_headers.append(&mut get_unstable_block_headers_in_range(
+            s,
+            start_height,
+            end_height,
+        ));
+    });
 
     stats.ins_build_block_headers_unstable_blocks = performance_counter() - ins_after_stable_blocks;
     stats.ins_total = performance_counter();

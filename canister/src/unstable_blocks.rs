@@ -5,7 +5,7 @@ use crate::{
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader;
+use bitcoin::{consensus::Encodable, BlockHeader};
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
@@ -166,6 +166,24 @@ impl UnstableBlocks {
         }
         chain.reverse();
         chain
+    }
+
+    /// Returns block headers in the inclusive range provided as an argument
+    /// relative to the start of unstable blocks.
+    pub(crate) fn get_block_headers_in_range(
+        &self,
+        start_range_in_unstable_blocks: u32,
+        end_range_in_unstable_blocks: u32,
+    ) -> Vec<Vec<u8>> {
+        get_main_chain(self).into_chain()
+            [start_range_in_unstable_blocks as usize..=end_range_in_unstable_blocks as usize]
+            .iter()
+            .map(|block| {
+                let mut header_blob = vec![];
+                block.header().consensus_encode(&mut header_blob).unwrap();
+                header_blob
+            })
+            .collect()
     }
 }
 
