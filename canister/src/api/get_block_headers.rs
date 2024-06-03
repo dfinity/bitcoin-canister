@@ -17,8 +17,11 @@ struct Stats {
     // The total number of instructions used to process the request.
     ins_total: u64,
 
-    // The number of instructions used to build the block headers vec.
-    ins_build_block_headers_vec: u64,
+    // The number of instructions used to build the block headers vec from stable blocks.
+    ins_build_block_headers_stable_blocks: u64,
+
+    // The number of instructions used to build the block headers vec from unstable blocks.
+    ins_build_block_headers_unstable_blocks: u64,
 }
 
 fn verify_and_return_effective_range(
@@ -86,6 +89,10 @@ fn get_block_headers_internal(
             .collect()
     });
 
+    let ins_after_stable_blocks = performance_counter();
+
+    stats.ins_build_block_headers_stable_blocks = ins_after_stable_blocks - ins_start;
+
     // The last stable block is located in `unstable_blocks`, the height of the
     // first block in `unstable_blocks` is equal to `stable_height`.
     let height_of_first_block_in_unstable_blocks = with_state(|s| s.stable_height());
@@ -115,7 +122,7 @@ fn get_block_headers_internal(
         });
     }
 
-    stats.ins_build_block_headers_vec = performance_counter() - ins_start;
+    stats.ins_build_block_headers_unstable_blocks = performance_counter() - ins_after_stable_blocks;
     stats.ins_total = performance_counter();
 
     Ok((
@@ -147,8 +154,12 @@ pub fn get_block_headers(
         s.metrics.get_block_headers_total.observe(stats.ins_total);
 
         s.metrics
-            .get_block_headers_build_block_headers_vec
-            .observe(stats.ins_build_block_headers_vec);
+            .get_block_headers_stable_blocks
+            .observe(stats.ins_build_block_headers_stable_blocks);
+
+        s.metrics
+            .get_block_headers_unstable_blocks
+            .observe(stats.ins_build_block_headers_unstable_blocks);
     });
 
     // Print the number of instructions it took to process this request.
