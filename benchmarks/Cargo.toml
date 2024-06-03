@@ -10,11 +10,12 @@ bench = false
 
 [dependencies]
 bitcoin = { workspace = true, features = ["use-serde"]}
-canbench-rs = "0.1.1"
+canbench-rs = { workspace = true }
 candid = { workspace = true }
 hex = { workspace = true }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
-ic-btc-canister = { workspace = true }
+ic-btc-canister = { workspace = true, features = ["canbench-rs"] }
 ic-btc-interface = { workspace = true }
+ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true }

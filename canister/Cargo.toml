@@ -7,6 +7,8 @@ edition = "2018"
 
 [dependencies]
 bitcoin = { workspace = true, features = ["use-serde"] }
+# An optional dependency to benchmark parts of the code.
+canbench-rs = { workspace = true, optional = true }
 candid = { workspace = true }
 ciborium = { workspace = true }
 hex = { workspace = true }

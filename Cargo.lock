@@ -324,6 +324,7 @@ dependencies = [
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
+ "ic-btc-test-utils",
  "ic-btc-types",
  "ic-cdk 0.12.1",
  "ic-cdk-macros 0.8.4",
@@ -467,9 +468,9 @@ checksum = "89b2fd2a0dcf38d7971e2194b6b6eebab45ae01067456a7fd93d5547a61b70be"
 
 [[package]]
 name = "canbench-rs"
-version = "0.1.1"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe5d551419a1547b5064111df7bfa6e87818750e7f6df611067a02e63a9cbb31"
+checksum = "53574f268dbe23dc83f891a4751b118a6ba927c8bc92e839ff108f3aaf151aa9"
 dependencies = [
  "canbench-rs-macros",
  "candid 0.10.8",
@@ -479,9 +480,9 @@ dependencies = [
 
 [[package]]
 name = "canbench-rs-macros"
-version = "0.1.0"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5acd4a41fd2e7018508f7442d7ae90957a913c6fa0e4b767e5be9a8cc5848c8"
+checksum = "d454906c77138a3802a7a680259cca7c006e9b268ba6905f7f4f2b8b74293fa4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1439,6 +1440,7 @@ dependencies = [
  "async-std",
  "bitcoin",
  "byteorder",
+ "canbench-rs",
  "candid 0.10.8",
  "candid_parser",
  "ciborium",
@@ -1476,6 +1478,7 @@ name = "ic-btc-test-utils"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+ "ic-btc-types",
 ]
 
 [[package]]
