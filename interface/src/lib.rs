@@ -528,6 +528,10 @@ pub struct SetConfigRequest {
     /// The watchdog canister has the authority to disable the Bitcoin canister's API
     /// if it suspects that there is a problem.
     pub watchdog_canister: Option<Option<Principal>>,
+
+    /// If enabled, fee percentiles are only computed when requested.
+    /// Otherwise, they are computed whenever we receive a new block.
+    pub lazily_evaluate_fee_percentiles: Option<Flag>,
 }
 
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug, Default)]
@@ -555,6 +559,7 @@ pub struct InitConfig {
     pub disable_api_if_not_fully_synced: Option<Flag>,
     pub watchdog_canister: Option<Option<Principal>>,
     pub burn_cycles: Option<Flag>,
+    pub lazily_evaluate_fee_percentiles: Option<Flag>,
 }
 
 /// The config of the canister.
@@ -588,6 +593,10 @@ pub struct Config {
     /// If enabled, continuously burns all cycles in its balance
     /// (to count towards the IC's burn rate).
     pub burn_cycles: Flag,
+
+    /// If enabled, fee percentiles are only computed when requested.
+    /// Otherwise, they are computed whenever we receive a new block.
+    pub lazily_evaluate_fee_percentiles: Flag,
 }
 
 impl From<InitConfig> for Config {
@@ -630,6 +639,10 @@ impl From<InitConfig> for Config {
             config.burn_cycles = burn_cycles;
         }
 
+        if let Some(lazily_evaluate_fee_percentiles) = init_config.lazily_evaluate_fee_percentiles {
+            config.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
+        }
+
         config
     }
 }
@@ -646,6 +659,7 @@ impl Default for Config {
             disable_api_if_not_fully_synced: Flag::Enabled,
             watchdog_canister: None,
             burn_cycles: Flag::Disabled,
+            lazily_evaluate_fee_percentiles: Flag::Disabled,
         }
     }
 }

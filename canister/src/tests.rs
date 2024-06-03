@@ -1,5 +1,5 @@
 use crate::{
-    api::{get_balance, get_utxos},
+    api::{get_balance, get_current_fee_percentiles, get_utxos},
     genesis_block, heartbeat,
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
@@ -772,4 +772,96 @@ async fn cycles_are_not_burnt_when_flag_is_disabled() {
         crate::with_state(|state| state.metrics.cycles_burnt),
         Some(0)
     );
+}
+
+async fn fee_percentiles_evaluation_helper() {
+    // Create a block with a transaction that has fees.
+    let block_0 = {
+        let fee = 1;
+        let balance = 1000;
+
+        let tx_1 = TransactionBuilder::coinbase()
+            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .build();
+        let tx_2 = TransactionBuilder::new()
+            .with_input(ic_btc_types::OutPoint {
+                txid: tx_1.txid(),
+                vout: 0,
+            })
+            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .build();
+
+        BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+            .with_transaction(tx_1)
+            .with_transaction(tx_2.clone())
+            .build()
+    };
+
+    let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+
+    // Serialize the block.
+    let blocks: Vec<BlockBlob> = [block_0.clone(), block_1.clone()]
+        .iter()
+        .map(|block| {
+            let mut block_bytes = vec![];
+            block.consensus_encode(&mut block_bytes).unwrap();
+            block_bytes
+        })
+        .collect();
+
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks,
+            next: vec![],
+        },
+    )));
+
+    // Run the heartbeat to fetch the blocks.
+    heartbeat().await;
+
+    // Run the heartbeat to ingest the blocks.
+    heartbeat().await;
+
+    // Verify the blocks have been ingested.
+    assert_eq!(with_state(main_chain_height), 2);
+
+    // New blocks are not yet marked as stable.
+    assert_eq!(with_state(|s| s.stable_height()), 0);
+
+    // Run the heartbeat for blocks to be marked as stable.
+    heartbeat().await;
+
+    // New blocks are now marked as stable.
+    assert_eq!(with_state(|s| s.stable_height()), 2);
+}
+
+#[async_std::test]
+async fn fee_percentiles_are_evaluated_lazily() {
+    crate::init(InitConfig {
+        lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
+        stability_threshold: Some(0),
+        ..Default::default()
+    });
+
+    fee_percentiles_evaluation_helper().await;
+
+    // Fee percentiles should be empty, since there are no transactions
+    // in the unstable blocks.
+    assert_eq!(get_current_fee_percentiles().len(), 0);
+}
+
+#[async_std::test]
+async fn fee_percentiles_are_evaluated_eagerly() {
+    crate::init(InitConfig {
+        lazily_evaluate_fee_percentiles: Some(Flag::Disabled),
+        stability_threshold: Some(0),
+        ..Default::default()
+    });
+
+    fee_percentiles_evaluation_helper().await;
+
+    // Even though there are no transactions in the unstable blocks, fee
+    // percentiles should NOT be empty, as they were eagerly evaluated
+    // when blocks were ingested.
+    assert_eq!(get_current_fee_percentiles().len(), 101);
 }
