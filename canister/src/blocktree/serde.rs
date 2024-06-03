@@ -13,6 +13,9 @@ use std::fmt;
 // overflow if the structure is very deep.
 impl Serialize for BlockTree {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[cfg(feature = "canbench-rs")]
+        let _p = canbench_rs::bench_scope("serialize_blocktree");
+
         // Flatten a block tree into a list.
         fn flatten(tree: &BlockTree, flattened_tree: &mut Vec<(Block, usize)>) {
             flattened_tree.push((tree.root.clone(), tree.children.len()));
@@ -23,7 +26,14 @@ impl Serialize for BlockTree {
         }
 
         let mut flattened_tree = vec![];
-        flatten(self, &mut flattened_tree);
+        {
+            #[cfg(feature = "canbench-rs")]
+            let _p = canbench_rs::bench_scope("serialize_blocktree_flatten");
+            flatten(self, &mut flattened_tree);
+        }
+
+        #[cfg(feature = "canbench-rs")]
+        let _p = canbench_rs::bench_scope("serialize_blocktree_serialize");
 
         let mut seq = serializer.serialize_seq(Some(flattened_tree.len()))?;
         for e in flattened_tree {

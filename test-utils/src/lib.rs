@@ -1,8 +1,11 @@
+use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, util::uint::Uint256, Address, Block,
-    BlockHash, BlockHeader, KeyPair, Network, OutPoint, PublicKey, Script, Transaction, TxIn,
-    TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, util::uint::Uint256, Address,
+    Block as BitcoinBlock, BlockHash, BlockHeader, KeyPair, Network, OutPoint, PublicKey, Script,
+    Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
 };
+use ic_btc_types::Block;
+use std::str::FromStr;
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
@@ -55,7 +58,7 @@ impl BlockBuilder {
         self
     }
 
-    pub fn build(self) -> Block {
+    pub fn build(self) -> BitcoinBlock {
         let txdata = if self.transactions.is_empty() {
             // Create a random coinbase transaction.
             vec![TransactionBuilder::coinbase().build()]
@@ -73,8 +76,47 @@ impl BlockBuilder {
             None => genesis(merkle_root),
         };
 
-        Block { header, txdata }
+        BitcoinBlock { header, txdata }
     }
+}
+
+/// Builds a random chain with the given number of block and transactions
+/// and starting with the Regtest genesis block.
+pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
+    let genesis_block = Block::new(genesis_block(Network::Regtest));
+
+    // Use a static address to send outputs to.
+    // `random_p2pkh_address` isn't used here as it doesn't work in wasm.
+    let address = Address::from_str("bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8").unwrap();
+    let mut blocks = vec![genesis_block.clone()];
+    let mut prev_block: Block = genesis_block;
+    let mut value = 1;
+
+    // Since we start with a genesis block, we need `num_blocks - 1` additional blocks.
+    for _ in 0..num_blocks - 1 {
+        let mut block_builder = BlockBuilder::with_prev_header(*prev_block.header());
+        let mut transactions = vec![];
+        for _ in 0..num_transactions_per_block {
+            transactions.push(
+                TransactionBuilder::coinbase()
+                    .with_output(&address, value)
+                    .build(),
+            );
+            // Vary the value of the transaction to ensure that
+            // we get unique outpoints in the blockchain.
+            value += 1;
+        }
+
+        for transaction in transactions.iter() {
+            block_builder = block_builder.with_transaction(transaction.clone());
+        }
+
+        let block = Block::new(block_builder.build());
+        blocks.push(block.clone());
+        prev_block = block;
+    }
+
+    blocks
 }
 
 fn genesis(merkle_root: TxMerkleNode) -> BlockHeader {

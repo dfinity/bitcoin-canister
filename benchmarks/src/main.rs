@@ -3,6 +3,7 @@ use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
 use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{InitConfig, Network};
+use ic_btc_test_utils::build_regtest_chain;
 use ic_btc_types::Block;
 use ic_cdk_macros::init;
 use std::cell::RefCell;
@@ -147,6 +148,27 @@ fn insert_block_headers_multiple_times() -> BenchResult {
                 ic_btc_canister::state::insert_next_block_headers(s, next_block_headers.as_slice());
             }
         });
+    })
+}
+
+#[bench(raw)]
+fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
+    let blocks = build_regtest_chain(3000, 100);
+
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Regtest),
+        ..Default::default()
+    });
+
+    // Insert the blocks.
+    with_state_mut(|s| {
+        for idx in 1..blocks.len() {
+            ic_btc_canister::state::insert_block(s, blocks[idx].clone()).unwrap();
+        }
+    });
+
+    bench_fn(|| {
+        ic_btc_canister::pre_upgrade();
     })
 }
 

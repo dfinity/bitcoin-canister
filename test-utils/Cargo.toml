@@ -11,3 +11,4 @@ repository = "https://github.com/dfinity/bitcoin-canister"
 
 [dependencies]
 bitcoin = {version = "0.28.1", features = ["rand"]} # needed for generating secp256k1 keys.
+ic-btc-types = { workspace = true }
