@@ -72,6 +72,10 @@ impl Block {
     pub fn target_difficulty(network: Network, target: Uint256) -> u64 {
         (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
     }
+
+    pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
+        &self.block
+    }
 }
 
 impl PartialEq for Block {

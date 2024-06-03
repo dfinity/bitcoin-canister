@@ -1,4 +1,5 @@
 use super::BlockTree;
+use bitcoin::Block as BitcoinBlock;
 use ic_btc_types::Block;
 use serde::{
     de::{Deserializer, SeqAccess, Visitor},
@@ -17,8 +18,8 @@ impl Serialize for BlockTree {
         let _p = canbench_rs::bench_scope("serialize_blocktree");
 
         // Flatten a block tree into a list.
-        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<(&'a Block, usize)>) {
-            flattened_tree.push((&tree.root, tree.children.len()));
+        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<(&'a BitcoinBlock, usize)>) {
+            flattened_tree.push((tree.root.internal_bitcoin_block(), tree.children.len()));
 
             for child in &tree.children {
                 flatten(child, flattened_tree);
@@ -63,6 +64,8 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
         fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> Option<(Block, usize)> {
+            // TODO(EXC-1639): Update the logic here to deserialize a `BitcoinBlock`
+            // rather than a `Block` once the canister is released.
             seq.next_element()
                 .expect("reading next element must succeed")
         }

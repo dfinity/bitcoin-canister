@@ -88,7 +88,8 @@ dfx canister start bitcoin
 dfx canister stop bitcoin
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged bitcoin --argument "(record { })"
-dfx canister start bitcoin
+# TODO(EXC-1639): Re-enable this test once the canister is released.
+#dfx deploy --upgrade-unchanged bitcoin --argument "(record { })"
+#dfx canister start bitcoin
 
 echo "SUCCESS"
