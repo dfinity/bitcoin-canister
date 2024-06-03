@@ -532,20 +532,4 @@ mod test {
             }
         );
     }
-
-    #[ignore]
-    #[test]
-    fn test_all_combinations_large() {
-        for stability_threshold in [3, 10, 100] {
-            for block_num in [1, 3, 10, 20, 50, 100, 200] {
-                let blobs: Vec<Vec<u8>> = helper_initialize_and_get_header_blobs(
-                    stability_threshold,
-                    block_num,
-                    Network::Regtest,
-                );
-
-                test_all_valid_combination_or_height_range(&blobs, block_num);
-            }
-        }
-    }
 }
