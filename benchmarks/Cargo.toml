@@ -10,7 +10,7 @@ bench = false
 
 [dependencies]
 bitcoin = { workspace = true, features = ["use-serde"]}
-canbench-rs = "0.1.4"
+canbench-rs = { workspace = true }
 candid = { workspace = true }
 hex = { workspace = true }
 ic-cdk = { workspace = true }

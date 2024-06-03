@@ -33,7 +33,7 @@ impl Serialize for BlockTree {
         }
 
         #[cfg(feature = "canbench-rs")]
-        let _p = canbench_rs::bench_scope("serialize_blocktree_serialize");
+        let _p = canbench_rs::bench_scope("serialize_blocktree_serialize_seq");
 
         let mut seq = serializer.serialize_seq(Some(flattened_tree.len()))?;
         for e in flattened_tree {
