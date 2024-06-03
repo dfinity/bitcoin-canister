@@ -120,9 +120,13 @@ mod test {
         proptest!(|(
             start_range in 0..=block_num - 1,
             range_length in 1..=block_num)|{
-                let end_range = std::cmp::min(start_range + range_length - 1, block_num - 1 );
+                let requested_end = start_range + range_length - 1;
 
-                let res = store.get_block_headers_in_range(start_range as u32, end_range as u32);
+                let res = store.get_block_headers_in_range(start_range as u32, requested_end as u32);
+
+                let end_range = std::cmp::min(requested_end, block_num - 1);
+
+                assert_eq!(res.len(), end_range - start_range + 1);
 
                 for i in start_range..=end_range{
                     let mut expected_block_header = vec![];
