@@ -17,8 +17,8 @@ impl Serialize for BlockTree {
         let _p = canbench_rs::bench_scope("serialize_blocktree");
 
         // Flatten a block tree into a list.
-        fn flatten(tree: &BlockTree, flattened_tree: &mut Vec<(Block, usize)>) {
-            flattened_tree.push((tree.root.clone(), tree.children.len()));
+        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<(&'a Block, usize)>) {
+            flattened_tree.push((&tree.root, tree.children.len()));
 
             for child in &tree.children {
                 flatten(child, flattened_tree);
