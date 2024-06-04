@@ -9,11 +9,8 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-# Deploy the bitcoin canister, setting the blocks_source to be the source above.
-dfx deploy --no-wallet bitcoin --argument "(record {
-  stability_threshold = opt 2;
-  network = opt variant { regtest };
-})"
+# Deploy the bitcoin canister
+dfx deploy --no-wallet bitcoin --argument "(record { })"
 
 # Check the canister's metadata section for the Candid interface.
 METADATA=$(dfx canister metadata bitcoin candid:service)
