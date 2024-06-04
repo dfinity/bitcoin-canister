@@ -72,7 +72,7 @@ impl BlockHeaderStore {
         })
     }
 
-    /// Returns block headers in the range [start_hegiht, end_height].
+    /// Returns block headers in the range [start_height, end_height].
     pub fn get_block_headers_in_range(&self, start_height: u32, end_height: u32) -> Vec<Vec<u8>> {
         self.block_heights
             .range(start_height..=end_height)
@@ -103,17 +103,17 @@ mod test {
 
     #[test]
     fn test_get_block_headers_in_range() {
-        let mut vec_headers = vec![];
+        let mut headers = vec![];
         let block_0 = BlockBuilder::genesis().build();
-        vec_headers.push(*block_0.header());
+        headers.push(*block_0.header());
 
         let mut store = BlockHeaderStore::init();
         store.insert_block(&block_0, 0);
         let block_num = 100;
 
         for i in 1..block_num {
-            let block = BlockBuilder::with_prev_header(&vec_headers[i - 1]).build();
-            vec_headers.push(*block.header());
+            let block = BlockBuilder::with_prev_header(&headers[i - 1]).build();
+            headers.push(*block.header());
             store.insert_block(&block, i as u32);
         }
 
@@ -130,7 +130,7 @@ mod test {
 
                 for i in start_range..=end_range{
                     let mut expected_block_header = vec![];
-                    vec_headers[i].consensus_encode(&mut expected_block_header).unwrap();
+                    headers[i].consensus_encode(&mut expected_block_header).unwrap();
                     assert_eq!(expected_block_header, res[i - start_range]);
                 }
             }
