@@ -81,7 +81,9 @@ fn get_block_headers_internal(
     // Add requested block headers located in stable_blocks.
     let mut vec_headers: Vec<Vec<u8>> = with_state(|s| {
         s.stable_block_headers
-            .get_block_headers_in_range(start_height, end_height)
+            .get_block_headers_in_range(std::ops::RangeInclusive::new(start_height, end_height))
+            .map(|header_blob| header_blob.into())
+            .collect()
     });
 
     let ins_after_stable_blocks = performance_counter();
