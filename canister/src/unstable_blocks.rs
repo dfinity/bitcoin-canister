@@ -1055,13 +1055,9 @@ mod test {
 
         // `stable_height` is larger than any height from the range, which implies none of the requested
         // blocks are in unstable blocks, hence the result should be an empty iterator.
-        assert_eq!(
-            vec![].iter().peekable().peek(),
-            unstable_blocks
-                .get_block_headers_in_range(stable_height, range)
-                .peekable()
-                .peek()
-        );
+        assert!(unstable_blocks
+            .get_block_headers_in_range(stable_height, range)
+            .eq([].iter()));
     }
 
     #[test]
@@ -1077,8 +1073,8 @@ mod test {
 
                 let mut result = unstable_blocks.get_block_headers_in_range(0, std::ops::RangeInclusive::new(start_range as u32, end_range as u32)).peekable();
 
-                for i in start_range..=end_range{
-                    assert_eq!(headers[i], **result.peek().unwrap());
+                for expected_result in headers.iter().take(end_range + 1).skip(start_range){
+                    assert_eq!(expected_result, *result.peek().unwrap());
                     result.next();
                 }
             }
