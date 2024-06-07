@@ -1,7 +1,6 @@
 use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
-    blocktree::BlockChain,
     metrics::Metrics,
     runtime::{inc_performance_counter, performance_counter, print, time},
     types::{
@@ -113,10 +112,6 @@ impl State {
     /// Returns the UTXO set of a given bitcoin address.
     pub fn get_utxos(&self, address: Address) -> AddressUtxoSet<'_> {
         AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
-    }
-
-    pub fn get_unstable_blocks_in_main_chain(&self) -> BlockChain {
-        unstable_blocks::get_main_chain(&self.unstable_blocks)
     }
 }
 
