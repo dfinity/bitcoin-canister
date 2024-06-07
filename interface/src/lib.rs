@@ -372,7 +372,7 @@ pub enum GetBlockHeadersError {
         requested: Height,
         chain_height: Height,
     },
-    StartHeightLagerThanEndHeight {
+    StartHeightLargerThanEndHeight {
         start_height: Height,
         end_height: Height,
     },
@@ -401,7 +401,7 @@ impl fmt::Display for GetBlockHeadersError {
                     requested, chain_height
                 )
             }
-            Self::StartHeightLagerThanEndHeight {
+            Self::StartHeightLargerThanEndHeight {
                 start_height,
                 end_height,
             } => {

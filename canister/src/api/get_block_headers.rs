@@ -39,7 +39,7 @@ fn verify_and_return_effective_range(
     let (effective_start_height, mut effective_end_height) =
         if let Some(end_height) = request.end_height {
             if end_height < request.start_height {
-                return Err(GetBlockHeadersError::StartHeightLagerThanEndHeight {
+                return Err(GetBlockHeadersError::StartHeightLargerThanEndHeight {
                     start_height: request.start_height,
                     end_height,
                 });
@@ -203,7 +203,7 @@ mod test {
 
         assert_eq!(
             err,
-            GetBlockHeadersError::StartHeightLagerThanEndHeight {
+            GetBlockHeadersError::StartHeightLargerThanEndHeight {
                 start_height,
                 end_height,
             }
