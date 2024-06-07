@@ -26,7 +26,7 @@ ARGUMENT="(record {
     get_current_fee_percentiles = 0; 
     get_current_fee_percentiles_maximum = 0;  
     send_transaction_base =0; 
-    send_transaction_per_byte = 0; 
+    send_transaction_per_byte = 0;
  }; 
  syncing = variant { enabled }; 
  api_access = variant { enabled };

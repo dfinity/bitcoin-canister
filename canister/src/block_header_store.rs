@@ -71,6 +71,16 @@ impl BlockHeaderStore {
                 .expect("block header must exist")
         })
     }
+
+    /// Returns iterator on block headers in the range `heights`.
+    pub fn get_block_headers_in_range(
+        &self,
+        heights: std::ops::RangeInclusive<Height>,
+    ) -> impl Iterator<Item = BlockHeaderBlob> + '_ {
+        self.block_heights
+            .range(heights)
+            .map(move |(_, block_hash)| self.block_headers.get(&block_hash).unwrap())
+    }
 }
 
 fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> BlockHeader {
@@ -84,4 +94,51 @@ fn init_block_headers() -> StableBTreeMap<BlockHash, BlockHeaderBlob, Memory> {
 
 fn init_block_heights() -> StableBTreeMap<u32, BlockHash, Memory> {
     StableBTreeMap::init(crate::memory::get_block_heights_memory())
+}
+
+#[cfg(test)]
+mod test {
+    use bitcoin::consensus::Encodable;
+    use proptest::proptest;
+
+    use crate::{
+        block_header_store::BlockHeaderStore, test_utils::BlockBuilder, types::BlockHeaderBlob,
+    };
+
+    #[test]
+    fn test_get_block_headers_in_range() {
+        let mut headers = vec![];
+        let block_0 = BlockBuilder::genesis().build();
+        headers.push(*block_0.header());
+
+        let mut store = BlockHeaderStore::init();
+        store.insert_block(&block_0, 0);
+        let block_num = 100;
+
+        for i in 1..block_num {
+            let block = BlockBuilder::with_prev_header(&headers[i - 1]).build();
+            headers.push(*block.header());
+            store.insert_block(&block, i as u32);
+        }
+
+        proptest!(|(
+            start_range in 0..=block_num - 1,
+            range_length in 1..=block_num)|{
+                let requested_end = start_range + range_length - 1;
+
+                let res: Vec<BlockHeaderBlob>= store.get_block_headers_in_range(std::ops::RangeInclusive::new(start_range as u32, requested_end as u32)).collect();
+
+                let end_range = std::cmp::min(requested_end, block_num - 1);
+
+                assert_eq!(res.len(), end_range - start_range + 1);
+
+                for i in start_range..=end_range{
+                    let mut expected_block_header = vec![];
+                    headers[i].consensus_encode(&mut expected_block_header).unwrap();
+                    let actual_block_header: Vec<u8> = res[i - start_range].clone().into();
+                    assert_eq!(expected_block_header, actual_block_header);
+                }
+            }
+        );
+    }
 }

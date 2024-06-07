@@ -13,6 +13,13 @@ pub struct Metrics {
     pub get_utxos_apply_unstable_blocks: InstructionHistogram,
     pub get_utxos_build_utxos_vec: InstructionHistogram,
 
+    #[serde(default = "default_get_block_headers_total")]
+    pub get_block_headers_total: InstructionHistogram,
+    #[serde(default = "default_get_block_headers_stable_blocks")]
+    pub get_block_headers_stable_blocks: InstructionHistogram,
+    #[serde(default = "default_get_block_headers_unstable_blocks")]
+    pub get_block_headers_unstable_blocks: InstructionHistogram,
+
     pub get_balance_total: InstructionHistogram,
     pub get_balance_apply_unstable_blocks: InstructionHistogram,
 
@@ -46,6 +53,10 @@ impl Default for Metrics {
                 "inst_count_get_utxos_build_utxos_vec",
                 "Instructions needed to build the UTXOs vec in a get_utxos request.",
             ),
+
+            get_block_headers_total: default_get_block_headers_total(),
+            get_block_headers_stable_blocks: default_get_block_headers_stable_blocks(),
+            get_block_headers_unstable_blocks: default_get_block_headers_unstable_blocks(),
 
             get_balance_total: InstructionHistogram::new(
                 "ins_get_balance_total",
@@ -128,6 +139,27 @@ impl InstructionHistogram {
         let idx = (value - 1) / BUCKET_SIZE;
         std::cmp::min(idx, NUM_BUCKETS - 1) as usize
     }
+}
+
+fn default_get_block_headers_total() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "ins_block_headers_total",
+        "Instructions needed to execute a get_block_headers request.",
+    )
+}
+
+fn default_get_block_headers_stable_blocks() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "inst_count_get_block_headers_stable_blocks",
+        "Instructions needed to build the block headers vec in a get_block_headers request from stable blocks.",
+    )
+}
+
+fn default_get_block_headers_unstable_blocks() -> InstructionHistogram {
+    InstructionHistogram::new(
+        "inst_count_get_block_headers_unstable_blocks",
+        "Instructions needed to build the block headers vec in a get_block_headers request from unstable blocks.",
+    )
 }
 
 #[cfg(test)]

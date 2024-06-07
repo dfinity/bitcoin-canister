@@ -1,4 +1,5 @@
 mod outpoints_cache;
+
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree},
     runtime::print,
@@ -166,6 +167,32 @@ impl UnstableBlocks {
         }
         chain.reverse();
         chain
+    }
+
+    /// Returns block headers of all unstable blocks in height range `heights`.
+    pub fn get_block_headers_in_range(
+        &self,
+        stable_height: Height,
+        heights: std::ops::RangeInclusive<Height>,
+    ) -> impl Iterator<Item = &BlockHeader> {
+        if *heights.end() < stable_height {
+            // `stable_height` is larger than any height from the range, which implies none of the requested
+            // blocks are in unstable blocks, hence the result should be an empty iterator.
+            return Default::default();
+        }
+
+        // The last stable block is located in `unstable_blocks`, hence the height of the
+        // first block in `unstable_blocks` is equal to `stable_height`.
+        let heights_relative_to_unstable_blocks = std::ops::RangeInclusive::new(
+            heights.start().saturating_sub(stable_height) as usize,
+            heights.end().checked_sub(stable_height).unwrap() as usize,
+        );
+
+        get_main_chain(self).into_chain()[heights_relative_to_unstable_blocks]
+            .iter()
+            .map(|block| block.header())
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }
 
@@ -403,6 +430,7 @@ mod test {
     use super::*;
     use crate::test_utils::{BlockBuilder, BlockChainBuilder};
     use ic_btc_interface::Network;
+    use proptest::proptest;
 
     #[test]
     fn empty() {
@@ -996,5 +1024,60 @@ mod test {
         // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
         // is considered unstable.
         assert_eq!(peek(&unstable_blocks), None);
+    }
+
+    fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<BlockHeader>) {
+        let mut headers = vec![];
+        let block_0 = BlockBuilder::genesis().build();
+        headers.push(*block_0.header());
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        for i in 1..block_num {
+            let block = BlockBuilder::with_prev_header(&headers[i - 1]).build();
+            headers.push(*block.header());
+            push(&mut unstable_blocks, &utxos, block).unwrap();
+        }
+
+        (unstable_blocks, headers)
+    }
+
+    #[test]
+    fn test_get_block_headers_in_range_in_stable_blocks() {
+        let block_num = 15;
+
+        let (unstable_blocks, _) = get_block_headers_helper(block_num);
+
+        let stable_height = 10;
+        let range = std::ops::RangeInclusive::new(0, stable_height - 1);
+
+        // `stable_height` is larger than any height from the range, which implies none of the requested
+        // blocks are in unstable blocks, hence the result should be an empty iterator.
+        assert!(unstable_blocks
+            .get_block_headers_in_range(stable_height, range)
+            .eq([].iter()));
+    }
+
+    #[test]
+    fn test_get_block_headers_in_range() {
+        let block_num = 100;
+
+        let (unstable_blocks, headers) = get_block_headers_helper(block_num);
+
+        proptest!(|(
+            start_range in 0..=block_num - 1,
+            range_length in 1..=block_num)|{
+                let end_range = std::cmp::min(start_range + range_length - 1, block_num - 1 );
+
+                let mut result = unstable_blocks.get_block_headers_in_range(0, std::ops::RangeInclusive::new(start_range as u32, end_range as u32)).peekable();
+
+                for expected_result in headers.iter().take(end_range + 1).skip(start_range){
+                    assert_eq!(expected_result, *result.peek().unwrap());
+                    result.next();
+                }
+            }
+        );
     }
 }
