@@ -1,11 +1,12 @@
 mod outpoints_cache;
+
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree},
     runtime::print,
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::{consensus::Encodable, BlockHeader};
+use bitcoin::BlockHeader;
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
@@ -168,22 +169,30 @@ impl UnstableBlocks {
         chain
     }
 
-    /// Returns block headers in the inclusive range provided as an argument
-    /// relative to the start of unstable blocks.
-    pub(crate) fn get_block_headers_in_range(
+    /// Returns block headers of all unstable blocks in height range `heights`.
+    pub fn get_block_headers_in_range(
         &self,
-        start_range_in_unstable_blocks: u32,
-        end_range_in_unstable_blocks: u32,
-    ) -> Vec<Vec<u8>> {
-        get_main_chain(self).into_chain()
-            [start_range_in_unstable_blocks as usize..=end_range_in_unstable_blocks as usize]
+        stable_height: Height,
+        heights: std::ops::RangeInclusive<Height>,
+    ) -> impl Iterator<Item = &BlockHeader> {
+        if *heights.end() < stable_height {
+            // `stable_height` is larger than any height from the range, which implies none of the requested
+            // blocks are in unstable blocks, hence the result should be an empty iterator.
+            return Default::default();
+        }
+
+        // The last stable block is located in `unstable_blocks`, hence the height of the
+        // first block in `unstable_blocks` is equal to `stable_height`.
+        let heights_relative_to_unstable_blocks = std::ops::RangeInclusive::new(
+            heights.start().saturating_sub(stable_height) as usize,
+            heights.end().checked_sub(stable_height).unwrap() as usize,
+        );
+
+        get_main_chain(self).into_chain()[heights_relative_to_unstable_blocks]
             .iter()
-            .map(|block| {
-                let mut header_blob = vec![];
-                block.header().consensus_encode(&mut header_blob).unwrap();
-                header_blob
-            })
-            .collect()
+            .map(|block| block.header())
+            .collect::<Vec<_>>()
+            .into_iter()
     }
 }
 
@@ -1017,34 +1026,60 @@ mod test {
         assert_eq!(peek(&unstable_blocks), None);
     }
 
-    #[test]
-    fn test_get_block_headers_in_range() {
-        let mut vec_headers = vec![];
+    fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<BlockHeader>) {
+        let mut headers = vec![];
         let block_0 = BlockBuilder::genesis().build();
-        vec_headers.push(*block_0.header());
+        headers.push(*block_0.header());
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
         let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
-        let block_num = 100;
 
         for i in 1..block_num {
-            let block = BlockBuilder::with_prev_header(&vec_headers[i - 1]).build();
-            vec_headers.push(*block.header());
+            let block = BlockBuilder::with_prev_header(&headers[i - 1]).build();
+            headers.push(*block.header());
             push(&mut unstable_blocks, &utxos, block).unwrap();
         }
+
+        (unstable_blocks, headers)
+    }
+
+    #[test]
+    fn test_get_block_headers_in_range_in_stable_blocks() {
+        let block_num = 15;
+
+        let (unstable_blocks, _) = get_block_headers_helper(block_num);
+
+        let stable_height = 10;
+        let range = std::ops::RangeInclusive::new(0, stable_height - 1);
+
+        // `stable_height` is larger than any height from the range, which implies none of the requested
+        // blocks are in unstable blocks, hence the result should be an empty iterator.
+        assert_eq!(
+            vec![].iter().peekable().peek(),
+            unstable_blocks
+                .get_block_headers_in_range(stable_height, range)
+                .peekable()
+                .peek()
+        );
+    }
+
+    #[test]
+    fn test_get_block_headers_in_range() {
+        let block_num = 100;
+
+        let (unstable_blocks, headers) = get_block_headers_helper(block_num);
 
         proptest!(|(
             start_range in 0..=block_num - 1,
             range_length in 1..=block_num)|{
                 let end_range = std::cmp::min(start_range + range_length - 1, block_num - 1 );
 
-                let res = unstable_blocks.get_block_headers_in_range(start_range as u32, end_range as u32);
+                let mut result = unstable_blocks.get_block_headers_in_range(0, std::ops::RangeInclusive::new(start_range as u32, end_range as u32)).peekable();
 
                 for i in start_range..=end_range{
-                    let mut expected_block_header = vec![];
-                    vec_headers[i].consensus_encode(&mut expected_block_header).unwrap();
-                    assert_eq!(expected_block_header, res[i - start_range]);
+                    assert_eq!(headers[i], **result.peek().unwrap());
+                    result.next();
                 }
             }
         );

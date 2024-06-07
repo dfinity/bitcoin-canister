@@ -195,34 +195,6 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     has_state_changed(state)
 }
 
-/// Returns block headers of all unstable blocks in height
-/// range [start_height, end_height].
-pub fn get_unstable_block_headers_in_range(
-    state: &State,
-    start_height: Height,
-    end_height: Height,
-) -> Vec<Vec<u8>> {
-    let stable_height = state.stable_height();
-
-    if end_height < stable_height {
-        return vec![];
-    }
-
-    // The last stable block is located in `unstable_blocks`, the height of the
-    // first block in `unstable_blocks` is equal to `stable_height`.
-    let start_range_in_unstable_blocks = if start_height < stable_height {
-        0
-    } else {
-        start_height - stable_height
-    };
-
-    let end_range_in_unstable_blocks = end_height - stable_height;
-
-    state
-        .unstable_blocks
-        .get_block_headers_in_range(start_range_in_unstable_blocks, end_range_in_unstable_blocks)
-}
-
 pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeaderBlob]) {
     // The limit at which no further next block headers are processed.
     // Note that the actual limit available on system subnets is 50B. The threshold is set

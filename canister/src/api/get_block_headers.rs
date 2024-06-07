@@ -1,8 +1,9 @@
+use bitcoin::consensus::Encodable;
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
 use crate::{
     runtime::{performance_counter, print},
-    state::{get_unstable_block_headers_in_range, main_chain_height},
+    state::main_chain_height,
     with_state, with_state_mut,
 };
 
@@ -92,11 +93,21 @@ fn get_block_headers_internal(
 
     // Add requested block headers located in unstable_blocks.
     with_state(|s| {
-        vec_headers.append(&mut get_unstable_block_headers_in_range(
-            s,
-            start_height,
-            end_height,
-        ));
+        let unstable_block_headers = &mut s
+            .unstable_blocks
+            .get_block_headers_in_range(
+                s.stable_height(),
+                std::ops::RangeInclusive::new(start_height, end_height),
+            )
+            // Serialize headers of unstable blocks.
+            .map(|header| {
+                let mut serialized_header = vec![];
+                header.consensus_encode(&mut serialized_header).unwrap();
+                serialized_header
+            })
+            .collect();
+
+        vec_headers.append(unstable_block_headers)
     });
 
     stats.ins_build_block_headers_unstable_blocks = performance_counter() - ins_after_stable_blocks;
