@@ -67,6 +67,10 @@ pub struct State {
     /// NOTE: serde(default) is used here for backward-compatibility.
     #[serde(default)]
     pub burn_cycles: Flag,
+
+    /// NOTE: serde(default) is used here for backward-compatibility.
+    #[serde(default)]
+    pub lazily_evaluate_fee_percentiles: Flag,
 }
 
 impl State {
@@ -93,6 +97,7 @@ impl State {
             disable_api_if_not_fully_synced: Flag::Enabled,
             watchdog_canister: None,
             burn_cycles: Flag::Disabled,
+            lazily_evaluate_fee_percentiles: Flag::Disabled,
         }
     }
 

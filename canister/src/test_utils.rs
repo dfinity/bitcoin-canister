@@ -71,18 +71,6 @@ pub fn build_chain(
     )
 }
 
-/// Builds a random chain with the given number of block and transactions
-/// and starting with the Regtest genesis block.
-pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
-    let network = Network::Regtest;
-    build_chain_with_genesis_block(
-        network,
-        genesis_block(network),
-        num_blocks,
-        num_transactions_per_block,
-    )
-}
-
 fn build_chain_with_genesis_block(
     network: Network,
     genesis_block: Block,
