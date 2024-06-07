@@ -103,7 +103,4 @@ RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; ne
 EXPECTED="UnknownTipBlockHash"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
-#test bitcoin_get_block_headers
-
-
 echo "SUCCESS"
