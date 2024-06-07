@@ -32,7 +32,6 @@ dfx deploy bitcoin --argument "(record {
     get_block_headers_base = 1;
     get_block_headers_cycles_per_ten_instructions = 1;
     get_block_headers_maximum = 1;
-
   };
 })"
 
