@@ -72,12 +72,14 @@ impl BlockHeaderStore {
         })
     }
 
-    /// Returns block headers in the range [start_hegiht, end_height].
-    pub fn get_block_headers_in_range(&self, start_height: u32, end_height: u32) -> Vec<Vec<u8>> {
+    /// Returns iterator on block headers in the range `heights`.
+    pub fn get_block_headers_in_range(
+        &self,
+        heights: std::ops::RangeInclusive<Height>,
+    ) -> impl Iterator<Item = BlockHeaderBlob> + '_ {
         self.block_heights
-            .range(start_height..=end_height)
-            .map(|(_, block_hash)| self.block_headers.get(&block_hash).unwrap().into())
-            .collect()
+            .range(heights)
+            .map(move |(_, block_hash)| self.block_headers.get(&block_hash).unwrap().into())
     }
 }
 
@@ -99,21 +101,23 @@ mod test {
     use bitcoin::consensus::Encodable;
     use proptest::proptest;
 
-    use crate::{block_header_store::BlockHeaderStore, test_utils::BlockBuilder};
+    use crate::{
+        block_header_store::BlockHeaderStore, test_utils::BlockBuilder, types::BlockHeaderBlob,
+    };
 
     #[test]
     fn test_get_block_headers_in_range() {
-        let mut vec_headers = vec![];
+        let mut headers = vec![];
         let block_0 = BlockBuilder::genesis().build();
-        vec_headers.push(*block_0.header());
+        headers.push(*block_0.header());
 
         let mut store = BlockHeaderStore::init();
         store.insert_block(&block_0, 0);
         let block_num = 100;
 
         for i in 1..block_num {
-            let block = BlockBuilder::with_prev_header(&vec_headers[i - 1]).build();
-            vec_headers.push(*block.header());
+            let block = BlockBuilder::with_prev_header(&headers[i - 1]).build();
+            headers.push(*block.header());
             store.insert_block(&block, i as u32);
         }
 
@@ -122,7 +126,7 @@ mod test {
             range_length in 1..=block_num)|{
                 let requested_end = start_range + range_length - 1;
 
-                let res = store.get_block_headers_in_range(start_range as u32, requested_end as u32);
+                let res: Vec<BlockHeaderBlob>= store.get_block_headers_in_range(std::ops::RangeInclusive::new(start_range as u32, requested_end as u32)).collect();
 
                 let end_range = std::cmp::min(requested_end, block_num - 1);
 
@@ -130,8 +134,9 @@ mod test {
 
                 for i in start_range..=end_range{
                     let mut expected_block_header = vec![];
-                    vec_headers[i].consensus_encode(&mut expected_block_header).unwrap();
-                    assert_eq!(expected_block_header, res[i - start_range]);
+                    headers[i].consensus_encode(&mut expected_block_header).unwrap();
+                    let actual_block_header: Vec<u8> = res[i - start_range].clone().into();
+                    assert_eq!(expected_block_header, actual_block_header);
                 }
             }
         );
