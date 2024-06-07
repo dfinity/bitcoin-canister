@@ -55,7 +55,7 @@ fn verify_and_return_effective_range(
             // end of effective height range.
             (request.start_height, end_height)
         } else {
-            // If `end_height`` is not provided then the end of effective
+            // If `end_height` is not provided then the end of effective
             // range should be the last block of the chain.
             (request.start_height, chain_height)
         };
