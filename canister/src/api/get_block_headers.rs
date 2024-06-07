@@ -2,9 +2,10 @@ use bitcoin::consensus::Encodable;
 use ic_btc_interface::{GetBlockHeadersError, GetBlockHeadersRequest, GetBlockHeadersResponse};
 
 use crate::{
+    charge_cycles,
     runtime::{performance_counter, print},
     state::main_chain_height,
-    with_state, with_state_mut,
+    verify_has_enough_cycles, with_state, with_state_mut,
 };
 
 // The maximum number of block headers that are allowed to be included in a single
@@ -135,6 +136,10 @@ fn get_block_headers_internal(
 pub fn get_block_headers(
     request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
+    verify_has_enough_cycles(with_state(|s| s.fees.get_block_headers_maximum));
+    // Charge the base fee.
+    charge_cycles(with_state(|s| s.fees.get_block_headers_base));
+
     let (res, stats) = get_block_headers_internal(&request)?;
 
     // Observe metrics.
@@ -148,6 +153,16 @@ pub fn get_block_headers(
         s.metrics
             .get_block_headers_unstable_blocks
             .observe(stats.ins_build_block_headers_unstable_blocks);
+    });
+
+    // Charge the fee based on the number of the instructions.
+    with_state(|s| {
+        let fee = std::cmp::min(
+            (stats.ins_total / 10) as u128 * s.fees.get_block_headers_cycles_per_ten_instructions,
+            s.fees.get_block_headers_maximum - s.fees.get_block_headers_base,
+        );
+
+        charge_cycles(fee);
     });
 
     // Print the number of instructions it took to process this request.
