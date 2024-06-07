@@ -77,9 +77,11 @@ pub fn bitcoin_get_utxos_query(request: GetUtxosRequest) -> ManualReply<GetUtxos
 
 #[update(manual_reply = true)]
 pub fn bitcoin_get_block_headers(
-    request: GetBlockHeadersRequest,
+    _request: GetBlockHeadersRequest,
 ) -> ManualReply<GetBlockHeadersResponse> {
-    match ic_btc_canister::get_block_headers(request) {
+    unimplemented!("The api is not implemented");
+    #[allow(unreachable_code)]
+    match ic_btc_canister::get_block_headers(_request) {
         Ok(response) => ManualReply::one(response),
         Err(e) => ManualReply::reject(format!("get_block_headers failed: {:?}", e).as_str()),
     }
