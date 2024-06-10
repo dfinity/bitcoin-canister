@@ -172,12 +172,13 @@ dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
 })'
 
 
-HEADERS=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
+ACTUAL_HEADERS=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
   start_height = 0;
-  end_height = opt 5;
 })');
 
-EXPECTED='(
+# Verify that we can fetch the block headers.
+# The e2e-scenario-1 canister chains 5 blocks onto the genesis block.
+EXPECTED_HEADERS='(
   record {
     tip_height = 5 : nat32;
     block_headers = vec {
@@ -191,7 +192,7 @@ EXPECTED='(
   },
 )'
 
-if ! [[ $HEADERS = $EXPECTED ]]; then
+if ! [[ $ACTUAL_HEADERS = $EXPECTED_HEADERS ]]; then
   echo "FAIL"
   exit 1
 fi
