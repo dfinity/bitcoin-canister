@@ -174,13 +174,13 @@ pub fn get_block_headers(
 mod test {
     use super::*;
     use crate::{
-        genesis_block,
+        genesis_block, runtime,
         state::{self, ingest_stable_blocks_into_utxoset, insert_block},
         test_utils::BlockBuilder,
         with_state_mut,
     };
     use bitcoin::consensus::Encodable;
-    use ic_btc_interface::{InitConfig, Network};
+    use ic_btc_interface::{Fees, InitConfig, Network};
     use proptest::prelude::*;
 
     fn get_block_headers_helper() {
@@ -559,5 +559,76 @@ mod test {
                 check_response(&blobs, start_height, end_height, block_num);
             }
         );
+    }
+
+    #[test]
+    fn charges_cycles() {
+        crate::init(InitConfig {
+            fees: Some(Fees {
+                get_block_headers_base: 10,
+                get_block_headers_maximum: 100,
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+        })
+        .unwrap();
+
+        assert_eq!(runtime::get_cycles_balance(), 10);
+    }
+
+    #[test]
+    fn charges_cycles_capped_at_maximum() {
+        crate::init(InitConfig {
+            fees: Some(Fees {
+                get_block_headers_base: 10,
+                get_block_headers_cycles_per_ten_instructions: 10,
+                get_block_headers_maximum: 100,
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        runtime::set_performance_counter_step(1000);
+        runtime::inc_performance_counter();
+
+        get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+        })
+        .unwrap();
+
+        // Charging is capped to the maximum fee.
+        assert_eq!(runtime::get_cycles_balance(), 100);
+    }
+
+    #[test]
+    fn charges_cycles_per_instructions() {
+        crate::init(InitConfig {
+            fees: Some(Fees {
+                get_block_headers_base: 10,
+                get_block_headers_cycles_per_ten_instructions: 10,
+                get_block_headers_maximum: 100_000,
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        // Set the number of instructions consumed.
+        runtime::set_performance_counter_step(1000);
+        runtime::inc_performance_counter();
+
+        get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+        })
+        .unwrap();
+
+        // Base fee + instructions are charged for.
+        assert_eq!(runtime::get_cycles_balance(), 10 + 1000);
     }
 }
