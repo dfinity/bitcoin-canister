@@ -171,12 +171,11 @@ dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
   network = variant { regtest };
 })'
 
-
+# Verify that we can fetch the block headers.
 ACTUAL_HEADERS=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
   start_height = 0;
 })');
 
-# Verify that we can fetch the block headers.
 # The e2e-scenario-1 canister chains 5 blocks onto the genesis block.
 EXPECTED_HEADERS='(
   record {
