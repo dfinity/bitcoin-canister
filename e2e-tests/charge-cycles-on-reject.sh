@@ -11,14 +11,14 @@ dfx start --background --clean
 
 # Deploy the canister that will be used as an internal endpoint to send the transaction 
 # to the Bitcoin network when calling bitcoin_send_transaction.
-dfx deploy e2e-scenario-3
+dfx deploy e2e-scenario-1
 
 # Deploy the bitcoin canister.
 dfx deploy bitcoin --argument "(record {
   stability_threshold = opt 2;
   network = opt variant { regtest };
-  blocks_source = opt principal \"$(dfx canister id e2e-scenario-3)\";
-  syncing = opt variant { disabled };
+  blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
+  syncing = opt variant { enabled };
   fees = opt record {
     get_utxos_base = 1;
     get_utxos_cycles_per_ten_instructions = 1;
@@ -68,6 +68,8 @@ check_charging()
   fi
 }
 
+wait_until_main_chain_height 1 60
+
 #test bitcoin_send_transaction
 TX_BYTES="blob \"12341234789789\""
 METHOD="bitcoin_send_transaction"
@@ -104,6 +106,22 @@ check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 BAD_TIP="blob \"123412347897123412347897123412347897123412347897123412347897123412347897\""
 RECORD="(record { address = \"bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8\"; network = variant { regtest }; filter = opt variant {page = ${BAD_TIP}} })"
 EXPECTED="UnknownTipBlockHash"
+check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
+
+#test bitcoin_get_block_headers
+METHOD="bitcoin_get_block_headers"
+RECORD="(record { start_height = 10})"
+EXPECTED="StartHeightDoesNotExist"
+check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
+
+METHOD="bitcoin_get_block_headers"
+RECORD="(record { start_height = 0; end_height = opt 10 })"
+EXPECTED="EndHeightDoesNotExist"
+check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
+
+METHOD="bitcoin_get_block_headers"
+RECORD="(record { start_height = 1; end_height = opt 0 })"
+EXPECTED="StartHeightLargerThanEndHeight"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
 echo "SUCCESS"
