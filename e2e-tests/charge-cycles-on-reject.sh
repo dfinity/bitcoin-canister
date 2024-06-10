@@ -68,6 +68,8 @@ check_charging()
   fi
 }
 
+wait_until_main_chain_height 1 60
+
 #test bitcoin_send_transaction
 TX_BYTES="blob \"12341234789789\""
 METHOD="bitcoin_send_transaction"
@@ -117,10 +119,8 @@ RECORD="(record { start_height = 0; end_height = opt 10 })"
 EXPECTED="EndHeightDoesNotExist"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
-wait_until_stable_height 3 60
-
 METHOD="bitcoin_get_block_headers"
-RECORD="(record { start_height = 2; end_height = opt 1 })"
+RECORD="(record { start_height = 1; end_height = opt 0 })"
 EXPECTED="StartHeightLargerThanEndHeight"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
