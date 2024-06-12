@@ -352,6 +352,7 @@ pub enum GetUtxosError {
 pub struct GetBlockHeadersRequest {
     pub start_height: Height,
     pub end_height: Option<Height>,
+    pub network: NetworkInRequest,
 }
 
 /// The response returned for a request for getting the block headers from a given height.

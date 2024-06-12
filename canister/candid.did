@@ -118,6 +118,7 @@ type set_config_request = record {
 type get_block_headers_request = record {
   start_height : block_height;
   end_height : opt block_height;
+  network : network;
 };
 
 type get_block_headers_response = record {

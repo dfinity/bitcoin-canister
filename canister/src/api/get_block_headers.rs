@@ -183,8 +183,7 @@ mod test {
     use ic_btc_interface::{Fees, InitConfig, Network};
     use proptest::prelude::*;
 
-    fn get_block_headers_helper() {
-        let network = Network::Regtest;
+    fn get_block_headers_helper(network: Network) {
         crate::init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
@@ -205,7 +204,8 @@ mod test {
 
     #[test]
     fn get_block_headers_malformed_heights() {
-        get_block_headers_helper();
+        let network: Network = Network::Regtest;
+        get_block_headers_helper(network);
 
         let start_height = 1;
         let end_height = 0;
@@ -213,6 +213,7 @@ mod test {
         let err = get_block_headers(GetBlockHeadersRequest {
             start_height,
             end_height: Some(end_height),
+            network: network.into(),
         })
         .unwrap_err();
 
@@ -227,13 +228,15 @@ mod test {
 
     #[test]
     fn start_height_does_not_exist() {
-        get_block_headers_helper();
+        let network: Network = Network::Regtest;
+        get_block_headers_helper(network);
 
         let start_height: u32 = 3;
 
         let err = get_block_headers(GetBlockHeadersRequest {
             start_height,
             end_height: None,
+            network: network.into(),
         })
         .unwrap_err();
 
@@ -248,7 +251,8 @@ mod test {
 
     #[test]
     fn end_height_does_not_exist() {
-        get_block_headers_helper();
+        let network: Network = Network::Regtest;
+        get_block_headers_helper(network);
 
         let start_height: u32 = 1;
         let end_height: u32 = 4;
@@ -256,6 +260,7 @@ mod test {
         let err = get_block_headers(GetBlockHeadersRequest {
             start_height,
             end_height: Some(end_height),
+            network: network.into(),
         })
         .unwrap_err();
 
@@ -287,6 +292,7 @@ mod test {
         let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
+            network: network.into(),
         })
         .unwrap();
 
@@ -303,6 +309,7 @@ mod test {
         let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: Some(0),
+            network: network.into(),
         })
         .unwrap();
 
@@ -343,6 +350,7 @@ mod test {
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 0,
                 end_height: Some(0),
+                network: network.into(),
             })
             .unwrap(),
             GetBlockHeadersResponse {
@@ -362,6 +370,7 @@ mod test {
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 1,
                 end_height: Some(1),
+                network: network.into(),
             })
             .unwrap(),
             GetBlockHeadersResponse {
@@ -375,6 +384,7 @@ mod test {
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 1,
                 end_height: None,
+                network: network.into(),
             })
             .unwrap(),
             GetBlockHeadersResponse {
@@ -388,6 +398,7 @@ mod test {
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 0,
                 end_height: Some(1),
+                network: network.into(),
             })
             .unwrap(),
             GetBlockHeadersResponse {
@@ -401,6 +412,7 @@ mod test {
             get_block_headers(GetBlockHeadersRequest {
                 start_height: 0,
                 end_height: None,
+                network: network.into(),
             })
             .unwrap(),
             GetBlockHeadersResponse {
@@ -453,10 +465,12 @@ mod test {
         start_height: u32,
         end_height: Option<u32>,
         total_num_blocks: u32,
+        network: Network,
     ) {
         let response: GetBlockHeadersResponse = get_block_headers(GetBlockHeadersRequest {
             start_height,
             end_height,
+            network: network.into(),
         })
         .unwrap();
 
@@ -475,13 +489,17 @@ mod test {
         );
     }
 
-    fn test_all_valid_combination_or_height_range(blobs: &[Vec<u8>], block_num: u32) {
+    fn test_all_valid_combination_or_height_range(
+        blobs: &[Vec<u8>],
+        block_num: u32,
+        network: Network,
+    ) {
         for start_height in 0..block_num {
             let mut end_height_range: Vec<Option<u32>> =
                 (start_height..block_num).map(Some).collect::<Vec<_>>();
             end_height_range.push(None);
             for end_height in end_height_range {
-                check_response(blobs, start_height, end_height, block_num);
+                check_response(blobs, start_height, end_height, block_num, network);
             }
         }
     }
@@ -495,7 +513,7 @@ mod test {
         let blobs: Vec<Vec<u8>> =
             helper_initialize_and_get_header_blobs(stability_threshold, block_num, network);
 
-        test_all_valid_combination_or_height_range(&blobs, block_num);
+        test_all_valid_combination_or_height_range(&blobs, block_num, network);
     }
 
     #[test]
@@ -507,27 +525,42 @@ mod test {
         let blobs: Vec<Vec<u8>> =
             helper_initialize_and_get_header_blobs(stability_threshold, block_num, network);
 
-        check_response(&blobs, 0, None, block_num);
-        check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE / 2, None, block_num);
-        check_response(&blobs, MAX_BLOCK_HEADERS_PER_RESPONSE, None, block_num);
+        check_response(&blobs, 0, None, block_num, network);
+        check_response(
+            &blobs,
+            MAX_BLOCK_HEADERS_PER_RESPONSE / 2,
+            None,
+            block_num,
+            network,
+        );
+        check_response(
+            &blobs,
+            MAX_BLOCK_HEADERS_PER_RESPONSE,
+            None,
+            block_num,
+            network,
+        );
 
         check_response(
             &blobs,
             0,
             Some(MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
             block_num,
+            network,
         );
         check_response(
             &blobs,
             MAX_BLOCK_HEADERS_PER_RESPONSE / 2,
             Some(3 * MAX_BLOCK_HEADERS_PER_RESPONSE / 2 + 1),
             block_num,
+            network,
         );
         check_response(
             &blobs,
             MAX_BLOCK_HEADERS_PER_RESPONSE,
             Some(2 * MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
             block_num,
+            network,
         );
 
         check_response(
@@ -535,6 +568,7 @@ mod test {
             0,
             Some(2 * MAX_BLOCK_HEADERS_PER_RESPONSE + 1),
             block_num,
+            network,
         );
     }
 
@@ -542,11 +576,9 @@ mod test {
     fn get_block_headers_proptest() {
         let stability_threshold = 3;
         let block_num = 200;
-        let blobs: Vec<Vec<u8>> = helper_initialize_and_get_header_blobs(
-            stability_threshold,
-            block_num,
-            Network::Regtest,
-        );
+        let network = Network::Regtest;
+        let blobs: Vec<Vec<u8>> =
+            helper_initialize_and_get_header_blobs(stability_threshold, block_num, network);
 
         proptest!(|(
             start_height in 0..=block_num - 1,
@@ -556,25 +588,28 @@ mod test {
                 } else {
                     None
                 };
-                check_response(&blobs, start_height, end_height, block_num);
+                check_response(&blobs, start_height, end_height, block_num, network);
             }
         );
     }
 
     #[test]
     fn charges_cycles() {
+        let network = Network::Regtest;
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_block_headers_base: 10,
                 get_block_headers_maximum: 100,
                 ..Default::default()
             }),
+            network: Some(network),
             ..Default::default()
         });
 
         get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
+            network: network.into(),
         })
         .unwrap();
 
@@ -583,6 +618,7 @@ mod test {
 
     #[test]
     fn charges_cycles_capped_at_maximum() {
+        let network = Network::Regtest;
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_block_headers_base: 10,
@@ -590,6 +626,7 @@ mod test {
                 get_block_headers_maximum: 100,
                 ..Default::default()
             }),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -599,6 +636,7 @@ mod test {
         get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
+            network: network.into(),
         })
         .unwrap();
 
@@ -608,6 +646,7 @@ mod test {
 
     #[test]
     fn charges_cycles_per_instructions() {
+        let network = Network::Regtest;
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_block_headers_base: 10,
@@ -615,6 +654,7 @@ mod test {
                 get_block_headers_maximum: 100_000,
                 ..Default::default()
             }),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -625,6 +665,7 @@ mod test {
         get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
+            network: network.into(),
         })
         .unwrap();
 
