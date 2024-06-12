@@ -1,6 +1,6 @@
 [package]
 name = "ic-btc-interface"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 description = "Rust types for the Internet Computer's Bitcoin API."
 homepage = "https://docs.rs/ic-btc-interface"
@@ -8,7 +8,7 @@ documentation = "https://docs.rs/ic-btc-interface"
 license = "Apache-2.0"
 include = ["src", "Cargo.toml", "../LICENSE", "README.md"]
 repository = "https://github.com/dfinity/bitcoin-canister"
-readme= "README.md"
+readme = "README.md"
 
 [dependencies]
 candid = { workspace = true }
