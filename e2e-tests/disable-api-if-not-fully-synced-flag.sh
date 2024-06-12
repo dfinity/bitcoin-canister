@@ -71,6 +71,7 @@ fi
 set +e
 MSG=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
   start_height = 0;
+  network = variant { regtest };
 })' 2>&1);
 set -e
 
@@ -158,6 +159,7 @@ fi
 # Verify that we are able to fetch block headers.
 MSG=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
   start_height = 0;
+  network = variant { regtest };
 })');
 
 # Height of the tip is 2.

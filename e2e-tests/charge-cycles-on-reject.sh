@@ -110,17 +110,17 @@ check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
 #test bitcoin_get_block_headers
 METHOD="bitcoin_get_block_headers"
-RECORD="(record { start_height = 10})"
+RECORD="(record { start_height = 10; network = variant { regtest }})"
 EXPECTED="StartHeightDoesNotExist"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
 METHOD="bitcoin_get_block_headers"
-RECORD="(record { start_height = 0; end_height = opt 10 })"
+RECORD="(record { start_height = 0; end_height = opt 10; network = variant { regtest } })"
 EXPECTED="EndHeightDoesNotExist"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
 METHOD="bitcoin_get_block_headers"
-RECORD="(record { start_height = 1; end_height = opt 0 })"
+RECORD="(record { start_height = 1; end_height = opt 0; network = variant { regtest } })"
 EXPECTED="StartHeightLargerThanEndHeight"
 check_charging "${METHOD}" "${RECORD}" "${EXPECTED}" 1
 
