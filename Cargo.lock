@@ -1464,7 +1464,7 @@ dependencies = [
 
 [[package]]
 name = "ic-btc-interface"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "candid 0.10.8",
  "ciborium",

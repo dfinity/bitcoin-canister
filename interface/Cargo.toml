@@ -1,6 +1,6 @@
 [package]
 name = "ic-btc-interface"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "Rust types for the Internet Computer's Bitcoin API."
 homepage = "https://docs.rs/ic-btc-interface"
