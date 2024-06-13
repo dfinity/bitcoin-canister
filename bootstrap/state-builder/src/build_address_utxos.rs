@@ -75,24 +75,22 @@ fn main() {
         if let Some(address) = address {
             let address: Address = address.into();
 
-            address_utxos
-                .insert(
-                    Blob::try_from(
-                        AddressUtxo {
-                            address,
-                            height,
-                            outpoint: OutPoint {
-                                txid: txid.clone(),
-                                vout,
-                            },
-                        }
-                        .to_bytes()
-                        .as_ref(),
-                    )
-                    .unwrap(),
-                    (),
+            address_utxos.insert(
+                Blob::try_from(
+                    AddressUtxo {
+                        address,
+                        height,
+                        outpoint: OutPoint {
+                            txid: txid.clone(),
+                            vout,
+                        },
+                    }
+                    .to_bytes()
+                    .as_ref(),
                 )
-                .unwrap();
+                .unwrap(),
+                (),
+            );
         }
     }
 
