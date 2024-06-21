@@ -141,6 +141,7 @@ pub fn get_block_headers(
     request: GetBlockHeadersRequest,
 ) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
     verify_api_access();
+    verify_network(request.network.into());
     verify_synced();
     api::get_block_headers(request)
 }
@@ -434,6 +435,22 @@ mod test {
     }
 
     #[test]
+    #[should_panic(expected = "Network must be mainnet. Found testnet")]
+    fn get_block_headers_incorrect_network() {
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(Network::Mainnet),
+            ..Default::default()
+        });
+        get_block_headers(GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+            network: NetworkInRequest::Testnet,
+        })
+        .unwrap();
+    }
+
+    #[test]
     fn test_verify_has_enough_cycles_does_not_panic_with_enough_cycles() {
         verify_has_enough_cycles(1_000);
     }
@@ -509,6 +526,7 @@ mod test {
         get_block_headers(GetBlockHeadersRequest {
             start_height: 3,
             end_height: None,
+            network: NetworkInRequest::Mainnet,
         })
         .unwrap();
     }

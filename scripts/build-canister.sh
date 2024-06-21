@@ -34,6 +34,14 @@ if [[ "$STATUS" -eq "0" ]]; then
     ./target/bin/ic-wasm \
     "./target/$TARGET/release/$CANISTER.wasm" \
     -o "./target/$TARGET/release/$CANISTER.wasm" shrink
+
+    if [[ "$CANISTER" == "ic-btc-canister" ]]; then
+    	./target/bin/ic-wasm \
+    	"./target/$TARGET/release/$CANISTER.wasm" \
+    	-o "./target/$TARGET/release/$CANISTER.wasm" \
+    	metadata candid:service -f "$SCRIPT_DIR/../canister/candid.did" -v public
+    fi
+
   true
 else
   echo Could not install ic-wasm

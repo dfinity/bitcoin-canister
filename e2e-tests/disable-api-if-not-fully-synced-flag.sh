@@ -71,6 +71,7 @@ fi
 set +e
 MSG=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
   start_height = 0;
+  network = variant { regtest };
 })' 2>&1);
 set -e
 
@@ -151,6 +152,18 @@ FEES=$(dfx canister call bitcoin bitcoin_get_current_fee_percentiles '(record {
 })')
 
 if ! [[ $FEES = "(vec {})" ]]; then
+  echo "FAIL"
+  exit 1
+fi
+
+# Verify that we are able to fetch block headers.
+MSG=$(dfx canister call bitcoin bitcoin_get_block_headers '(record {
+  start_height = 0;
+  network = variant { regtest };
+})');
+
+# Height of the tip is 2.
+if ! [[ $MSG = *"tip_height = 2"* ]]; then
   echo "FAIL"
   exit 1
 fi
