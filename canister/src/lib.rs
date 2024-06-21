@@ -318,7 +318,6 @@ mod test {
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(1))]
         #[test]
-        #[ignore] // TODO(EXC-1639): re-enable this test.
         fn upgrade(
             stability_threshold in 1..100u128,
             num_blocks in 1..250u32,
