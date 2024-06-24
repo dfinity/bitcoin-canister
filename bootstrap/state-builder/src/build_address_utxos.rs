@@ -12,7 +12,8 @@ use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo};
 use ic_btc_interface::Network;
 use ic_btc_types::{OutPoint, Txid};
 use ic_stable_structures::{
-    storable::Blob, BoundedStorable, DefaultMemoryImpl, StableBTreeMap, Storable,
+    storable::{max_size, Blob},
+    DefaultMemoryImpl, StableBTreeMap, Storable,
 };
 use std::{
     fs::File,
@@ -44,7 +45,7 @@ fn main() {
     let reader = BufReader::new(utxos_file);
 
     let memory = DefaultMemoryImpl::default();
-    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), _> =
+    let mut address_utxos: StableBTreeMap<Blob<{ max_size::<AddressUtxo>() as usize }>, (), _> =
         StableBTreeMap::init(memory.clone());
 
     for (i, line) in reader.lines().enumerate() {
