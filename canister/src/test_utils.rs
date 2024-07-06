@@ -3,8 +3,9 @@ use crate::{
     types::{into_bitcoin_network, Address},
 };
 use bitcoin::{
-    hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
-    BlockHeader, PublicKey, Script, WScriptHash, Witness,
+    absolute::LockTime, block::Header as BlockHeader, hashes::Hash, secp256k1::rand::rngs::OsRng,
+    secp256k1::rand::RngCore, secp256k1::Secp256k1, Address as BitcoinAddress, CompressedPublicKey,
+    PublicKey, ScriptBuf, WScriptHash, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -12,8 +13,8 @@ use ic_btc_test_utils::{
 };
 use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
-use proptest::prelude::RngCore;
 use std::{
+    convert::TryFrom,
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
@@ -21,10 +22,10 @@ use std::{
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
 
     BitcoinAddress::p2pkh(
-        &PublicKey::new(secp.generate_keypair(&mut rng).1),
+        PublicKey::new(secp.generate_keypair(&mut rng).1),
         into_bitcoin_network(network),
     )
     .into()
@@ -36,21 +37,23 @@ pub fn random_p2tr_address(network: Network) -> Address {
 
 pub fn random_p2wpkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
     BitcoinAddress::p2wpkh(
-        &PublicKey::new(secp.generate_keypair(&mut rng).1),
+        &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(&mut rng).1))
+            .expect("failed to create p2wpkh address"),
         into_bitcoin_network(network),
     )
-    .expect("failed to create p2wpkh address")
     .into()
 }
 
 pub fn random_p2wsh_address(network: Network) -> Address {
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
     let mut hash = [0u8; 32];
     rng.fill_bytes(&mut hash);
     BitcoinAddress::p2wsh(
-        &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&hash).unwrap())),
+        &ScriptBuf::new_p2wsh(&WScriptHash::from_raw_hash(
+            Hash::from_slice(&hash).unwrap(),
+        )),
         into_bitcoin_network(network),
     )
     .into()
@@ -215,14 +218,16 @@ impl TransactionBuilder {
 
     pub fn with_lock_time(self, i: u32) -> Self {
         Self {
-            builder: self.builder.with_lock_time(i),
+            builder: self.builder.with_lock_time(LockTime::from_consensus(i)),
         }
     }
 
     pub fn with_output(self, address: &Address, value: u64) -> Self {
         Self {
             builder: self.builder.with_output(
-                &BitcoinAddress::from_str(&address.to_string()).unwrap(),
+                &BitcoinAddress::from_str(&address.to_string())
+                    .unwrap()
+                    .assume_checked(),
                 value,
             ),
         }

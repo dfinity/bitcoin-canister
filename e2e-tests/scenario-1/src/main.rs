@@ -80,10 +80,13 @@ fn init() {
     // Block 1: A single transaction that gives ADDRESS_1 50 BTC split over 10k inputs.
     let mut tx_1 = TransactionBuilder::new();
     for _ in 0..10_000 {
-        tx_1 = tx_1.with_output(&Address::from_str(ADDRESS_1).unwrap(), 500_000);
+        tx_1 = tx_1.with_output(
+            &Address::from_str(ADDRESS_1).unwrap().assume_checked(),
+            500_000,
+        );
     }
     let tx_1 = tx_1.build();
-    let tx_1_id = tx_1.txid();
+    let tx_1_id = tx_1.compute_txid();
 
     let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header)
         .with_transaction(tx_1)
@@ -102,7 +105,10 @@ fn init() {
                     },
                     None,
                 )
-                .with_output(&Address::from_str(ADDRESS_2).unwrap(), 500_000)
+                .with_output(
+                    &Address::from_str(ADDRESS_2).unwrap().assume_checked(),
+                    500_000,
+                )
                 .build(),
         )
     }
@@ -119,7 +125,10 @@ fn init() {
     let block_3 = BlockBuilder::with_prev_header(block_2.header)
         .with_transaction(
             TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_3).unwrap(), 500_000)
+                .with_output(
+                    &Address::from_str(ADDRESS_3).unwrap().assume_checked(),
+                    500_000,
+                )
                 .build(),
         )
         .build();
@@ -128,7 +137,10 @@ fn init() {
     let block_4 = BlockBuilder::with_prev_header(block_3.header)
         .with_transaction(
             TransactionBuilder::new()
-                .with_output(&Address::from_str(ADDRESS_4).unwrap(), 500_000)
+                .with_output(
+                    &Address::from_str(ADDRESS_4).unwrap().assume_checked(),
+                    500_000,
+                )
                 .build(),
         )
         .build();
@@ -141,12 +153,15 @@ fn init() {
             TransactionBuilder::new()
                 .with_input(
                     OutPoint {
-                        txid: block_2_tx.txid(),
+                        txid: block_2_tx.compute_txid(),
                         vout: 0,
                     },
                     None,
                 )
-                .with_output(&Address::from_str(ADDRESS_5).unwrap(), 500_000)
+                .with_output(
+                    &Address::from_str(ADDRESS_5).unwrap().assume_checked(),
+                    500_000,
+                )
                 .build(),
         )
     }
@@ -227,3 +242,8 @@ fn append_block(block: &Block) {
 }
 
 fn main() {}
+
+getrandom::register_custom_getrandom!(always_fail);
+pub fn always_fail(_buf: &mut [u8]) -> Result<(), getrandom::Error> {
+    Err(getrandom::Error::UNSUPPORTED)
+}

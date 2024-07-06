@@ -4,7 +4,7 @@ use crate::{
     runtime::{inc_performance_counter, performance_counter, print},
     types::{Address, AddressUtxo, AddressUtxoRange, Slicing, TxOut, Utxo},
 };
-use bitcoin::{Script, TxOut as BitcoinTxOut};
+use bitcoin::{Amount, ScriptBuf, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Network, Satoshi};
 use ic_btc_types::{Block, BlockHash, OutPoint, Transaction, Txid};
 use ic_stable_structures::{storable::Blob, BoundedStorable, StableBTreeMap, Storable as _};
@@ -168,13 +168,17 @@ impl UtxoSet {
             // Add any removed outpoints back to the balance.
             for outpoint in utxos_delta.get_removed_outpoints(address) {
                 let (tx_out, _) = utxos_delta.get_utxo(outpoint).expect("UTXO must exist");
-                balance = balance.checked_add(tx_out.value).expect("Cannot overflow");
+                balance = balance
+                    .checked_add(tx_out.value.to_sat())
+                    .expect("Cannot overflow");
             }
 
             // Remove any added outpoints from the balance.
             for outpoint in utxos_delta.get_added_outpoints(address) {
                 let (tx_out, _) = utxos_delta.get_utxo(outpoint).expect("UTXO must exist");
-                balance = balance.checked_sub(tx_out.value).expect("Cannot underflow");
+                balance = balance
+                    .checked_sub(tx_out.value.to_sat())
+                    .expect("Cannot underflow");
             }
         }
 
@@ -310,7 +314,7 @@ impl UtxoSet {
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
                     if let Ok(address) = Address::from_script(
-                        &Script::from(txout.script_pubkey.clone()),
+                        &ScriptBuf::from(txout.script_pubkey.clone()),
                         self.network,
                     ) {
                         let address_utxo = AddressUtxo {
@@ -330,13 +334,13 @@ impl UtxoSet {
                         );
 
                         // Update the balance of the address.
-                        if txout.value != 0 {
+                        if txout.value != Amount::ZERO {
                             let address_balance =
                                 self.balances.get(&address).unwrap_or_else(|| {
                                     panic!("Address {} must exist in the balances map (trying to remove outpoint {:?})", address, input.previous_output);
                                 });
 
-                            match address_balance - txout.value {
+                            match address_balance - txout.value.to_sat() {
                                 // Remove the address from the map if balance is zero.
                                 0 => self.balances.remove(&address),
                                 // Update the balance in the map.
@@ -369,7 +373,7 @@ impl UtxoSet {
                 return Slicing::Paused(vout);
             }
 
-            if !(output.script_pubkey.is_provably_unspendable()) {
+            if !(output.script_pubkey.is_op_return()) {
                 let ins_start = performance_counter();
                 let txid = tx.txid();
                 stats.ins_txids += performance_counter() - ins_start;
@@ -416,7 +420,7 @@ impl UtxoSet {
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value);
+                .insert(address.clone(), address_balance + output.value.to_sat());
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }
@@ -442,7 +446,7 @@ impl UtxoSet {
 
     #[cfg(test)]
     pub fn get_total_supply(&self) -> Satoshi {
-        self.utxos.iter().map(|(_, (v, _))| v.value).sum()
+        self.utxos.iter().map(|(_, (v, _))| v.value.to_sat()).sum()
     }
 }
 
@@ -571,6 +575,7 @@ mod test {
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
+    use bitcoin::{absolute::LockTime, transaction::Version};
     use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
@@ -598,8 +603,8 @@ mod test {
             let coinbase_empty_tx = Transaction::new(bitcoin::Transaction {
                 output: vec![],
                 input: vec![],
-                version: 1,
-                lock_time: 0,
+                version: Version::ONE,
+                lock_time: LockTime::ZERO,
             });
             ingest_tx(&mut utxo, &coinbase_empty_tx);
 
@@ -617,12 +622,12 @@ mod test {
             let block = BlockBuilder::genesis()
                 .with_transaction(Transaction::new(bitcoin::Transaction {
                     output: vec![BitcoinTxOut {
-                        value: 50_0000_0000,
+                        value: Amount::from_sat(50_0000_0000),
                         script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
                     }],
                     input: vec![],
-                    version: 1,
-                    lock_time: 0,
+                    version: Version::ONE,
+                    lock_time: LockTime::ZERO,
                 }))
                 .build();
 

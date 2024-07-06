@@ -152,7 +152,7 @@ fn maybe_process_response() {
                 ));
                 for block_bytes in response.blocks.iter() {
                     // Deserialize the block.
-                    let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
+                    let block = match BitcoinBlock::consensus_decode(&mut block_bytes.as_slice()) {
                         Ok(block) => block,
                         Err(err) => {
                             print(&format!(
@@ -270,7 +270,7 @@ mod test {
         types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
         utxo_set::IngestingBlock,
     };
-    use bitcoin::BlockHeader;
+    use bitcoin::block::Header as BlockHeader;
     use ic_btc_interface::{InitConfig, Network};
 
     fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {

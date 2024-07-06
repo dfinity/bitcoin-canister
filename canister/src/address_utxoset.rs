@@ -67,7 +67,7 @@ impl<'a> AddressUtxoSet<'a> {
                 });
             self.added_utxos.insert(Utxo {
                 outpoint: outpoint.clone(),
-                value: txout.value,
+                value: txout.value.to_sat(),
                 height,
             });
         }
@@ -96,7 +96,7 @@ impl<'a> AddressUtxoSet<'a> {
                 Utxo {
                     outpoint,
                     height,
-                    value: tx_out.value,
+                    value: tx_out.value.to_sat(),
                 }
             });
 

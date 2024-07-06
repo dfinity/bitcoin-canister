@@ -7,7 +7,7 @@
 //!     --network testnet \
 //!     --blocks-path /path/to/data/testnet3 \
 //!     --tip 000000002ce019cc4a8f2af62b3ecf7c30a19d29828b25268a0194dbac3cac50
-use bitcoin::{consensus::Decodable, BlockHash, BlockHeader};
+use bitcoin::{block::Header as BlockHeader, consensus::Decodable, io::Cursor, BlockHash};
 use byteorder::{LittleEndian, ReadBytesExt};
 use clap::Parser;
 use ic_btc_canister::{
@@ -21,7 +21,7 @@ use rusty_leveldb::{Options, DB};
 use std::{
     collections::BTreeMap,
     fs::File,
-    io::{Cursor, Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -50,7 +50,7 @@ struct Args {
 }
 
 // How to read Bitcoin's varint format.
-trait VarIntRead: std::io::Read {
+trait VarIntRead: bitcoin::io::Read {
     fn read_varint(&mut self) -> usize {
         let mut n = 0;
         loop {
@@ -100,7 +100,7 @@ fn get_block_info(
     block_hash: &BlockHash,
 ) -> Option<(Height, FileNumber, FileOffset, BlockHash)> {
     let mut key: Vec<u8> = vec![98];
-    key.extend(block_hash.to_vec());
+    key.extend((block_hash.as_ref() as &[u8]).to_vec());
 
     let value = db.get(&key).unwrap();
 

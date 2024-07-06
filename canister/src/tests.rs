@@ -13,7 +13,7 @@ use crate::{
 };
 use crate::{init, test_utils::random_p2pkh_address};
 use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::{Block as BitcoinBlock, BlockHeader};
+use bitcoin::{block::Header as BlockHeader, Block as BitcoinBlock};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};

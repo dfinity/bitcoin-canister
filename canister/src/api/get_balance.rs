@@ -69,7 +69,7 @@ fn get_balance_private(request: GetBalanceRequest) -> Result<Satoshi, GetBalance
                 .get_added_outpoints(&block.block_hash(), &address)
             {
                 let (txout, _) = state.unstable_blocks.get_tx_out(outpoint).unwrap();
-                balance += txout.value;
+                balance += txout.value.to_sat();
             }
 
             for outpoint in state
@@ -77,7 +77,7 @@ fn get_balance_private(request: GetBalanceRequest) -> Result<Satoshi, GetBalance
                 .get_removed_outpoints(&block.block_hash(), &address)
             {
                 let (txout, _) = state.unstable_blocks.get_tx_out(outpoint).unwrap();
-                balance -= txout.value;
+                balance -= txout.value.to_sat();
             }
         }
 

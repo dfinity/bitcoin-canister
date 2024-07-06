@@ -2,8 +2,7 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    util::uint::Uint256, Block as BitcoinBlock, Network as BitcoinNetwork,
-    OutPoint as BitcoinOutPoint,
+    Block as BitcoinBlock, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint, Target,
 };
 use candid::CandidType;
 use ic_btc_interface::{Network, Txid as PublicTxid};
@@ -37,7 +36,7 @@ impl Block {
         }
     }
 
-    pub fn header(&self) -> &bitcoin::BlockHeader {
+    pub fn header(&self) -> &bitcoin::block::Header {
         &self.block.header
     }
 
@@ -63,14 +62,21 @@ impl Block {
 
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
-        self.block.consensus_encode(buffer)
+        self.block
+            .consensus_encode(buffer)
+            .map_err(|err| err.into())
     }
 
     // Computes the difficulty given a block's target.
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
-    pub fn target_difficulty(network: Network, target: Uint256) -> u64 {
-        (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
+    pub fn target_difficulty(network: Network, target: Target) -> u64 {
+        use primitive_types::U256;
+
+        let max_target = ic_btc_validation::max_target(&into_bitcoin_network(network));
+        let max_target = U256::from_big_endian(&max_target.to_be_bytes());
+        let target = U256::from_big_endian(&target.to_be_bytes());
+        (max_target / target).low_u64()
     }
 
     pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
@@ -99,7 +105,7 @@ impl Transaction {
     }
 
     pub fn is_coin_base(&self) -> bool {
-        self.tx.is_coin_base()
+        self.tx.is_coinbase()
     }
 
     pub fn input(&self) -> &[bitcoin::TxIn] {
@@ -114,15 +120,19 @@ impl Transaction {
         self.tx.vsize()
     }
 
-    pub fn size(&self) -> usize {
-        self.tx.size()
+    pub fn base_size(&self) -> usize {
+        self.tx.base_size()
+    }
+
+    pub fn total_size(&self) -> usize {
+        self.tx.total_size()
     }
 
     pub fn txid(&self) -> Txid {
         if self.txid.borrow().is_none() {
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
-            let txid = Txid::from(self.tx.txid().to_vec());
+            let txid = Txid::from(self.tx.compute_txid().as_ref());
             self.txid.borrow_mut().replace(txid);
         }
 
@@ -155,13 +165,21 @@ impl From<Vec<u8>> for Txid {
     }
 }
 
+impl From<&[u8]> for Txid {
+    fn from(bytes: &[u8]) -> Self {
+        Self {
+            bytes: bytes.to_vec(),
+        }
+    }
+}
+
 impl FromStr for Txid {
     type Err = String;
 
     fn from_str(txid: &str) -> Result<Self, Self::Err> {
         use bitcoin::Txid as BitcoinTxid;
-        let bytes = BitcoinTxid::from_str(txid).unwrap().to_vec();
-        Ok(Self::from(bytes))
+        let bytes = BitcoinTxid::from_str(txid).unwrap();
+        Ok(Self::from(bytes.as_ref()))
     }
 }
 
@@ -244,9 +262,15 @@ impl From<Vec<u8>> for BlockHash {
     }
 }
 
+impl From<&[u8]> for BlockHash {
+    fn from(bytes: &[u8]) -> Self {
+        Self::from(bytes.to_vec())
+    }
+}
+
 impl From<bitcoin::BlockHash> for BlockHash {
     fn from(block_hash: bitcoin::BlockHash) -> Self {
-        Self(block_hash.to_vec())
+        Self::from(block_hash.as_ref())
     }
 }
 
@@ -254,10 +278,10 @@ impl FromStr for BlockHash {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(
+        Ok(Self::from(
             bitcoin::BlockHash::from_str(s)
                 .map_err(|e| e.to_string())?
-                .to_vec(),
+                .as_ref(),
         ))
     }
 }
@@ -315,7 +339,7 @@ impl OutPoint {
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self {
-            txid: Txid::from(bitcoin_outpoint.txid.to_vec()),
+            txid: Txid::from(bitcoin_outpoint.txid.as_ref()),
             vout: bitcoin_outpoint.vout,
         }
     }
@@ -326,7 +350,7 @@ impl From<OutPoint> for bitcoin::OutPoint {
         use bitcoin::hashes::Hash;
 
         Self {
-            txid: bitcoin::Txid::from_hash(
+            txid: bitcoin::Txid::from_raw_hash(
                 Hash::from_slice(outpoint.txid.as_bytes()).expect("txid must be valid"),
             ),
             vout: outpoint.vout,
@@ -365,7 +389,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
+            Target::from_compact(bitcoin::CompactTarget::from_consensus(0x1b0404cb))
         ),
         16_307
     );
@@ -375,7 +399,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386397584)
+            Target::from_compact(bitcoin::CompactTarget::from_consensus(386397584))
         ),
         35_364_065_900_457
     );
@@ -385,7 +409,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386877668)
+            Target::from_compact(bitcoin::CompactTarget::from_consensus(386877668))
         ),
         18_415_156_832_118
     );
@@ -395,7 +419,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(422681968)
+            Target::from_compact(bitcoin::CompactTarget::from_consensus(422681968))
         ),
         86_564_599
     );
@@ -405,7 +429,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(457142912)
+            Target::from_compact(bitcoin::CompactTarget::from_consensus(457142912))
         ),
         1_032
     );

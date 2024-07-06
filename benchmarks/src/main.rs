@@ -1,5 +1,5 @@
 use bitcoin::consensus::Decodable;
-use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
+use bitcoin::{block::Header as BlockHeader, consensus::Encodable, Block as BitcoinBlock};
 use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{InitConfig, Network};
@@ -22,7 +22,7 @@ fn init() {
                 .split('\n')
                 .map(|block_hex| {
                     let block_bytes = hex::decode(block_hex).unwrap();
-                    Block::new(BitcoinBlock::consensus_decode(block_bytes.as_slice()).unwrap())
+                    Block::new(BitcoinBlock::consensus_decode(&mut block_bytes.as_slice()).unwrap())
                 })
                 .collect(),
         );
@@ -173,3 +173,8 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
 }
 
 fn main() {}
+
+getrandom::register_custom_getrandom!(always_fail);
+pub fn always_fail(_buf: &mut [u8]) -> Result<(), getrandom::Error> {
+    Err(getrandom::Error::UNSUPPORTED)
+}

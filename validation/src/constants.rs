@@ -1,4 +1,4 @@
-use bitcoin::{util::uint::Uint256, Network};
+use bitcoin::{CompactTarget, Network, Target};
 
 use crate::BlockHeight;
 
@@ -8,45 +8,14 @@ pub const DIFFICULTY_ADJUSTMENT_INTERVAL: BlockHeight = 6 * 24 * 14;
 /// Needed to help test check for the 20 minute testnet/regtest rule
 pub const TEN_MINUTES: u32 = 60 * 10;
 
-/// Bitcoin mainnet maximum target value
-const BITCOIN_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000,
-    0x0000000000000000,
-    0x0000000000000000,
-    0x00000000ffff0000,
-]);
-
-/// Bitcoin testnet maximum target value
-const TESTNET_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000,
-    0x0000000000000000,
-    0x0000000000000000,
-    0x00000000ffff0000,
-]);
-
-/// Bitcoin regtest maximum target value
-const REGTEST_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000,
-    0x0000000000000000,
-    0x0000000000000000,
-    0x7fffff0000000000,
-]);
-
-/// Bitcoin signet maximum target value
-const SIGNET_MAX_TARGET: Uint256 = Uint256([
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x0000000000000000u64,
-    0x00000377ae000000u64,
-]);
-
 /// Returns the maximum difficulty target depending on the network
-pub fn max_target(network: &Network) -> Uint256 {
+pub fn max_target(network: &Network) -> Target {
     match network {
-        Network::Bitcoin => BITCOIN_MAX_TARGET,
-        Network::Testnet => TESTNET_MAX_TARGET,
-        Network::Regtest => REGTEST_MAX_TARGET,
-        Network::Signet => SIGNET_MAX_TARGET,
+        Network::Bitcoin => Target::MAX_ATTAINABLE_MAINNET,
+        Network::Testnet => Target::MAX_ATTAINABLE_TESTNET,
+        Network::Regtest => Target::MAX_ATTAINABLE_REGTEST,
+        Network::Signet => Target::MAX_ATTAINABLE_SIGNET,
+        _ => unreachable!(),
     }
 }
 
@@ -56,17 +25,19 @@ pub fn no_pow_retargeting(network: &Network) -> bool {
     match network {
         Network::Bitcoin | Network::Testnet | Network::Signet => false,
         Network::Regtest => true,
+        _ => unreachable!(),
     }
 }
 
 /// Returns the PoW limit bits of the bitcoin network
-pub fn pow_limit_bits(network: &Network) -> u32 {
-    match network {
+pub fn pow_limit_bits(network: &Network) -> CompactTarget {
+    CompactTarget::from_consensus(match network {
         Network::Bitcoin => 0x1d00ffff,
         Network::Testnet => 0x1d00ffff,
         Network::Regtest => 0x207fffff,
         Network::Signet => 0x1e0377ae,
-    }
+        _ => unreachable!(),
+    })
 }
 
 #[cfg(test)]

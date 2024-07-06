@@ -1,8 +1,9 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, util::uint::Uint256, Address,
-    Block as BitcoinBlock, BlockHash, BlockHeader, KeyPair, Network, OutPoint, PublicKey, Script,
-    Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    absolute::LockTime, block::Header as BlockHeader, block::Version, hashes::Hash, key::Keypair,
+    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, transaction::Version as TransactionVersion,
+    Address, Amount, Block as BitcoinBlock, Network, OutPoint, PublicKey, ScriptBuf, Sequence,
+    Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;
 use std::str::FromStr;
@@ -10,16 +11,16 @@ use std::str::FromStr;
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
 
-    Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), network)
+    Address::p2pkh(PublicKey::new(secp.generate_keypair(&mut rng).1), network)
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
-    let key_pair = KeyPair::new(&secp, &mut rng);
-    let xonly = XOnlyPublicKey::from_keypair(&key_pair);
+    let mut rng = OsRng;
+    let key_pair = Keypair::new(&secp, &mut rng);
+    let (xonly, _parity) = XOnlyPublicKey::from_keypair(&key_pair);
 
     Address::p2tr(&secp, xonly, None, network)
 }
@@ -27,8 +28,8 @@ pub fn random_p2tr_address(network: Network) -> Address {
 fn coinbase_input() -> TxIn {
     TxIn {
         previous_output: OutPoint::null(),
-        script_sig: Script::new(),
-        sequence: 0xffffffff,
+        script_sig: ScriptBuf::new(),
+        sequence: Sequence(0xffffffff),
         witness: Witness::new(),
     }
 }
@@ -66,10 +67,11 @@ impl BlockBuilder {
             self.transactions
         };
 
-        let merkle_root =
-            bitcoin::util::hash::bitcoin_merkle_root(txdata.iter().map(|tx| tx.txid().as_hash()))
-                .unwrap();
-        let merkle_root = TxMerkleNode::from_hash(merkle_root);
+        let merkle_root = bitcoin::merkle_tree::calculate_root(
+            txdata.iter().map(|tx| tx.compute_txid().to_raw_hash()),
+        )
+        .unwrap();
+        let merkle_root = TxMerkleNode::from_raw_hash(merkle_root);
 
         let header = match self.prev_header {
             Some(prev_header) => header(&prev_header, merkle_root),
@@ -99,7 +101,7 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
         for _ in 0..num_transactions_per_block {
             transactions.push(
                 TransactionBuilder::coinbase()
-                    .with_output(&address, value)
+                    .with_output(address.assume_checked_ref(), value)
                     .build(),
             );
             // Vary the value of the transaction to ensure that
@@ -120,21 +122,16 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
 }
 
 fn genesis(merkle_root: TxMerkleNode) -> BlockHeader {
-    let target = Uint256([
-        0xffffffffffffffffu64,
-        0xffffffffffffffffu64,
-        0xffffffffffffffffu64,
-        0x7fffffffffffffffu64,
-    ]);
-    let bits = BlockHeader::compact_target_from_u256(&target);
+    let target = Target::MAX_ATTAINABLE_REGTEST;
+    let bits = target.to_compact_lossy();
 
     let mut header = BlockHeader {
-        version: 1,
+        version: Version::ONE,
         time: 0,
         nonce: 0,
         bits,
         merkle_root,
-        prev_blockhash: BlockHash::default(),
+        prev_blockhash: Hash::all_zeros(),
     };
     solve(&mut header);
 
@@ -144,7 +141,7 @@ fn genesis(merkle_root: TxMerkleNode) -> BlockHeader {
 pub struct TransactionBuilder {
     input: Vec<TxIn>,
     output: Vec<TxOut>,
-    lock_time: u32,
+    lock_time: LockTime,
 }
 
 impl TransactionBuilder {
@@ -152,7 +149,7 @@ impl TransactionBuilder {
         Self {
             input: vec![],
             output: vec![],
-            lock_time: 0,
+            lock_time: LockTime::ZERO,
         }
     }
 
@@ -160,7 +157,7 @@ impl TransactionBuilder {
         Self {
             input: vec![coinbase_input()],
             output: vec![],
-            lock_time: 0,
+            lock_time: LockTime::ZERO,
         }
     }
 
@@ -172,8 +169,8 @@ impl TransactionBuilder {
         let witness = witness.map_or(Witness::new(), |w| w);
         let input = TxIn {
             previous_output,
-            script_sig: Script::new(),
-            sequence: 0xffffffff,
+            script_sig: ScriptBuf::new(),
+            sequence: Sequence(0xffffffff),
             witness,
         };
         self.input.push(input);
@@ -182,13 +179,13 @@ impl TransactionBuilder {
 
     pub fn with_output(mut self, address: &Address, value: u64) -> Self {
         self.output.push(TxOut {
-            value,
+            value: Amount::from_sat(value),
             script_pubkey: address.script_pubkey(),
         });
         self
     }
 
-    pub fn with_lock_time(mut self, time: u32) -> Self {
+    pub fn with_lock_time(mut self, time: LockTime) -> Self {
         self.lock_time = time;
         self
     }
@@ -203,7 +200,7 @@ impl TransactionBuilder {
         let output = if self.output.is_empty() {
             // Use default of 50 BTC.
             vec![TxOut {
-                value: 50_0000_0000,
+                value: Amount::from_sat(50_0000_0000),
                 script_pubkey: random_p2pkh_address(Network::Regtest).script_pubkey(),
             }]
         } else {
@@ -211,7 +208,7 @@ impl TransactionBuilder {
         };
 
         Transaction {
-            version: 1,
+            version: TransactionVersion::ONE,
             lock_time: self.lock_time,
             input,
             output,
@@ -227,10 +224,10 @@ impl Default for TransactionBuilder {
 
 fn header(prev_header: &BlockHeader, merkle_root: TxMerkleNode) -> BlockHeader {
     let time = prev_header.time + 60 * 10; // 10 minutes.
-    let bits = BlockHeader::compact_target_from_u256(&prev_header.target());
+    let bits = prev_header.target().to_compact_lossy();
 
     let mut header = BlockHeader {
-        version: 1,
+        version: Version::ONE,
         time,
         nonce: 0,
         bits,
@@ -244,7 +241,7 @@ fn header(prev_header: &BlockHeader, merkle_root: TxMerkleNode) -> BlockHeader {
 
 fn solve(header: &mut BlockHeader) {
     let target = header.target();
-    while header.validate_pow(&target).is_err() {
+    while header.validate_pow(target).is_err() {
         header.nonce += 1;
     }
 }
@@ -253,26 +250,26 @@ fn solve(header: &mut BlockHeader) {
 mod test {
     mod transaction_builder {
         use crate::{random_p2pkh_address, TransactionBuilder};
-        use bitcoin::{Network, OutPoint};
+        use bitcoin::{Amount, Network, OutPoint};
 
         #[test]
         fn new_build() {
             let tx = TransactionBuilder::new().build();
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value, Amount::from_sat(50_0000_0000));
         }
 
         #[test]
         fn coinbase() {
             let tx = TransactionBuilder::coinbase().build();
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value, Amount::from_sat(50_0000_0000));
         }
 
         #[test]
@@ -286,7 +283,7 @@ mod test {
                 .build();
 
             TransactionBuilder::coinbase()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None);
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0), None);
         }
 
         #[test]
@@ -296,11 +293,11 @@ mod test {
                 .with_output(&address, 1000)
                 .build();
 
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 1000);
+            assert_eq!(tx.output[0].value, Amount::from_sat(1000));
             assert_eq!(tx.output[0].script_pubkey, address.script_pubkey());
         }
 
@@ -313,13 +310,13 @@ mod test {
                 .with_output(&address_1, 2000)
                 .build();
 
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 2);
-            assert_eq!(tx.output[0].value, 1000);
+            assert_eq!(tx.output[0].value, Amount::from_sat(1000));
             assert_eq!(tx.output[0].script_pubkey, address_0.script_pubkey());
-            assert_eq!(tx.output[1].value, 2000);
+            assert_eq!(tx.output[1].value, Amount::from_sat(2000));
             assert_eq!(tx.output[1].script_pubkey, address_1.script_pubkey());
         }
 
@@ -331,16 +328,16 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None)
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0), None)
                 .build();
-            assert!(!tx.is_coin_base());
+            assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(
                 tx.input[0].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0)
             );
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value, Amount::from_sat(50_0000_0000));
         }
 
         #[test]
@@ -354,21 +351,27 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0), None)
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0), None)
+                .with_input(
+                    bitcoin::OutPoint::new(coinbase_tx_0.compute_txid(), 0),
+                    None,
+                )
+                .with_input(
+                    bitcoin::OutPoint::new(coinbase_tx_1.compute_txid(), 0),
+                    None,
+                )
                 .build();
-            assert!(!tx.is_coin_base());
+            assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 2);
             assert_eq!(
                 tx.input[0].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx_0.compute_txid(), 0)
             );
             assert_eq!(
                 tx.input[1].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx_1.compute_txid(), 0)
             );
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value, Amount::from_sat(50_0000_0000));
         }
     }
 }

@@ -1,4 +1,4 @@
-use bitcoin::BlockHeader;
+use bitcoin::block::Header as BlockHeader;
 use ic_btc_interface::Height;
 use ic_btc_types::BlockHash;
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,6 @@
-use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader, Network};
+use bitcoin::{
+    block::Header as BlockHeader, block::ValidationError, BlockHash, CompactTarget, Network, Target,
+};
 
 use crate::{
     constants::{
@@ -76,15 +78,15 @@ pub fn validate_header(
         return Err(ValidateHeaderError::TargetDifficultyAboveMax);
     }
 
-    if header.validate_pow(&header_target).is_err() {
+    if header.validate_pow(header_target).is_err() {
         return Err(ValidateHeaderError::InvalidPoWForHeaderTarget);
     }
 
     let target = get_next_target(network, store, &prev_header, prev_height, header.time);
-    if let Err(err) = header.validate_pow(&target) {
+    if let Err(err) = header.validate_pow(Target::from_compact(target)) {
         match err {
-            bitcoin::Error::BlockBadProofOfWork => println!("bad proof of work"),
-            bitcoin::Error::BlockBadTarget => println!("bad target"),
+            ValidationError::BadProofOfWork => println!("bad proof of work"),
+            ValidationError::BadTarget => println!("bad target"),
             _ => {}
         };
         return Err(ValidateHeaderError::InvalidPoWForComputedTarget);
@@ -149,7 +151,7 @@ fn get_next_target(
     prev_header: &BlockHeader,
     prev_height: BlockHeight,
     timestamp: u32,
-) -> Uint256 {
+) -> CompactTarget {
     match network {
         Network::Testnet | Network::Regtest => {
             if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
@@ -161,29 +163,20 @@ fn get_next_target(
                 if timestamp > prev_header.time + TEN_MINUTES * 2 {
                     //If no block has been found in 20 minutes, then use the maximum difficulty
                     // target
-                    max_target(network)
+                    max_target(network).to_compact_lossy()
                 } else {
                     //If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    BlockHeader::u256_from_compact_target(find_next_difficulty_in_chain(
-                        network,
-                        store,
-                        prev_header,
-                        prev_height,
-                    ))
+                    find_next_difficulty_in_chain(network, store, prev_header, prev_height)
                 }
             } else {
-                BlockHeader::u256_from_compact_target(compute_next_difficulty(
-                    network,
-                    store,
-                    prev_header,
-                    prev_height,
-                ))
+                compute_next_difficulty(network, store, prev_header, prev_height)
             }
         }
-        Network::Bitcoin | Network::Signet => BlockHeader::u256_from_compact_target(
-            compute_next_difficulty(network, store, prev_header, prev_height),
-        ),
+        Network::Bitcoin | Network::Signet => {
+            compute_next_difficulty(network, store, prev_header, prev_height)
+        }
+        _ => unreachable!(),
     }
 }
 
@@ -199,7 +192,7 @@ fn find_next_difficulty_in_chain(
     store: &impl HeaderStore,
     prev_header: &BlockHeader,
     prev_height: BlockHeight,
-) -> u32 {
+) -> CompactTarget {
     // This is the maximum difficulty target for the network
     let pow_limit_bits = pow_limit_bits(network);
     match network {
@@ -236,6 +229,7 @@ fn find_next_difficulty_in_chain(
             pow_limit_bits
         }
         Network::Bitcoin | Network::Signet => pow_limit_bits,
+        _ => unreachable!(),
     }
 }
 
@@ -246,7 +240,8 @@ fn compute_next_difficulty(
     store: &impl HeaderStore,
     prev_header: &BlockHeader,
     prev_height: BlockHeight,
-) -> u32 {
+) -> CompactTarget {
+    use primitive_types::U256;
     // Difficulty is adjusted only once in every interval of 2 weeks (2016 blocks)
     // If an interval boundary is not reached, then previous difficulty target is
     // returned Regtest network doesn't adjust PoW difficult levels. For
@@ -289,16 +284,14 @@ fn compute_next_difficulty(
     // Computing new difficulty target.
     // new difficulty target = old difficult target * (adjusted_interval /
     // 2_weeks);
-    let mut target = prev_header.target();
-    target = target.mul_u32(adjusted_interval);
-    target = target / Uint256::from_u64(target_adjustment_interval_time as u64).unwrap();
+    let mut target = U256::from_big_endian(&prev_header.target().to_be_bytes());
+    target *= U256::from(adjusted_interval);
+    target /= U256::from(target_adjustment_interval_time);
+    let target = Target::from_be_bytes(target.into());
 
     // Adjusting the newly computed difficulty target so that it doesn't exceed the
     // max_difficulty_target limit
-    target = Uint256::min(target, max_target(network));
-
-    // Converting the target (Uint256) into a 32 bit representation used by Bitcoin
-    BlockHeader::compact_target_from_u256(&target)
+    target.min(max_target(network)).to_compact_lossy()
 }
 
 #[cfg(test)]
@@ -306,7 +299,9 @@ mod test {
 
     use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode};
+    use bitcoin::{
+        block::Version, consensus::deserialize, hashes::hex::FromHex, hashes::Hash, TxMerkleNode,
+    };
     use csv::Reader;
     use proptest::prelude::*;
 
@@ -409,11 +404,15 @@ mod test {
         for result in rdr.records() {
             let record = result.unwrap();
             let header = BlockHeader {
-                version: i32::from_str_radix(record.get(0).unwrap(), 16).unwrap(),
+                version: Version::from_consensus(
+                    i32::from_str_radix(record.get(0).unwrap(), 16).unwrap(),
+                ),
                 prev_blockhash: BlockHash::from_str(record.get(1).unwrap()).unwrap(),
                 merkle_root: TxMerkleNode::from_str(record.get(2).unwrap()).unwrap(),
                 time: u32::from_str_radix(record.get(3).unwrap(), 16).unwrap(),
-                bits: u32::from_str_radix(record.get(4).unwrap(), 16).unwrap(),
+                bits: CompactTarget::from_consensus(
+                    u32::from_str_radix(record.get(4).unwrap(), 16).unwrap(),
+                ),
                 nonce: u32::from_str_radix(record.get(5).unwrap(), 16).unwrap(),
             };
             headers.push(header);
@@ -513,17 +512,17 @@ mod test {
         store.add(header_705602);
 
         let mut header = BlockHeader {
-            version: 0x20800004,
-            prev_blockhash: BlockHash::from_hex(
+            version: Version::from_consensus(0x20800004),
+            prev_blockhash: BlockHash::from_str(
                 "00000000000000000001eea12c0de75000c2546da22f7bf42d805c1d2769b6ef",
             )
             .unwrap(),
-            merkle_root: TxMerkleNode::from_hex(
+            merkle_root: TxMerkleNode::from_str(
                 "c120ff2ae1363593a0b92e0d281ec341a0cc989b4ee836dc3405c9f4215242a6",
             )
             .unwrap(),
             time: 1634590600,
-            bits: 0x170e0408,
+            bits: CompactTarget::from_consensus(0x170e0408),
             nonce: 0xb48e8b0a,
         };
         assert!(is_timestamp_valid(&store, &header, MOCK_CURRENT_TIME).is_ok());
@@ -632,7 +631,7 @@ mod test {
         for line in rdr.lines() {
             let header = line.unwrap();
             let header = hex::decode(header.trim()).unwrap();
-            let header = BlockHeader::consensus_decode(header.as_slice()).unwrap();
+            let header = BlockHeader::consensus_decode(&mut header.as_slice()).unwrap();
             headers.push(header);
         }
 
@@ -651,7 +650,7 @@ mod test {
             // Assert that the expected next target matches the next header's target.
             assert_eq!(
                 expected_next_target,
-                BlockHeader::u256_from_compact_target(headers[i + 1].bits)
+                headers[i + 1].bits
             );
         });
     }
@@ -674,18 +673,18 @@ mod test {
         );
     }
 
-    fn genesis_header(bits: u32) -> BlockHeader {
+    fn genesis_header(bits: CompactTarget) -> BlockHeader {
         BlockHeader {
-            version: 1,
-            prev_blockhash: Default::default(),
-            merkle_root: Default::default(),
+            version: Version::ONE,
+            prev_blockhash: Hash::all_zeros(),
+            merkle_root: Hash::all_zeros(),
             time: 1296688602,
             bits,
             nonce: 0,
         }
     }
 
-    fn next_block_header(prev: BlockHeader, bits: u32) -> BlockHeader {
+    fn next_block_header(prev: BlockHeader, bits: CompactTarget) -> BlockHeader {
         BlockHeader {
             prev_blockhash: prev.block_hash(),
             time: prev.time + TEN_MINUTES,
@@ -698,7 +697,7 @@ mod test {
     /// proof of work for the first header.
     fn create_chain(
         network: &Network,
-        initial_pow: u32,
+        initial_pow: CompactTarget,
         chain_length: u32,
     ) -> (SimpleHeaderStore, BlockHeader) {
         let pow_limit = pow_limit_bits(network);
@@ -724,7 +723,7 @@ mod test {
 
         // Arrange.
         let network = Network::Regtest;
-        let expected_pow = 7; // Some non-limit PoW, the actual value is not important.
+        let expected_pow = CompactTarget::from_consensus(7); // Some non-limit PoW, the actual value is not important.
         for chain_length in 1..10 {
             let (store, last_header) = create_chain(&network, expected_pow, chain_length);
             assert_eq!(store.height() + 1, chain_length);
@@ -737,7 +736,7 @@ mod test {
                 last_header.time + TEN_MINUTES,
             );
             // Assert.
-            assert_eq!(target, BlockHeader::u256_from_compact_target(expected_pow));
+            assert_eq!(target, expected_pow);
         }
     }
 }
