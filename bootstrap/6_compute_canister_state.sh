@@ -30,7 +30,7 @@ cargo run --release --bin build-address-utxos -- \
    --output $CANISTER_STATE_DIR/address_utxos --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Computing UTXOs..."
-cargo run --release --bin build-utxos -- \
+cargo run --release --bin build-utxos --features file_memory -- \
    --output $CANISTER_STATE_DIR --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Combining the state into $CANISTER_STATE_FILE"
