@@ -128,6 +128,11 @@ impl Transaction {
         self.tx.total_size()
     }
 
+    #[deprecated(note = "Use total_size() instead")]
+    pub fn size(&self) -> usize {
+        self.total_size()
+    }
+
     pub fn txid(&self) -> Txid {
         if self.txid.borrow().is_none() {
             // Compute the txid as it wasn't computed already.
