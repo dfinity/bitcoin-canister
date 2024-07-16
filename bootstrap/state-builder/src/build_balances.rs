@@ -6,7 +6,7 @@
 //!   --network testnet \
 //!   --output balances.bin \
 //!   --utxos-dump-path utxos-dump.csv
-use bitcoin::{Address as BitcoinAddress, Script};
+use bitcoin::{Address as BitcoinAddress, ScriptBuf};
 use clap::Parser;
 use ic_btc_canister::types::{into_bitcoin_network, Address};
 use ic_btc_interface::Network;
@@ -59,16 +59,16 @@ fn main() {
 
         // Load the address. The UTXO dump tool we use doesn't output all the addresses
         // we support, so if parsing the address itself fails, we try parsing the script directly.
-        let address = if let Ok(address) = BitcoinAddress::from_str(address_str) {
-            Some(address)
-        } else {
-            BitcoinAddress::from_script(
-                &Script::from(hex::decode(script).expect("script must be valid hex")),
-                into_bitcoin_network(args.network),
-            )
-        };
+        let address = BitcoinAddress::from_str(address_str)
+            .map(|address| address.assume_checked())
+            .or_else(|_| {
+                BitcoinAddress::from_script(
+                    &ScriptBuf::from(hex::decode(script).expect("script must be valid hex")),
+                    into_bitcoin_network(args.network),
+                )
+            });
 
-        if let Some(address) = address {
+        if let Ok(address) = address {
             let address: Address = address.into();
 
             // Update the balance of the address.

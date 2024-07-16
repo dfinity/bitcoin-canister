@@ -1,5 +1,5 @@
 use bitcoin::{
-    Address as BitcoinAddress, Network as BitcoinNetwork, Script, TxOut as BitcoinTxOut,
+    Address as BitcoinAddress, Amount, Network as BitcoinNetwork, ScriptBuf, TxOut as BitcoinTxOut,
 };
 use candid::CandidType;
 use ic_btc_interface::{
@@ -25,7 +25,7 @@ const EXPECTED_PAGE_LENGTH: usize = 72;
 /// A Bitcoin transaction's output.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub struct TxOut {
-    pub value: u64,
+    pub value: Amount,
     pub script_pubkey: Vec<u8>,
 }
 
@@ -104,9 +104,9 @@ pub trait Storable {
 impl Storable for (TxOut, Height) {
     fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.0.value.to_bytes().to_vec(), // Store the value (8 bytes)
-            self.0.script_pubkey.clone(),     // Then the script (size varies)
-            Storable::to_bytes(&self.1),      // Then the height (4 bytes)
+            self.0.value.to_sat().to_bytes().to_vec(), // Store the value (8 bytes)
+            self.0.script_pubkey.clone(),              // Then the script (size varies)
+            Storable::to_bytes(&self.1),               // Then the height (4 bytes)
         ]
         .into_iter()
         .flatten()
@@ -116,7 +116,7 @@ impl Storable for (TxOut, Height) {
     fn from_bytes(mut bytes: Vec<u8>) -> Self {
         let height = <Height as Storable>::from_bytes(bytes.split_off(bytes.len() - 4));
         let script_pubkey = bytes.split_off(8);
-        let value = u64::from_bytes(Cow::Owned(bytes));
+        let value = Amount::from_sat(u64::from_bytes(Cow::Owned(bytes)));
         (
             TxOut {
                 value,
@@ -315,11 +315,11 @@ impl BoundedStorable for BlockHeaderBlob {
     const IS_FIXED_SIZE: bool = true;
 }
 
-impl From<&bitcoin::BlockHeader> for BlockHeaderBlob {
-    fn from(header: &bitcoin::BlockHeader) -> Self {
+impl From<&bitcoin::block::Header> for BlockHeaderBlob {
+    fn from(header: &bitcoin::block::Header) -> Self {
         use bitcoin::consensus::Encodable;
         let mut block_header_blob = vec![];
-        bitcoin::BlockHeader::consensus_encode(header, &mut block_header_blob).unwrap();
+        bitcoin::block::Header::consensus_encode(header, &mut block_header_blob).unwrap();
         Self(block_header_blob)
     }
 }
@@ -433,9 +433,9 @@ pub struct Address(String);
 
 impl Address {
     /// Creates a new address from a bitcoin script.
-    pub fn from_script(script: &Script, network: Network) -> Result<Self, InvalidAddress> {
+    pub fn from_script(script: &ScriptBuf, network: Network) -> Result<Self, InvalidAddress> {
         let address = BitcoinAddress::from_script(script, into_bitcoin_network(network))
-            .ok_or(InvalidAddress)?;
+            .map_err(|_| InvalidAddress)?;
 
         // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
         // that `Address:from_script` succeeds even if the address is invalid.
@@ -464,7 +464,7 @@ impl FromStr for Address {
 
     fn from_str(s: &str) -> Result<Self, InvalidAddress> {
         BitcoinAddress::from_str(s)
-            .map(|address| Address(address.to_string()))
+            .map(|address| Address(address.assume_checked().to_string()))
             .map_err(|_| InvalidAddress)
     }
 }
@@ -655,7 +655,7 @@ fn address_handles_script_edge_case() {
     // (https://github.com/rust-bitcoin/rust-bitcoin/issues/995)
     //
     // This test verifies that we're protecting ourselves from that case.
-    let script = Script::from(vec![
+    let script = ScriptBuf::from(vec![
         0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
     ]);
 

@@ -11,7 +11,7 @@ use crate::{
     validation::ValidationContext,
     UtxoSet,
 };
-use bitcoin::{consensus::Decodable, BlockHeader};
+use bitcoin::{block::Header as BlockHeader, consensus::Decodable};
 use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
@@ -207,7 +207,7 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
             break;
         }
 
-        let block_header = match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
+        let block_header = match BlockHeader::consensus_decode(&mut block_header_blob.as_slice()) {
             Ok(header) => header,
             Err(err) => {
                 print(&format!(

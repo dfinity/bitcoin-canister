@@ -61,7 +61,7 @@ fn read_block(reader: &mut BufReader<File>) -> Block {
     let mut block = String::new();
     reader.read_line(&mut block).unwrap();
     let block = hex::decode(block.replace('\n', "")).unwrap();
-    Block::new(BitcoinBlock::consensus_decode(block.as_slice()).unwrap())
+    Block::new(BitcoinBlock::consensus_decode(&mut block.as_slice()).unwrap())
 }
 
 fn main() {

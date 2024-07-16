@@ -146,7 +146,7 @@ impl BlockTree {
             Some((block_subtree, _)) => {
                 assert_eq!(
                     block_subtree.root.block_hash().to_vec(),
-                    block.header().prev_blockhash.to_vec()
+                    block.header().prev_blockhash.as_ref() as &[u8]
                 );
                 // Add the block as a successor.
                 block_subtree.children.push(BlockTree::new(block));
@@ -388,7 +388,7 @@ mod test {
             for i in 1..chain.len() {
                 assert_eq!(
                     chain[i - 1].block_hash().to_vec(),
-                    chain[i].header().prev_blockhash.to_vec()
+                    chain[i].header().prev_blockhash.as_ref() as &[u8]
                 )
             }
         }
@@ -429,7 +429,7 @@ mod test {
                 for i in 1..chain.len() {
                     assert_eq!(
                         chain[i - 1].block_hash().to_vec(),
-                        chain[i].header().prev_blockhash.to_vec()
+                        chain[i].header().prev_blockhash.as_ref() as &[u8]
                     )
                 }
             }

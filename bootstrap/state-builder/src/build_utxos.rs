@@ -6,7 +6,7 @@
 //!   --network testnet \
 //!   --output output-dir \
 //!   --utxos-dump-path utxos-dump.csv
-use bitcoin::{Address, Txid as BitcoinTxid};
+use bitcoin::{Address, Amount, Txid as BitcoinTxid};
 use clap::Parser;
 use ic_btc_canister::{types::TxOut, with_state, with_state_mut};
 use ic_btc_interface::{Flag, InitConfig, Network};
@@ -81,7 +81,7 @@ fn main() {
             let line = line.unwrap();
             let parts: Vec<_> = line.split(',').collect();
 
-            let txid = Txid::from(BitcoinTxid::from_str(parts[1]).unwrap().to_vec());
+            let txid = Txid::from(BitcoinTxid::from_str(parts[1]).unwrap().as_ref());
             let vout: u32 = parts[2].parse().unwrap();
             let amount: u64 = parts[3].parse().unwrap();
             let script = parts[6];
@@ -96,15 +96,15 @@ fn main() {
             // Instead of using the scripts from the database, we can infer the script from the
             // address. Otherwise, we use the script in the chainstate database as-is.
             let script = match Address::from_str(address_str) {
-                Ok(address) => address.script_pubkey().as_bytes().to_vec(),
+                Ok(address) => address.assume_checked().script_pubkey().as_bytes().to_vec(),
                 Err(_) => hex::decode(script).unwrap(),
             };
 
             // Insert the UTXO
             let outpoint = OutPoint { txid, vout };
-            if !bitcoin::Script::from(script.clone()).is_provably_unspendable() {
+            if !bitcoin::ScriptBuf::from(script.clone()).is_op_return() {
                 let txout = TxOut {
-                    value: amount,
+                    value: Amount::from_sat(amount),
                     script_pubkey: script,
                 };
 

@@ -124,10 +124,11 @@ fn get_tx_fee_per_byte(
             .get_tx_out(&outpoint)
             .unwrap_or_else(|| panic!("tx out of outpoint {:?} must exist", outpoint))
             .0
-            .value;
+            .value
+            .to_sat();
     }
     for tx_out in tx.output() {
-        satoshi -= tx_out.value;
+        satoshi -= tx_out.value.to_sat();
     }
 
     if tx.vsize() > 0 {
@@ -602,7 +603,7 @@ mod test {
             .with_output(&random_p2pkh_address(Network::Regtest), balance)
             .build();
 
-        let witness = Witness::from_vec(vec![
+        let witness = Witness::from_slice(&[
             vec![0u8, 2u8],
             vec![4u8, 2u8],
             vec![3u8, 2u8],
@@ -619,8 +620,8 @@ mod test {
             .build();
 
         // Check that vsize() is not the same as size() of a transaction.
-        assert_ne!(tx.vsize(), tx.size());
-        assert_eq!(tx_without_witness.vsize(), tx_without_witness.size());
+        assert_ne!(tx.vsize(), tx.total_size());
+        assert_eq!(tx_without_witness.vsize(), tx_without_witness.total_size());
 
         let blocks = vec![
             BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
@@ -636,7 +637,7 @@ mod test {
             // Coinbase txs are ignored, so the percentiles should be the fee / vbyte of the second transaction.
             assert_ne!(
                 get_current_fee_percentiles_with_number_of_transactions(s, 1),
-                vec![fee_in_millisatoshi / tx.size() as u64; PERCENTILE_BUCKETS]
+                vec![fee_in_millisatoshi / tx.total_size() as u64; PERCENTILE_BUCKETS]
             );
             assert_eq!(
                 get_current_fee_percentiles_with_number_of_transactions(s, 1),

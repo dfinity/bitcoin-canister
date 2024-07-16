@@ -6,7 +6,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitcoin = { workspace = true, features = ["use-serde"] }
+bitcoin = { workspace = true, features = ["serde"] }
 # An optional dependency to benchmark parts of the code.
 canbench-rs = { workspace = true, optional = true }
 candid = { workspace = true }

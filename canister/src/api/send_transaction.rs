@@ -15,10 +15,10 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
     }));
 
     // Decode the transaction as a sanity check that it's valid.
-    let tx = Transaction::consensus_decode(request.transaction.as_slice())
+    let tx = Transaction::consensus_decode(&mut request.transaction.as_slice())
         .map_err(|_| SendTransactionError::MalformedTransaction)?;
 
-    runtime::print(&format!("[send_transaction] Tx ID: {}", tx.txid()));
+    runtime::print(&format!("[send_transaction] Tx ID: {}", tx.compute_txid()));
 
     // Bump the counter for the number of (valid) requests received.
     with_state_mut(|s| {
@@ -41,6 +41,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
 #[cfg(test)]
 mod test {
     use super::*;
+    use bitcoin::{absolute::LockTime, transaction::Version};
     use ic_btc_interface::{Fees, Flag, InitConfig, Network, NetworkInRequest};
 
     fn empty_transaction() -> Vec<u8> {
@@ -48,8 +49,8 @@ mod test {
 
         use bitcoin::consensus::Encodable;
         Transaction {
-            version: 0,
-            lock_time: 0,
+            version: Version::ONE,
+            lock_time: LockTime::ZERO,
             input: vec![],
             output: vec![],
         }

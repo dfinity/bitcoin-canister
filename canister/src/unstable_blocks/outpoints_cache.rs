@@ -109,7 +109,7 @@ impl OutPointsCache {
                 };
 
                 if let Ok(address) = Address::from_script(
-                    &bitcoin::Script::from(txout.script_pubkey.clone()),
+                    &bitcoin::ScriptBuf::from(txout.script_pubkey.clone()),
                     utxos.network(),
                 ) {
                     let entry = removed_outpoints.entry(address).or_insert(vec![]);

@@ -1,5 +1,5 @@
 use bitcoin::{
-    blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
+    absolute::LockTime, blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
     Network as BitcoinNetwork,
 };
 use candid::CandidType;
@@ -88,8 +88,8 @@ fn init() {
             // A transaction giving 1 satoshi to the address.
             block = block.with_transaction(
                 TransactionBuilder::new()
-                    .with_lock_time(i)
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_lock_time(LockTime::from_consensus(i))
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             );
         }
@@ -136,3 +136,8 @@ fn append_block(block: &Block) {
 }
 
 fn main() {}
+
+getrandom::register_custom_getrandom!(always_fail);
+pub fn always_fail(_buf: &mut [u8]) -> Result<(), getrandom::Error> {
+    Err(getrandom::Error::UNSUPPORTED)
+}

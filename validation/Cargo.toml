@@ -11,6 +11,7 @@ repository = "https://github.com/dfinity/bitcoin-canister"
 
 [dependencies]
 bitcoin = { workspace = true }
+primitive-types = { workspace = true }
 
 [dev-dependencies]
 csv = "1.1"
