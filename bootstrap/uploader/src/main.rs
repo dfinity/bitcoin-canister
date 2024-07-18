@@ -20,7 +20,6 @@ fn init(state_size: u64) {
     // Load the chunks of the bitcoin mainnet canister's state.
     let chunk_hashes: Vec<String> = include_str!(env!("CHUNK_HASHES_PATH"))
         .split('\n')
-        .into_iter()
         .filter(|s| !s.is_empty())
         .map(|hash| {
             // Each hash is 32-bytes represented in hex, which would be 64 bytes.
