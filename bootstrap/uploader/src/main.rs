@@ -4,29 +4,19 @@ use ic_cdk_macros::{init, query, update};
 use std::{cell::RefCell, cmp::min, collections::BTreeSet};
 use uploader::*;
 
+// Load the chunks from the $CHUNK_HASHES_PATH environment variable that's set at build time.
+include!(concat!(env!("OUT_DIR"), "/chunk_hashes.rs"));
+
 thread_local! {
     // A set containing the indices of chunks that have not yet been uploaded.
     // An index here refers to the index of the Wasm page in stable memory where the chunk begins.
     static MISSING_CHUNKS: RefCell<BTreeSet<u64>> = RefCell::new(BTreeSet::new());
-
-    static CHUNK_HASHES: RefCell<Vec<String>> = RefCell::new(Vec::new());
 }
 
 #[init]
 fn init(state_size: u64) {
     // Grow the stable memory to the given size.
     stable::stable64_grow(state_size).expect("cannot grow stabe memory");
-
-    // Load the chunks of the bitcoin mainnet canister's state.
-    let chunk_hashes: Vec<String> = include_str!(env!("CHUNK_HASHES_PATH"))
-        .split('\n')
-        .filter(|s| !s.is_empty())
-        .map(|hash| {
-            // Each hash is 32-bytes represented in hex, which would be 64 bytes.
-            assert_eq!(hash.len(), 64);
-            hash.to_string()
-        })
-        .collect();
 
     // Initialize the set of missing chunks.
     MISSING_CHUNKS.with(|mr| {
@@ -36,8 +26,6 @@ fn init(state_size: u64) {
                 .collect(),
         )
     });
-
-    CHUNK_HASHES.with(|ch| ch.replace(chunk_hashes));
 }
 
 #[update]
@@ -62,8 +50,7 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
     }
 
     // Verify that the hash of `bytes` matches some hash that we expect.
-    let expected_hash =
-        CHUNK_HASHES.with(|ch| ch.borrow()[(chunk_start / CHUNK_SIZE_IN_PAGES) as usize].clone());
+    let expected_hash = CHUNK_HASHES[(chunk_start / CHUNK_SIZE_IN_PAGES) as usize];
     let actual_hash = sha256::digest(&*bytes);
     if actual_hash != expected_hash {
         panic!(
