@@ -2,7 +2,7 @@
 //!
 //! Example run:
 //!
-//! cargo run --release -- \
+//! cargo run --release --bin main-state-builder --features=file_memory -- \
 //!   --canister-state canister.bin \
 //!   --canister-state-dir ./canister_state \
 //!   --network mainnet --stability-threshold 30 --stable-height 9999 \
