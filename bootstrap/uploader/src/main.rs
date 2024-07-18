@@ -13,14 +13,26 @@ thread_local! {
 }
 
 #[init]
-fn init(initial_size: u64, chunk_hashes: Vec<String>) {
+fn init(state_size: u64) {
     // Grow the stable memory to the given size.
-    stable::stable64_grow(initial_size).expect("cannot grow stabe memory");
+    stable::stable64_grow(state_size).expect("cannot grow stabe memory");
+
+    // Load the chunks of the bitcoin mainnet canister's state.
+    let chunk_hashes: Vec<String> = include_str!(env!("CHUNK_HASHES_PATH"))
+        .split('\n')
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .map(|hash| {
+            // Each hash is 32-bytes represented in hex, which would be 64 bytes.
+            assert_eq!(hash.len(), 64);
+            hash.to_string()
+        })
+        .collect();
 
     // Initialize the set of missing chunks.
     MISSING_CHUNKS.with(|mr| {
         mr.replace(
-            (0..initial_size)
+            (0..state_size)
                 .step_by(CHUNK_SIZE_IN_PAGES as usize)
                 .collect(),
         )
