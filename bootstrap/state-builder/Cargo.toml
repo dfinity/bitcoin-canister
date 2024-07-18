@@ -14,6 +14,7 @@ path = "src/build_address_utxos.rs"
 [[bin]]
 name = "build-utxos"
 path = "src/build_utxos.rs"
+required-features = ["file_memory"]
 
 [[bin]]
 name = "combine-state"
@@ -26,7 +27,7 @@ byteorder = { workspace = true }
 ciborium = { workspace = true }
 clap = { workspace = true }
 hex = { workspace = true }
-ic-btc-canister = { workspace = true }
+ic-btc-canister = { workspace = true, optional = true }
 ic-btc-interface = { workspace = true }
 ic-btc-types = { workspace = true }
 ic-stable-structures = { workspace = true }
@@ -35,3 +36,7 @@ rand = "0.8.5"
 rand_chacha = "0.3.1"
 rusty-leveldb = "1.0.4"
 tempfile = { workspace = true }
+
+[features]
+default = ["ic-btc-canister"]
+file_memory = ["ic-btc-canister/file_memory"]
