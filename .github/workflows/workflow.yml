@@ -38,8 +38,6 @@ jobs:
         shell: bash
         run: |
           cargo build --release --all-targets
-          cd bootstrap/main-state-builder
-          cargo build --release --all-targets
         env:
           RUST_BACKTRACE: 1
 

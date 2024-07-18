@@ -20,6 +20,11 @@ required-features = ["file_memory"]
 name = "combine-state"
 path = "src/combine_state.rs"
 
+[[bin]]
+name = "main-state-builder"
+path = "src/main_state_builder.rs"
+required-features = ["file_memory"]
+
 [dependencies]
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = { workspace = true }

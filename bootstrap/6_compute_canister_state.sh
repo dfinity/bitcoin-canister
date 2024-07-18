@@ -38,8 +38,7 @@ cargo run --release --bin combine-state -- \
    --output $CANISTER_STATE_FILE --canister-state-dir $CANISTER_STATE_DIR
 
 echo "Building state struct.."
-pushd main-state-builder
-cargo run --release -- \
+cargo run --release --features file_memory -- \
    --canister-state "../$CANISTER_STATE_FILE" \
    --canister-state-dir "../$CANISTER_STATE_DIR" \
    --network "$NETWORK" \
