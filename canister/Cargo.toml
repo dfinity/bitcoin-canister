@@ -41,7 +41,7 @@ ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
 maplit = "1.0.2"
 proptest = "0.9.4"
-tempfile = "3.2.0"
+tempfile = { workspace = true }
 test-strategy = "0.3.1"
 
 [features]

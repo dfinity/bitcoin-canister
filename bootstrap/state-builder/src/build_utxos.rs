@@ -2,7 +2,7 @@
 //!
 //! Example run:
 //!
-//! cargo run --release --bin build-utxos -- \
+//! cargo run --release --bin build-utxos --features file_memory -- \
 //!   --network testnet \
 //!   --output output-dir \
 //!   --utxos-dump-path utxos-dump.csv
@@ -13,7 +13,7 @@ use ic_btc_interface::{Flag, InitConfig, Network};
 use ic_btc_types::{OutPoint, Txid};
 use ic_stable_structures::{
     memory_manager::{MemoryId, MemoryManager},
-    Memory,
+    FileMemory, Memory,
 };
 use std::{
     fs::{create_dir_all, File},
@@ -62,6 +62,11 @@ fn write_memory_to_file(path: &PathBuf, memory_id: MemoryId) {
 
 fn main() {
     let args = Args::parse();
+
+    // Set a temp file to use as the memory while we compute the state.
+    // This is significantly slower than building the state in RAM, but now that state sizes
+    // are very large, this is the more reliable approach to avoid OOM issues.
+    ic_btc_canister::memory::set_memory(FileMemory::new(tempfile::tempfile().unwrap()));
 
     // Create the output directory if it doesn't already exist.
     create_dir_all(&args.output).unwrap();

@@ -2,7 +2,7 @@ name: CI
 
 env:
   RUST_VERSION: 1.76.0
-  DFX_VERSION: 0.16.0
+  DFX_VERSION: 0.21.0
 
 on:
   push:
@@ -38,8 +38,7 @@ jobs:
         shell: bash
         run: |
           cargo build --release --all-targets
-          cd bootstrap/main-state-builder
-          cargo build --release --all-targets
+          cargo build --release --bin build-utxos --bin main-state-builder --features=file_memory
         env:
           RUST_BACKTRACE: 1
 

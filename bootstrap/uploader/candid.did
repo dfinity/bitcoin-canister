@@ -1,4 +1,4 @@
-service: (nat64, vec text) -> {
+service: (nat64) -> {
   upload_chunk: (chunk_start: nat64, bytes: blob) -> ();
 
   get_missing_chunk_indices: () -> (vec nat64) query;

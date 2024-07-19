@@ -44,15 +44,10 @@ struct Empty;
 
 // Helper method for uploading a chunk.
 async fn upload(agent: &Agent, canister_id: &Principal, chunk_start: u64, bytes: &[u8]) {
-    let waiter = garcon::Delay::builder()
-        .throttle(std::time::Duration::from_millis(500))
-        .timeout(std::time::Duration::from_secs(60 * 5))
-        .build();
-
     agent
         .update(canister_id, "upload_chunk")
         .with_arg(encode_args((chunk_start, bytes.to_vec())).unwrap())
-        .call_and_wait(waiter)
+        .call_and_wait()
         .await
         .expect("uploading chunk failed");
 }

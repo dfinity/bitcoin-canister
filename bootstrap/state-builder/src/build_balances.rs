@@ -94,7 +94,7 @@ fn main() {
 
     // Write the balances into a stable btreemap.
     for (address, amount) in balances.into_iter() {
-        stable_balances.insert(address, amount).unwrap();
+        stable_balances.insert(address, amount);
     }
 
     println!("Writing stable structure to file...");
