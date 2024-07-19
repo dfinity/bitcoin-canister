@@ -79,7 +79,9 @@ fn main() {
     ic_btc_canister::init(InitConfig {
         network: Some(args.network),
         stability_threshold: Some(args.stability_threshold),
-        api_access: Some(Flag::Disabled),
+        api_access: Some(Flag::Enabled),
+        burn_cycles: Some(Flag::Enabled),
+        lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
         ..Default::default()
     });
 

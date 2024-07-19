@@ -38,6 +38,7 @@ jobs:
         shell: bash
         run: |
           cargo build --release --all-targets
+          cargo build --release --bin build-utxos --bin main-state-builder --features=file_memory
         env:
           RUST_BACKTRACE: 1
 

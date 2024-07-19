@@ -27,7 +27,11 @@ fn main() {
         dest_path,
         format!(
             "const CHUNK_HASHES: &[&str] = &[{}];",
-            chunk_hashes.join(",")
+            chunk_hashes
+                .into_iter()
+                .map(|h| format!("\"{}\"", h))
+                .collect::<Vec<_>>()
+                .join(",")
         ),
     )
     .expect("Failed to write file");
