@@ -37,7 +37,6 @@ sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init
 
 # Verify the fees have been updated.
 CONFIG=$(dfx canister call bitcoin get_config --query)
-echo $CONFIG
 if ! [[ $CONFIG == *"$FEES"* ]]; then
   echo "FAIL"
   exit 1
