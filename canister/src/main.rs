@@ -27,9 +27,9 @@ fn pre_upgrade() {
 }
 
 #[post_upgrade]
-fn post_upgrade() {
+fn post_upgrade(config_update: Option<SetConfigRequest>) {
     hook();
-    ic_btc_canister::post_upgrade();
+    ic_btc_canister::post_upgrade(config_update);
 }
 
 #[heartbeat]

@@ -22,6 +22,7 @@ use crate::{
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
     types::{into_bitcoin_network, HttpRequest, HttpResponse},
+    api::set_config::set_config_no_verification,
 };
 pub use api::get_metrics;
 pub use api::send_transaction;
@@ -30,7 +31,7 @@ pub use heartbeat::heartbeat;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
-    GetUtxosResponse, InitConfig, MillisatoshiPerByte, Network, Satoshi,
+    GetUtxosResponse, InitConfig, MillisatoshiPerByte, Network, Satoshi, SetConfigRequest,
 };
 use ic_btc_types::Block;
 use ic_stable_structures::Memory;
@@ -175,7 +176,7 @@ pub fn pre_upgrade() {
     crate::memory::write(&memory, 4, &state_bytes);
 }
 
-pub fn post_upgrade() {
+pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     let memory = memory::get_upgrades_memory();
 
     // Read the length of the state bytes.
@@ -191,6 +192,11 @@ pub fn post_upgrade() {
     let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
 
     set_state(state);
+
+    // Update the state based on the provided configuration.
+    if let Some(config_update) = config_update {
+        set_config_no_verification(config_update);
+    }
 }
 
 pub fn http_request(req: HttpRequest) -> HttpResponse {
@@ -318,7 +324,6 @@ mod test {
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(1))]
         #[test]
-        #[ignore] // TODO(EXC-1639): re-enable this test.
         fn upgrade(
             stability_threshold in 1..100u128,
             num_blocks in 1..250u32,
@@ -350,7 +355,7 @@ mod test {
             let old_state = STATE.with(|cell| cell.take().unwrap());
 
             // Run the postupgrade hook.
-            post_upgrade();
+            post_upgrade(None);
 
             // The new and old states should be equivalent.
             with_state(|new_state| assert!(new_state == &old_state));

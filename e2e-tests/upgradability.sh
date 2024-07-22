@@ -84,15 +84,20 @@ fi
 # Update the candid to point back to the new init args.
 sed -i.bak 's/service bitcoin : (config)/service bitcoin : (init_config)/' ./canister/candid.did
 
-# Deploy upgraded canister.
+echo "Deploy new version of canister (with legacy upgrade feature)..."
+# The legacy_preupgrade feature is enabled.
+sed -i.bak 's/ic-btc-canister"/ic-btc-canister legacy_preupgrade"/' ./dfx.json
 dfx deploy --no-wallet bitcoin --argument "(record { })"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
 
+# The legacy_preupgrade feature is removed.
+echo "Upgrade canister to own version..."
+sed -i.bak 's/ic-btc-canister legacy_preupgrade"/ic-btc-canister"/' ./dfx.json
+
 # Redeploy the canister to test the pre-upgrade hook.
-# TODO(EXC-1639): Re-enable this test once the canister is released.
-#dfx deploy --upgrade-unchanged bitcoin --argument "(record { })"
-#dfx canister start bitcoin
+dfx deploy --upgrade-unchanged bitcoin --argument "(record { })"
+dfx canister start bitcoin
 
 echo "SUCCESS"
