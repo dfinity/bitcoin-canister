@@ -19,10 +19,10 @@ mod utxo_set;
 mod validation;
 
 use crate::{
+    api::set_config::set_config_no_verification,
     runtime::{msg_cycles_accept, msg_cycles_available},
     state::State,
     types::{into_bitcoin_network, HttpRequest, HttpResponse},
-    api::set_config::set_config_no_verification,
 };
 pub use api::get_metrics;
 pub use api::send_transaction;
@@ -321,45 +321,65 @@ mod test {
         }
     }
 
-    proptest! {
-        #![proptest_config(ProptestConfig::with_cases(1))]
-        #[test]
-        fn upgrade(
-            stability_threshold in 1..100u128,
-            num_blocks in 1..250u32,
-            num_transactions_in_block in 1..100u32,
-        ) {
-            let network = Network::Regtest;
+    #[test_strategy::proptest(ProptestConfig::with_cases(1))]
+    fn upgrade(
+        #[strategy(1..100u128)] stability_threshold: u128,
+        #[strategy(1..250u32)] num_blocks: u32,
+        #[strategy(1..100u32)] num_transactions_in_block: u32,
+    ) {
+        let network = Network::Regtest;
 
-            init(InitConfig {
-                stability_threshold: Some(stability_threshold),
-                network: Some(network),
-                ..Default::default()
+        init(InitConfig {
+            stability_threshold: Some(stability_threshold),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let blocks = build_regtest_chain(num_blocks, num_transactions_in_block);
+
+        // Insert all the blocks. Note that we skip the genesis block, as that
+        // is already included as part of initializing the state.
+        for block in blocks[1..].iter() {
+            with_state_mut(|s| {
+                crate::state::insert_block(s, block.clone()).unwrap();
+                crate::state::ingest_stable_blocks_into_utxoset(s);
             });
-
-            let blocks = build_regtest_chain(num_blocks, num_transactions_in_block);
-
-            // Insert all the blocks. Note that we skip the genesis block, as that
-            // is already included as part of initializing the state.
-            for block in blocks[1..].iter() {
-                with_state_mut(|s| {
-                    crate::state::insert_block(s, block.clone()).unwrap();
-                    crate::state::ingest_stable_blocks_into_utxoset(s);
-                });
-            }
-
-            // Run the preupgrade hook.
-            pre_upgrade();
-
-            // Take out the old state (which also clears the `STATE` singleton).
-            let old_state = STATE.with(|cell| cell.take().unwrap());
-
-            // Run the postupgrade hook.
-            post_upgrade(None);
-
-            // The new and old states should be equivalent.
-            with_state(|new_state| assert!(new_state == &old_state));
         }
+
+        // Run the preupgrade hook.
+        pre_upgrade();
+
+        // Take out the old state (which also clears the `STATE` singleton).
+        let old_state = STATE.with(|cell| cell.take().unwrap());
+
+        // Run the postupgrade hook.
+        post_upgrade(None);
+
+        // The new and old states should be equivalent.
+        with_state(|new_state| assert!(new_state == &old_state));
+    }
+
+    #[test_strategy::proptest(ProptestConfig::with_cases(1))]
+    fn upgrade_with_config(#[strategy(1..100u128)] stability_threshold: u128) {
+        let network = Network::Regtest;
+
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        // Run the preupgrade hook.
+        pre_upgrade();
+
+        // Run the postupgrade hook, setting the new stability threshold.
+        post_upgrade(Some(SetConfigRequest {
+            stability_threshold: Some(stability_threshold),
+            ..Default::default()
+        }));
+
+        // The config has been updated with the new stability threshold.
+        assert_eq!(get_config().stability_threshold, stability_threshold);
     }
 
     #[test]
