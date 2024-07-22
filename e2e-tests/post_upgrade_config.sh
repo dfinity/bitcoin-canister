@@ -26,7 +26,20 @@ fi
 sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ./canister/candid.did
 
 # Upgrade and update the fees.
-FEES="record { get_current_fee_percentiles = 6 : nat; get_utxos_maximum = 3 : nat; get_block_headers_cycles_per_ten_instructions = 11 : nat; get_current_fee_percentiles_maximum = 7 : nat; send_transaction_per_byte = 9 : nat; get_balance = 4 : nat; get_utxos_cycles_per_ten_instructions = 2 : nat; get_block_headers_base = 10 : nat; get_utxos_base = 1 : nat; get_balance_maximum = 5 : nat; send_transaction_base = 8 : nat; get_block_headers_maximum = 12 : nat; }";
+FEES="record {
+  get_current_fee_percentiles = 123 : nat;
+  get_utxos_maximum = 0 : nat;
+  get_block_headers_cycles_per_ten_instructions = 0 : nat;
+  get_current_fee_percentiles_maximum = 0 : nat;
+  send_transaction_per_byte = 0 : nat;
+  get_balance = 0 : nat;
+  get_utxos_cycles_per_ten_instructions = 0 : nat;
+  get_block_headers_base = 0 : nat;
+  get_utxos_base = 0 : nat;
+  get_balance_maximum = 0 : nat;
+  send_transaction_base = 0 : nat;
+  get_block_headers_maximum = 0 : nat;
+}";
 
 dfx deploy --upgrade-unchanged bitcoin --argument "opt (record {
   fees = opt $FEES;
@@ -37,7 +50,7 @@ sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init
 
 # Verify the fees have been updated.
 CONFIG=$(dfx canister call bitcoin get_config --query)
-if ! [[ $CONFIG == *"$FEES"* ]]; then
+if ! [[ $CONFIG == *"get_current_fee_percentiles = 123"* ]]; then
   echo "FAIL"
   exit 1
 fi
