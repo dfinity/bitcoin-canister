@@ -10,8 +10,8 @@
     "watchdog": {
       "type": "custom",
       "candid": "./watchdog/candid.did",
-      "build": "./scripts/build-canister.sh watchdog-canister",
-      "wasm": "./target/wasm32-unknown-unknown/release/watchdog-canister.wasm.gz"
+      "build": "./scripts/build-canister.sh watchdog",
+      "wasm": "./target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
     },
     "watchdog-upgradability-test": {
       "type": "custom",
