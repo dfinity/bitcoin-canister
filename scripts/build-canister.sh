@@ -19,10 +19,10 @@ fi
 
 if [[ -z "$FEATURES" ]]; then
   # No features provided
-  cargo build -p $CANISTER --target "$TARGET" --release
+  cargo build -p "$CANISTER" --target "$TARGET" --release
 else
   # Features provided
-  cargo build -p $CANISTER --target "$TARGET" --release --features "$FEATURES"
+  cargo build -p "$CANISTER" --target "$TARGET" --release --features "$FEATURES"
 fi
 
 # Navigate to root directory.

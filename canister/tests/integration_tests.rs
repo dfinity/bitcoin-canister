@@ -28,7 +28,7 @@ fn canister_wasm() -> Vec<u8> {
     std::fs::read(get_full_path(WASM_PATH)).unwrap()
 }
 
-fn with_bitcoin_canister<F: Fn(PocketIc, CanisterId) -> ()>(test: F) -> () {
+fn with_bitcoin_canister<F: Fn(PocketIc, CanisterId)>(test: F) {
     println!("Building the bitcoin canister...");
     build_canister();
     println!("Done.");
