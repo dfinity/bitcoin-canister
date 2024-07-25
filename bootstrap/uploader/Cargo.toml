@@ -5,7 +5,7 @@ edition = "2021"
 build = "src/build.rs"
 
 [[bin]]
-name = "uploader-canister"
+name = "uploader"
 path = "src/main.rs"
 
 # The upload script is added here as an example and not a binary because making it
