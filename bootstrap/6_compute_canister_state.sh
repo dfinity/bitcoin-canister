@@ -39,14 +39,13 @@ cargo run --release --bin combine-state -- \
 
 echo "Building state struct.."
 cargo run --release --bin main-state-builder --features file_memory -- \
-   --canister-state "../$CANISTER_STATE_FILE" \
-   --canister-state-dir "../$CANISTER_STATE_DIR" \
+   --canister-state "$CANISTER_STATE_FILE" \
+   --canister-state-dir "$CANISTER_STATE_DIR" \
    --network "$NETWORK" \
    --stability-threshold "$STABILITY_THRESHOLD" \
    --anchor-height "$ANCHOR_HEIGHT" \
-   --unstable-blocks "../$UNSTABLE_BLOCKS_FILE" \
-   --block-headers "../$BLOCK_HEADERS_FILE"
-popd
+   --unstable-blocks "$UNSTABLE_BLOCKS_FILE" \
+   --block-headers "$BLOCK_HEADERS_FILE"
 
 echo "Computing checksum of canister state..."
 sha256sum "$CANISTER_STATE_FILE"

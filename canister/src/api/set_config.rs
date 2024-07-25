@@ -31,7 +31,7 @@ fn set_api_access(request: SetConfigRequest) {
     });
 }
 
-fn set_config_no_verification(request: SetConfigRequest) {
+pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
     crate::with_state_mut(|s| {
         if let Some(syncing) = request.syncing {
             s.syncing_state.syncing = syncing;
