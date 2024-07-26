@@ -22,23 +22,23 @@ fi
 mkdir $CANISTER_STATE_DIR
 
 echo "Computing balances..."
-cargo run --release --bin build-balances -- \
+cargo run -p state-builder --release --bin build-balances -- \
    --output $CANISTER_STATE_DIR/balances --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Computing address UTXOs..."
-cargo run --release --bin build-address-utxos -- \
+cargo run -p state-builder --release --bin build-address-utxos -- \
    --output $CANISTER_STATE_DIR/address_utxos --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Computing UTXOs..."
-cargo run --release --bin build-utxos --features file_memory -- \
+cargo run -p state-builder --release --bin build-utxos --features file_memory -- \
    --output $CANISTER_STATE_DIR --network "$NETWORK" --utxos-dump-path $UTXO_FILE
 
 echo "Combining the state into $CANISTER_STATE_FILE"
-cargo run --release --bin combine-state -- \
+cargo run -p state-builder --release --bin combine-state -- \
    --output $CANISTER_STATE_FILE --canister-state-dir $CANISTER_STATE_DIR
 
 echo "Building state struct.."
-cargo run --release --bin main-state-builder --features file_memory -- \
+cargo run -p state-builder --release --bin main-state-builder --features file_memory -- \
    --canister-state "$CANISTER_STATE_FILE" \
    --canister-state-dir "$CANISTER_STATE_DIR" \
    --network "$NETWORK" \
