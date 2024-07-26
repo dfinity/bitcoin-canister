@@ -88,7 +88,6 @@ jobs:
       - name: Install brew packages (mac)
         if: runner.os == 'macOS'
         run: |
-          #/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           brew install llvm
 
       - name: Run Tests
