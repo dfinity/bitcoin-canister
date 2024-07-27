@@ -3,8 +3,8 @@
 # This Dockerfile prepares an environment to build and verify the integrity of 
 # these specific WebAssembly canisters:
 #  - ic-btc-canister
-#  - uploader-canister
-#  - watchdog-canister
+#  - uploader
+#  - watchdog
 #
 # Each canister is built, compressed, and checksum-verified, ensuring 
 # reproducibility and consistency of builds within this isolated setup.
@@ -14,12 +14,12 @@
 # docker build -t canisters .
 #
 # docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
-# docker run --rm --entrypoint cat canisters /uploader-canister.wasm.gz > uploader-canister.wasm.gz
-# docker run --rm --entrypoint cat canisters /watchdog-canister.wasm.gz > watchdog-canister.wasm.gz
+# docker run --rm --entrypoint cat canisters /uploader.wasm.gz > uploader.wasm.gz
+# docker run --rm --entrypoint cat canisters /watchdog.wasm.gz > watchdog.wasm.gz
 #
 # sha256sum ic-btc-canister.wasm.gz
-# sha256sum uploader-canister.wasm.gz
-# sha256sum watchdog-canister.wasm.gz
+# sha256sum uploader.wasm.gz
+# sha256sum watchdog.wasm.gz
 
 # The docker image. To update, run `docker pull ubuntu` locally, and update the
 # sha256:... accordingly.
@@ -28,6 +28,7 @@ FROM ubuntu@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3
 # NOTE: if this version is updated, then the version in rust-toolchain.toml
 # should be updated as well.
 ARG rust_version=1.76.0
+ARG CHUNK_HASHES_PATH
 
 # Setting the timezone and installing the necessary dependencies
 ENV TZ=UTC
@@ -55,16 +56,17 @@ ENV PATH=/cargo/bin:$PATH
 # Copy the current directory (containing source code and build scripts) into the Docker image.
 COPY . .
 
-RUN \
-    # Building bitcoin canister...
-    scripts/build-canister.sh ic-btc-canister && \
-    cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz && \
-    sha256sum ic-btc-canister.wasm.gz && \
-    # Building uploader canister...
-    scripts/build-canister.sh uploader && \
-    cp target/wasm32-unknown-unknown/release/uploader.wasm.gz uploader.wasm.gz && \
-    sha256sum uploader.wasm.gz && \
-    # Building watchdog canister...
-    scripts/build-canister.sh watchdog && \
-    cp target/wasm32-unknown-unknown/release/watchdog.wasm.gz watchdog.wasm.gz && \
-    sha256sum watchdog.wasm.gz
+# Building bitcoin canister...
+RUN scripts/build-canister.sh ic-btc-canister && \
+    cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz
+
+# Set the path to chunk hashes if specified (for including it in the uploader canister)
+RUN if [ -n "$CHUNK_HASHES_PATH" ]; then export CHUNK_HASHES_PATH="$CHUNK_HASHES_PATH"; fi
+
+# Building uploader canister...
+RUN scripts/build-canister.sh uploader && \
+    cp target/wasm32-unknown-unknown/release/uploader.wasm.gz uploader.wasm.gz
+
+# Building watchdog canister...
+RUN scripts/build-canister.sh watchdog && \
+    cp target/wasm32-unknown-unknown/release/watchdog.wasm.gz watchdog.wasm.gz
