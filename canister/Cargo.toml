@@ -33,6 +33,7 @@ path = "src/main.rs"
 bench = false
 
 [dev-dependencies]
+assert_matches = { workspace = true }
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = { workspace = true, features = ["rand"] } # needed for generating secp256k1 keys.
 byteorder = { workspace = true }
@@ -40,6 +41,7 @@ candid_parser = { workspace = true }
 ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
 maplit = "1.0.2"
+pocket-ic = { workspace = true }
 proptest = "0.9.4"
 tempfile = { workspace = true }
 test-strategy = "0.3.1"

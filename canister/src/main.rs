@@ -126,6 +126,15 @@ fn inspect_message() {
     }
 }
 
+// Expose a method to know if canbench is included in the binary or not.
+// This is used in a test to ensure that canbench is _not_ included in the
+// production binary.
+#[cfg(feature = "canbench-rs")]
+#[update]
+pub fn has_canbench() -> bool {
+    true
+}
+
 fn main() {}
 
 #[cfg(test)]

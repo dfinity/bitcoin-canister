@@ -17,12 +17,15 @@ if [ "$(uname)" == "Darwin" ]; then
   export CC="${LLVM_PATH}/bin/clang"
 fi
 
+# NOTE: `-p` is used rather than `--bin` due to a quirk in cargo where, if --bin
+# is used, it may include features that specified by benchmarking/testing crates
+# that aren't needed in production.
 if [[ -z "$FEATURES" ]]; then
   # No features provided
-  cargo build --bin "$CANISTER" --target "$TARGET" --release
+  cargo build -p "$CANISTER" --target "$TARGET" --release
 else
   # Features provided
-  cargo build --bin "$CANISTER" --target "$TARGET" --release --features "$FEATURES"
+  cargo build -p "$CANISTER" --target "$TARGET" --release --features "$FEATURES"
 fi
 
 # Navigate to root directory.

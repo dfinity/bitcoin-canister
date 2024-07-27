@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-20.04, macos-12 ]
+        os: [ ubuntu-20.04, macos-13 ]
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
     needs: cargo-build
     strategy:
       matrix:
-        os: [ ubuntu-20.04, macos-12 ]
+        os: [ ubuntu-20.04, macos-13 ]
 
     steps:
       - uses: actions/checkout@v4
@@ -66,6 +66,29 @@ jobs:
           rustup update $RUST_VERSION --no-self-update
           rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
+
+      - name: Install PocketIC (mac)
+        if: runner.os == 'macOS'
+        run: |
+          wget https://github.com/dfinity/pocketic/releases/download/5.0.0/pocket-ic-x86_64-darwin.gz
+          gzip -d pocket-ic-x86_64-darwin.gz
+          mv pocket-ic-x86_64-darwin pocket-ic
+          chmod +x pocket-ic
+          mv pocket-ic ./canister/
+
+      - name: Install PocketIC (linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget https://github.com/dfinity/pocketic/releases/download/5.0.0/pocket-ic-x86_64-linux.gz
+          gzip -d pocket-ic-x86_64-linux.gz
+          mv pocket-ic-x86_64-linux pocket-ic
+          chmod +x pocket-ic
+          mv pocket-ic ./canister/
+
+      - name: Install brew packages (mac)
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm
 
       - name: Run Tests
         shell: bash
