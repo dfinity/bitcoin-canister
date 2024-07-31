@@ -29,6 +29,7 @@ FROM ubuntu@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3
 # should be updated as well.
 ARG rust_version=1.76.0
 ARG CHUNK_HASHES_PATH
+ARG BTC_FEATURES=""
 
 # Setting the timezone and installing the necessary dependencies
 ENV TZ=UTC
@@ -57,7 +58,7 @@ ENV PATH=/cargo/bin:$PATH
 COPY . .
 
 # Building bitcoin canister...
-RUN scripts/build-canister.sh ic-btc-canister && \
+RUN scripts/build-canister.sh ic-btc-canister ${BTC_FEATURES} && \
     cp target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz ic-btc-canister.wasm.gz
 
 # Set the path to chunk hashes if specified (for including it in the uploader canister)
