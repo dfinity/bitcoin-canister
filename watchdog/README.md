@@ -4,7 +4,7 @@ Watchdog service for a bitcoin_canister that compares its latest block height ag
 
 ## Commands
 
-```sh
+```console
 $ dfx stop
 
 $ dfx start --background  --clean
