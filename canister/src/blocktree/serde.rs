@@ -64,14 +64,6 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
         fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> Option<(Block, usize)> {
-            // A feature to upgrade from a release canister that has the old pre_upgrade
-            // that serialized the entire Block (as opposed to only the `BitcoinBlock` inside it).
-            #[cfg(feature = "legacy_preupgrade")]
-            return seq
-                .next_element()
-                .expect("reading next element must succeed");
-
-            #[cfg(not(feature = "legacy_preupgrade"))]
             return seq
                 .next_element::<(BitcoinBlock, usize)>()
                 .expect("reading next element must succeed")
