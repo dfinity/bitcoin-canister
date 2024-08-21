@@ -16,7 +16,7 @@ thread_local! {
 #[init]
 fn init(state_size: u64) {
     // Grow the stable memory to the given size.
-    stable::stable64_grow(state_size).expect("cannot grow stabe memory");
+    stable::stable_grow(state_size).expect("cannot grow stabe memory");
 
     // Initialize the set of missing chunks.
     MISSING_CHUNKS.with(|mr| {
@@ -39,7 +39,7 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
     }
 
     // Verify the length of the chunk is correct.
-    let expected_end_chunk = min(chunk_start + CHUNK_SIZE_IN_PAGES, stable::stable64_size());
+    let expected_end_chunk = min(chunk_start + CHUNK_SIZE_IN_PAGES, stable::stable_size());
     let expected_bytes_length = ((expected_end_chunk - chunk_start) * PAGE_SIZE_IN_BYTES) as usize;
     if expected_bytes_length != bytes.len() {
         panic!(
@@ -63,7 +63,7 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
 
     // Write the chunk.
     let offset = chunk_start * PAGE_SIZE_IN_BYTES;
-    stable::stable64_write(offset, &bytes);
+    stable::stable_write(offset, &bytes);
 
     MISSING_CHUNKS.with(|mr| mr.borrow_mut().remove(&chunk_start));
 }

@@ -92,7 +92,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         // Memory
         w.encode_gauge(
             "stable_memory_size_in_bytes",
-            (ic_cdk::api::stable::stable64_size() * WASM_PAGE_SIZE) as f64,
+            (ic_cdk::api::stable::stable_size() * WASM_PAGE_SIZE) as f64,
             "The size of stable memory in pages.",
         )?;
         w.encode_gauge(
