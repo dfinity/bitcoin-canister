@@ -12,32 +12,7 @@
 set -Eexuo pipefail
 
 # Constants.
-MANAGEMENT_CANISTER="aaaaa-aa"
 REFERENCE_CANISTER_NAME="upgradability-test"
-ARGUMENT="(record { 
- stability_threshold = 2;
- network = variant { regtest };
- blocks_source = principal \"$(dfx canister id "${MANAGEMENT_CANISTER}")\";
- fees = record { 
-    get_utxos_base = 0; 
-    get_utxos_cycles_per_ten_instructions = 0; 
-    get_utxos_maximum = 0; get_balance = 0; 
-    get_balance_maximum = 0; 
-    get_current_fee_percentiles = 0; 
-    get_current_fee_percentiles_maximum = 0;  
-    send_transaction_base =0; 
-    send_transaction_per_byte = 0;
-    get_block_headers_base = 0;
-    get_block_headers_cycles_per_ten_instructions = 0;
-    get_block_headers_maximum = 0;
- }; 
- syncing = variant { enabled }; 
- api_access = variant { enabled };
- disable_api_if_not_fully_synced = variant { enabled };
- watchdog_canister = null;
- burn_cycles = variant { enabled };
- lazily_evaluate_fee_percentiles = variant { enabled };
-})"
 
 # Run dfx stop if we run into errors and remove the downloaded wasm.
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
@@ -65,9 +40,7 @@ download_latest_release
 dfx start --background --clean
 
 # Deploy the latest release.
-# Update the candid to point so that it's using the old init arguments.
-sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (config)/' ./canister/candid.did
-dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "${ARGUMENT}"
+dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(record {})"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
 
@@ -81,23 +54,22 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
-# Update the candid to point back to the new init args.
-sed -i.bak 's/service bitcoin : (config)/service bitcoin : (init_config)/' ./canister/candid.did
+# Update candid to make the post_upgrade accept a set_config_request.
+sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ./canister/candid.did
 
-echo "Deploy new version of canister (with legacy upgrade feature)..."
-# The legacy_preupgrade feature is enabled.
-sed -i.bak 's/ic-btc-canister"/ic-btc-canister legacy_preupgrade"/' ./dfx.json
-dfx deploy --no-wallet bitcoin --argument "(record { })"
+echo "Deploy new version of canister..."
+dfx deploy --no-wallet bitcoin --argument "(null)"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
 
-# The legacy_preupgrade feature is removed.
 echo "Upgrade canister to own version..."
-sed -i.bak 's/ic-btc-canister legacy_preupgrade"/ic-btc-canister"/' ./dfx.json
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged bitcoin --argument "(record { })"
+dfx deploy --upgrade-unchanged bitcoin --argument "(null)"
 dfx canister start bitcoin
+
+# Reset candid init args
+sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ./canister/candid.did
 
 echo "SUCCESS"
