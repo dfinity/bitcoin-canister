@@ -3569,19 +3569,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha256"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18278f6a914fa3070aa316493f7d2ddfb9ac86ebc06fa3b83bffda487e9065b0"
-dependencies = [
- "async-trait",
- "bytes",
- "hex",
- "sha2 0.10.8",
- "tokio",
-]
-
-[[package]]
 name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4228,11 +4215,12 @@ dependencies = [
  "async-std",
  "candid 0.10.10",
  "clap",
+ "hex",
  "ic-agent",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
  "serde",
- "sha256",
+ "sha2 0.10.8",
  "url",
 ]
 

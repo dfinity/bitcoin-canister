@@ -21,10 +21,11 @@ path = "src/compute_hashes.rs"
 
 [dependencies]
 candid = { workspace = true }
+hex.workspace = true
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
-sha256 = "1.1.1"
 serde = { workspace = true }
+sha2 = "0.10.8"
 
 [dev-dependencies]
 async-std = { version = "1.12.0", features = ["attributes", "tokio1"] }
