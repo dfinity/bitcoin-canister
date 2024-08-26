@@ -51,7 +51,13 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
 
     // Verify that the hash of `bytes` matches some hash that we expect.
     let expected_hash = CHUNK_HASHES[(chunk_start / CHUNK_SIZE_IN_PAGES) as usize];
-    let actual_hash = sha256::digest(&*bytes);
+    let actual_hash = {
+        use sha2::Digest;
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&*bytes);
+        let digest_bytes = hasher.finalize();
+        hex::encode(&digest_bytes)
+    };
     if actual_hash != expected_hash {
         panic!(
             "Expected digest {} but found {}. bytes snippet {:?}",
