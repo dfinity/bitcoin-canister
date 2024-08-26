@@ -25,7 +25,13 @@ fn main() {
             break;
         }
 
-        let hash = sha256::digest(&chunk[0..bytes_read]);
+        let hash = {
+            use sha2::Digest;
+            let mut hasher = sha2::Sha256::new();
+            hasher.update(&chunk[0..bytes_read]);
+            let digest_bytes = hasher.finalize();
+            hex::encode(digest_bytes)
+        };
         println!("{}", hash);
     }
 }

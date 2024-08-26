@@ -56,7 +56,7 @@ fn upload_chunk(chunk_start: u64, bytes: Vec<u8>) {
         let mut hasher = sha2::Sha256::new();
         hasher.update(&*bytes);
         let digest_bytes = hasher.finalize();
-        hex::encode(&digest_bytes)
+        hex::encode(digest_bytes)
     };
     if actual_hash != expected_hash {
         panic!(
