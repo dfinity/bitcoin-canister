@@ -154,6 +154,11 @@ fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
 }
 
 #[query]
+fn transform_bitcoinexplorer_org_block(raw: TransformArgs) -> HttpResponse {
+    endpoint_bitcoinexplorer_org_block_mainnet().transform(raw)
+}
+
+#[query]
 fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpResponse {
     endpoint_blockchain_info_hash_mainnet().transform(raw)
 }

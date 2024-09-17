@@ -31,6 +31,9 @@ pub enum BitcoinBlockApi {
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
+    #[serde(rename = "bitcoinexplorer_org_mainnet")]
+    BitcoinExplorerOrgMainnet,
+
     #[serde(rename = "blockchain_info_mainnet")]
     BlockchainInfoMainnet,
 
@@ -98,6 +101,7 @@ impl BitcoinBlockApi {
             BitcoinBlockApi::ApiBitapsComMainnet,
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
+            BitcoinBlockApi::BitcoinExplorerOrgMainnet,
             BitcoinBlockApi::BlockchainInfoMainnet,
             BitcoinBlockApi::BlockstreamInfoMainnet,
             BitcoinBlockApi::ChainApiBtcComMainnet,
@@ -146,6 +150,9 @@ impl BitcoinBlockApi {
                 http_request(endpoint_api_blockcypher_com_block_testnet()).await
             }
             BitcoinBlockApi::BitcoinCanister => http_request(endpoint_bitcoin_canister()).await,
+            BitcoinBlockApi::BitcoinExplorerOrgMainnet => {
+                http_request(endpoint_bitcoinexplorer_org_block_mainnet()).await
+            }
             BitcoinBlockApi::BlockchainInfoMainnet => {
                 let futures = vec![
                     http_request(endpoint_blockchain_info_height_mainnet()),
