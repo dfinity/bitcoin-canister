@@ -57,14 +57,27 @@ pub fn health_status() -> HealthStatus {
 }
 
 fn calculate_height_target(explorers: &[BlockInfo], config: &Config) -> Option<u64> {
-    let heights = explorers
-        .iter()
-        .filter_map(|block| block.height)
-        .collect::<Vec<_>>();
+    // Collect block heights from explorers and calculate their median
+    let mut heights: Vec<u64> = explorers.iter().filter_map(|block| block.height).collect();
+
+    // Early return if there are not enough explorers
     if heights.len() < config.min_explorers as usize {
-        None // Not enough data from explorers.
+        return None;
+    }
+
+    // Calculate thresholds.
+    let threshold = median(heights.clone())? as i64;
+    let lo = threshold.saturating_add(config.get_blocks_behind_threshold()) as u64;
+    let hi = threshold.saturating_add(config.get_blocks_ahead_threshold()) as u64;
+
+    // Filter heights within the range
+    heights.retain(|&height| lo <= height && height <= hi);
+
+    // Return None if there are fewer heights than the minimum required.
+    if heights.len() < config.min_explorers as usize {
+        None
     } else {
-        median(heights)
+        Some(threshold as u64)
     }
 }
 
@@ -97,14 +110,14 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
 /// The median of the given values.
 fn median(mut values: Vec<u64>) -> Option<u64> {
     let length = values.len();
-
     if length == 0 {
         return None;
     }
 
-    values.sort();
+    values.sort_unstable();
 
     let mid_index = length / 2;
+    // If even number of elements, take the average of the two middle ones.
     let median_value = if length % 2 == 0 {
         (values[mid_index - 1] + values[mid_index]) / 2
     } else {
