@@ -24,6 +24,7 @@ type bitcoin_block_api = variant {
     api_blockcypher_com_mainnet;
     api_blockcypher_com_testnet;
     bitcoin_canister;
+    bitcoinexplorer_org_mainnet;
     blockchain_info_mainnet;
     blockstream_info_mainnet;
     blockstream_info_testnet;
