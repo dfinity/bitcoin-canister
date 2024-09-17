@@ -56,18 +56,22 @@ pub fn health_status() -> HealthStatus {
     )
 }
 
-/// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
-    let height_source = source.and_then(|block| block.height);
+fn calculate_height_target(explorers: &[BlockInfo], config: &Config) -> Option<u64> {
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
         .collect::<Vec<_>>();
-    let height_target = if heights.len() < config.min_explorers as usize {
+    if heights.len() < config.min_explorers as usize {
         None // Not enough data from explorers.
     } else {
         median(heights)
-    };
+    }
+}
+
+/// Compares the source with the other explorers.
+fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
+    let height_source = source.and_then(|block| block.height);
+    let height_target = calculate_height_target(&explorers, &config);
     let height_diff = height_source
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
