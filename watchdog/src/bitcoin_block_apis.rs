@@ -292,6 +292,20 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_bitcoinexplorer_org_mainnet() {
+        test_utils::mock_mainnet_outcalls();
+        run_test(
+            BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+            vec![(endpoint_bitcoinexplorer_org_block_mainnet(), 1)],
+            json!({
+                "height": 861687,
+                "hash": "00000000000000000000fde077ede6f8ea5b0b03631eb7467bd344808998dced",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
     async fn test_api_blockchair_com_mainnet() {
         test_utils::mock_mainnet_outcalls();
         run_test(
