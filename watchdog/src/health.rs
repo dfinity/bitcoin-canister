@@ -110,14 +110,14 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
 /// The median of the given values.
 fn median(mut values: Vec<u64>) -> Option<u64> {
     let length = values.len();
+
     if length == 0 {
         return None;
     }
 
-    values.sort_unstable();
+    values.sort();
 
     let mid_index = length / 2;
-    // If even number of elements, take the average of the two middle ones.
     let median_value = if length % 2 == 0 {
         (values[mid_index - 1] + values[mid_index]) / 2
     } else {
