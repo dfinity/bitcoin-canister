@@ -495,6 +495,10 @@ mod test {
             ),
             (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),
             (
+                BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                "bitcoinexplorer_org_mainnet",
+            ),
+            (
                 BitcoinBlockApi::BlockchainInfoMainnet,
                 "blockchain_info_mainnet",
             ),

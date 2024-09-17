@@ -171,10 +171,9 @@ pub fn endpoint_bitcoinexplorer_org_block_mainnet() -> HttpRequestConfig {
         }),
         |raw| {
             apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
                 json!({
-                    "height": data["height"].as_u64(),
-                    "hash": data["hash"].as_str(),
+                    "height": json["height"].as_u64(),
+                    "hash": json["hash"].as_str(),
                 })
             })
         },
@@ -558,6 +557,7 @@ mod test {
                 "transform_api_blockchair_com_block",
                 "transform_api_blockcypher_com_block",
                 "transform_bitcoin_canister",
+                "transform_bitcoinexplorer_org_block",
                 "transform_blockchain_info_hash",
                 "transform_blockchain_info_height",
                 "transform_blockstream_info_hash",

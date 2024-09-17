@@ -72,6 +72,10 @@ mod test {
                     height: Some(700003),
                 },
                 BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                    height: Some(861687),
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: Some(700004),
                 },
@@ -100,6 +104,10 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsComTestnet,
+                    height: Some(2000001),
+                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairComTestnet,
                     height: Some(2000002),
@@ -142,6 +150,10 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                    height: None,
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: None,
                 },
@@ -170,6 +182,10 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: BitcoinBlockApi::ApiBitapsComTestnet,
+                    height: None,
+                },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockchairComTestnet,
                     height: None,
