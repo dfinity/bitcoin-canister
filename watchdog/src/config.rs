@@ -89,7 +89,8 @@ impl Config {
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
             explorers: vec![
-                BitcoinBlockApi::ApiBitapsComTestnet,
+                // NOTE: Disabled due to flakiness.
+                // BitcoinBlockApi::ApiBitapsComTestnet,
                 BitcoinBlockApi::ApiBlockchairComTestnet,
                 BitcoinBlockApi::ApiBlockcypherComTestnet,
                 BitcoinBlockApi::BlockstreamInfoTestnet,

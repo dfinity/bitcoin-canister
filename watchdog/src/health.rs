@@ -56,35 +56,18 @@ pub fn health_status() -> HealthStatus {
     )
 }
 
-fn calculate_height_target(explorers: &[BlockInfo], config: &Config) -> Option<u64> {
-    // Collect block heights from explorers and calculate their median
-    let mut heights: Vec<u64> = explorers.iter().filter_map(|block| block.height).collect();
-
-    // Early return if there are not enough explorers
-    if heights.len() < config.min_explorers as usize {
-        return None;
-    }
-
-    // Calculate thresholds.
-    let threshold = median(heights.clone())? as i64;
-    let lo = threshold.saturating_add(config.get_blocks_behind_threshold()) as u64;
-    let hi = threshold.saturating_add(config.get_blocks_ahead_threshold()) as u64;
-
-    // Filter heights within the range
-    heights.retain(|&height| lo <= height && height <= hi);
-
-    // Return None if there are fewer heights than the minimum required.
-    if heights.len() < config.min_explorers as usize {
-        None
-    } else {
-        Some(threshold as u64)
-    }
-}
-
 /// Compares the source with the other explorers.
 fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
-    let height_target = calculate_height_target(&explorers, &config);
+    let heights = explorers
+        .iter()
+        .filter_map(|block| block.height)
+        .collect::<Vec<_>>();
+    let height_target = if heights.len() < config.min_explorers as usize {
+        None // Not enough data from explorers.
+    } else {
+        median(heights)
+    };
     let height_diff = height_source
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
