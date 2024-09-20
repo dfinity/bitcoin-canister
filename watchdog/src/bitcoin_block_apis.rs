@@ -31,6 +31,9 @@ pub enum BitcoinBlockApi {
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
+    #[serde(rename = "bitcoinexplorer_org_mainnet")]
+    BitcoinExplorerOrgMainnet,
+
     #[serde(rename = "blockchain_info_mainnet")]
     BlockchainInfoMainnet,
 
@@ -98,6 +101,7 @@ impl BitcoinBlockApi {
             BitcoinBlockApi::ApiBitapsComMainnet,
             BitcoinBlockApi::ApiBlockchairComMainnet,
             BitcoinBlockApi::ApiBlockcypherComMainnet,
+            BitcoinBlockApi::BitcoinExplorerOrgMainnet,
             BitcoinBlockApi::BlockchainInfoMainnet,
             BitcoinBlockApi::BlockstreamInfoMainnet,
             BitcoinBlockApi::ChainApiBtcComMainnet,
@@ -146,6 +150,9 @@ impl BitcoinBlockApi {
                 http_request(endpoint_api_blockcypher_com_block_testnet()).await
             }
             BitcoinBlockApi::BitcoinCanister => http_request(endpoint_bitcoin_canister()).await,
+            BitcoinBlockApi::BitcoinExplorerOrgMainnet => {
+                http_request(endpoint_bitcoinexplorer_org_block_mainnet()).await
+            }
             BitcoinBlockApi::BlockchainInfoMainnet => {
                 let futures = vec![
                     http_request(endpoint_blockchain_info_height_mainnet()),
@@ -279,6 +286,20 @@ mod test {
             json!({
                 "height": 2000001,
                 "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_bitcoinexplorer_org_mainnet() {
+        test_utils::mock_mainnet_outcalls();
+        run_test(
+            BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+            vec![(endpoint_bitcoinexplorer_org_block_mainnet(), 1)],
+            json!({
+                "height": 861687,
+                "hash": "00000000000000000000fde077ede6f8ea5b0b03631eb7467bd344808998dced",
             }),
         )
         .await;
@@ -473,6 +494,10 @@ mod test {
                 "api_blockcypher_com_testnet",
             ),
             (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),
+            (
+                BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                "bitcoinexplorer_org_mainnet",
+            ),
             (
                 BitcoinBlockApi::BlockchainInfoMainnet,
                 "blockchain_info_mainnet",

@@ -4,9 +4,9 @@ use crate::print;
 use crate::{
     transform_api_bitaps_com_block, transform_api_blockchair_com_block,
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
-    transform_blockchain_info_hash, transform_blockchain_info_height,
-    transform_blockstream_info_hash, transform_blockstream_info_height,
-    transform_chain_api_btc_com_block,
+    transform_bitcoinexplorer_org_block, transform_blockchain_info_hash,
+    transform_blockchain_info_height, transform_blockstream_info_hash,
+    transform_blockstream_info_height, transform_chain_api_btc_com_block,
 };
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use regex::Regex;
@@ -156,6 +156,25 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
                         .to_string()
                     })
                     .unwrap_or_default()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet block data from bitcoinexplorer.org.
+pub fn endpoint_bitcoinexplorer_org_block_mainnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://bitcoinexplorer.org/api/blocks/tip",
+        Some(TransformFnWrapper {
+            name: "transform_bitcoinexplorer_org_block",
+            func: transform_bitcoinexplorer_org_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                json!({
+                    "height": json["height"].as_u64(),
+                    "hash": json["hash"].as_str(),
+                })
             })
         },
     )
@@ -538,6 +557,7 @@ mod test {
                 "transform_api_blockchair_com_block",
                 "transform_api_blockcypher_com_block",
                 "transform_bitcoin_canister",
+                "transform_bitcoinexplorer_org_block",
                 "transform_blockchain_info_hash",
                 "transform_blockchain_info_height",
                 "transform_blockstream_info_hash",

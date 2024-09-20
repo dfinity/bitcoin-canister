@@ -69,6 +69,7 @@ impl Config {
                 BitcoinBlockApi::ApiBitapsComMainnet,
                 BitcoinBlockApi::ApiBlockchairComMainnet,
                 BitcoinBlockApi::ApiBlockcypherComMainnet,
+                BitcoinBlockApi::BitcoinExplorerOrgMainnet,
                 BitcoinBlockApi::BlockchainInfoMainnet,
                 BitcoinBlockApi::BlockstreamInfoMainnet,
                 BitcoinBlockApi::ChainApiBtcComMainnet,

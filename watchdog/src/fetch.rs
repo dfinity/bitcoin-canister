@@ -72,6 +72,10 @@ mod test {
                     height: Some(700003),
                 },
                 BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                    height: Some(861687),
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::BlockchainInfoMainnet,
                     height: Some(700004),
                 },
@@ -139,6 +143,10 @@ mod test {
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::ApiBlockcypherComMainnet,
+                    height: None,
+                },
+                BlockInfo {
+                    provider: BitcoinBlockApi::BitcoinExplorerOrgMainnet,
                     height: None,
                 },
                 BlockInfo {
