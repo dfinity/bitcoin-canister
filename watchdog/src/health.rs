@@ -178,8 +178,17 @@ mod test {
 
     #[test]
     fn test_calculate_height_target_not_enough_explorers() {
+        // Within threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10],
+            heights: &[10, 12],
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: None,
+        });
+        // Outside threshold.
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[10, 13],
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
@@ -189,8 +198,17 @@ mod test {
 
     #[test]
     fn test_calculate_height_target_explorers_not_in_range() {
+        // Above threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10, 20, 30],
+            heights: &[10, 10, 12],
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: None,
+        });
+        // Below threshold.
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[8, 10, 10],
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
@@ -200,12 +218,21 @@ mod test {
 
     #[test]
     fn test_calculate_height_target_explorers_are_in_range() {
+        // Above threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10, 11, 12],
+            heights: &[10, 10, 11],
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
-            expected: Some(11),
+            expected: Some(10),
+        });
+        // Below threshold.
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[9, 10, 10],
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: Some(10),
         });
     }
 
