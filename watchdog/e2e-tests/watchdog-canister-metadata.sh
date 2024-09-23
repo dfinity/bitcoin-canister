@@ -16,7 +16,7 @@ deploy_watchdog_canister_mainnet
 METADATA=$(dfx canister metadata watchdog candid:service)
 
 # Metadata returned should match the canister's .did file.
-DIFF_OUTPUT=$(diff "$SCRIPT_DIR/candid.did" <(echo "$METADATA"))
+DIFF_OUTPUT=$(diff "$SCRIPT_DIR/../candid.did" <(echo "$METADATA"))
 
 if [ "$DIFF_OUTPUT" != "" ]; then
   echo "FAIL"
