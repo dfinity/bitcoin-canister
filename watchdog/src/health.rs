@@ -72,10 +72,7 @@ fn calculate_height_target(
         threshold.saturating_add(blocks_behind_threshold) as u64,
         threshold.saturating_add(blocks_ahead_threshold) as u64,
     );
-    let valid_explorers = heights
-        .iter()
-        .filter(|&height| (lo..=hi).contains(height))
-        .count();
+    let valid_explorers = heights.iter().filter(|&x| (lo..=hi).contains(x)).count();
 
     if valid_explorers >= min_explorers {
         Some(threshold as u64)
