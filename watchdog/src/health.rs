@@ -56,24 +56,28 @@ pub fn health_status() -> HealthStatus {
     )
 }
 
-fn calculate_height_target(explorers: &[BlockInfo], config: &Config) -> Option<u64> {
-    let heights: Vec<u64> = explorers.iter().filter_map(|block| block.height).collect();
-    if heights.len() < config.min_explorers as usize {
+fn calculate_height_target(
+    heights: &[u64],
+    min_explorers: usize,
+    blocks_behind_threshold: i64,
+    blocks_ahead_threshold: i64,
+) -> Option<u64> {
+    if heights.len() < min_explorers {
         return None;
     }
 
-    let median = median(&heights)? as i64;
+    let median = median(heights)? as i64;
     let (lo, hi) = (
-        median.saturating_add(config.get_blocks_behind_threshold()) as u64,
-        median.saturating_add(config.get_blocks_ahead_threshold()) as u64,
+        (median + blocks_behind_threshold).max(0) as u64,
+        (median + blocks_ahead_threshold).max(0) as u64,
     );
-    let valid_heights = heights
-        .into_iter()
-        .filter(|&height| lo <= height && height <= hi)
+    let valid_explorers = heights
+        .iter()
+        .filter(|&height| (lo..=hi).contains(height))
         .count();
 
-    // Return the median if enough explorers are within range, otherwise None.
-    if valid_heights >= config.min_explorers as usize {
+    if valid_explorers >= min_explorers {
+        // Return the median if enough explorers are within range.
         Some(median as u64)
     } else {
         None
@@ -83,7 +87,16 @@ fn calculate_height_target(explorers: &[BlockInfo], config: &Config) -> Option<u
 /// Compares the source with the other explorers.
 fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
-    let height_target = calculate_height_target(&explorers, &config);
+    let heights = explorers
+        .iter()
+        .filter_map(|block| block.height)
+        .collect::<Vec<_>>();
+    let height_target = calculate_height_target(
+        &heights,
+        config.min_explorers as usize,
+        config.get_blocks_behind_threshold(),
+        config.get_blocks_ahead_threshold(),
+    );
     let height_diff = height_source
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
@@ -142,6 +155,21 @@ mod test {
         assert_eq!(median(&[5, 4, 3, 2, 1]), Some(3));
         assert_eq!(median(&[20, 20, 10, 10]), Some(15));
         assert_eq!(median(&[20, 15, 10]), Some(15));
+    }
+
+    #[test]
+    fn test_calculate_height_target_not_enough_explorers() {
+        assert_eq!(calculate_height_target(&[10], 3, -1, 1), None);
+    }
+
+    #[test]
+    fn test_calculate_height_target_explorers_not_in_range() {
+        assert_eq!(calculate_height_target(&[10, 20, 30], 3, -1, 1), None);
+    }
+
+    #[test]
+    fn test_calculate_height_target_explorers_are_in_range() {
+        assert_eq!(calculate_height_target(&[10, 11, 12], 3, -1, 1), Some(11));
     }
 
     #[test]
