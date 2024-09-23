@@ -157,19 +157,62 @@ mod test {
         assert_eq!(median(&[20, 15, 10]), Some(15));
     }
 
+    struct CalculateHeightTargetParams {
+        heights: &'static [u64],
+        min_explorers: usize,
+        blocks_behind_threshold: i64,
+        blocks_ahead_threshold: i64,
+    }
+
+    fn test_calculate_height_target(params: CalculateHeightTargetParams, expected: Option<u64>) {
+        assert_eq!(
+            calculate_height_target(
+                params.heights,
+                params.min_explorers,
+                params.blocks_behind_threshold,
+                params.blocks_ahead_threshold
+            ),
+            expected
+        );
+    }
+
     #[test]
     fn test_calculate_height_target_not_enough_explorers() {
-        assert_eq!(calculate_height_target(&[10], 3, -1, 1), None);
+        test_calculate_height_target(
+            CalculateHeightTargetParams {
+                heights: &[10],
+                min_explorers: 3,
+                blocks_behind_threshold: -1,
+                blocks_ahead_threshold: 1,
+            },
+            None,
+        );
     }
 
     #[test]
     fn test_calculate_height_target_explorers_not_in_range() {
-        assert_eq!(calculate_height_target(&[10, 20, 30], 3, -1, 1), None);
+        test_calculate_height_target(
+            CalculateHeightTargetParams {
+                heights: &[10, 20, 30],
+                min_explorers: 3,
+                blocks_behind_threshold: -1,
+                blocks_ahead_threshold: 1,
+            },
+            None,
+        );
     }
 
     #[test]
     fn test_calculate_height_target_explorers_are_in_range() {
-        assert_eq!(calculate_height_target(&[10, 11, 12], 3, -1, 1), Some(11));
+        test_calculate_height_target(
+            CalculateHeightTargetParams {
+                heights: &[10, 11, 12],
+                min_explorers: 3,
+                blocks_behind_threshold: -1,
+                blocks_ahead_threshold: 1,
+            },
+            Some(11),
+        );
     }
 
     #[test]
