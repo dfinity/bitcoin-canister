@@ -56,6 +56,7 @@ pub fn health_status() -> HealthStatus {
     )
 }
 
+/// Returns the median if `min_explorers` are within the block range around it.
 fn calculate_height_target(
     heights: &[u64],
     min_explorers: usize,
@@ -66,10 +67,10 @@ fn calculate_height_target(
         return None;
     }
 
-    let median = median(heights)? as i64;
+    let threshold = median(heights)? as i64;
     let (lo, hi) = (
-        (median + blocks_behind_threshold).max(0) as u64,
-        (median + blocks_ahead_threshold).max(0) as u64,
+        threshold.saturating_add(blocks_behind_threshold) as u64,
+        threshold.saturating_add(blocks_ahead_threshold) as u64,
     );
     let valid_explorers = heights
         .iter()
@@ -77,8 +78,7 @@ fn calculate_height_target(
         .count();
 
     if valid_explorers >= min_explorers {
-        // Return the median if enough explorers are within range.
-        Some(median as u64)
+        Some(threshold as u64)
     } else {
         None
     }
