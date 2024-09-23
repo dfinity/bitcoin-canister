@@ -56,18 +56,34 @@ pub fn health_status() -> HealthStatus {
     )
 }
 
+fn calculate_height_target(explorers: &[BlockInfo], config: &Config) -> Option<u64> {
+    let heights: Vec<u64> = explorers.iter().filter_map(|block| block.height).collect();
+    if heights.len() < config.min_explorers as usize {
+        return None;
+    }
+
+    let median = median(&heights)? as i64;
+    let (lo, hi) = (
+        median.saturating_add(config.get_blocks_behind_threshold()) as u64,
+        median.saturating_add(config.get_blocks_ahead_threshold()) as u64,
+    );
+    let valid_heights = heights
+        .into_iter()
+        .filter(|&height| lo <= height && height <= hi)
+        .count();
+
+    // Return the median if enough explorers are within range, otherwise None.
+    if valid_heights >= config.min_explorers as usize {
+        Some(median as u64)
+    } else {
+        None
+    }
+}
+
 /// Compares the source with the other explorers.
 fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
-    let heights = explorers
-        .iter()
-        .filter_map(|block| block.height)
-        .collect::<Vec<_>>();
-    let height_target = if heights.len() < config.min_explorers as usize {
-        None // Not enough data from explorers.
-    } else {
-        median(heights)
-    };
+    let height_target = calculate_height_target(&explorers, &config);
     let height_diff = height_source
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
@@ -91,13 +107,14 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
 }
 
 /// The median of the given values.
-fn median(mut values: Vec<u64>) -> Option<u64> {
+fn median(values: &[u64]) -> Option<u64> {
     let length = values.len();
 
     if length == 0 {
         return None;
     }
 
+    let mut values = values.to_vec();
     values.sort();
 
     let mid_index = length / 2;
@@ -117,14 +134,14 @@ mod test {
 
     #[test]
     fn test_median() {
-        assert_eq!(median(vec![]), None);
-        assert_eq!(median(vec![1]), Some(1));
-        assert_eq!(median(vec![2, 1]), Some(1));
-        assert_eq!(median(vec![3, 2, 1]), Some(2));
-        assert_eq!(median(vec![4, 3, 2, 1]), Some(2));
-        assert_eq!(median(vec![5, 4, 3, 2, 1]), Some(3));
-        assert_eq!(median(vec![20, 20, 10, 10]), Some(15));
-        assert_eq!(median(vec![20, 15, 10]), Some(15));
+        assert_eq!(median(&[]), None);
+        assert_eq!(median(&[1]), Some(1));
+        assert_eq!(median(&[2, 1]), Some(1));
+        assert_eq!(median(&[3, 2, 1]), Some(2));
+        assert_eq!(median(&[4, 3, 2, 1]), Some(2));
+        assert_eq!(median(&[5, 4, 3, 2, 1]), Some(3));
+        assert_eq!(median(&[20, 20, 10, 10]), Some(15));
+        assert_eq!(median(&[20, 15, 10]), Some(15));
     }
 
     #[test]
