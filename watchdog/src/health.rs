@@ -178,17 +178,15 @@ mod test {
 
     #[test]
     fn test_calculate_height_target_not_enough_explorers() {
-        // Within threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10, 12],
+            heights: &[10, 12], // Within threshold.
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
             expected: None,
         });
-        // Outside threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10, 13],
+            heights: &[10, 13], // Outside threshold.
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
@@ -198,17 +196,15 @@ mod test {
 
     #[test]
     fn test_calculate_height_target_explorers_not_in_range() {
-        // Above threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10, 10, 12],
+            heights: &[10, 10, 12], // Above threshold.
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
             expected: None,
         });
-        // Below threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[8, 10, 10],
+            heights: &[8, 10, 10], // Below threshold.
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
@@ -218,17 +214,15 @@ mod test {
 
     #[test]
     fn test_calculate_height_target_explorers_are_in_range() {
-        // Above threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[10, 10, 11],
+            heights: &[10, 10, 11], // Above threshold.
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
             expected: Some(10),
         });
-        // Below threshold.
         test_calculate_height_target(CalculateHeightTargetTestData {
-            heights: &[9, 10, 10],
+            heights: &[9, 10, 10], // Below threshold.
             min_explorers: 3,
             blocks_behind_threshold: -1,
             blocks_ahead_threshold: 1,
