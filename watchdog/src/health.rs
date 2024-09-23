@@ -157,6 +157,7 @@ mod test {
         assert_eq!(median(&[20, 15, 10]), Some(15));
     }
 
+    /// Test data for `calculate_height_target`.
     struct CalculateHeightTargetTestData {
         heights: &'static [u64],
         min_explorers: usize,
@@ -165,6 +166,7 @@ mod test {
         expected: Option<u64>,
     }
 
+    /// Tests `calculate_height_target` with the given test data.
     fn test_calculate_height_target(params: CalculateHeightTargetTestData) {
         assert_eq!(
             calculate_height_target(
