@@ -10,22 +10,22 @@ name = "watchdog"
 path = "src/main.rs"
 
 [dependencies]
-async-trait = "0.1.67"
 candid = { workspace = true }
-futures = { workspace = true }
-hex = { workspace = true }
-ic-btc-interface = { workspace = true }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
-ic-cdk-timers = "0.1"
-ic-http = { workspace = true }
 ic-metrics-encoder = { workspace = true }
-regex = "1.7.0"
+ic-cdk-timers = "0.1"
 serde = { workspace = true, features = ["derive"] }
-serde_bytes = { workspace = true }
 serde_json = { workspace = true }
+hex = { workspace = true }
+async-trait = "0.1.67"
+regex = "1.7.0"
+futures = { workspace = true }
+ic-http = { workspace = true }
+serde_bytes = { workspace = true }
+ic-btc-interface = { workspace = true }
 
 [dev-dependencies]
+tokio = { workspace = true }
 assert-json-diff = "2.0.2"
 candid_parser = { workspace = true }
-tokio = { workspace = true }
