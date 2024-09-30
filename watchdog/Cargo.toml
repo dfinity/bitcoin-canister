@@ -27,4 +27,5 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"
+candid_parser = { workspace = true }
 tokio = { workspace = true }

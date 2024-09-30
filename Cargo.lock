@@ -4392,6 +4392,7 @@ dependencies = [
  "assert-json-diff",
  "async-trait",
  "candid 0.10.10",
+ "candid_parser",
  "futures",
  "hex",
  "ic-btc-interface",

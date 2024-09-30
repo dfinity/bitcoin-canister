@@ -39,10 +39,17 @@ if [[ "$STATUS" -eq "0" ]]; then
     -o "./target/$TARGET/release/$CANISTER.wasm" shrink
 
     if [[ "$CANISTER" == "ic-btc-canister" ]]; then
-    	./target/bin/ic-wasm \
-    	"./target/$TARGET/release/$CANISTER.wasm" \
-    	-o "./target/$TARGET/release/$CANISTER.wasm" \
-    	metadata candid:service -f "$SCRIPT_DIR/../canister/candid.did" -v public
+      ./target/bin/ic-wasm \
+      "./target/$TARGET/release/$CANISTER.wasm" \
+      -o "./target/$TARGET/release/$CANISTER.wasm" \
+      metadata candid:service -f "$SCRIPT_DIR/../canister/candid.did" -v public
+    fi
+
+    if [[ "$CANISTER" == "watchdog" ]]; then
+      ./target/bin/ic-wasm \
+      "./target/$TARGET/release/$CANISTER.wasm" \
+      -o "./target/$TARGET/release/$CANISTER.wasm" \
+      metadata candid:service -f "$SCRIPT_DIR/../watchdog/candid.did" -v public
     fi
 
   true
