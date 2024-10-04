@@ -198,4 +198,22 @@ mod test {
         init(BitcoinNetwork::Mainnet);
         assert_eq!(get_config(), Config::mainnet());
     }
+
+    #[test]
+    fn test_candid_interface_compatibility() {
+        use candid_parser::utils::{service_compatible, CandidSource};
+        use std::path::PathBuf;
+
+        candid::export_service!();
+        let rust_interface = __export_service();
+
+        let candid_interface =
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("candid.did");
+
+        service_compatible(
+            CandidSource::Text(&rust_interface),
+            CandidSource::File(candid_interface.as_path()),
+        )
+        .expect("The canister implementation is not compatible with the candid.did file");
+    }
 }
