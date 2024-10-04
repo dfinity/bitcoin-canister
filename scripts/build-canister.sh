@@ -6,6 +6,7 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 CANISTER=$1
 FEATURES=${2:-}
+PROFILE=${3:-release}
 
 pushd "$SCRIPT_DIR"
 
@@ -22,10 +23,10 @@ fi
 # that aren't needed in production.
 if [[ -z "$FEATURES" ]]; then
   # No features provided
-  cargo build -p "$CANISTER" --target "$TARGET" --release
+  cargo build -p "$CANISTER" --target "$TARGET" --profile="${PROFILE}"
 else
   # Features provided
-  cargo build -p "$CANISTER" --target "$TARGET" --release --features "$FEATURES"
+  cargo build -p "$CANISTER" --target "$TARGET" --profile="${PROFILE}" --features "$FEATURES"
 fi
 
 # Navigate to root directory.
@@ -35,8 +36,8 @@ cargo install ic-wasm --version 0.2.0 --root ./target
 STATUS=$?
 if [[ "$STATUS" -eq "0" ]]; then
     ./target/bin/ic-wasm \
-    "./target/$TARGET/release/$CANISTER.wasm" \
-    -o "./target/$TARGET/release/$CANISTER.wasm" shrink
+    "./target/$TARGET/${PROFILE}/$CANISTER.wasm" \
+    -o "./target/$TARGET/${PROFILE}/$CANISTER.wasm" shrink
 
     if [[ "$CANISTER" == "ic-btc-canister" ]]; then
     	./target/bin/ic-wasm \
@@ -51,6 +52,6 @@ else
   false
 fi
 
-gzip -n -f "./target/$TARGET/release/$CANISTER.wasm"
+gzip -n -f "./target/$TARGET/${PROFILE}/$CANISTER.wasm"
 
 popd
