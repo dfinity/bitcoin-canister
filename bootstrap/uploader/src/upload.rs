@@ -37,6 +37,9 @@ struct Args {
     /// The canister to upload the state to.
     #[clap(long)]
     canister_id: Principal,
+
+    #[clap(long, default_value_t = false)]
+    upload_from_end: bool,
 }
 
 #[derive(CandidType)]
@@ -84,7 +87,15 @@ async fn main() {
 
     // Upload the missing chunks.
     let mut reader = BufReader::new(f);
-    for chunk_index in missing_chunk_indices {
+    // Compute the chunk indices in the order they should be uploaded
+    // either from the beginning or from the end, depending on the
+    // `upload_from_end` flag.
+    let chunk_indices: Vec<u64> = if args.upload_from_end {
+        missing_chunk_indices.into_iter().rev().collect()
+    } else {
+        missing_chunk_indices.into_iter().collect()
+    };
+    for chunk_index in chunk_indices {
         let offset = chunk_index * PAGE_SIZE_IN_BYTES;
         let mut buf = vec![0; CHUNK_SIZE_IN_BYTES as usize];
         reader
