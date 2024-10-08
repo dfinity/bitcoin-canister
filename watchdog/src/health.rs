@@ -56,6 +56,31 @@ pub fn health_status() -> HealthStatus {
     )
 }
 
+/// Returns the median if `min_explorers` are within the block range around it.
+fn calculate_height_target(
+    heights: &[u64],
+    min_explorers: usize,
+    blocks_behind_threshold: i64,
+    blocks_ahead_threshold: i64,
+) -> Option<u64> {
+    if heights.len() < min_explorers {
+        return None;
+    }
+
+    let threshold = median(heights)? as i64;
+    let (lo, hi) = (
+        threshold.saturating_add(blocks_behind_threshold) as u64,
+        threshold.saturating_add(blocks_ahead_threshold) as u64,
+    );
+    let valid_explorers = heights.iter().filter(|&x| (lo..=hi).contains(x)).count();
+
+    if valid_explorers >= min_explorers {
+        Some(threshold as u64)
+    } else {
+        None
+    }
+}
+
 /// Compares the source with the other explorers.
 fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
@@ -63,11 +88,12 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
         .iter()
         .filter_map(|block| block.height)
         .collect::<Vec<_>>();
-    let height_target = if heights.len() < config.min_explorers as usize {
-        None // Not enough data from explorers.
-    } else {
-        median(heights)
-    };
+    let height_target = calculate_height_target(
+        &heights,
+        config.min_explorers as usize,
+        config.get_blocks_behind_threshold(),
+        config.get_blocks_ahead_threshold(),
+    );
     let height_diff = height_source
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
@@ -91,13 +117,14 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
 }
 
 /// The median of the given values.
-fn median(mut values: Vec<u64>) -> Option<u64> {
+fn median(values: &[u64]) -> Option<u64> {
     let length = values.len();
 
     if length == 0 {
         return None;
     }
 
+    let mut values = values.to_vec();
     values.sort();
 
     let mid_index = length / 2;
@@ -117,14 +144,90 @@ mod test {
 
     #[test]
     fn test_median() {
-        assert_eq!(median(vec![]), None);
-        assert_eq!(median(vec![1]), Some(1));
-        assert_eq!(median(vec![2, 1]), Some(1));
-        assert_eq!(median(vec![3, 2, 1]), Some(2));
-        assert_eq!(median(vec![4, 3, 2, 1]), Some(2));
-        assert_eq!(median(vec![5, 4, 3, 2, 1]), Some(3));
-        assert_eq!(median(vec![20, 20, 10, 10]), Some(15));
-        assert_eq!(median(vec![20, 15, 10]), Some(15));
+        assert_eq!(median(&[]), None);
+        assert_eq!(median(&[1]), Some(1));
+        assert_eq!(median(&[2, 1]), Some(1));
+        assert_eq!(median(&[3, 2, 1]), Some(2));
+        assert_eq!(median(&[4, 3, 2, 1]), Some(2));
+        assert_eq!(median(&[5, 4, 3, 2, 1]), Some(3));
+        assert_eq!(median(&[20, 20, 10, 10]), Some(15));
+        assert_eq!(median(&[20, 15, 10]), Some(15));
+    }
+
+    /// Test data for `calculate_height_target`.
+    struct CalculateHeightTargetTestData {
+        heights: &'static [u64],
+        min_explorers: usize,
+        blocks_behind_threshold: i64,
+        blocks_ahead_threshold: i64,
+        expected: Option<u64>,
+    }
+
+    /// Tests `calculate_height_target` with the given test data.
+    fn test_calculate_height_target(params: CalculateHeightTargetTestData) {
+        assert_eq!(
+            calculate_height_target(
+                params.heights,
+                params.min_explorers,
+                params.blocks_behind_threshold,
+                params.blocks_ahead_threshold
+            ),
+            params.expected
+        );
+    }
+
+    #[test]
+    fn test_calculate_height_target_not_enough_explorers() {
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[10, 12], // Within threshold.
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: None,
+        });
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[10, 13], // Outside threshold.
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: None,
+        });
+    }
+
+    #[test]
+    fn test_calculate_height_target_explorers_not_in_range() {
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[10, 10, 12], // Above threshold.
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: None,
+        });
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[8, 10, 10], // Below threshold.
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: None,
+        });
+    }
+
+    #[test]
+    fn test_calculate_height_target_explorers_are_in_range() {
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[10, 10, 11], // Above threshold.
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: Some(10),
+        });
+        test_calculate_height_target(CalculateHeightTargetTestData {
+            heights: &[9, 10, 10], // Below threshold.
+            min_explorers: 3,
+            blocks_behind_threshold: -1,
+            blocks_ahead_threshold: 1,
+            expected: Some(10),
+        });
     }
 
     #[test]

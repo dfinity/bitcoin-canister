@@ -65,8 +65,8 @@ RUN scripts/build-canister.sh ic-btc-canister ${BTC_FEATURES} && \
 RUN if [ -n "$CHUNK_HASHES_PATH" ]; then export CHUNK_HASHES_PATH="$CHUNK_HASHES_PATH"; fi
 
 # Building uploader canister...
-RUN scripts/build-canister.sh uploader && \
-    cp target/wasm32-unknown-unknown/release/uploader.wasm.gz uploader.wasm.gz
+RUN scripts/build-canister.sh uploader "" "release-lto" && \
+    cp target/wasm32-unknown-unknown/release-lto/uploader.wasm.gz uploader.wasm.gz
 
 # Building watchdog canister...
 RUN scripts/build-canister.sh watchdog && \
