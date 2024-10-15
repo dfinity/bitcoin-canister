@@ -1,4 +1,4 @@
-# watchdog canister
+# Watchdog canister changelog
 
 ## UNRELEASED
 
