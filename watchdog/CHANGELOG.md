@@ -4,10 +4,10 @@
 
 Features:
 - chore: add watchdog canister metadata (#329) by @maksymar
-- feat: re-enable tracking `api.bitaps.com` testnet explorer in watchdog canister (#328) by @maksymar
+- feat: re-enable tracking `api.bitaps.com` `testnet` explorer in watchdog canister (#328) by @maksymar
 - feat: improve height target calculation for watchdog canister (#327) by @maksymar
 - chore: add mainnet explorer `bitcoinexplorer.org` (#326) by @maksymar
-- chore: update threshold of watchdog testnet canister (#295) by @islam.elashi
+- chore: update threshold of watchdog `testnet` canister (#295) by @islam.elashi
 
 Chores:
 - chore: sort dependencies in `Cargo.toml` files (#330) by @maksymar
@@ -17,7 +17,7 @@ Chores:
 
 ## [2024-01-22 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2024-01-22)
 
-- make testnet watchdog canister less sensitive
+- make `testnet` watchdog canister less sensitive
 
 ### Proposals
 
