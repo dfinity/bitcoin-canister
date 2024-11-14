@@ -95,7 +95,11 @@ async fn main() {
     } else {
         missing_chunk_indices.into_iter().collect()
     };
-    for chunk_index in chunk_indices {
+
+    let total_chunks = chunk_indices.len();
+    let start_time = std::time::Instant::now();
+
+    for (i, &chunk_index) in chunk_indices.iter().enumerate() {
         let offset = chunk_index * PAGE_SIZE_IN_BYTES;
         let mut buf = vec![0; CHUNK_SIZE_IN_BYTES as usize];
         reader
@@ -106,7 +110,22 @@ async fn main() {
             break;
         }
 
-        println!("Uploading chunk at {}", chunk_index);
+        let percentage = (i as f64 / total_chunks as f64) * 100.0;
+        let elapsed_secs = start_time.elapsed().as_secs_f64();
+        let estimated_time_left = if percentage > 0.0 {
+            (100.0 - percentage) * elapsed_secs / percentage
+        } else {
+            0.0
+        };
+        let estimated_duration = std::time::Duration::from_secs_f64(estimated_time_left);
+        let hours = estimated_duration.as_secs() / 3600;
+        let minutes = (estimated_duration.as_secs() % 3600) / 60;
+        let seconds = estimated_duration.as_secs() % 60;
+        let current_chunk = i + 1;
+        println!(
+            "Uploading chunk {current_chunk}/{total_chunks} ({percentage:.1}%), index {chunk_index}, ETA: {hours}h {minutes:02}m {seconds:02}s",
+        );
+
         upload(&agent, &args.canister_id, chunk_index, &buf[..bytes_read]).await;
     }
 }
