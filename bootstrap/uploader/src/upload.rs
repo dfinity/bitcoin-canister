@@ -117,10 +117,9 @@ async fn main() {
         } else {
             0.0
         };
-        let estimated_duration = std::time::Duration::from_secs_f64(estimated_time_left);
-        let hours = estimated_duration.as_secs() / 3600;
-        let minutes = (estimated_duration.as_secs() % 3600) / 60;
-        let seconds = estimated_duration.as_secs() % 60;
+        let hours = (estimated_time_left / 3600.0).floor() as u64;
+        let minutes = ((estimated_time_left % 3600.0) / 60.0).floor() as u64;
+        let seconds = (estimated_time_left % 60.0).floor() as u64;
         let current_chunk = i + 1;
         println!(
             "Uploading chunk {current_chunk}/{total_chunks} ({percentage:.1}%), index {chunk_index}, ETA: {hours}h {minutes:02}m {seconds:02}s",
