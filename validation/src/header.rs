@@ -254,7 +254,6 @@ fn compute_next_difficulty(
 
     let height = prev_height + 1;
     if height % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 || no_pow_retargeting(network) {
-        println!("ABC quick return: {}", prev_header.bits);
         return prev_header.bits;
     }
 
