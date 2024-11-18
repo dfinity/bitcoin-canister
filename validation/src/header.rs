@@ -762,7 +762,6 @@ mod test {
             let new_header = BlockHeader {
                 prev_blockhash: last_header.block_hash(),
                 time: last_header.time - 1, // Each new block is 1 second earlier
-                bits: pow_limit_bits(&network),
                 ..last_header
             };
             store.add(new_header);
