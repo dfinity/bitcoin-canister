@@ -747,28 +747,28 @@ mod test {
 
     #[test]
     fn test_compute_next_difficulty_for_backdated_blocks() {
-        // Arrange: Set up the test network and initial parameters
+        // Arrange: Set up the test network and parameters
         let network = Network::Testnet;
-        let chain_length = DIFFICULTY_ADJUSTMENT_INTERVAL - 1;
+        let chain_length = DIFFICULTY_ADJUSTMENT_INTERVAL - 1; // To trigger difficulty adjustment
+        let initial_difficulty = 486604799;
 
-        // Create the genesis header and initialize the store
-        // by the header chain with timestamps decreasing by 1 second.
-        let genesis_header = genesis_header(0);
+        // Create the genesis header and initialize the header store
+        let genesis_header = genesis_header(initial_difficulty);
         let mut store = SimpleHeaderStore::new(genesis_header, 0);
-        let mut last_header = genesis_header;
-        for _ in 1..chain_length {
+
+        // Populate the header chain with timestamps decreasing by 1 second
+        (1..chain_length).for_each(|_| {
             let new_header = BlockHeader {
-                prev_blockhash: last_header.block_hash(),
-                time: last_header.time - 1, // Each new block is 1 second earlier
+                prev_blockhash: genesis_header.block_hash(),
+                time: genesis_header.time - 1, // Each new block is 1 second earlier
                 bits: pow_limit_bits(&network),
-                ..last_header
+                ..genesis_header
             };
             store.add(new_header);
-            last_header = new_header;
-        }
+        });
 
         // Act: Compute the next difficulty
-        let difficulty = compute_next_difficulty(&network, &store, &last_header, chain_length);
+        let difficulty = compute_next_difficulty(&network, &store, &genesis_header, chain_length);
 
         // Assert: Verify the computed difficulty matches the expected value
         assert_eq!(difficulty, 473956288);
