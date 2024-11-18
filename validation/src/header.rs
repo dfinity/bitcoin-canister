@@ -254,6 +254,7 @@ fn compute_next_difficulty(
 
     let height = prev_height + 1;
     if height % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 || no_pow_retargeting(network) {
+        println!("ABC quick return: {}", prev_header.bits);
         return prev_header.bits;
     }
 
@@ -743,5 +744,33 @@ mod test {
             // Assert.
             assert_eq!(target, BlockHeader::u256_from_compact_target(expected_pow));
         }
+    }
+
+    #[test]
+    fn test_compute_next_difficulty_new_block_with_earlier_timestamp() {
+        // Arrange.
+        let network = Network::Testnet;
+        let initial_pow = 0;
+        let chain_length = 2015;
+        let pow_limit = pow_limit_bits(&network);
+        let h0 = genesis_header(initial_pow);
+        let mut store = SimpleHeaderStore::new(h0, 0);
+        let mut last_header = h0;
+        for _ in 1..chain_length {
+            let new_header = BlockHeader {
+                prev_blockhash: last_header.block_hash(),
+                time: last_header.time - 1, // new block is 1 second earlier.
+                bits: pow_limit,
+                ..last_header
+            };
+            store.add(new_header);
+            last_header = new_header;
+        }
+
+        // Act.
+        let difficulty = compute_next_difficulty(&network, &store, &last_header, chain_length);
+
+        // Assert.
+        assert_eq!(difficulty, 473956288);
     }
 }
