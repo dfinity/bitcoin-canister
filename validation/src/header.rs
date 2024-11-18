@@ -755,8 +755,6 @@ mod test {
         // Create the genesis header and initialize the header store
         let genesis_header = genesis_header(genesis_difficulty);
         let mut store = SimpleHeaderStore::new(genesis_header, 0);
-
-        // Populate the header chain with timestamps decreasing by 1 second
         let mut last_header = genesis_header;
         for _ in 1..chain_length {
             let new_header = BlockHeader {
@@ -765,13 +763,13 @@ mod test {
                 ..last_header
             };
             store.add(new_header);
-            last_header = new_header; // Update the last header for the next iteration
+            last_header = new_header;
         }
 
-        // Act: Compute the next difficulty
+        // Act.
         let difficulty = compute_next_difficulty(&network, &store, &last_header, chain_length);
 
-        // Assert: Verify the computed difficulty matches the expected value
+        // Assert.
         assert_eq!(difficulty, 473956288);
     }
 }
