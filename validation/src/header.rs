@@ -746,7 +746,7 @@ mod test {
     }
 
     #[test]
-    fn test_compute_next_difficulty_new_block_with_earlier_timestamp() {
+    fn test_compute_next_difficulty_for_backdated_blocks() {
         // Arrange: Set up the test network and initial parameters
         let network = Network::Testnet;
         let chain_length = DIFFICULTY_ADJUSTMENT_INTERVAL - 1;
