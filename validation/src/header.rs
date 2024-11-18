@@ -275,16 +275,20 @@ fn compute_next_difficulty(
     // actual_interval will deviate slightly from 2 weeks. Our goal is to
     // readjust the difficulty target so that the expected time taken for the next
     // 2016 blocks is again 2 weeks.
-    let actual_interval = prev_header.time - last_adjustment_time;
-    let mut adjusted_interval = actual_interval;
+    // IMPORTANT: The bitcoin protocol allows for a roughly 3-hour window around
+    // timestamp (1 hour in the past, 2 hours in the future) meaning that
+    // the actual_interval can be negative on testnet networks.
+    let actual_interval = (prev_header.time as i64) - (last_adjustment_time as i64);
 
     // The target_adjustment_interval_time is 2 weeks of time expressed in seconds
-    let target_adjustment_interval_time: u32 = DIFFICULTY_ADJUSTMENT_INTERVAL * TEN_MINUTES; //Number of seconds in 2 weeks
+    let target_adjustment_interval_time = (DIFFICULTY_ADJUSTMENT_INTERVAL * TEN_MINUTES) as i64;
 
     // Adjusting the actual_interval to [0.5 week, 8 week] range in case the
     // actual_interval deviates too much from the expected 2 weeks.
-    adjusted_interval = u32::max(adjusted_interval, target_adjustment_interval_time / 4);
-    adjusted_interval = u32::min(adjusted_interval, target_adjustment_interval_time * 4);
+    let adjusted_interval = actual_interval.clamp(
+        target_adjustment_interval_time / 4,
+        target_adjustment_interval_time * 4,
+    ) as u32;
 
     // Computing new difficulty target.
     // new difficulty target = old difficult target * (adjusted_interval /
