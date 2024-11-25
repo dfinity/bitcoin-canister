@@ -3,59 +3,67 @@
 # Script for dumping the block headers into a file.
 set -euo pipefail
 
+source "$(dirname "$0")/utils.sh"
+
 BITCOIN_D=$1/bin/bitcoind
 BITCOIN_CLI=$1/bin/bitcoin-cli
 HEIGHT=$2
 NETWORK=$3
 STABLE_HEIGHT=$((HEIGHT-12))
 
+validate_network "$NETWORK"
+
 # Kill all background processes on exit.
 trap "kill 0" EXIT
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
-
 CONF_FILE=$(mktemp)
-cat <<- "EOF" > "$CONF_FILE"
-networkactive=0
-
-# Reduce storage requirements by only storing most recent N MiB of block.
-prune=5000
-
-# Dummy credentials that are required by `bitcoin-cli`.
-rpcuser=ic-btc-integration
-rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
-rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
-EOF
-
-# Configure bitcoin.conf to connect to the testnet network if needed.
-if [[ "$NETWORK" == "testnet" ]]; then
-    echo "chain=test" >> "$CONF_FILE"
-fi
+generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
 
 # Delete any previously computed block headers file.
 rm -f block_headers
 
+DATA_DIR="$(pwd)/data"
+
 echo "Fetching block headers..."
 # Run bitcoind in the background with no network access.
-$BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > /dev/null &
+$BITCOIN_D -conf="$CONF_FILE" -datadir="$DATA_DIR" > /dev/null &
 
 # Wait for bitcoind to load.
 sleep 30
 
-# Retrieve the block hashes and headers via bitcoin-cli.
-for ((height = 0; height <= STABLE_HEIGHT; height++))
-do
-  BLOCK_HASH=$($BITCOIN_CLI -conf="$CONF_FILE" -datadir="$(pwd)/data" getblockhash "$height")
-  BLOCK_HEADER=$($BITCOIN_CLI -conf="$CONF_FILE" -datadir="$(pwd)/data" getblockheader "$BLOCK_HASH" false)
+# Function to format seconds as xxh xxm xxs.
+format_time() {
+    local total_seconds=$1
+    local hours=$((total_seconds / 3600))
+    local minutes=$(((total_seconds % 3600) / 60))
+    local seconds=$((total_seconds % 60))
+    printf "%02dh %02dm %02ds" "$hours" "$minutes" "$seconds"
+}
 
-  if [ "$((height % 100))" == 0 ]; then
-    echo "Processed $height headers"
-  fi
+# Start timer for ETA calculation.
+START_TIME=$(date +%s)
 
-  echo "$BLOCK_HASH,$BLOCK_HEADER" >> block_headers
+# Retrieve block hashes and headers via bitcoin-cli with progress logging.
+echo "Fetching block headers up to height $STABLE_HEIGHT..."
+for ((height = 0; height <= STABLE_HEIGHT; height++)); do
+    BLOCK_HASH=$("$BITCOIN_CLI" -conf="$CONF_FILE" -datadir="$DATA_DIR" getblockhash "$height")
+    BLOCK_HEADER=$("$BITCOIN_CLI" -conf="$CONF_FILE" -datadir="$DATA_DIR" getblockheader "$BLOCK_HASH" false)
+
+    # Append the block hash and header to the file.
+    echo "$BLOCK_HASH,$BLOCK_HEADER" >> "$BLOCK_HEADERS_FILE"
+
+    # Calculate and log progress every 100 blocks.
+    if ((height % 100 == 0 || height == STABLE_HEIGHT)); then
+        CURRENT_TIME=$(date +%s)
+        ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
+        PROCESSED_COUNT=$((height + 1))
+        TOTAL_COUNT=$((STABLE_HEIGHT + 1))
+        PERCENTAGE=$((100 * PROCESSED_COUNT / TOTAL_COUNT))
+        REMAINING_TIME=$((ELAPSED_TIME * (TOTAL_COUNT - PROCESSED_COUNT) / PROCESSED_COUNT))
+        FORMATTED_ETA=$(format_time "$REMAINING_TIME")
+
+        echo "Processed $PROCESSED_COUNT/$TOTAL_COUNT ($PERCENTAGE%) headers, ETA: $FORMATTED_ETA"
+    fi
 done
 
 sha256sum block_headers

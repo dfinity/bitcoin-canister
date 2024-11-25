@@ -3,12 +3,11 @@
 # A script for building the UTXO dump text file.
 set -euo pipefail
 
+source "$(dirname "$0")/utils.sh"
+
 NETWORK=$1
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
+validate_network "$NETWORK"
 
 # Generate the UTXO set.
 if [[ "$NETWORK" == "mainnet" ]]; then
