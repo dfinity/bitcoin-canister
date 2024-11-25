@@ -3,6 +3,8 @@
 # A script to build the canister's state given a UTXO dump file.
 set -euo pipefail
 
+source "$(dirname "$0")/utils.sh"
+
 CANISTER_STATE_DIR=canister_state
 CANISTER_STATE_FILE=canister_state.bin
 UTXO_FILE=utxodump_shuffled.csv
@@ -14,10 +16,7 @@ ANCHOR_HEIGHT=$((HEIGHT-11))
 STABILITY_THRESHOLD=$2
 NETWORK=$3
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
+validate_network "$NETWORK"
 
 mkdir $CANISTER_STATE_DIR
 

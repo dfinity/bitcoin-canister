@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "$0")/utils.sh"
+
 BITCOIN_D=$1/bin/bitcoind
 BITCOIN_CLI=$1/bin/bitcoin-cli
 NETWORK=$2
 
+validate_network "$NETWORK"
+
 # Kill all background processes on exit.
 trap "kill 0" EXIT
-
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
 
 CONF_FILE=$(mktemp)
 cat <<- "EOF" > "$CONF_FILE"

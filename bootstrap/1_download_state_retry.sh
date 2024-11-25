@@ -3,13 +3,12 @@
 # Script for downloading the bitcoin state.
 set -euo pipefail
 
+source "$(dirname "$0")/utils.sh"
+
 BITCOIN_D=$1/bin/bitcoind
 NETWORK=$2
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
+validate_network "$NETWORK"
 
 # Create a bitcoin.conf file that downloads blocks up to the given height.
 CONF_FILE=$(mktemp)
