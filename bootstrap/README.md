@@ -94,7 +94,7 @@ Once all these steps are complete, the canister's state will be available in thi
 
 A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
 
-```
+```shell
 cargo run --release --example compute_hashes -- --file ./canister_state.bin > chunk_hashes.txt
 ```
 
