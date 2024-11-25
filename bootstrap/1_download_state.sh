@@ -46,8 +46,10 @@ rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0d
 EOF
 
 # Add network-specific configuration if necessary.
-[[ "$NETWORK" == "testnet" ]] && echo "chain=test" >> "$CONF_FILE"
-[[ "$NETWORK" == "testnet4" ]] && echo "chain=testnet4" >> "$CONF_FILE"
+case "$NETWORK" in
+    "testnet") echo "chain=test" >> "$CONF_FILE" ;;
+    "testnet4") echo "chain=testnet4" >> "$CONF_FILE" ;;
+esac
 
 # Log file for monitoring progress.
 LOG_FILE=$(mktemp)
