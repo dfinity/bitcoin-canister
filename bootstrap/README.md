@@ -24,13 +24,13 @@ tar -xvf bitcoin-28.0-x86_64-linux-gnu.tar.gz
 
 Install the `bitcoin-utxo-dump` utility (requires `go` lang to be installed):
 
-```
+```shell
 go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce62ba43dc8
 ```
 
 ## 2. Setup Environment Variables
 
-```
+```shell
 BITCOIN_DIR=/path/to/bitcoin-28.0/
 HEIGHT=<height of the state you want to compute>
 STABILITY_THRESHOLD=<desired stability threshold>
@@ -41,19 +41,19 @@ NETWORK=<mainnet or testnet>
 
 Run `1_download_state.sh`, which downloads the bitcoin state. This can several hours.
 
-```
+```shell
 ./1_download_state.sh $BITCOIN_DIR $HEIGHT $NETWORK
 ```
 
 Once it's done, run the following:
 
-```
+```shell
 ./check_chaintip.sh $BITCOIN_DIR $NETWORK
 ```
 
 Make sure that the output of the above command specifies that you have a chain that has the status "active", and has a height of at least `$HEIGHT - 10`. For example, if you set the `$HEIGHT` to 10010 in the earlier steps, the height of the chain should be >= 10000. It should look something like this:
 
-```
+```shell
 [
   {
     "height": <height>,
@@ -68,11 +68,23 @@ If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_re
 
 ## 4. Compute the Bitcoin Canister's State
 
-```
+```shell
 ./2_compute_unstable_blocks.sh $BITCOIN_DIR $HEIGHT $NETWORK
+```
+
+```shell
 ./3_compute_block_headers.sh $BITCOIN_DIR $HEIGHT $NETWORK
+```
+
+```shell
 ./4_compute_utxo_dump.sh $NETWORK
+```
+
+```shell
 ./5_shuffle_utxo_dump.sh
+```
+
+```shell
 ./6_compute_canister_state.sh $HEIGHT $STABILITY_THRESHOLD $NETWORK
 ```
 
