@@ -7,7 +7,7 @@ set -euo pipefail
 validate_network() {
     local network=$1
     local valid_networks=("mainnet" "testnet" "testnet4")
-    if ! [[ " ${valid_networks[*]} " =~ " $network " ]]; then
+    if ! [[ " ${valid_networks[*]} " =~ $network ]]; then
         echo "Error: NETWORK must be one of ${valid_networks[*]}."
         exit 1
     fi

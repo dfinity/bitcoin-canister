@@ -21,13 +21,6 @@ validate_network "$NETWORK"
 # Kill all background processes on exit.
 trap "kill 0" EXIT
 
-# Validate the network input.
-VALID_NETWORKS=("mainnet" "testnet" "testnet4")
-if ! [[ " ${VALID_NETWORKS[*]} " =~ " $NETWORK " ]]; then
-    echo "Error: NETWORK must be one of ${VALID_NETWORKS[*]}."
-    exit 1
-fi
-
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
