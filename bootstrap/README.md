@@ -10,7 +10,7 @@ Rather than syncing the Bitcoin canister from genesis, which can take several we
 
 ## 1. Download Bitcoin Core
 
-Download [Bitcoin Core 22.0](https://bitcoin.org/bin/bitcoin-core-22.0/bitcoin-22.0-x86_64-linux-gnu.tar.gz) and unpack the `tar.gz` file.
+Download [Bitcoin Core 28.0](https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz) and unpack the `tar.gz` file.
 
 Install the `bitcoin-utxo-dump` utility (requires `go` lang to be installed):
 
@@ -21,7 +21,7 @@ go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce6
 ## 2. Setup Environment Variables
 
 ```
-BITCOIN_DIR=/path/to/bitcoin-22.0/
+BITCOIN_DIR=/path/to/bitcoin-28.0/
 HEIGHT=<height of the state you want to compute>
 STABILITY_THRESHOLD=<desired stability threshold>
 NETWORK=<mainnet or testnet>
