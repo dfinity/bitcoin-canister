@@ -10,12 +10,14 @@ canister_ids.json
 
 *.wasm.gz
 
-bootstrap/data/
-bootstrap/canister_state/
+bootstrap/bitcoin-*
 bootstrap/block_headers
 bootstrap/canister_state.bin
-bootstrap/unstable_blocks
+bootstrap/canister_state/
 bootstrap/chunk_hashes.txt
+bootstrap/data_bk/
+bootstrap/data/
+bootstrap/unstable_blocks
 bootstrap/utxodump_shuffled.csv
 bootstrap/utxodump.csv
 chunk_hashes.txt
