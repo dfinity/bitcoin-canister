@@ -28,24 +28,8 @@ mkdir "$DATA_DIR"
 
 # Generate a temporary bitcoin.conf file with required settings.
 CONF_FILE=$(mktemp)
-cat << EOF > "$CONF_FILE"
 # Stop running after reaching the given height in the main chain.
-stopatheight=$HEIGHT
-
-# Reduce storage requirements by only storing the most recent N MiB of blocks.
-prune=5000
-
-# Dummy credentials required by bitcoin-cli.
-rpcuser=ic-btc-integration
-rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
-rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
-EOF
-
-# Add network-specific configuration if necessary.
-case "$NETWORK" in
-    "testnet") echo "chain=test" >> "$CONF_FILE" ;;
-    "testnet4") echo "chain=testnet4" >> "$CONF_FILE" ;;
-esac
+generate_config "$NETWORK" "$CONF_FILE" "stopatheight=$HEIGHT"
 
 # Log file for monitoring progress.
 LOG_FILE=$(mktemp)

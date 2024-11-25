@@ -23,18 +23,7 @@ trap "kill 0" EXIT
 
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
-cat << EOF > "$CONF_FILE"
-networkactive=0
-
-# Reduce storage requirements by only storing the most recent N MiB of blocks.
-prune=5000
-
-# Dummy credentials required by bitcoin-cli.
-rpcuser=ic-btc-integration
-rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
-rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
-EOF
-
+generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
 
 # Prepare the unstable blocks.
 DATA_DIR="$(pwd)/data"
