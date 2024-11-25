@@ -1,4 +1,4 @@
-use bitcoin::{Target, Network};
+use bitcoin::{Target, CompactTarget, Network};
 
 use crate::BlockHeight;
 
@@ -28,14 +28,13 @@ pub fn no_pow_retargeting(network: &Network) -> bool {
 }
 
 /// Returns the PoW limit bits of the bitcoin network
-pub fn pow_limit_bits(network: &Network) -> u32 {
-    match network {
-        Network::Bitcoin => 0x1d00ffff,
-        Network::Testnet => 0x1d00ffff,
-        Network::Testnet4 => 0x1d00ffff,
+pub fn pow_limit_bits(network: &Network) -> CompactTarget {
+    let bits = match network {
+        Network::Bitcoin | Network::Testnet | Network::Testnet4 => 0x1d00ffff,
         Network::Regtest => 0x207fffff,
         Network::Signet => 0x1e0377ae,
-    }
+    };
+    CompactTarget::from_consensus(bits)
 }
 
 #[cfg(test)]
