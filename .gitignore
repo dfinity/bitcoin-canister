@@ -12,8 +12,7 @@ canister_ids.json
 
 bootstrap/bitcoin-*
 bootstrap/block_headers
-bootstrap/canister_state.bin
-bootstrap/canister_state/
+bootstrap/canister_state*
 bootstrap/chunk_hashes.txt
 bootstrap/data*
 bootstrap/unstable_blocks
