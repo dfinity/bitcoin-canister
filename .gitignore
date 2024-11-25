@@ -17,6 +17,5 @@ bootstrap/canister_state/
 bootstrap/chunk_hashes.txt
 bootstrap/data*
 bootstrap/unstable_blocks
-bootstrap/utxodump_shuffled.csv
-bootstrap/utxodump.csv
+bootstrap/utxodump*.csv
 chunk_hashes.txt
