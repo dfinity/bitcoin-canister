@@ -1,40 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BITCOIN_D=$1/bin/bitcoind
-BITCOIN_CLI=$1/bin/bitcoin-cli
-NETWORK=$2
+# Ensure correct usage.
+if [[ $# -ne 2 ]]; then
+    echo "Usage: $0 <path-to-bitcoin-dir> <network>"
+    exit 1
+fi
+
+BITCOIN_D="$1/bin/bitcoind"
+BITCOIN_CLI="$1/bin/bitcoin-cli"
+NETWORK="$2"
 
 # Kill all background processes on exit.
 trap "kill 0" EXIT
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
+# Validate network input.
+VALID_NETWORKS=("mainnet" "testnet" "testnet4")
+if ! [[ " ${VALID_NETWORKS[*]} " =~ " $NETWORK " ]]; then
+    echo "Error: NETWORK must be one of ${VALID_NETWORKS[*]}."
+    exit 1
 fi
 
+# Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
-cat <<- "EOF" > "$CONF_FILE"
+cat << EOF > "$CONF_FILE"
 networkactive=0
 
-# Reduce storage requirements by only storing most recent N MiB of block.
+# Reduce storage requirements by only storing the most recent N MiB of blocks.
 prune=5000
 
-# Dummy credentials that are required by `bitcoin-cli`.
+# Dummy credentials required by bitcoin-cli.
 rpcuser=ic-btc-integration
 rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
-rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
+rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
 EOF
 
-# Configure bitcoin.conf to connect to the testnet network if needed.
-if [[ "$NETWORK" == "testnet" ]]; then
-    echo "chain=test" >> "$CONF_FILE"
-fi
+# Add network-specific configuration if necessary.
+[[ "$NETWORK" == "testnet" ]] && echo "chain=test" >> "$CONF_FILE"
+[[ "$NETWORK" == "testnet4" ]] && echo "chain=testnet4" >> "$CONF_FILE"
 
-# Run bitcoind in the background with no network access.
-$BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > /dev/null &
+DATA_DIR="$(pwd)/data"
 
-# Wait for bitcoind to load.
+# Start bitcoind in the background with no network access.
+echo "Starting bitcoind for $NETWORK..."
+"$BITCOIN_D" -conf="$CONF_FILE" -datadir="$DATA_DIR" > /dev/null &
+BITCOIND_PID=$!
+
+# Wait for bitcoind to initialize.
+echo "Waiting for bitcoind to load..."
 sleep 30
 
-$BITCOIN_CLI -conf="$CONF_FILE" -datadir="$(pwd)/data" getchaintips
+# Get chain tips.
+echo "Fetching chain tips for $NETWORK..."
+"$BITCOIN_CLI" -conf="$CONF_FILE" -datadir="$DATA_DIR" getchaintips
+
+# Clean up.
+kill "$BITCOIND_PID"
+wait "$BITCOIND_PID" || true
+echo "Done."
