@@ -2,6 +2,7 @@
 #
 # Script for dumping Bitcoin block headers into a file.
 set -euo pipefail
+source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
 if [[ $# -ne 3 ]]; then
@@ -14,6 +15,8 @@ BITCOIN_CLI="$1/bin/bitcoin-cli"
 HEIGHT="$2"
 NETWORK="$3"
 STABLE_HEIGHT=$((HEIGHT - 12))
+
+validate_network "$NETWORK"
 
 # Kill all background processes on exit.
 trap "kill 0" EXIT

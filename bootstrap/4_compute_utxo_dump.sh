@@ -2,21 +2,28 @@
 #
 # A script for building the UTXO dump text file.
 set -euo pipefail
+source "$(dirname "$0")/utils.sh"
+
+# Ensure correct usage.
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 <network>"
+    exit 1
+fi
 
 NETWORK=$1
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
+validate_network "$NETWORK"
 
-# Generate the UTXO set.
+# Determine the chainstate directory based on the network.
 if [[ "$NETWORK" == "mainnet" ]]; then
     CHAIN_STATE_DIR=./data/chainstate
-else
+elif [[ "$NETWORK" == "testnet" ]]; then
     CHAIN_STATE_DIR=./data/testnet3/chainstate
+else
+    CHAIN_STATE_DIR=./data/testnet4/chainstate
 fi
 
+echo "Generating the UTXO dump for $NETWORK..."
 ~/go/bin/bitcoin-utxo-dump -db "$CHAIN_STATE_DIR" -o utxodump.csv -f "height,txid,vout,amount,type,address,script,coinbase,nsize"
 
 echo "Removing the headers from the file..."

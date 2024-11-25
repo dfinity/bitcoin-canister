@@ -2,6 +2,7 @@
 #
 # Script for downloading the Bitcoin state.
 set -euo pipefail
+source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
 if [[ $# -ne 2 ]]; then
@@ -12,12 +13,7 @@ fi
 BITCOIN_D="$1/bin/bitcoind"
 NETWORK="$2"
 
-# Validate the network input.
-VALID_NETWORKS=("mainnet" "testnet" "testnet4")
-if ! [[ " ${VALID_NETWORKS[*]} " =~ " $NETWORK " ]]; then
-    echo "Error: NETWORK must be one of ${VALID_NETWORKS[*]}."
-    exit 1
-fi
+validate_network "$NETWORK"
 
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)

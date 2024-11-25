@@ -3,6 +3,7 @@
 # Script for preparing the unstable blocks file and setting the chainstate database
 # to the exact height needed.
 set -euo pipefail
+source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
 if [[ $# -ne 3 ]]; then
@@ -15,15 +16,10 @@ BITCOIN_CLI="$1/bin/bitcoin-cli"
 HEIGHT="$2"
 NETWORK="$3"
 
+validate_network "$NETWORK"
+
 # Kill all background processes on exit.
 trap "kill 0" EXIT
-
-# Validate network input.
-VALID_NETWORKS=("mainnet" "testnet" "testnet4")
-if ! [[ " ${VALID_NETWORKS[*]} " =~ " $NETWORK " ]]; then
-    echo "Error: NETWORK must be one of ${VALID_NETWORKS[*]}."
-    exit 1
-fi
 
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
@@ -39,11 +35,6 @@ rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
 rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
 EOF
 
-# Add network-specific configuration if necessary.
-case "$NETWORK" in
-    "testnet") echo "chain=test" >> "$CONF_FILE" ;;
-    "testnet4") echo "chain=testnet4" >> "$CONF_FILE" ;;
-esac
 
 # Prepare the unstable blocks.
 DATA_DIR="$(pwd)/data"

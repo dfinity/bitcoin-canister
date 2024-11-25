@@ -2,6 +2,7 @@
 #
 # Script for downloading the Bitcoin state up to a specified block height.
 set -euo pipefail
+source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
 if [[ $# -ne 3 ]]; then
@@ -13,12 +14,7 @@ BITCOIN_D="$1/bin/bitcoind"
 HEIGHT="$2"
 NETWORK="$3"
 
-# Validate network input.
-VALID_NETWORKS=("mainnet" "testnet" "testnet4")
-if ! [[ " ${VALID_NETWORKS[*]} " =~ " $NETWORK " ]]; then
-    echo "Error: NETWORK must be one of ${VALID_NETWORKS[*]}."
-    exit 1
-fi
+validate_network "$NETWORK"
 
 # Check if the data directory already exists.
 DATA_DIR="$(pwd)/data"

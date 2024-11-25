@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
 if [[ $# -ne 2 ]]; then
@@ -11,15 +12,10 @@ BITCOIN_D="$1/bin/bitcoind"
 BITCOIN_CLI="$1/bin/bitcoin-cli"
 NETWORK="$2"
 
+validate_network "$NETWORK"
+
 # Kill all background processes on exit.
 trap "kill 0" EXIT
-
-# Validate network input.
-VALID_NETWORKS=("mainnet" "testnet" "testnet4")
-if ! [[ " ${VALID_NETWORKS[*]} " =~ " $NETWORK " ]]; then
-    echo "Error: NETWORK must be one of ${VALID_NETWORKS[*]}."
-    exit 1
-fi
 
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
