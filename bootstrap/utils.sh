@@ -7,10 +7,16 @@ set -euo pipefail
 validate_network() {
     local network=$1
     local valid_networks=("mainnet" "testnet")
-    if ! [[ " ${valid_networks[*]} " =~ $network ]]; then
-        echo "Error: NETWORK must be one of ${valid_networks[*]}."
-        exit 1
-    fi
+
+    for valid_network in "${valid_networks[@]}"; do
+        if [[ "$network" == "$valid_network" ]]; then
+            # Network is valid
+            return 0
+        fi
+    done
+
+    echo "Error: NETWORK must be one of [ ${valid_networks[*]} ]."
+    exit 1
 }
 
 # Generate the Bitcoin configuration file with optional parameters.
