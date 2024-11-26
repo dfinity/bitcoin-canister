@@ -1,4 +1,4 @@
-use bitcoin::{Target, BlockHash, block::Header, Network};
+use bitcoin::{Target, BlockHash, CompactTarget, block::Header, Network, params::Params};
 
 use crate::{
     constants::{
@@ -150,8 +150,8 @@ fn get_next_target(
     prev_height: BlockHeight,
     timestamp: u32,
 ) -> Target {
-    match network {
-        Network::Testnet | Network::Regtest => {
+    let compact = match network {
+        Network::Testnet | Network::Testnet4 | Network::Regtest => {
             if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
                 // This if statements is reached only for Regtest and Testnet networks
                 // Here is the quote from "https://en.bitcoin.it/wiki/Testnet"
@@ -159,32 +159,32 @@ fn get_next_target(
                 // resets back to the minimum for a single block, after which it
                 // returns to its previous value."
                 if timestamp > prev_header.time + TEN_MINUTES * 2 {
-                    //If no block has been found in 20 minutes, then use the maximum difficulty
+                    // If no block has been found in 20 minutes, then use the maximum difficulty
                     // target
-                    max_target(network)
+                    return max_target(network);
                 } else {
-                    //If the block has been found within 20 minutes, then use the previous
+                    // If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    Header::u256_from_compact_target(find_next_difficulty_in_chain(
+                    find_next_difficulty_in_chain(
                         network,
                         store,
                         prev_header,
                         prev_height,
-                    ))
+                    )
                 }
             } else {
-                Header::u256_from_compact_target(compute_next_difficulty(
+                compute_next_difficulty(
                     network,
                     store,
                     prev_header,
                     prev_height,
-                ))
+                )
             }
         }
-        Network::Bitcoin | Network::Signet => Header::u256_from_compact_target(
-            compute_next_difficulty(network, store, prev_header, prev_height),
-        ),
-    }
+        Network::Bitcoin | Network::Signet => compute_next_difficulty(network, store, prev_header, prev_height),
+        &other => unreachable!("Unsupported network: {:?}", other),
+    };
+    Target::from_compact(compact)
 }
 
 /// This method is only valid when used for testnet and regtest networks.
@@ -199,11 +199,11 @@ fn find_next_difficulty_in_chain(
     store: &impl HeaderStore,
     prev_header: &Header,
     prev_height: BlockHeight,
-) -> u32 {
+) -> CompactTarget {
     // This is the maximum difficulty target for the network
     let pow_limit_bits = pow_limit_bits(network);
     match network {
-        Network::Testnet | Network::Regtest => {
+        Network::Testnet | Network::Testnet4 | Network::Regtest => {
             let mut current_header = *prev_header;
             let mut current_height = prev_height;
             let mut current_hash = current_header.block_hash();
@@ -236,21 +236,22 @@ fn find_next_difficulty_in_chain(
             pow_limit_bits
         }
         Network::Bitcoin | Network::Signet => pow_limit_bits,
+        &other => unreachable!("Unsupported network: {:?}", other),
     }
 }
 
-/// This function returns the difficult target to be used for the current
+/// This function returns the difficulty target to be used for the current
 /// header given the previous header
 fn compute_next_difficulty(
     network: &Network,
     store: &impl HeaderStore,
     prev_header: &Header,
     prev_height: BlockHeight,
-) -> u32 {
+) -> CompactTarget {
     // Difficulty is adjusted only once in every interval of 2 weeks (2016 blocks)
     // If an interval boundary is not reached, then previous difficulty target is
-    // returned Regtest network doesn't adjust PoW difficult levels. For
-    // regtest, simply return the previous difficulty target
+    // returned Regtest network doesn't adjust PoW difficulty levels. For
+    // regtest, simply return the previous difficulty target.
 
     let height = prev_height + 1;
     if height % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 || no_pow_retargeting(network) {
@@ -270,39 +271,17 @@ fn compute_next_difficulty(
     let last_adjustment_time = last_adjustment_header.time;
 
     // Computing the time interval between the last adjustment header time and
-    // current time. The expected value actual_interval is 2 weeks assuming
+    // current time. The expected value timespan is 2 weeks assuming
     // the expected block time is 10 mins. But most of the time, the
-    // actual_interval will deviate slightly from 2 weeks. Our goal is to
+    // timespan will deviate slightly from 2 weeks. Our goal is to
     // readjust the difficulty target so that the expected time taken for the next
     // 2016 blocks is again 2 weeks.
     // IMPORTANT: The bitcoin protocol allows for a roughly 3-hour window around
     // timestamp (1 hour in the past, 2 hours in the future) meaning that
-    // the actual_interval can be negative on testnet networks.
-    let actual_interval = (prev_header.time as i64) - (last_adjustment_time as i64);
+    // the timespan can be negative on testnet networks.
+    let timespan = prev_header.time.saturating_sub(last_adjustment_time) as u64;
 
-    // The target_adjustment_interval_time is 2 weeks of time expressed in seconds
-    let target_adjustment_interval_time = (DIFFICULTY_ADJUSTMENT_INTERVAL * TEN_MINUTES) as i64;
-
-    // Adjusting the actual_interval to [0.5 week, 8 week] range in case the
-    // actual_interval deviates too much from the expected 2 weeks.
-    let adjusted_interval = actual_interval.clamp(
-        target_adjustment_interval_time / 4,
-        target_adjustment_interval_time * 4,
-    ) as u32;
-
-    // Computing new difficulty target.
-    // new difficulty target = old difficult target * (adjusted_interval /
-    // 2_weeks);
-    let mut target = prev_header.target();
-    target = target.mul_u32(adjusted_interval);
-    target = target / Uint256::from_u64(target_adjustment_interval_time as u64).unwrap();
-
-    // Adjusting the newly computed difficulty target so that it doesn't exceed the
-    // max_difficulty_target limit
-    target = Uint256::min(target, max_target(network));
-
-    // Converting the target (Uint256) into a 32 bit representation used by Bitcoin
-    Header::compact_target_from_u256(&target)
+    CompactTarget::from_next_work_required(prev_header.bits, timespan, Params::new(*network))
 }
 
 #[cfg(test)]
