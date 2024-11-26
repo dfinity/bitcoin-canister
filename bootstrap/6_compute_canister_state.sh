@@ -4,6 +4,8 @@
 set -euo pipefail
 source "$(dirname "$0")/utils.sh"
 
+source "$(dirname "$0")/utils.sh"
+
 CANISTER_STATE_DIR=canister_state
 CANISTER_STATE_FILE=canister_state.bin
 UTXO_FILE=utxodump_shuffled.csv
