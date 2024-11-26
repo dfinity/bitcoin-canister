@@ -1,4 +1,4 @@
-use bitcoin::{Target, BlockHash, CompactTarget, block::Header, Network, params::Params};
+use bitcoin::{Target, BlockHash, CompactTarget, block::{Header}, Network, params::Params};
 
 use crate::{
     constants::{
@@ -289,7 +289,7 @@ mod test {
 
     use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode};
+    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode, block::Version};
     use csv::Reader;
     use proptest::prelude::*;
 
@@ -392,11 +392,11 @@ mod test {
         for result in rdr.records() {
             let record = result.unwrap();
             let header = Header {
-                version: i32::from_str_radix(record.get(0).unwrap(), 16).unwrap(),
+                version: Version::from_consensus(i32::from_str_radix(record.get(0).unwrap(), 16).unwrap()),
                 prev_blockhash: BlockHash::from_str(record.get(1).unwrap()).unwrap(),
                 merkle_root: TxMerkleNode::from_str(record.get(2).unwrap()).unwrap(),
                 time: u32::from_str_radix(record.get(3).unwrap(), 16).unwrap(),
-                bits: u32::from_str_radix(record.get(4).unwrap(), 16).unwrap(),
+                bits: CompactTarget::from_consensus(u32::from_str_radix(record.get(4).unwrap(), 16).unwrap()),
                 nonce: u32::from_str_radix(record.get(5).unwrap(), 16).unwrap(),
             };
             headers.push(header);
@@ -496,7 +496,7 @@ mod test {
         store.add(header_705602);
 
         let mut header = Header {
-            version: 0x20800004,
+            version: Version::from_consensus(0x20800004),
             prev_blockhash: BlockHash::from_hex(
                 "00000000000000000001eea12c0de75000c2546da22f7bf42d805c1d2769b6ef",
             )
@@ -506,7 +506,7 @@ mod test {
             )
             .unwrap(),
             time: 1634590600,
-            bits: 0x170e0408,
+            bits: CompactTarget::from_consensus(0x170e0408),
             nonce: 0xb48e8b0a,
         };
         assert!(is_timestamp_valid(&store, &header, MOCK_CURRENT_TIME).is_ok());
@@ -659,11 +659,11 @@ mod test {
 
     fn genesis_header(bits: u32) -> Header {
         Header {
-            version: 1,
+            version: Version::from_consensus(1),
             prev_blockhash: Default::default(),
             merkle_root: Default::default(),
             time: 1296688602,
-            bits,
+            bits: CompactTarget::from_consensus(bits),
             nonce: 0,
         }
     }
@@ -672,7 +672,7 @@ mod test {
         Header {
             prev_blockhash: prev.block_hash(),
             time: prev.time + TEN_MINUTES,
-            bits,
+            bits: CompactTarget::from_consensus(bits),
             ..prev
         }
     }
