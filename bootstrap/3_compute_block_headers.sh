@@ -3,7 +3,7 @@
 # Script for dumping Bitcoin block headers into a file.
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
 BITCOIN_D="$1/bin/bitcoind"
 BITCOIN_CLI="$1/bin/bitcoin-cli"
@@ -21,10 +21,7 @@ CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
 
 # Remove any previously computed block headers file.
-BLOCK_HEADERS_FILE="block_headers"
 rm -f "$BLOCK_HEADERS_FILE"
-
-DATA_DIR="$(pwd)/data"
 
 # Start bitcoind in the background with no network access.
 echo "Starting bitcoind for $NETWORK..."

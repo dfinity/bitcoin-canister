@@ -4,7 +4,7 @@
 # to the exact height needed.
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
 BITCOIN_D="$1/bin/bitcoind"
 BITCOIN_CLI="$1/bin/bitcoin-cli"
@@ -19,8 +19,6 @@ trap "kill 0" EXIT
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
-
-DATA_DIR="$(pwd)/data"
 
 echo "Preparing the unstable blocks..."
 # Start bitcoind in the background with no network access.
@@ -43,7 +41,6 @@ BLOCK_HASH_2=$("$BITCOIN_CLI" -conf="$CONF_FILE" -datadir="$DATA_DIR" getblockha
 echo "Hash: $BLOCK_HASH_2"
 
 # Save the unstable blocks to a file.
-UNSTABLE_BLOCKS_FILE="unstable_blocks"
 "$BITCOIN_CLI" -conf="$CONF_FILE" -datadir="$DATA_DIR" getblock "$BLOCK_HASH_1" 0 > "$UNSTABLE_BLOCKS_FILE"
 "$BITCOIN_CLI" -conf="$CONF_FILE" -datadir="$DATA_DIR" getblock "$BLOCK_HASH_2" 0 >> "$UNSTABLE_BLOCKS_FILE"
 echo "Unstable blocks saved to $UNSTABLE_BLOCKS_FILE."

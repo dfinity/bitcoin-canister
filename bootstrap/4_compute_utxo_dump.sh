@@ -3,7 +3,7 @@
 # A script for building the UTXO dump text file.
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
 NETWORK=$1
 
@@ -22,10 +22,10 @@ else
 fi
 
 echo "Generating the UTXO dump for $NETWORK..."
-~/go/bin/bitcoin-utxo-dump -db "$CHAIN_STATE_DIR" -o utxodump.csv -f "height,txid,vout,amount,type,address,script,coinbase,nsize"
+~/go/bin/bitcoin-utxo-dump -db "$CHAIN_STATE_DIR" -o "$UTXO_DUMP" -f "height,txid,vout,amount,type,address,script,coinbase,nsize"
 
 echo "Removing the headers from the file..."
-tail -n +2 utxodump.csv > utxodump.csv.tmp && mv utxodump.csv.tmp utxodump.csv
+tail -n +2 "$UTXO_DUMP" > "$UTXO_DUMP.tmp" && mv "$UTXO_DUMP.tmp" "$UTXO_DUMP"
 
 echo "Sorting the file..."
 
@@ -46,7 +46,7 @@ export LC_MEASUREMENT="C.UTF-8"
 export LC_IDENTIFICATION="C.UTF-8"
 export LC_ALL=
 
-sort -n -o utxodump.csv utxodump.csv
+sort -n -o "$UTXO_DUMP" "$UTXO_DUMP"
 
 echo "Computing sorted UTXO checksum..."
-sha256sum utxodump.csv
+sha256sum "$UTXO_DUMP"

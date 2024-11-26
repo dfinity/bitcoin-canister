@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
 BITCOIN_D="$1/bin/bitcoind"
 BITCOIN_CLI="$1/bin/bitcoin-cli"
@@ -15,8 +15,6 @@ trap "kill 0" EXIT
 # Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
-
-DATA_DIR="$(pwd)/data"
 
 # Start bitcoind in the background with no network access.
 echo "Starting bitcoind for $NETWORK..."

@@ -22,7 +22,7 @@ export LC_IDENTIFICATION="C.UTF-8"
 export LC_ALL=
 
 echo "Shuffling the UTXO dump..."
-awk 'BEGIN{srand(0);} {printf "%06d %s\n", rand()*1000000, $0;}' utxodump.csv | sort -n | cut -c8- > utxodump_shuffled.csv
+awk 'BEGIN{srand(0);} {printf "%06d %s\n", rand()*1000000, $0;}' "$UTXO_DUMP" | sort -n | cut -c8- > "$UTXO_DUMP_SHUFFLED"
 
 echo "Computing shuffled UTXO checksum..."
-sha256sum utxodump_shuffled.csv
+sha256sum "$UTXO_DUMP_SHUFFLED"
