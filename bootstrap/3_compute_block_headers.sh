@@ -20,12 +20,11 @@ trap "kill 0" EXIT
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
 
-# Prepare the data directory.
-DATA_DIR="$(pwd)/data"
-
 # Remove any previously computed block headers file.
 BLOCK_HEADERS_FILE="block_headers"
 rm -f "$BLOCK_HEADERS_FILE"
+
+DATA_DIR="$(pwd)/data"
 
 # Start bitcoind in the background with no network access.
 echo "Starting bitcoind for $NETWORK..."

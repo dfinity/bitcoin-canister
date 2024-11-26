@@ -14,8 +14,11 @@ if [[ "$NETWORK" == "mainnet" ]]; then
     CHAIN_STATE_DIR=./data/chainstate
 elif [[ "$NETWORK" == "testnet" ]]; then
     CHAIN_STATE_DIR=./data/testnet3/chainstate
-else
+elif [[ "$NETWORK" == "testnet4" ]]; then
     CHAIN_STATE_DIR=./data/testnet4/chainstate
+else
+    echo "Error: unknown network: $NETWORK."
+    exit 1
 fi
 
 echo "Generating the UTXO dump for $NETWORK..."
