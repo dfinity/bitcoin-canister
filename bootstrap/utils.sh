@@ -3,6 +3,19 @@
 # Utility functions for Bitcoin scripts.
 set -euo pipefail
 
+# Directories.
+export OUTPUT_DIR="./output"
+export DATA_DIR="$OUTPUT_DIR/data"
+export BACKUP_DIR="$OUTPUT_DIR/data_bk"
+# Intermediate files.
+export UNSTABLE_BLOCKS_FILE="$OUTPUT_DIR/unstable_blocks"
+export BLOCK_HEADERS_FILE="$OUTPUT_DIR/block_headers"
+export UTXO_DUMP="$OUTPUT_DIR/utxodump.csv"
+export UTXO_DUMP_SHUFFLED="$OUTPUT_DIR/utxodump_shuffled.csv"
+# Canister state.
+export CANISTER_STATE_DIR="$OUTPUT_DIR/canister_state"
+export CANISTER_STATE_FILE="$OUTPUT_DIR/canister_state.bin"
+
 # Validate the network input.
 validate_network() {
     local network=$1

@@ -32,9 +32,9 @@ go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce6
 
 ```shell
 BITCOIN_DIR=/path/to/bitcoin-22.0/
+NETWORK=<mainnet or testnet>
 HEIGHT=<height of the state you want to compute>
 STABILITY_THRESHOLD=<desired stability threshold>
-NETWORK=<mainnet or testnet>
 ```
 
 ## 3. Download the Bitcoin state
@@ -42,7 +42,7 @@ NETWORK=<mainnet or testnet>
 Run `1_download_state.sh`, which downloads the bitcoin state. This can several hours.
 
 ```shell
-./1_download_state.sh $BITCOIN_DIR $HEIGHT $NETWORK
+./1_download_state.sh $BITCOIN_DIR $NETWORK $HEIGHT
 ```
 
 Once it's done, run the following:
@@ -64,26 +64,45 @@ Make sure that the output of the above command specifies that you have a chain t
 ]
 ```
 
-If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh $BITCOIN_DIR $NETWORK` for a minute or two, which downloads more Bitcoin blocks, and try again.
+If the height returned here is < `$HEIGHT - 10`, then run
+
+```shell
+./1_download_state_retry.sh $BITCOIN_DIR $NETWORK
+```
+
+for a minute or two, which downloads more Bitcoin blocks, and try again.
 
 ## 4. Compute the Bitcoin Canister's State
 
 ```shell
-./2_compute_unstable_blocks.sh $BITCOIN_DIR $HEIGHT $NETWORK
-./3_compute_block_headers.sh $BITCOIN_DIR $HEIGHT $NETWORK
+./2_compute_unstable_blocks.sh $BITCOIN_DIR $NETWORK $HEIGHT
+```
+
+```shell
+./3_compute_block_headers.sh $BITCOIN_DIR $NETWORK $HEIGHT
+```
+
+```shell
 ./4_compute_utxo_dump.sh $NETWORK
+```
+
+```shell
 ./5_shuffle_utxo_dump.sh
-./6_compute_canister_state.sh $HEIGHT $STABILITY_THRESHOLD $NETWORK
+```
+
+```shell
+./6_compute_canister_state.sh $NETWORK $HEIGHT $STABILITY_THRESHOLD
 ```
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
 
-## 5. Compute the State's Hashes.
+## 5. Compute the State Hashes
 
-A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
+A canister's state is uploaded in "chunks" through ingress messages to the `uploader` canister. 
+The required chunk hashes can be computed as follows:
 
 ```shell
-cargo run --release --example compute_hashes -- --file ./canister_state.bin > chunk_hashes.txt
+cargo run --release --example compute_hashes -- --file ./output/canister_state.bin > chunk_hashes.txt
 ```
 
-The hash of each chunk is saved in `chunk_hashes.txt`.
+The hashes of each chunk are saved in `./bootstrap/chunk_hashes.txt` and can be used later when building the `uploader` canister in Docker.

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# Script for downloading the bitcoin state.
+# Script for downloading the Bitcoin state.
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
-BITCOIN_D=$1/bin/bitcoind
-NETWORK=$2
+BITCOIN_D="$1/bin/bitcoind"
+NETWORK="$2"
 
 validate_network "$NETWORK"
 
-# Create a bitcoin.conf file that downloads blocks up to the given height.
+# Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE"
 
-$BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data"
+$BITCOIN_D -conf="$CONF_FILE" -datadir="$DATA_DIR"

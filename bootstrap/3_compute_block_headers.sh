@@ -1,34 +1,35 @@
 #!/usr/bin/env bash
 #
-# Script for dumping the block headers into a file.
+# Script for dumping Bitcoin block headers into a file.
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
-BITCOIN_D=$1/bin/bitcoind
-BITCOIN_CLI=$1/bin/bitcoin-cli
-HEIGHT=$2
-NETWORK=$3
-STABLE_HEIGHT=$((HEIGHT-12))
+BITCOIN_D="$1/bin/bitcoind"
+BITCOIN_CLI="$1/bin/bitcoin-cli"
+NETWORK="$2"
+HEIGHT="$3"
+STABLE_HEIGHT=$((HEIGHT - 12))
 
 validate_network "$NETWORK"
 
 # Kill all background processes on exit.
 trap "kill 0" EXIT
 
+# Create a temporary bitcoin.conf file with the required settings.
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
 
-# Delete any previously computed block headers file.
-rm -f block_headers
+# Remove any previously computed block headers file.
+rm -f "$BLOCK_HEADERS_FILE"
 
-DATA_DIR="$(pwd)/data"
+# Start bitcoind in the background with no network access.
+echo "Starting bitcoind for $NETWORK..."
+"$BITCOIN_D" -conf="$CONF_FILE" -datadir="$DATA_DIR" > /dev/null &
+BITCOIND_PID=$!
 
-echo "Fetching block headers..."
-# Run bitcoind in the background with no network access.
-$BITCOIN_D -conf="$CONF_FILE" -datadir="$DATA_DIR" > /dev/null &
-
-# Wait for bitcoind to load.
+# Wait for bitcoind to initialize.
+echo "Waiting for bitcoind to load..."
 sleep 30
 
 # Function to format seconds as xxh xxm xxs.
@@ -66,5 +67,11 @@ for ((height = 0; height <= STABLE_HEIGHT; height++)); do
     fi
 done
 
-sha256sum block_headers
+# Compute and display the checksum of the block headers file.
+echo "Computing checksum of $BLOCK_HEADERS_FILE..."
+sha256sum "$BLOCK_HEADERS_FILE"
 
+# Clean up.
+kill "$BITCOIND_PID"
+wait "$BITCOIND_PID" || true
+echo "Done."

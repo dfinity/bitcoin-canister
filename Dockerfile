@@ -12,6 +12,8 @@
 # Use the following commands:
 #
 # docker build -t canisters .
+# or
+# docker build --build-arg CHUNK_HASHES_PATH=/bootstrap/chunk_hashes.txt  -t canisters .
 #
 # docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
 # docker run --rm --entrypoint cat canisters /uploader.wasm.gz > uploader.wasm.gz
