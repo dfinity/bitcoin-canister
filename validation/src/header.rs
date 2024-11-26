@@ -1,4 +1,4 @@
-use bitcoin::{Target, BlockHash, CompactTarget, block::{Header}, Network, params::Params};
+use bitcoin::{Target, BlockHash, CompactTarget, block::Header, Network, params::Params};
 
 use crate::{
     constants::{
@@ -286,10 +286,9 @@ fn compute_next_difficulty(
 
 #[cfg(test)]
 mod test {
-
     use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode, block::Version};
+    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode, block::Version, blockdata::constants::genesis_block};
     use csv::Reader;
     use proptest::prelude::*;
 
@@ -497,14 +496,12 @@ mod test {
 
         let mut header = Header {
             version: Version::from_consensus(0x20800004),
-            prev_blockhash: BlockHash::from_hex(
+            prev_blockhash: BlockHash::from_str(
                 "00000000000000000001eea12c0de75000c2546da22f7bf42d805c1d2769b6ef",
-            )
-            .unwrap(),
-            merkle_root: TxMerkleNode::from_hex(
+            ).unwrap(),
+            merkle_root: TxMerkleNode::from_str(
                 "c120ff2ae1363593a0b92e0d281ec341a0cc989b4ee836dc3405c9f4215242a6",
-            )
-            .unwrap(),
+            ).unwrap(),
             time: 1634590600,
             bits: CompactTarget::from_consensus(0x170e0408),
             nonce: 0xb48e8b0a,
@@ -573,7 +570,7 @@ mod test {
     fn test_is_header_valid_invalid_computed_target() {
         let pow_bitcoin = pow_limit_bits(&Network::Bitcoin);
         let pow_regtest = pow_limit_bits(&Network::Regtest);
-        let h0 = genesis_header(pow_bitcoin);
+        let h0 = genesis_header(Network::Bitcoin, pow_bitcoin);
         let h1 = next_block_header(h0, pow_regtest);
         let h2 = next_block_header(h1, pow_regtest);
         let h3 = next_block_header(h2, pow_regtest);
@@ -634,7 +631,7 @@ mod test {
             // Assert that the expected next target matches the next header's target.
             assert_eq!(
                 expected_next_target,
-                Header::u256_from_compact_target(headers[i + 1].bits)
+                Target::from_compact(headers[i + 1].bits)
             );
         });
     }
@@ -657,22 +654,18 @@ mod test {
         );
     }
 
-    fn genesis_header(bits: u32) -> Header {
+    fn genesis_header(network: Network, bits: CompactTarget) -> Header {
         Header {
-            version: Version::from_consensus(1),
-            prev_blockhash: Default::default(),
-            merkle_root: Default::default(),
-            time: 1296688602,
-            bits: CompactTarget::from_consensus(bits),
-            nonce: 0,
+            bits,
+            ..genesis_block(Params::new(network)).header
         }
     }
 
-    fn next_block_header(prev: Header, bits: u32) -> Header {
+    fn next_block_header(prev: Header, bits: CompactTarget) -> Header {
         Header {
             prev_blockhash: prev.block_hash(),
             time: prev.time + TEN_MINUTES,
-            bits: CompactTarget::from_consensus(bits),
+            bits,
             ..prev
         }
     }
@@ -681,11 +674,11 @@ mod test {
     /// proof of work for the first header.
     fn create_chain(
         network: &Network,
-        initial_pow: u32,
+        initial_pow: CompactTarget,
         chain_length: u32,
     ) -> (SimpleHeaderStore, Header) {
         let pow_limit = pow_limit_bits(network);
-        let h0 = genesis_header(initial_pow);
+        let h0 = genesis_header(*network, initial_pow);
         let mut store = SimpleHeaderStore::new(h0, 0);
         let mut last_header = h0;
 
@@ -707,7 +700,7 @@ mod test {
 
         // Arrange.
         let network = Network::Regtest;
-        let expected_pow = 7; // Some non-limit PoW, the actual value is not important.
+        let expected_pow = CompactTarget::from_consensus(7); // Some non-limit PoW, the actual value is not important.
         for chain_length in 1..10 {
             let (store, last_header) = create_chain(&network, expected_pow, chain_length);
             assert_eq!(store.height() + 1, chain_length);
@@ -720,7 +713,7 @@ mod test {
                 last_header.time + TEN_MINUTES,
             );
             // Assert.
-            assert_eq!(target, Header::u256_from_compact_target(expected_pow));
+            assert_eq!(target, Target::from_compact(expected_pow));
         }
     }
 
@@ -729,10 +722,10 @@ mod test {
         // Arrange: Set up the test network and parameters
         let network = Network::Testnet;
         let chain_length = DIFFICULTY_ADJUSTMENT_INTERVAL - 1; // To trigger the difficulty adjustment.
-        let genesis_difficulty = 486604799;
+        let genesis_difficulty = CompactTarget::from_consensus(486604799);
 
         // Create the genesis header and initialize the header store
-        let genesis_header = genesis_header(genesis_difficulty);
+        let genesis_header = genesis_header(network, genesis_difficulty);
         let mut store = SimpleHeaderStore::new(genesis_header, 0);
         let mut last_header = genesis_header;
         for _ in 1..chain_length {
@@ -749,6 +742,6 @@ mod test {
         let difficulty = compute_next_difficulty(&network, &store, &last_header, chain_length);
 
         // Assert.
-        assert_eq!(difficulty, 473956288);
+        assert_eq!(difficulty, CompactTarget::from_consensus(473956288));
     }
 }
