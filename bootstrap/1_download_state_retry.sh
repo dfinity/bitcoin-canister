@@ -14,4 +14,4 @@ validate_network "$NETWORK"
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE"
 
-$BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data"
+$BITCOIN_D -conf="$CONF_FILE" -datadir="$DATA_DIR"

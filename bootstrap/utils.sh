@@ -4,16 +4,16 @@
 set -euo pipefail
 
 # Shared directory for data storage.
-DATA_DIR="$(pwd)/data"
-BACKUP_DIR="$(pwd)/data_bk"
+DATA_DIR="./data"
+BACKUP_DIR="./data_bk"
 # Files.
-UNSTABLE_BLOCKS_FILE="$(pwd)/unstable_blocks"
-BLOCK_HEADERS_FILE="$(pwd)/block_headers"
-UTXO_DUMP="$(pwd)/utxodump.csv"
-UTXO_DUMP_SHUFFLED="$(pwd)/utxodump_shuffled.csv"
+UNSTABLE_BLOCKS_FILE="./unstable_blocks"
+BLOCK_HEADERS_FILE="./block_headers"
+UTXO_DUMP="./utxodump.csv"
+UTXO_DUMP_SHUFFLED="./utxodump_shuffled.csv"
 # Canister state.
-CANISTER_STATE_DIR="$(pwd)/canister_state"
-CANISTER_STATE_FILE="$(pwd)/canister_state.bin"
+CANISTER_STATE_DIR="./canister_state"
+CANISTER_STATE_FILE="./canister_state.bin"
 
 # Validate the network input.
 validate_network() {
