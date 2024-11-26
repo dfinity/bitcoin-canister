@@ -7,8 +7,8 @@ source "$(dirname "$0")/utils.sh"
 
 BITCOIN_D="$1/bin/bitcoind"
 BITCOIN_CLI="$1/bin/bitcoin-cli"
-HEIGHT="$2"
-NETWORK="$3"
+NETWORK="$2"
+HEIGHT="$3"
 STABLE_HEIGHT=$((HEIGHT - 12))
 
 validate_network "$NETWORK"

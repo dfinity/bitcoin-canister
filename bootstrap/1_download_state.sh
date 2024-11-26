@@ -6,8 +6,8 @@ set -euo pipefail
 source "$(dirname "$0")/utils.sh"
 
 BITCOIN_D="$1/bin/bitcoind"
-HEIGHT="$2"
-NETWORK="$3"
+NETWORK="$2"
+HEIGHT="$3"
 
 validate_network "$NETWORK"
 
