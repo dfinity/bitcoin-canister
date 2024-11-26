@@ -2,6 +2,7 @@
 #
 # Script for dumping Bitcoin block headers into a file.
 set -euo pipefail
+
 source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.

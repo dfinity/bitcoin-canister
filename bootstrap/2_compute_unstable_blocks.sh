@@ -3,6 +3,7 @@
 # Script for preparing the unstable blocks file and setting the chainstate database
 # to the exact height needed.
 set -euo pipefail
+
 source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.

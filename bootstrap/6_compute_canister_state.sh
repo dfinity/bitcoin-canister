@@ -2,7 +2,6 @@
 #
 # A script to build the canister's state given a UTXO dump file.
 set -euo pipefail
-source "$(dirname "$0")/utils.sh"
 
 source "$(dirname "$0")/utils.sh"
 

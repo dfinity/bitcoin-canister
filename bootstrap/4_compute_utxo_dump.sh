@@ -2,6 +2,7 @@
 #
 # A script for building the UTXO dump text file.
 set -euo pipefail
+
 source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
@@ -9,8 +10,6 @@ if [[ $# -ne 1 ]]; then
     echo "Usage: $0 <network>"
     exit 1
 fi
-
-source "$(dirname "$0")/utils.sh"
 
 NETWORK=$1
 

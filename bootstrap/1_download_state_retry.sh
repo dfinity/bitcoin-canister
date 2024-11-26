@@ -2,6 +2,7 @@
 #
 # Script for downloading the Bitcoin state.
 set -euo pipefail
+
 source "$(dirname "$0")/utils.sh"
 
 # Ensure correct usage.
