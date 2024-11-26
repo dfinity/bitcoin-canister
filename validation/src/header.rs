@@ -1,4 +1,4 @@
-use bitcoin::{Target, BlockHash, CompactTarget, block::Header, Network, params::Params};
+use bitcoin::{block::Header, params::Params, BlockHash, CompactTarget, Network, Target};
 
 use crate::{
     constants::{
@@ -165,23 +165,15 @@ fn get_next_target(
                 } else {
                     // If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    find_next_difficulty_in_chain(
-                        network,
-                        store,
-                        prev_header,
-                        prev_height,
-                    )
+                    find_next_difficulty_in_chain(network, store, prev_header, prev_height)
                 }
             } else {
-                compute_next_difficulty(
-                    network,
-                    store,
-                    prev_header,
-                    prev_height,
-                )
+                compute_next_difficulty(network, store, prev_header, prev_height)
             }
         }
-        Network::Bitcoin | Network::Signet => compute_next_difficulty(network, store, prev_header, prev_height),
+        Network::Bitcoin | Network::Signet => {
+            compute_next_difficulty(network, store, prev_header, prev_height)
+        }
         &other => unreachable!("Unsupported network: {:?}", other),
     };
     Target::from_compact(compact)
@@ -288,7 +280,10 @@ fn compute_next_difficulty(
 mod test {
     use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode, block::Version, blockdata::constants::genesis_block};
+    use bitcoin::{
+        block::Version, blockdata::constants::genesis_block, consensus::deserialize,
+        hashes::hex::FromHex, TxMerkleNode,
+    };
     use csv::Reader;
     use proptest::prelude::*;
 
@@ -391,11 +386,15 @@ mod test {
         for result in rdr.records() {
             let record = result.unwrap();
             let header = Header {
-                version: Version::from_consensus(i32::from_str_radix(record.get(0).unwrap(), 16).unwrap()),
+                version: Version::from_consensus(
+                    i32::from_str_radix(record.get(0).unwrap(), 16).unwrap(),
+                ),
                 prev_blockhash: BlockHash::from_str(record.get(1).unwrap()).unwrap(),
                 merkle_root: TxMerkleNode::from_str(record.get(2).unwrap()).unwrap(),
                 time: u32::from_str_radix(record.get(3).unwrap(), 16).unwrap(),
-                bits: CompactTarget::from_consensus(u32::from_str_radix(record.get(4).unwrap(), 16).unwrap()),
+                bits: CompactTarget::from_consensus(
+                    u32::from_str_radix(record.get(4).unwrap(), 16).unwrap(),
+                ),
                 nonce: u32::from_str_radix(record.get(5).unwrap(), 16).unwrap(),
             };
             headers.push(header);
@@ -498,10 +497,12 @@ mod test {
             version: Version::from_consensus(0x20800004),
             prev_blockhash: BlockHash::from_str(
                 "00000000000000000001eea12c0de75000c2546da22f7bf42d805c1d2769b6ef",
-            ).unwrap(),
+            )
+            .unwrap(),
             merkle_root: TxMerkleNode::from_str(
                 "c120ff2ae1363593a0b92e0d281ec341a0cc989b4ee836dc3405c9f4215242a6",
-            ).unwrap(),
+            )
+            .unwrap(),
             time: 1634590600,
             bits: CompactTarget::from_consensus(0x170e0408),
             nonce: 0xb48e8b0a,
