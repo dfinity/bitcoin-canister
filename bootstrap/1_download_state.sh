@@ -16,8 +16,8 @@ if [[ -d "$DATA_DIR" ]]; then
     echo "Error: The 'data' directory already exists. Please remove it or choose another directory."
     exit 1
 fi
-# Create the data directory.
-mkdir "$DATA_DIR"
+# Create the data directory (including parent directories if needed).
+mkdir -p "$DATA_DIR"
 
 # Generate a temporary bitcoin.conf file with required settings.
 CONF_FILE=$(mktemp)

@@ -11,9 +11,9 @@ validate_network "$NETWORK"
 
 # Determine the chainstate directory based on the network.
 if [[ "$NETWORK" == "mainnet" ]]; then
-    CHAIN_STATE_DIR=./data/chainstate
+    CHAIN_STATE_DIR=$DATA_DIR/chainstate
 elif [[ "$NETWORK" == "testnet" ]]; then
-    CHAIN_STATE_DIR=./data/testnet3/chainstate
+    CHAIN_STATE_DIR=$DATA_DIR/testnet3/chainstate
 else
     echo "Error: unknown network $NETWORK, can't define CHAIN_STATE_DIR."
     exit 1
