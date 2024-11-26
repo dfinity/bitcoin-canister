@@ -3,7 +3,7 @@
 # Utility functions for Bitcoin scripts.
 set -euo pipefail
 
-# Shared directory for data storage.
+# Directories.
 export OUTPUT_DIR="./output"
 export DATA_DIR="$OUTPUT_DIR/data"
 export BACKUP_DIR="$OUTPUT_DIR/data_bk"
