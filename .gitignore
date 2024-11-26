@@ -12,3 +12,4 @@ canister_ids.json
 
 bootstrap/bitcoin-*
 bootstrap/output
+chunk_hashes.txt

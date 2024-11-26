@@ -96,12 +96,13 @@ for a minute or two, which downloads more Bitcoin blocks, and try again.
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
 
-## 5. Compute the State's Hashes.
+## 5. Compute the State Hashes
 
-A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
+A canister's state is uploaded in "chunks" through ingress messages to the `uploader` canister. 
+The required chunk hashes can be computed as follows:
 
 ```shell
-cargo run --release --example compute_hashes -- --file ./output/canister_state.bin > ./output/chunk_hashes.txt
+cargo run --release --example compute_hashes -- --file ./output/canister_state.bin > ./bootstrap/chunk_hashes.txt
 ```
 
-The hash of each chunk is saved in `./output/chunk_hashes.txt`.
+The hashes of each chunk are saved in `./bootstrap/chunk_hashes.txt` and can be used later when building the `uploader` canister in Docker.

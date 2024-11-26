@@ -1,9 +1,6 @@
 target
 out
-bootstrap/canister_state*
-bootstrap/block_headers
-bootstrap/utxodump*
-bootstrap/data*
+bootstrap/output
 
 # Filter out all "hidden" files and directories
 .*
