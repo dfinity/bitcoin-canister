@@ -1,6 +1,10 @@
+# Exclude build artifacts
 target
 out
+
+# Exclude intermediate files for computing canister state,
+# except `chunk_hashes.txt`.
 bootstrap/output
 
-# Filter out all "hidden" files and directories
+# Exclude all hidden files and directories
 .*
