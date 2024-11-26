@@ -20,10 +20,9 @@ trap "kill 0" EXIT
 CONF_FILE=$(mktemp)
 generate_config "$NETWORK" "$CONF_FILE" "networkactive=0"
 
-# Prepare the unstable blocks.
 DATA_DIR="$(pwd)/data"
-echo "Preparing the unstable blocks..."
 
+echo "Preparing the unstable blocks..."
 # Start bitcoind in the background with no network access.
 "$BITCOIN_D" -conf="$CONF_FILE" -datadir="$DATA_DIR" > /dev/null &
 BITCOIND_PID=$!
