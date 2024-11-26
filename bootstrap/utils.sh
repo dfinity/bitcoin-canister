@@ -4,16 +4,16 @@
 set -euo pipefail
 
 # Shared directory for data storage.
-DATA_DIR="./data"
-BACKUP_DIR="./data_bk"
+export DATA_DIR="./data"
+export BACKUP_DIR="./data_bk"
 # Intermediate files.
-UNSTABLE_BLOCKS_FILE="./unstable_blocks"
-BLOCK_HEADERS_FILE="./block_headers"
-UTXO_DUMP="./utxodump.csv"
-UTXO_DUMP_SHUFFLED="./utxodump_shuffled.csv"
+export UNSTABLE_BLOCKS_FILE="./unstable_blocks"
+export BLOCK_HEADERS_FILE="./block_headers"
+export UTXO_DUMP="./utxodump.csv"
+export UTXO_DUMP_SHUFFLED="./utxodump_shuffled.csv"
 # Canister state.
-CANISTER_STATE_DIR="./canister_state"
-CANISTER_STATE_FILE="./canister_state.bin"
+export CANISTER_STATE_DIR="./canister_state"
+export CANISTER_STATE_FILE="./canister_state.bin"
 
 # Validate the network input.
 validate_network() {
