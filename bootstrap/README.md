@@ -64,7 +64,13 @@ Make sure that the output of the above command specifies that you have a chain t
 ]
 ```
 
-If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh $BITCOIN_DIR $NETWORK` for a minute or two, which downloads more Bitcoin blocks, and try again.
+If the height returned here is < `$HEIGHT - 10`, then run
+
+```shell
+./1_download_state_retry.sh $BITCOIN_DIR $NETWORK
+```
+
+for a minute or two, which downloads more Bitcoin blocks, and try again.
 
 ## 4. Compute the Bitcoin Canister's State
 
