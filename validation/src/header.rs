@@ -612,8 +612,8 @@ mod test {
         let mut headers = vec![];
         for line in rdr.lines() {
             let header = line.unwrap();
-            let header = hex::decode(header.trim()).unwrap();
-            let header = Header::consensus_decode(header.as_slice()).unwrap();
+            let decoded = hex::decode(header.trim()).unwrap();
+            let header = Header::consensus_decode(&mut &decoded[..]).unwrap();
             headers.push(header);
         }
 
