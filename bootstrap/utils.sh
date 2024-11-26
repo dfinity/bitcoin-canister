@@ -6,7 +6,7 @@ set -euo pipefail
 # Shared directory for data storage.
 DATA_DIR="./data"
 BACKUP_DIR="./data_bk"
-# Files.
+# Intermediate files.
 UNSTABLE_BLOCKS_FILE="./unstable_blocks"
 BLOCK_HEADERS_FILE="./block_headers"
 UTXO_DUMP="./utxodump.csv"
