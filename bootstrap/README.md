@@ -102,7 +102,7 @@ A canister's state is uploaded in "chunks" through ingress messages to the `uplo
 The required chunk hashes can be computed as follows:
 
 ```shell
-cargo run --release --example compute_hashes -- --file ./output/canister_state.bin > ./bootstrap/chunk_hashes.txt
+cargo run --release --example compute_hashes -- --file ./output/canister_state.bin > chunk_hashes.txt
 ```
 
 The hashes of each chunk are saved in `./bootstrap/chunk_hashes.txt` and can be used later when building the `uploader` canister in Docker.
