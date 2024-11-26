@@ -1,4 +1,4 @@
-use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader, Network};
+use bitcoin::{Target, BlockHash, block::Header, Network};
 
 use crate::{
     constants::{
@@ -37,10 +37,10 @@ const ONE_HOUR: u64 = 3_600;
 
 pub trait HeaderStore {
     /// Returns the header with the given block hash.
-    fn get_with_block_hash(&self, hash: &BlockHash) -> Option<BlockHeader>;
+    fn get_with_block_hash(&self, hash: &BlockHash) -> Option<Header>;
 
     /// Returns the header at the given height.
-    fn get_with_height(&self, height: u32) -> Option<BlockHeader>;
+    fn get_with_height(&self, height: u32) -> Option<Header>;
 
     /// Returns the height of the tip that the new header will extend.
     fn height(&self) -> u32;
@@ -58,7 +58,7 @@ pub trait HeaderStore {
 pub fn validate_header(
     network: &Network,
     store: &impl HeaderStore,
-    header: &BlockHeader,
+    header: &Header,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
     let prev_height = store.height();
@@ -76,15 +76,15 @@ pub fn validate_header(
         return Err(ValidateHeaderError::TargetDifficultyAboveMax);
     }
 
-    if header.validate_pow(&header_target).is_err() {
+    if header.validate_pow(header_target).is_err() {
         return Err(ValidateHeaderError::InvalidPoWForHeaderTarget);
     }
 
     let target = get_next_target(network, store, &prev_header, prev_height, header.time);
-    if let Err(err) = header.validate_pow(&target) {
+    if let Err(err) = header.validate_pow(target) {
         match err {
-            bitcoin::Error::BlockBadProofOfWork => println!("bad proof of work"),
-            bitcoin::Error::BlockBadTarget => println!("bad target"),
+            bitcoin::block::ValidationError::BadProofOfWork => println!("bad proof of work"),
+            bitcoin::block::ValidationError::BadTarget => println!("bad target"),
             _ => {}
         };
         return Err(ValidateHeaderError::InvalidPoWForComputedTarget);
@@ -115,7 +115,7 @@ fn timestamp_is_less_than_2h_in_future(
 /// "Block timestamp must not be more than two hours in the future"
 fn is_timestamp_valid(
     store: &impl HeaderStore,
-    header: &BlockHeader,
+    header: &Header,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
     timestamp_is_less_than_2h_in_future(header.time as u64, current_time)?;
@@ -146,10 +146,10 @@ fn is_timestamp_valid(
 fn get_next_target(
     network: &Network,
     store: &impl HeaderStore,
-    prev_header: &BlockHeader,
+    prev_header: &Header,
     prev_height: BlockHeight,
     timestamp: u32,
-) -> Uint256 {
+) -> Target {
     match network {
         Network::Testnet | Network::Regtest => {
             if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
@@ -165,7 +165,7 @@ fn get_next_target(
                 } else {
                     //If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    BlockHeader::u256_from_compact_target(find_next_difficulty_in_chain(
+                    Header::u256_from_compact_target(find_next_difficulty_in_chain(
                         network,
                         store,
                         prev_header,
@@ -173,7 +173,7 @@ fn get_next_target(
                     ))
                 }
             } else {
-                BlockHeader::u256_from_compact_target(compute_next_difficulty(
+                Header::u256_from_compact_target(compute_next_difficulty(
                     network,
                     store,
                     prev_header,
@@ -181,7 +181,7 @@ fn get_next_target(
                 ))
             }
         }
-        Network::Bitcoin | Network::Signet => BlockHeader::u256_from_compact_target(
+        Network::Bitcoin | Network::Signet => Header::u256_from_compact_target(
             compute_next_difficulty(network, store, prev_header, prev_height),
         ),
     }
@@ -197,7 +197,7 @@ fn get_next_target(
 fn find_next_difficulty_in_chain(
     network: &Network,
     store: &impl HeaderStore,
-    prev_header: &BlockHeader,
+    prev_header: &Header,
     prev_height: BlockHeight,
 ) -> u32 {
     // This is the maximum difficulty target for the network
@@ -244,7 +244,7 @@ fn find_next_difficulty_in_chain(
 fn compute_next_difficulty(
     network: &Network,
     store: &impl HeaderStore,
-    prev_header: &BlockHeader,
+    prev_header: &Header,
     prev_height: BlockHeight,
 ) -> u32 {
     // Difficulty is adjusted only once in every interval of 2 weeks (2016 blocks)
@@ -302,7 +302,7 @@ fn compute_next_difficulty(
     target = Uint256::min(target, max_target(network));
 
     // Converting the target (Uint256) into a 32 bit representation used by Bitcoin
-    BlockHeader::compact_target_from_u256(&target)
+    Header::compact_target_from_u256(&target)
 }
 
 #[cfg(test)]
@@ -324,7 +324,7 @@ mod test {
 
     #[derive(Clone)]
     struct StoredHeader {
-        header: BlockHeader,
+        header: Header,
         height: BlockHeight,
     }
 
@@ -336,7 +336,7 @@ mod test {
     }
 
     impl SimpleHeaderStore {
-        fn new(initial_header: BlockHeader, height: BlockHeight) -> Self {
+        fn new(initial_header: Header, height: BlockHeight) -> Self {
             let initial_hash = initial_header.block_hash();
             let tip_hash = initial_header.block_hash();
             let mut headers = HashMap::new();
@@ -356,7 +356,7 @@ mod test {
             }
         }
 
-        fn add(&mut self, header: BlockHeader) {
+        fn add(&mut self, header: Header) {
             let prev = self
                 .headers
                 .get(&header.prev_blockhash)
@@ -373,11 +373,11 @@ mod test {
     }
 
     impl HeaderStore for SimpleHeaderStore {
-        fn get_with_block_hash(&self, hash: &BlockHash) -> Option<BlockHeader> {
+        fn get_with_block_hash(&self, hash: &BlockHash) -> Option<Header> {
             self.headers.get(hash).map(|stored| stored.header)
         }
 
-        fn get_with_height(&self, height: u32) -> Option<BlockHeader> {
+        fn get_with_height(&self, height: u32) -> Option<Header> {
             let blocks_to_traverse = self.height - height;
             let mut header = self.headers.get(&self.tip_hash).unwrap().header;
             for _ in 0..blocks_to_traverse {
@@ -395,14 +395,14 @@ mod test {
         }
     }
 
-    fn deserialize_header(encoded_bytes: &str) -> BlockHeader {
+    fn deserialize_header(encoded_bytes: &str) -> Header {
         let bytes = Vec::from_hex(encoded_bytes).expect("failed to decoded bytes");
         deserialize(bytes.as_slice()).expect("failed to deserialize")
     }
 
     /// This function reads `num_headers` headers from `tests/data/headers.csv`
     /// and returns them.
-    fn get_bitcoin_headers() -> Vec<BlockHeader> {
+    fn get_bitcoin_headers() -> Vec<Header> {
         let rdr = Reader::from_path(
             PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
                 .join("tests/data/headers.csv"),
@@ -412,7 +412,7 @@ mod test {
         let mut headers = vec![];
         for result in rdr.records() {
             let record = result.unwrap();
-            let header = BlockHeader {
+            let header = Header {
                 version: i32::from_str_radix(record.get(0).unwrap(), 16).unwrap(),
                 prev_blockhash: BlockHash::from_str(record.get(1).unwrap()).unwrap(),
                 merkle_root: TxMerkleNode::from_str(record.get(2).unwrap()).unwrap(),
@@ -516,7 +516,7 @@ mod test {
         store.add(header_705601);
         store.add(header_705602);
 
-        let mut header = BlockHeader {
+        let mut header = Header {
             version: 0x20800004,
             prev_blockhash: BlockHash::from_hex(
                 "00000000000000000001eea12c0de75000c2546da22f7bf42d805c1d2769b6ef",
@@ -636,7 +636,7 @@ mod test {
         for line in rdr.lines() {
             let header = line.unwrap();
             let header = hex::decode(header.trim()).unwrap();
-            let header = BlockHeader::consensus_decode(header.as_slice()).unwrap();
+            let header = Header::consensus_decode(header.as_slice()).unwrap();
             headers.push(header);
         }
 
@@ -655,7 +655,7 @@ mod test {
             // Assert that the expected next target matches the next header's target.
             assert_eq!(
                 expected_next_target,
-                BlockHeader::u256_from_compact_target(headers[i + 1].bits)
+                Header::u256_from_compact_target(headers[i + 1].bits)
             );
         });
     }
@@ -678,8 +678,8 @@ mod test {
         );
     }
 
-    fn genesis_header(bits: u32) -> BlockHeader {
-        BlockHeader {
+    fn genesis_header(bits: u32) -> Header {
+        Header {
             version: 1,
             prev_blockhash: Default::default(),
             merkle_root: Default::default(),
@@ -689,8 +689,8 @@ mod test {
         }
     }
 
-    fn next_block_header(prev: BlockHeader, bits: u32) -> BlockHeader {
-        BlockHeader {
+    fn next_block_header(prev: Header, bits: u32) -> Header {
+        Header {
             prev_blockhash: prev.block_hash(),
             time: prev.time + TEN_MINUTES,
             bits,
@@ -704,7 +704,7 @@ mod test {
         network: &Network,
         initial_pow: u32,
         chain_length: u32,
-    ) -> (SimpleHeaderStore, BlockHeader) {
+    ) -> (SimpleHeaderStore, Header) {
         let pow_limit = pow_limit_bits(network);
         let h0 = genesis_header(initial_pow);
         let mut store = SimpleHeaderStore::new(h0, 0);
@@ -741,7 +741,7 @@ mod test {
                 last_header.time + TEN_MINUTES,
             );
             // Assert.
-            assert_eq!(target, BlockHeader::u256_from_compact_target(expected_pow));
+            assert_eq!(target, Header::u256_from_compact_target(expected_pow));
         }
     }
 
@@ -757,7 +757,7 @@ mod test {
         let mut store = SimpleHeaderStore::new(genesis_header, 0);
         let mut last_header = genesis_header;
         for _ in 1..chain_length {
-            let new_header = BlockHeader {
+            let new_header = Header {
                 prev_blockhash: last_header.block_hash(),
                 time: last_header.time - 1, // Each new block is 1 second earlier
                 ..last_header
