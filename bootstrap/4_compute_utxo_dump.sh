@@ -17,7 +17,7 @@ elif [[ "$NETWORK" == "testnet" ]]; then
 elif [[ "$NETWORK" == "testnet4" ]]; then
     CHAIN_STATE_DIR=./data/testnet4/chainstate
 else
-    echo "Error: unknown network: $NETWORK."
+    echo "Error: unknown network $NETWORK, can't define CHAIN_STATE_DIR."
     exit 1
 fi
 
