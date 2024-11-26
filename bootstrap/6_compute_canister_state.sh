@@ -3,21 +3,16 @@
 # A script to build the canister's state given a UTXO dump file.
 set -euo pipefail
 
-source "$(dirname "$0")/utils.sh"
+source "./utils.sh"
 
-CANISTER_STATE_DIR=canister_state
-CANISTER_STATE_FILE=canister_state.bin
-UTXO_FILE=utxodump_shuffled.csv
-UNSTABLE_BLOCKS_FILE=unstable_blocks
-BLOCK_HEADERS_FILE=block_headers
-
-HEIGHT=$1
-ANCHOR_HEIGHT=$((HEIGHT-11))
-STABILITY_THRESHOLD=$2
-NETWORK=$3
+NETWORK=$1
+HEIGHT=$2
+STABILITY_THRESHOLD=$3
 
 validate_network "$NETWORK"
 
+ANCHOR_HEIGHT=$((HEIGHT-11))
+UTXO_FILE=$UTXO_DUMP_SHUFFLED
 mkdir $CANISTER_STATE_DIR
 
 echo "Computing balances..."
