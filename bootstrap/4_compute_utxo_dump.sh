@@ -5,12 +5,6 @@ set -euo pipefail
 
 source "$(dirname "$0")/utils.sh"
 
-# Ensure correct usage.
-if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <network>"
-    exit 1
-fi
-
 NETWORK=$1
 
 validate_network "$NETWORK"

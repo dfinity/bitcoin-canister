@@ -5,12 +5,6 @@ set -euo pipefail
 
 source "$(dirname "$0")/utils.sh"
 
-# Ensure correct usage.
-if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <path-to-bitcoin-dir> <network>"
-    exit 1
-fi
-
 BITCOIN_D="$1/bin/bitcoind"
 NETWORK="$2"
 
