@@ -2,8 +2,8 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    params::Params, Block as BitcoinBlock, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
-    Target,
+    hashes::Hash, params::Params, Block as BitcoinBlock, Network as BitcoinNetwork,
+    OutPoint as BitcoinOutPoint, Target,
 };
 use candid::CandidType;
 use ic_btc_interface::{Network, Txid as PublicTxid};
@@ -133,7 +133,13 @@ impl Transaction {
         if self.txid.borrow().is_none() {
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
-            let txid = Txid::from(self.tx.txid().to_vec());
+            let txid = Txid::from(
+                self.tx
+                    .compute_txid()
+                    .as_raw_hash()
+                    .as_byte_array()
+                    .to_vec(),
+            );
             self.txid.borrow_mut().replace(txid);
         }
 
@@ -171,7 +177,11 @@ impl FromStr for Txid {
 
     fn from_str(txid: &str) -> Result<Self, Self::Err> {
         use bitcoin::Txid as BitcoinTxid;
-        let bytes = BitcoinTxid::from_str(txid).unwrap().to_vec();
+        let bytes = BitcoinTxid::from_str(txid)
+            .unwrap()
+            .as_raw_hash()
+            .as_byte_array()
+            .to_vec();
         Ok(Self::from(bytes))
     }
 }
@@ -257,7 +267,7 @@ impl From<Vec<u8>> for BlockHash {
 
 impl From<bitcoin::BlockHash> for BlockHash {
     fn from(block_hash: bitcoin::BlockHash) -> Self {
-        Self(block_hash.to_vec())
+        Self(block_hash.as_raw_hash().as_byte_array().to_vec())
     }
 }
 
@@ -268,6 +278,8 @@ impl FromStr for BlockHash {
         Ok(Self(
             bitcoin::BlockHash::from_str(s)
                 .map_err(|e| e.to_string())?
+                .as_raw_hash()
+                .as_byte_array()
                 .to_vec(),
         ))
     }
@@ -297,6 +309,7 @@ fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     match network {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
         Network::Testnet => BitcoinNetwork::Testnet,
+        Network::Testnet4 => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
     }
 }
@@ -326,7 +339,7 @@ impl OutPoint {
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self {
-            txid: Txid::from(bitcoin_outpoint.txid.to_vec()),
+            txid: Txid::from(bitcoin_outpoint.txid.as_raw_hash().as_byte_array().to_vec()),
             vout: bitcoin_outpoint.vout,
         }
     }
@@ -334,10 +347,8 @@ impl From<&BitcoinOutPoint> for OutPoint {
 
 impl From<OutPoint> for bitcoin::OutPoint {
     fn from(outpoint: OutPoint) -> Self {
-        use bitcoin::hashes::Hash;
-
         Self {
-            txid: bitcoin::Txid::from_hash(
+            txid: bitcoin::Txid::from_raw_hash(
                 Hash::from_slice(outpoint.txid.as_bytes()).expect("txid must be valid"),
             ),
             vout: outpoint.vout,
