@@ -96,7 +96,7 @@ fn get_fees_per_byte(
             if tx_i >= number_of_transactions {
                 break;
             }
-            if !tx.is_coin_base() {
+            if !tx.is_coinbase() {
                 tx_i += 1;
             }
             if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
@@ -112,7 +112,7 @@ fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
 ) -> Option<MillisatoshiPerByte> {
-    if tx.is_coin_base() {
+    if tx.is_coinbase() {
         // Coinbase transactions do not have a fee.
         return None;
     }

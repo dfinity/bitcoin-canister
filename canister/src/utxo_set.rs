@@ -296,7 +296,7 @@ impl UtxoSet {
         start_idx: usize,
         utxos_delta: &mut UtxosDelta,
     ) -> Slicing<usize, ()> {
-        if tx.is_coin_base() {
+        if tx.is_coinbase() {
             return Slicing::Done(());
         }
 

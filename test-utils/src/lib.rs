@@ -258,7 +258,7 @@ mod test {
         #[test]
         fn new_build() {
             let tx = TransactionBuilder::new().build();
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
@@ -268,7 +268,7 @@ mod test {
         #[test]
         fn coinbase() {
             let tx = TransactionBuilder::coinbase().build();
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
@@ -296,7 +296,7 @@ mod test {
                 .with_output(&address, 1000)
                 .build();
 
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
@@ -313,7 +313,7 @@ mod test {
                 .with_output(&address_1, 2000)
                 .build();
 
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 2);
@@ -333,7 +333,7 @@ mod test {
             let tx = TransactionBuilder::new()
                 .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None)
                 .build();
-            assert!(!tx.is_coin_base());
+            assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(
                 tx.input[0].previous_output,
@@ -357,7 +357,7 @@ mod test {
                 .with_input(bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0), None)
                 .with_input(bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0), None)
                 .build();
-            assert!(!tx.is_coin_base());
+            assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 2);
             assert_eq!(
                 tx.input[0].previous_output,

@@ -108,7 +108,7 @@ impl Transaction {
         }
     }
 
-    pub fn is_coin_base(&self) -> bool {
+    pub fn is_coinbase(&self) -> bool {
         self.tx.is_coinbase()
     }
 
