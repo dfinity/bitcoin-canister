@@ -270,10 +270,10 @@ mod test {
         types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
         utxo_set::IngestingBlock,
     };
-    use bitcoin::BlockHeader;
+    use bitcoin::block::Header;
     use ic_btc_interface::{InitConfig, Network};
 
-    fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
+    fn build_block(prev_header: &Header, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
         let mut value = 1;
         for _ in 0..num_transactions {

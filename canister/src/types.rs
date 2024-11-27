@@ -315,11 +315,11 @@ impl BoundedStorable for BlockHeaderBlob {
     const IS_FIXED_SIZE: bool = true;
 }
 
-impl From<&bitcoin::BlockHeader> for BlockHeaderBlob {
-    fn from(header: &bitcoin::BlockHeader) -> Self {
+impl From<&bitcoin::block::Header> for BlockHeaderBlob {
+    fn from(header: &bitcoin::block::Header) -> Self {
         use bitcoin::consensus::Encodable;
         let mut block_header_blob = vec![];
-        bitcoin::BlockHeader::consensus_encode(header, &mut block_header_blob).unwrap();
+        bitcoin::block::Header::consensus_encode(header, &mut block_header_blob).unwrap();
         Self(block_header_blob)
     }
 }
@@ -335,7 +335,7 @@ impl From<Vec<u8>> for BlockHeaderBlob {
         assert_eq!(
             bytes.len() as u32,
             Self::MAX_SIZE,
-            "BlockHeader must {} bytes",
+            "Header must {} bytes",
             Self::MAX_SIZE,
         );
         Self(bytes)

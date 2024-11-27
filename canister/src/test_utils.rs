@@ -4,7 +4,7 @@ use crate::{
 };
 use bitcoin::{
     hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
-    BlockHeader, PublicKey, Script, WScriptHash, Witness,
+    Header, PublicKey, Script, WScriptHash, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -146,7 +146,7 @@ impl BlockBuilder {
         }
     }
 
-    pub fn with_prev_header(prev_header: &BlockHeader) -> Self {
+    pub fn with_prev_header(prev_header: &Header) -> Self {
         Self {
             builder: ExternalBlockBuilder::with_prev_header(*prev_header),
             mock_difficulty: None,
@@ -235,7 +235,7 @@ impl TransactionBuilder {
 
 pub struct BlockChainBuilder {
     num_blocks: u32,
-    prev_block_header: Option<BlockHeader>,
+    prev_block_header: Option<Header>,
     #[allow(clippy::type_complexity)]
     difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u64)>,
 }
