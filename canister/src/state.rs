@@ -11,7 +11,7 @@ use crate::{
     validation::ValidationContext,
     UtxoSet,
 };
-use bitcoin::{consensus::Decodable, Header};
+use bitcoin::{block::Header, consensus::Decodable};
 use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};

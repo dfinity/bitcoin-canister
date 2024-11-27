@@ -32,7 +32,7 @@ pub struct TxOut {
 impl From<&BitcoinTxOut> for TxOut {
     fn from(bitcoin_txout: &BitcoinTxOut) -> Self {
         Self {
-            value: bitcoin_txout.value,
+            value: bitcoin_txout.value.to_sat(),
             script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
         }
     }

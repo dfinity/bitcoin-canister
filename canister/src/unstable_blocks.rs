@@ -76,7 +76,7 @@ impl UnstableBlocks {
         self.stability_threshold = stability_threshold;
     }
 
-    pub fn anchor_difficulty(&self) -> u64 {
+    pub fn anchor_difficulty(&self) -> u128 {
         self.tree.root.difficulty(self.network)
     }
 

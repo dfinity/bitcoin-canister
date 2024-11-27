@@ -18,7 +18,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
     let tx = Transaction::consensus_decode(request.transaction.as_slice())
         .map_err(|_| SendTransactionError::MalformedTransaction)?;
 
-    runtime::print(&format!("[send_transaction] Tx ID: {}", tx.txid()));
+    runtime::print(&format!("[send_transaction] Tx ID: {}", tx.compute_txid()));
 
     // Bump the counter for the number of (valid) requests received.
     with_state_mut(|s| {

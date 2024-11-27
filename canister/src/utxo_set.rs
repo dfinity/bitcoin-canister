@@ -416,7 +416,7 @@ impl UtxoSet {
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value);
+                .insert(address.clone(), address_balance + output.value.to_sat());
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }

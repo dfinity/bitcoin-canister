@@ -1,3 +1,4 @@
+use bitcoin::hashes::Hash;
 use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
@@ -146,7 +147,12 @@ impl BlockTree {
             Some((block_subtree, _)) => {
                 assert_eq!(
                     block_subtree.root.block_hash().to_vec(),
-                    block.header().prev_blockhash.to_vec()
+                    block
+                        .header()
+                        .prev_blockhash
+                        .as_raw_hash()
+                        .as_byte_array()
+                        .to_vec()
                 );
                 // Add the block as a successor.
                 block_subtree.children.push(BlockTree::new(block));

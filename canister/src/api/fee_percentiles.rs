@@ -127,7 +127,7 @@ fn get_tx_fee_per_byte(
             .value;
     }
     for tx_out in tx.output() {
-        satoshi -= tx_out.value;
+        satoshi -= tx_out.value.to_sat();
     }
 
     if tx.vsize() > 0 {
