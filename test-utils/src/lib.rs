@@ -1,8 +1,8 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, util::uint::Uint256, Address,
-    Block as BitcoinBlock, BlockHash, BlockHeader, KeyPair, Network, OutPoint, PublicKey, Script,
-    Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, Block as BitcoinBlock, BlockHash,
+    BlockHeader, KeyPair, Network, OutPoint, PublicKey, Script, Target, Transaction, TxIn,
+    TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;
 use std::str::FromStr;

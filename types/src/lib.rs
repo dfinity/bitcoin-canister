@@ -2,8 +2,8 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    util::uint::Uint256, Block as BitcoinBlock, Network as BitcoinNetwork,
-    OutPoint as BitcoinOutPoint,
+    params::Params, Block as BitcoinBlock, Network as BitcoinNetwork, OutPoint as BitcoinOutPoint,
+    Target,
 };
 use candid::CandidType;
 use ic_btc_interface::{Network, Txid as PublicTxid};
@@ -19,7 +19,7 @@ pub struct Block {
     block_hash: RefCell<Option<BlockHash>>,
 
     #[cfg(feature = "mock_difficulty")]
-    pub mock_difficulty: Option<u64>,
+    pub mock_difficulty: Option<u128>,
 }
 
 impl Block {
@@ -37,7 +37,7 @@ impl Block {
         }
     }
 
-    pub fn header(&self) -> &bitcoin::BlockHeader {
+    pub fn header(&self) -> &bitcoin::block::Header {
         &self.block.header
     }
 
@@ -52,7 +52,7 @@ impl Block {
         &self.transactions
     }
 
-    pub fn difficulty(&self, network: Network) -> u64 {
+    pub fn difficulty(&self, network: Network) -> u128 {
         #[cfg(feature = "mock_difficulty")]
         if let Some(difficulty) = self.mock_difficulty {
             return difficulty;
@@ -69,8 +69,9 @@ impl Block {
     // Computes the difficulty given a block's target.
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
-    pub fn target_difficulty(network: Network, target: Uint256) -> u64 {
-        (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
+    pub fn target_difficulty(network: Network, target: Target) -> u128 {
+        //(ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
+        target.difficulty(Params::new(to_bitcoin_network(network)))
     }
 
     pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
@@ -81,6 +82,15 @@ impl Block {
 impl PartialEq for Block {
     fn eq(&self, other: &Self) -> bool {
         self.block == other.block && self.transactions == other.transactions
+    }
+}
+
+fn to_bitcoin_network(network: Network) -> bitcoin::Network {
+    match network {
+        Network::Mainnet => bitcoin::Network::Bitcoin,
+        Network::Testnet => bitcoin::Network::Testnet,
+        Network::Testnet4 => bitcoin::Network::Testnet4,
+        Network::Regtest => bitcoin::Network::Regtest,
     }
 }
 
@@ -361,11 +371,13 @@ impl BoundedStorable for OutPoint {
 
 #[test]
 fn target_difficulty() {
+    use bitcoin::CompactTarget;
+
     // Example found in https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
+            Target::from_compact(CompactTarget::from_consensus(0x1b0404cb))
         ),
         16_307
     );
@@ -375,7 +387,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386397584)
+            Target::from_compact(CompactTarget::from_consensus(386397584))
         ),
         35_364_065_900_457
     );
@@ -385,7 +397,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386877668)
+            Target::from_compact(CompactTarget::from_consensus(386877668))
         ),
         18_415_156_832_118
     );
@@ -395,7 +407,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(422681968)
+            Target::from_compact(CompactTarget::from_consensus(422681968))
         ),
         86_564_599
     );
@@ -405,7 +417,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(457142912)
+            Target::from_compact(CompactTarget::from_consensus(457142912))
         ),
         1_032
     );
