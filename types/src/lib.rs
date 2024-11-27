@@ -307,7 +307,7 @@ impl std::fmt::Debug for BlockHash {
     }
 }
 
-fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
+pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     match network {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
         Network::Testnet => BitcoinNetwork::Testnet,
