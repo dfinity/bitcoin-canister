@@ -73,7 +73,7 @@ impl Block {
     // https://en.bitcoin.it/wiki/Difficulty
     pub fn target_difficulty(network: Network, target: Target) -> u128 {
         //(ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
-        target.difficulty(Params::new(to_bitcoin_network(network)))
+        target.difficulty(Params::new(into_bitcoin_network(network)))
     }
 
     pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
@@ -84,15 +84,6 @@ impl Block {
 impl PartialEq for Block {
     fn eq(&self, other: &Self) -> bool {
         self.block == other.block && self.transactions == other.transactions
-    }
-}
-
-fn to_bitcoin_network(network: Network) -> bitcoin::Network {
-    match network {
-        Network::Mainnet => bitcoin::Network::Bitcoin,
-        Network::Testnet => bitcoin::Network::Testnet,
-        Network::Testnet4 => bitcoin::Network::Testnet4,
-        Network::Regtest => bitcoin::Network::Regtest,
     }
 }
 
