@@ -72,8 +72,7 @@ impl Block {
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
     pub fn target_difficulty(network: Network, target: Target) -> u128 {
-        //(ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
-        target.difficulty(Params::new(into_bitcoin_network(network)))
+        target.difficulty(Params::new(into_bitcoin_network(network))) // TODO: verfiy it's correct
     }
 
     pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
