@@ -109,7 +109,7 @@ impl Transaction {
     }
 
     pub fn is_coin_base(&self) -> bool {
-        self.tx.is_coin_base()
+        self.tx.is_coinbase()
     }
 
     pub fn input(&self) -> &[bitcoin::TxIn] {
@@ -120,12 +120,13 @@ impl Transaction {
         &self.tx.output
     }
 
+    /// Returns the “virtual size” (vsize) of this transaction.
     pub fn vsize(&self) -> usize {
         self.tx.vsize()
     }
 
     pub fn size(&self) -> usize {
-        self.tx.size()
+        self.tx.total_size() // TODO: clarify to use base_size or total_size
     }
 
     pub fn txid(&self) -> Txid {
