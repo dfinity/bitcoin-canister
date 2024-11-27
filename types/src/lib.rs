@@ -63,7 +63,9 @@ impl Block {
 
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
-        self.block.consensus_encode(buffer)
+        self.block
+            .consensus_encode(buffer)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 
     // Computes the difficulty given a block's target.
