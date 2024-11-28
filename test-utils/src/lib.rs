@@ -1,8 +1,11 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address, Block as BitcoinBlock, BlockHash,
-    BlockHeader, KeyPair, Network, OutPoint, PublicKey, Script, Target, Transaction, TxIn,
-    TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    absolute::LockTime,
+    block::{Header, Version},
+    secp256k1::rand::rngs::OsRng,
+    secp256k1::Secp256k1,
+    Address, Amount, Block as BitcoinBlock, BlockHash, KeyPair, Network, OutPoint, PublicKey,
+    Script, Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;
 use std::str::FromStr;
@@ -27,14 +30,14 @@ pub fn random_p2tr_address(network: Network) -> Address {
 fn coinbase_input() -> TxIn {
     TxIn {
         previous_output: OutPoint::null(),
-        script_sig: Script::new(),
-        sequence: 0xffffffff,
+        script_sig: Script::new().into(),
+        sequence: Sequence(0xffffffff),
         witness: Witness::new(),
     }
 }
 
 pub struct BlockBuilder {
-    prev_header: Option<BlockHeader>,
+    prev_header: Option<Header>,
     transactions: Vec<Transaction>,
 }
 
@@ -46,7 +49,7 @@ impl BlockBuilder {
         }
     }
 
-    pub fn with_prev_header(prev_header: BlockHeader) -> Self {
+    pub fn with_prev_header(prev_header: Header) -> Self {
         Self {
             prev_header: Some(prev_header),
             transactions: vec![],
@@ -119,22 +122,22 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
     blocks
 }
 
-fn genesis(merkle_root: TxMerkleNode) -> BlockHeader {
+fn genesis(merkle_root: TxMerkleNode) -> Header {
     let target = Uint256([
         0xffffffffffffffffu64,
         0xffffffffffffffffu64,
         0xffffffffffffffffu64,
         0x7fffffffffffffffu64,
     ]);
-    let bits = BlockHeader::compact_target_from_u256(&target);
+    let bits = target.to_compact_lossy();
 
-    let mut header = BlockHeader {
-        version: 1,
+    let mut header = Header {
+        version: Version::from_consensus(1),
         time: 0,
         nonce: 0,
         bits,
         merkle_root,
-        prev_blockhash: BlockHash::default(),
+        prev_blockhash: BlockHash::from_raw_hash(bitcoin::hashes::Hash::all_zeros()),
     };
     solve(&mut header);
 
@@ -172,17 +175,17 @@ impl TransactionBuilder {
         let witness = witness.map_or(Witness::new(), |w| w);
         let input = TxIn {
             previous_output,
-            script_sig: Script::new(),
-            sequence: 0xffffffff,
+            script_sig: Script::new().into(),
+            sequence: Sequence(0xffffffff),
             witness,
         };
         self.input.push(input);
         self
     }
 
-    pub fn with_output(mut self, address: &Address, value: u64) -> Self {
+    pub fn with_output(mut self, address: &Address, satoshi: u64) -> Self {
         self.output.push(TxOut {
-            value,
+            value: Amount::from_sat(satoshi),
             script_pubkey: address.script_pubkey(),
         });
         self
@@ -203,7 +206,7 @@ impl TransactionBuilder {
         let output = if self.output.is_empty() {
             // Use default of 50 BTC.
             vec![TxOut {
-                value: 50_0000_0000,
+                value: Amount::from_sat(50_0000_0000),
                 script_pubkey: random_p2pkh_address(Network::Regtest).script_pubkey(),
             }]
         } else {
@@ -211,8 +214,8 @@ impl TransactionBuilder {
         };
 
         Transaction {
-            version: 1,
-            lock_time: self.lock_time,
+            version: bitcoin::transaction::Version(1),
+            lock_time: LockTime::from_consensus(self.lock_time),
             input,
             output,
         }
@@ -225,12 +228,12 @@ impl Default for TransactionBuilder {
     }
 }
 
-fn header(prev_header: &BlockHeader, merkle_root: TxMerkleNode) -> BlockHeader {
+fn header(prev_header: &Header, merkle_root: TxMerkleNode) -> Header {
     let time = prev_header.time + 60 * 10; // 10 minutes.
-    let bits = BlockHeader::compact_target_from_u256(&prev_header.target());
+    let bits = prev_header.target().to_compact_lossy();
 
-    let mut header = BlockHeader {
-        version: 1,
+    let mut header = Header {
+        version: Version::from_consensus(1),
         time,
         nonce: 0,
         bits,
@@ -242,9 +245,9 @@ fn header(prev_header: &BlockHeader, merkle_root: TxMerkleNode) -> BlockHeader {
     header
 }
 
-fn solve(header: &mut BlockHeader) {
+fn solve(header: &mut Header) {
     let target = header.target();
-    while header.validate_pow(&target).is_err() {
+    while header.validate_pow(target).is_err() {
         header.nonce += 1;
     }
 }
