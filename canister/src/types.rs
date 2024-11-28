@@ -435,7 +435,7 @@ impl Address {
     /// Creates a new address from a bitcoin script.
     pub fn from_script(script: &Script, network: Network) -> Result<Self, InvalidAddress> {
         let address = BitcoinAddress::from_script(script, into_bitcoin_network(network))
-            .ok_or(InvalidAddress)?;
+            .map_err(|_| InvalidAddress)?;
 
         // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
         // that `Address:from_script` succeeds even if the address is invalid.
@@ -464,7 +464,7 @@ impl FromStr for Address {
 
     fn from_str(s: &str) -> Result<Self, InvalidAddress> {
         BitcoinAddress::from_str(s)
-            .map(|address| Address(address.to_string()))
+            .map(|address| Address(address.assume_checked().to_string()))
             .map_err(|_| InvalidAddress)
     }
 }

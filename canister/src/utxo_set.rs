@@ -310,7 +310,7 @@ impl UtxoSet {
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
                     if let Ok(address) = Address::from_script(
-                        &Script::from(txout.script_pubkey.clone()),
+                        &Script::from_bytes(&txout.script_pubkey),
                         self.network,
                     ) {
                         let address_utxo = AddressUtxo {
