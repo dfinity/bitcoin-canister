@@ -152,7 +152,7 @@ fn maybe_process_response() {
                 ));
                 for block_bytes in response.blocks.iter() {
                     // Deserialize the block.
-                    let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
+                    let block = match BitcoinBlock::consensus_decode(&mut block_bytes.as_slice()) {
                         Ok(block) => block,
                         Err(err) => {
                             print(&format!(

@@ -348,7 +348,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     match depths.last() {
         Some((deepest_depth, child_idx)) => {
             match network {
-                Network::Testnet | Network::Regtest => {
+                Network::Testnet | Network::Testnet4 | Network::Regtest => {
                     // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
                     // in case a block hasn't been found for 20 minutes. This can be problematic.
                     // Consider the following scenario:

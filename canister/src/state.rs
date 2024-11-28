@@ -207,7 +207,7 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
             break;
         }
 
-        let block_header = match Header::consensus_decode(block_header_blob.as_slice()) {
+        let block_header = match Header::consensus_decode(&mut block_header_blob.as_slice()) {
             Ok(header) => header,
             Err(err) => {
                 print(&format!(

@@ -84,7 +84,7 @@ impl BlockHeaderStore {
 }
 
 fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> Header {
-    Header::consensus_decode(block_header_blob.as_slice())
+    Header::consensus_decode(&mut block_header_blob.as_slice())
         .expect("block header decoding must succeed")
 }
 

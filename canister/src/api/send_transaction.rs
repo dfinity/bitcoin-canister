@@ -15,7 +15,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
     }));
 
     // Decode the transaction as a sanity check that it's valid.
-    let tx = Transaction::consensus_decode(request.transaction.as_slice())
+    let tx = Transaction::consensus_decode(&mut request.transaction.as_slice())
         .map_err(|_| SendTransactionError::MalformedTransaction)?;
 
     runtime::print(&format!("[send_transaction] Tx ID: {}", tx.compute_txid()));
