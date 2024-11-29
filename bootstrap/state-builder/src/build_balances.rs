@@ -63,7 +63,7 @@ fn main() {
             Some(address)
         } else {
             BitcoinAddress::from_script(
-                &Script::from(hex::decode(script).expect("script must be valid hex")),
+                &Script::from_bytes(&hex::decode(script).expect("script must be valid hex")),
                 into_bitcoin_network(args.network),
             )
         };
