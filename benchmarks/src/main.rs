@@ -1,5 +1,5 @@
 use bitcoin::consensus::Decodable;
-use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
+use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader as Header};
 use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{InitConfig, Network};
@@ -103,8 +103,7 @@ fn insert_block_headers() -> BenchResult {
         let mut next_block_headers = vec![];
         for i in blocks_to_insert..blocks_to_insert + block_headers_to_insert {
             let mut block_header_blob = vec![];
-            BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
-                .unwrap();
+            Header::consensus_encode(blocks[i as usize].header(), &mut block_header_blob).unwrap();
             next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 
@@ -133,8 +132,7 @@ fn insert_block_headers_multiple_times() -> BenchResult {
         let mut next_block_headers = vec![];
         for i in 0..1000 {
             let mut block_header_blob = vec![];
-            BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
-                .unwrap();
+            Header::consensus_encode(blocks[i as usize].header(), &mut block_header_blob).unwrap();
             next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 

@@ -1,6 +1,6 @@
 use bitcoin::{
-    blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
-    Network as BitcoinNetwork,
+    blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
+    BlockHeader as Header, Network as BitcoinNetwork,
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
@@ -153,7 +153,7 @@ fn append_block(block: &Block) {
     BLOCKS.with(|b| b.borrow_mut().push(block_bytes));
 }
 
-fn append_block_header(block_header: &BlockHeader) {
+fn append_block_header(block_header: &Header) {
     let mut block_bytes = vec![];
     block_header.consensus_encode(&mut block_bytes).unwrap();
     BLOCK_HEADERS.with(|b| b.borrow_mut().push(block_bytes));
