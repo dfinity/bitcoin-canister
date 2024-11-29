@@ -7,14 +7,10 @@ target
 .dfx
 canister_ids.json
 .canbench
+pocket-ic
 
 *.wasm.gz
 
 bootstrap/bitcoin-*
-bootstrap/block_headers
-bootstrap/canister_state*
-bootstrap/chunk_hashes.txt
-bootstrap/data*
-bootstrap/unstable_blocks
-bootstrap/utxodump*.csv
+bootstrap/output
 chunk_hashes.txt

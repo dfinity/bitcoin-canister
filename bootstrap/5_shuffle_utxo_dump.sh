@@ -4,6 +4,8 @@
 # the stable btreemaps in the canister.
 set -euo pipefail
 
+source "./utils.sh"
+
 # Set the locale to make `sort -n` deterministic.
 export LANG=C.UTF-8
 export LANGUAGE=

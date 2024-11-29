@@ -1,4 +1,4 @@
-use bitcoin::{Target, CompactTarget, BlockHash, block::Header, Network};
+use bitcoin::{block::Header, BlockHash, CompactTarget, Network, Target};
 
 use crate::{
     constants::{
@@ -151,7 +151,7 @@ fn get_next_target(
     timestamp: u32,
 ) -> Target {
     match network {
-        Network::Testnet |Network::Testnet4 | Network::Regtest => {
+        Network::Testnet | Network::Testnet4 | Network::Regtest => {
             if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
                 // This if statements is reached only for Regtest and Testnet networks
                 // Here is the quote from "https://en.bitcoin.it/wiki/Testnet"
@@ -635,6 +635,7 @@ mod test {
         let mut headers = vec![];
         for line in rdr.lines() {
             let header = line.unwrap();
+            // If this line fails make sure you install git-lfs.
             let header = hex::decode(header.trim()).unwrap();
             let header = Header::consensus_decode(header.as_slice()).unwrap();
             headers.push(header);

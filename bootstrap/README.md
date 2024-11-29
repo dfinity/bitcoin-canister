@@ -64,7 +64,13 @@ Make sure that the output of the above command specifies that you have a chain t
 ]
 ```
 
-If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_retry.sh $BITCOIN_DIR $NETWORK` for a minute or two, which downloads more Bitcoin blocks, and try again.
+If the height returned here is < `$HEIGHT - 10`, then run
+
+```shell
+./1_download_state_retry.sh $BITCOIN_DIR $NETWORK
+```
+
+for a minute or two, which downloads more Bitcoin blocks, and try again.
 
 ## 4. Compute the Bitcoin Canister's State
 
@@ -90,12 +96,13 @@ If the height returned here is < `$HEIGHT - 10`, then run `./1_download_state_re
 
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
 
-## 5. Compute the State's Hashes.
+## 5. Compute the State Hashes
 
-A canister's state is uploaded in "chunks" via ingress messages via the `uploader` canister. The hashes to provide to the `uploader` canister can be computed as follows:
+A canister's state is uploaded in "chunks" through ingress messages to the `uploader` canister. 
+The required chunk hashes can be computed as follows:
 
 ```shell
-cargo run --release --example compute_hashes -- --file ./canister_state.bin > chunk_hashes.txt
+cargo run --release --example compute_hashes -- --file ./output/canister_state.bin > chunk_hashes.txt
 ```
 
-The hash of each chunk is saved in `chunk_hashes.txt`.
+The hashes of each chunk are saved in `./bootstrap/chunk_hashes.txt` and can be used later when building the `uploader` canister in Docker.
