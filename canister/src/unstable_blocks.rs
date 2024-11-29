@@ -6,7 +6,7 @@ use crate::{
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader;
+use bitcoin::BlockHeader as Header;
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
@@ -121,7 +121,7 @@ impl UnstableBlocks {
     // Inserts the block header of the block that should be received.
     pub fn insert_next_block_header(
         &mut self,
-        block_header: BlockHeader,
+        block_header: Header,
         stable_height: Height,
     ) -> Result<(), BlockDoesNotExtendTree> {
         let prev_block_hash = BlockHash::from(block_header.prev_blockhash);
@@ -142,7 +142,7 @@ impl UnstableBlocks {
     }
 
     /// Returns true if the given block header is already stored as one of the next block headers.
-    pub fn has_next_block_header(&self, block_header: &BlockHeader) -> bool {
+    pub fn has_next_block_header(&self, block_header: &Header) -> bool {
         self.next_block_headers
             .get_header(&BlockHash::from(block_header.block_hash()))
             .is_some()
@@ -153,12 +153,12 @@ impl UnstableBlocks {
         self.next_block_headers.get_max_height()
     }
 
-    // Returns BlockHeader chain from the tip up to the first block
+    // Returns Header chain from the tip up to the first block
     // header outside the main chain in the reverse order.
     pub fn get_next_block_headers_chain_with_tip(
         &self,
         tip_block_hash: BlockHash,
-    ) -> Vec<(&BlockHeader, BlockHash)> {
+    ) -> Vec<(&Header, BlockHash)> {
         let mut chain = vec![];
         let mut curr_hash = tip_block_hash;
         while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
@@ -174,7 +174,7 @@ impl UnstableBlocks {
         &self,
         stable_height: Height,
         heights: std::ops::RangeInclusive<Height>,
-    ) -> impl Iterator<Item = &BlockHeader> {
+    ) -> impl Iterator<Item = &Header> {
         if *heights.end() < stable_height {
             // `stable_height` is larger than any height from the range, which implies none of the requested
             // blocks are in unstable blocks, hence the result should be an empty iterator.
@@ -1026,7 +1026,7 @@ mod test {
         assert_eq!(peek(&unstable_blocks), None);
     }
 
-    fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<BlockHeader>) {
+    fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<Header>) {
         let mut headers = vec![];
         let block_0 = BlockBuilder::genesis().build();
         headers.push(*block_0.header());

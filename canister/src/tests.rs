@@ -13,7 +13,7 @@ use crate::{
 };
 use crate::{init, test_utils::random_p2pkh_address};
 use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::{Block as BitcoinBlock, BlockHeader};
+use bitcoin::{Block as BitcoinBlock, BlockHeader as Header};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
@@ -541,7 +541,7 @@ async fn test_rejections_counting() {
 }
 
 // Serialize header.
-fn get_header_blob(header: &BlockHeader) -> BlockHeaderBlob {
+fn get_header_blob(header: &Header) -> BlockHeaderBlob {
     let mut header_buff = vec![];
     header.consensus_encode(&mut header_buff).unwrap();
     header_buff.into()

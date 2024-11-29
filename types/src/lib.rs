@@ -2,7 +2,7 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    util::uint::Uint256, Block as BitcoinBlock, Network as BitcoinNetwork,
+    util::uint::Uint256, Block as BitcoinBlock, BlockHeader as Header, Network as BitcoinNetwork,
     OutPoint as BitcoinOutPoint,
 };
 use candid::CandidType;
@@ -37,7 +37,7 @@ impl Block {
         }
     }
 
-    pub fn header(&self) -> &bitcoin::BlockHeader {
+    pub fn header(&self) -> &Header {
         &self.block.header
     }
 
@@ -365,7 +365,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
+            Header::u256_from_compact_target(0x1b0404cb)
         ),
         16_307
     );
@@ -375,7 +375,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386397584)
+            Header::u256_from_compact_target(386397584)
         ),
         35_364_065_900_457
     );
@@ -385,7 +385,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386877668)
+            Header::u256_from_compact_target(386877668)
         ),
         18_415_156_832_118
     );
@@ -395,7 +395,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(422681968)
+            Header::u256_from_compact_target(422681968)
         ),
         86_564_599
     );
@@ -405,7 +405,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(457142912)
+            Header::u256_from_compact_target(457142912)
         ),
         1_032
     );
