@@ -635,7 +635,7 @@ mod test {
         let mut headers = vec![];
         for line in rdr.lines() {
             let header = line.unwrap();
-            println!("ABC header: {}", header);
+            // If this line fails make sure you install git-lfs.
             let header = hex::decode(header.trim()).unwrap();
             let header = BlockHeader::consensus_decode(header.as_slice()).unwrap();
             headers.push(header);
