@@ -1,6 +1,8 @@
 use crate::{memory::Memory, types::BlockHeaderBlob};
-use bitcoin::block::Header;
-use bitcoin::consensus::{Decodable, Encodable};
+use bitcoin::{
+    block::Header,
+    consensus::{Decodable, Encodable},
+};
 use ic_btc_interface::Height;
 use ic_btc_types::{Block, BlockHash};
 use ic_stable_structures::StableBTreeMap;

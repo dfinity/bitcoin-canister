@@ -2,7 +2,7 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    hashes::Hash, params::Params, Block as BitcoinBlock, Network as BitcoinNetwork,
+    block::Header, hashes::Hash, params::Params, Block as BitcoinBlock, Network as BitcoinNetwork,
     OutPoint as BitcoinOutPoint, Target,
 };
 use candid::CandidType;
@@ -37,7 +37,7 @@ impl Block {
         }
     }
 
-    pub fn header(&self) -> &bitcoin::block::Header {
+    pub fn header(&self) -> &Header {
         &self.block.header
     }
 

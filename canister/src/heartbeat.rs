@@ -8,8 +8,7 @@ use crate::{
     },
 };
 use crate::{with_state, with_state_mut};
-use bitcoin::consensus::Decodable;
-use bitcoin::Block as BitcoinBlock;
+use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
 

@@ -1,5 +1,6 @@
 use bitcoin::{
-    Address as BitcoinAddress, Network as BitcoinNetwork, Script, TxOut as BitcoinTxOut,
+    block::Header, Address as BitcoinAddress, Network as BitcoinNetwork, Script,
+    TxOut as BitcoinTxOut,
 };
 use candid::CandidType;
 use ic_btc_interface::{
@@ -315,11 +316,11 @@ impl BoundedStorable for BlockHeaderBlob {
     const IS_FIXED_SIZE: bool = true;
 }
 
-impl From<&bitcoin::block::Header> for BlockHeaderBlob {
-    fn from(header: &bitcoin::block::Header) -> Self {
+impl From<&Header> for BlockHeaderBlob {
+    fn from(header: &Header) -> Self {
         use bitcoin::consensus::Encodable;
         let mut block_header_blob = vec![];
-        bitcoin::block::Header::consensus_encode(header, &mut block_header_blob).unwrap();
+        Header::consensus_encode(header, &mut block_header_blob).unwrap();
         Self(block_header_blob)
     }
 }
@@ -333,10 +334,10 @@ impl BlockHeaderBlob {
 impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
-            bytes.len() as u32,
-            Self::MAX_SIZE,
-            "Header must {} bytes",
-            Self::MAX_SIZE,
+            bytes.len(),
+            Self::MAX_SIZE as usize,
+            "Header must be exactly {} bytes",
+            Self::MAX_SIZE
         );
         Self(bytes)
     }
