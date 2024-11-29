@@ -334,10 +334,10 @@ impl BlockHeaderBlob {
 impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
-            bytes.len() as u32,
-            Self::MAX_SIZE,
-            "Header must {} bytes",
-            Self::MAX_SIZE,
+            bytes.len(),
+            Self::MAX_SIZE as usize,
+            "Header must be exactly {} bytes",
+            Self::MAX_SIZE
         );
         Self(bytes)
     }
