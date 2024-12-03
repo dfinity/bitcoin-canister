@@ -7,7 +7,7 @@ use bitcoin::{
 };
 use candid::CandidType;
 use ic_btc_interface::{Network, Txid as PublicTxid};
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{storable::Bound, Storable};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, cell::RefCell, str::FromStr};
 
@@ -219,11 +219,11 @@ impl Storable for BlockHash {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self::from(bytes.to_vec())
     }
-}
 
-impl BoundedStorable for BlockHash {
-    const MAX_SIZE: u32 = 32;
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: 32,
+        is_fixed_size: true,
+    };
 }
 
 impl BlockHash {
@@ -236,9 +236,9 @@ impl From<Vec<u8>> for BlockHash {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::MAX_SIZE,
+            Self::BOUND.max_size(),
             "BlockHash must {} bytes",
-            Self::MAX_SIZE
+            Self::BOUND.max_size()
         );
         Self(bytes)
     }
@@ -352,11 +352,11 @@ impl Storable for OutPoint {
             vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
         }
     }
-}
 
-impl BoundedStorable for OutPoint {
-    const MAX_SIZE: u32 = OutPoint::size();
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: OutPoint::size(),
+        is_fixed_size: true,
+    };
 }
 
 #[test]

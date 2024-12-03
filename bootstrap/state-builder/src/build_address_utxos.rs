@@ -11,9 +11,7 @@ use clap::Parser;
 use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo};
 use ic_btc_interface::Network;
 use ic_btc_types::{OutPoint, Txid};
-use ic_stable_structures::{
-    storable::Blob, BoundedStorable, DefaultMemoryImpl, StableBTreeMap, Storable,
-};
+use ic_stable_structures::{storable::Blob, DefaultMemoryImpl, StableBTreeMap, Storable};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
