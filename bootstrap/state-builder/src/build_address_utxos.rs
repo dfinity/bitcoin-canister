@@ -42,7 +42,7 @@ fn main() {
     let reader = BufReader::new(utxos_file);
 
     let memory = DefaultMemoryImpl::default();
-    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), _> =
+    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::BOUND.max_size() as usize }>, (), _> =
         StableBTreeMap::init(memory.clone());
 
     for (i, line) in reader.lines().enumerate() {
