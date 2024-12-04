@@ -9,7 +9,10 @@ use ic_btc_interface::{
     UtxosFilterInRequest,
 };
 use ic_btc_types::{BlockHash, OutPoint, Txid};
-use ic_stable_structures::{storable::Blob, BoundedStorable, Storable as StableStructuresStorable};
+use ic_stable_structures::{
+    storable::{Blob, Bound as StableStructuresBound},
+    Storable as StableStructuresStorable,
+};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::{
@@ -136,13 +139,11 @@ impl StableStructuresStorable for Address {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(String::from_utf8(bytes.to_vec()).expect("Loading address cannot fail."))
     }
-}
 
-impl BoundedStorable for Address {
-    // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-    // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-    const MAX_SIZE: u32 = 90;
-    const IS_FIXED_SIZE: bool = false;
+    const BOUND: StableStructuresBound = StableStructuresBound::Bounded {
+        max_size: 90,
+        is_fixed_size: false,
+    };
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -181,16 +182,16 @@ impl StableStructuresStorable for AddressUtxo {
             )),
         }
     }
-}
 
-impl BoundedStorable for AddressUtxo {
-    const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
-    const IS_FIXED_SIZE: bool = false;
+    const BOUND: StableStructuresBound = StableStructuresBound::Bounded {
+        max_size: Address::BOUND.max_size() + 4 /* height bytes */ + OutPoint::BOUND.max_size(),
+        is_fixed_size: false,
+    };
 }
 
 pub struct AddressUtxoRange {
-    start_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
-    end_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
+    start_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
+    end_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
 }
 
 impl AddressUtxoRange {
@@ -241,12 +242,12 @@ impl AddressUtxoRange {
     }
 }
 
-impl RangeBounds<Blob<{ AddressUtxo::MAX_SIZE as usize }>> for AddressUtxoRange {
-    fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
+impl RangeBounds<Blob<{ AddressUtxo::BOUND.max_size() as usize }>> for AddressUtxoRange {
+    fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::BOUND.max_size() as usize }>> {
         Bound::Included(&self.start_bound)
     }
 
-    fn end_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
+    fn end_bound(&self) -> Bound<&Blob<{ AddressUtxo::BOUND.max_size() as usize }>> {
         Bound::Included(&self.end_bound)
     }
 }
@@ -307,13 +308,11 @@ impl StableStructuresStorable for BlockHeaderBlob {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self::from(bytes.to_vec())
     }
-}
 
-impl BoundedStorable for BlockHeaderBlob {
-    // A Bitcoin block header is always 80 bytes. See:
-    // https://developer.bitcoin.org/reference/block_chain.html#block-headers
-    const MAX_SIZE: u32 = 80;
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: StableStructuresBound = StableStructuresBound::Bounded {
+        max_size: 80,
+        is_fixed_size: true,
+    };
 }
 
 impl From<&Header> for BlockHeaderBlob {
@@ -335,9 +334,9 @@ impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len(),
-            Self::MAX_SIZE as usize,
+            Self::BOUND.max_size() as usize,
             "Header must be exactly {} bytes",
-            Self::MAX_SIZE
+            Self::BOUND.max_size()
         );
         Self(bytes)
     }
