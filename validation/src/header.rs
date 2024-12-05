@@ -1,4 +1,4 @@
-use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader as Header, Network};
+use bitcoin::{block::Header, BlockHash, CompactTarget, Network, Target};
 
 use crate::{
     constants::{
@@ -83,8 +83,8 @@ pub fn validate_header(
     let target = get_next_target(network, store, &prev_header, prev_height, header.time);
     if let Err(err) = header.validate_pow(&target) {
         match err {
-            bitcoin::Error::BlockBadProofOfWork => println!("bad proof of work"),
-            bitcoin::Error::BlockBadTarget => println!("bad target"),
+            bitcoin::block::ValidationError::BadProofOfWork => println!("bad proof of work"),
+            bitcoin::block::ValidationError::BadTarget => println!("bad target"),
             _ => {}
         };
         return Err(ValidateHeaderError::InvalidPoWForComputedTarget);
@@ -149,9 +149,9 @@ fn get_next_target(
     prev_header: &Header,
     prev_height: BlockHeight,
     timestamp: u32,
-) -> Uint256 {
+) -> Target {
     match network {
-        Network::Testnet | Network::Regtest => {
+        Network::Testnet | Network::Testnet4 | Network::Regtest => {
             if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
                 // This if statements is reached only for Regtest and Testnet networks
                 // Here is the quote from "https://en.bitcoin.it/wiki/Testnet"
@@ -199,11 +199,11 @@ fn find_next_difficulty_in_chain(
     store: &impl HeaderStore,
     prev_header: &Header,
     prev_height: BlockHeight,
-) -> u32 {
+) -> CompactTarget {
     // This is the maximum difficulty target for the network
     let pow_limit_bits = pow_limit_bits(network);
     match network {
-        Network::Testnet | Network::Regtest => {
+        Network::Testnet | Network::Testnet4 | Network::Regtest => {
             let mut current_header = *prev_header;
             let mut current_height = prev_height;
             let mut current_hash = current_header.block_hash();
@@ -246,7 +246,7 @@ fn compute_next_difficulty(
     store: &impl HeaderStore,
     prev_header: &Header,
     prev_height: BlockHeight,
-) -> u32 {
+) -> CompactTarget {
     // Difficulty is adjusted only once in every interval of 2 weeks (2016 blocks)
     // If an interval boundary is not reached, then previous difficulty target is
     // returned Regtest network doesn't adjust PoW difficult levels. For

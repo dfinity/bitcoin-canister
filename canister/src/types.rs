@@ -573,6 +573,7 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     match network {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
         Network::Testnet => BitcoinNetwork::Testnet,
+        Network::Testnet4 => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
     }
 }
