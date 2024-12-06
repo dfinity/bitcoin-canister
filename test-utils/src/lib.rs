@@ -269,7 +269,7 @@ mod test {
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
 
         #[test]
@@ -279,7 +279,7 @@ mod test {
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
 
         #[test]
@@ -293,7 +293,7 @@ mod test {
                 .build();
 
             TransactionBuilder::coinbase()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None);
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0), None);
         }
 
         #[test]
@@ -307,7 +307,7 @@ mod test {
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 1000);
+            assert_eq!(tx.output[0].value.to_sat(), 1000);
             assert_eq!(tx.output[0].script_pubkey, address.script_pubkey());
         }
 
@@ -324,9 +324,9 @@ mod test {
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 2);
-            assert_eq!(tx.output[0].value, 1000);
+            assert_eq!(tx.output[0].value.to_sat(), 1000);
             assert_eq!(tx.output[0].script_pubkey, address_0.script_pubkey());
-            assert_eq!(tx.output[1].value, 2000);
+            assert_eq!(tx.output[1].value.to_sat(), 2000);
             assert_eq!(tx.output[1].script_pubkey, address_1.script_pubkey());
         }
 
@@ -338,16 +338,16 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None)
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0), None)
                 .build();
             assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(
                 tx.input[0].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0)
             );
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
 
         #[test]
@@ -361,21 +361,27 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0), None)
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0), None)
+                .with_input(
+                    bitcoin::OutPoint::new(coinbase_tx_0.compute_txid(), 0),
+                    None,
+                )
+                .with_input(
+                    bitcoin::OutPoint::new(coinbase_tx_1.compute_txid(), 0),
+                    None,
+                )
                 .build();
             assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 2);
             assert_eq!(
                 tx.input[0].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx_0.compute_txid(), 0)
             );
             assert_eq!(
                 tx.input[1].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx_1.compute_txid(), 0)
             );
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
     }
 }
