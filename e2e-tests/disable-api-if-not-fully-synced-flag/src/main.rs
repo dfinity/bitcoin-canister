@@ -1,6 +1,6 @@
 use bitcoin::{
-    blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
-    BlockHeader as Header, Network as BitcoinNetwork,
+    block::Header, blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
+    Network as BitcoinNetwork,
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
@@ -87,7 +87,7 @@ fn init() {
         let block = BlockBuilder::with_prev_header(prev_header)
             .with_transaction(
                 TransactionBuilder::new()
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             )
             .build();
@@ -99,7 +99,7 @@ fn init() {
         let next_block = BlockBuilder::with_prev_header(prev_header)
             .with_transaction(
                 TransactionBuilder::new()
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             )
             .build();
