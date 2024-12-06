@@ -296,7 +296,7 @@ impl UtxoSet {
         start_idx: usize,
         utxos_delta: &mut UtxosDelta,
     ) -> Slicing<usize, ()> {
-        if tx.is_coin_base() {
+        if tx.is_coinbase() {
             return Slicing::Done(());
         }
 
@@ -310,7 +310,7 @@ impl UtxoSet {
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
                     if let Ok(address) = Address::from_script(
-                        &Script::from(txout.script_pubkey.clone()),
+                        &Script::from_bytes(&txout.script_pubkey),
                         self.network,
                     ) {
                         let address_utxo = AddressUtxo {
@@ -416,7 +416,7 @@ impl UtxoSet {
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value);
+                .insert(address.clone(), address_balance + output.value.to_sat());
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }
@@ -571,7 +571,12 @@ mod test {
     use crate::runtime;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
-    use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
+    use bitcoin::{
+        absolute::LockTime,
+        blockdata::{opcodes::all::OP_RETURN, script::Builder},
+        transaction::Version,
+        Amount,
+    };
     use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
@@ -599,8 +604,8 @@ mod test {
             let coinbase_empty_tx = Transaction::new(bitcoin::Transaction {
                 output: vec![],
                 input: vec![],
-                version: 1,
-                lock_time: 0,
+                version: Version(1),
+                lock_time: LockTime::from_consensus(0),
             });
             ingest_tx(&mut utxo, &coinbase_empty_tx);
 
@@ -618,12 +623,12 @@ mod test {
             let block = BlockBuilder::genesis()
                 .with_transaction(Transaction::new(bitcoin::Transaction {
                     output: vec![BitcoinTxOut {
-                        value: 50_0000_0000,
+                        value: Amount::from_sat(50_0000_0000),
                         script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
                     }],
                     input: vec![],
-                    version: 1,
-                    lock_time: 0,
+                    version: Version(1),
+                    lock_time: LockTime::from_consensus(0),
                 }))
                 .build();
 
