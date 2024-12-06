@@ -2,10 +2,11 @@ use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
     absolute::LockTime,
     block::{Header, Version},
+    key::Keypair,
     secp256k1::rand::rngs::OsRng,
     secp256k1::Secp256k1,
-    Address, Amount, Block as BitcoinBlock, BlockHash, KeyPair, Network, OutPoint, PublicKey,
-    Script, Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    Address, Amount, Block as BitcoinBlock, BlockHash, Network, OutPoint, PublicKey, Script,
+    Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;
 use std::str::FromStr;
@@ -13,16 +14,17 @@ use std::str::FromStr;
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
 
-    Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), network)
+    Address::p2pkh(
+        &PublicKey::new(secp.generate_keypair(&mut OsRng).1),
+        network,
+    )
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
-    let key_pair = KeyPair::new(&secp, &mut rng);
-    let xonly = XOnlyPublicKey::from_keypair(&key_pair);
+    let key_pair = Keypair::new(&secp, &mut OsRng);
+    let (xonly, _) = XOnlyPublicKey::from_keypair(&key_pair);
 
     Address::p2tr(&secp, xonly, None, network)
 }
@@ -69,14 +71,18 @@ impl BlockBuilder {
             self.transactions
         };
 
-        let merkle_root =
-            bitcoin::util::hash::bitcoin_merkle_root(txdata.iter().map(|tx| tx.txid().as_hash()))
-                .unwrap();
-        let merkle_root = TxMerkleNode::from_hash(merkle_root);
+        let merkle_root = bitcoin::merkle_tree::calculate_root(
+            txdata
+                .iter()
+                .map(|tx| *tx.compute_txid().as_raw_hash())
+                .clone(),
+        )
+        .unwrap();
+        let merkle_root = TxMerkleNode::from_raw_hash(merkle_root);
 
         let header = match self.prev_header {
-            Some(prev_header) => header(&prev_header, merkle_root),
             None => genesis(merkle_root),
+            Some(prev_header) => header(&prev_header, merkle_root),
         };
 
         BitcoinBlock { header, txdata }
@@ -86,11 +92,14 @@ impl BlockBuilder {
 /// Builds a random chain with the given number of block and transactions
 /// starting with the Regtest genesis block.
 pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
-    let genesis_block = Block::new(genesis_block(Network::Regtest));
+    let bitcoin_newtork = Network::Regtest;
+    let genesis_block = Block::new(genesis_block(bitcoin_newtork));
 
     // Use a static address to send outputs to.
     // `random_p2pkh_address` isn't used here as it doesn't work in wasm.
-    let address = Address::from_str("bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8").unwrap();
+    let address = Address::from_str("bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8")
+        .unwrap()
+        .assume_checked();
     let mut blocks = vec![genesis_block.clone()];
     let mut prev_block: Block = genesis_block;
     let mut value = 1;
@@ -123,12 +132,7 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
 }
 
 fn genesis(merkle_root: TxMerkleNode) -> Header {
-    let target = Uint256([
-        0xffffffffffffffffu64,
-        0xffffffffffffffffu64,
-        0xffffffffffffffffu64,
-        0x7fffffffffffffffu64,
-    ]);
+    let target = Target::MAX;
     let bits = target.to_compact_lossy();
 
     let mut header = Header {
