@@ -15,10 +15,7 @@ use std::str::FromStr;
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
 
-    Address::p2pkh(
-        &PublicKey::new(secp.generate_keypair(&mut OsRng).1),
-        network,
-    )
+    Address::p2pkh(PublicKey::new(secp.generate_keypair(&mut OsRng).1), network)
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
