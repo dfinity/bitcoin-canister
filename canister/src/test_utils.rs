@@ -21,10 +21,9 @@ use std::{
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
 
     BitcoinAddress::p2pkh(
-        &PublicKey::new(secp.generate_keypair(&mut rng).1),
+        &PublicKey::new(secp.generate_keypair(&mut OsRng).1),
         into_bitcoin_network(network),
     )
     .into()
@@ -36,9 +35,8 @@ pub fn random_p2tr_address(network: Network) -> Address {
 
 pub fn random_p2wpkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
     BitcoinAddress::p2wpkh(
-        &PublicKey::new(secp.generate_keypair(&mut rng).1),
+        &PublicKey::new(secp.generate_keypair(&mut OsRng).1),
         into_bitcoin_network(network),
     )
     .expect("failed to create p2wpkh address")
@@ -46,9 +44,8 @@ pub fn random_p2wpkh_address(network: Network) -> Address {
 }
 
 pub fn random_p2wsh_address(network: Network) -> Address {
-    let mut rng = OsRng::new().unwrap();
     let mut hash = [0u8; 32];
-    rng.fill_bytes(&mut hash);
+    OsRng.fill_bytes(&mut hash);
     BitcoinAddress::p2wsh(
         &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&hash).unwrap())),
         into_bitcoin_network(network),

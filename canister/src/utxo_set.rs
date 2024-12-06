@@ -570,7 +570,12 @@ mod test {
     use crate::runtime;
     use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
     use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
-    use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
+    use bitcoin::{
+        absolute::LockTime,
+        blockdata::{opcodes::all::OP_RETURN, script::Builder},
+        transaction::Version,
+        Amount,
+    };
     use ic_btc_interface::Network;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
@@ -598,8 +603,8 @@ mod test {
             let coinbase_empty_tx = Transaction::new(bitcoin::Transaction {
                 output: vec![],
                 input: vec![],
-                version: 1,
-                lock_time: 0,
+                version: Version(1),
+                lock_time: LockTime::from_consensus(0),
             });
             ingest_tx(&mut utxo, &coinbase_empty_tx);
 
@@ -617,12 +622,12 @@ mod test {
             let block = BlockBuilder::genesis()
                 .with_transaction(Transaction::new(bitcoin::Transaction {
                     output: vec![BitcoinTxOut {
-                        value: 50_0000_0000,
+                        value: Amount::from_sat(50_0000_0000),
                         script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
                     }],
                     input: vec![],
-                    version: 1,
-                    lock_time: 0,
+                    version: Version(1),
+                    lock_time: LockTime::from_consensus(0),
                 }))
                 .build();
 

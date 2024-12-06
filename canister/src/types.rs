@@ -657,7 +657,7 @@ fn address_handles_script_edge_case() {
     // (https://github.com/rust-bitcoin/rust-bitcoin/issues/995)
     //
     // This test verifies that we're protecting ourselves from that case.
-    let script = Script::from(vec![
+    let script = Script::from_bytes(&[
         0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
     ]);
 
