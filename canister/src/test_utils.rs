@@ -47,10 +47,10 @@ pub fn random_p2wpkh_address(network: Network) -> Address {
 }
 
 pub fn random_p2wsh_address(network: Network) -> Address {
-    let mut hash = [0u8; 32];
-    OsRng.fill_bytes(&mut hash);
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
     BitcoinAddress::p2wsh(
-        &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&hash).unwrap())),
+        &Script::from_bytes(&bytes).to_p2wsh(),
         into_bitcoin_network(network),
     )
     .into()
