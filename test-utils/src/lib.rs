@@ -3,12 +3,11 @@ use bitcoin::{
     absolute::LockTime,
     block::{Header, Version},
     key::Keypair,
-    secp256k1::rand::rngs::OsRng,
-    secp256k1::Secp256k1,
     Address, Amount, Block as BitcoinBlock, BlockHash, Network, OutPoint, PublicKey, Script,
     Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;
+use secp256k1::{rand::rngs::OsRng, Secp256k1};
 use std::str::FromStr;
 
 /// Generates a random P2PKH address.

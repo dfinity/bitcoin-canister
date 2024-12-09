@@ -3,10 +3,7 @@ use crate::{
     types::{into_bitcoin_network, Address},
 };
 use bitcoin::{
-    block::Header,
-    secp256k1::rand::{rngs::OsRng, RngCore},
-    secp256k1::Secp256k1,
-    Address as BitcoinAddress, CompressedPublicKey, PublicKey, Script, Witness,
+    block::Header, Address as BitcoinAddress, CompressedPublicKey, PublicKey, Script, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -14,6 +11,10 @@ use ic_btc_test_utils::{
 };
 use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
+use secp256k1::{
+    rand::{rngs::OsRng, RngCore},
+    Secp256k1,
+};
 use std::{
     convert::TryFrom,
     ops::{Bound, RangeBounds},

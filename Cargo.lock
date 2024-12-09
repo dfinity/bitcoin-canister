@@ -474,7 +474,7 @@ dependencies = [
  "bitcoin_hashes",
  "hex-conservative",
  "hex_lit",
- "secp256k1 0.29.1",
+ "secp256k1",
  "serde",
 ]
 
@@ -1736,6 +1736,7 @@ dependencies = [
  "maplit",
  "pocket-ic",
  "proptest 0.9.6",
+ "secp256k1",
  "serde",
  "serde_bytes",
  "tempfile",
@@ -1760,7 +1761,7 @@ dependencies = [
  "bitcoin",
  "getrandom 0.2.15",
  "ic-btc-types",
- "secp256k1 0.30.0",
+ "secp256k1",
 ]
 
 [[package]]
@@ -3474,17 +3475,6 @@ dependencies = [
  "rand 0.8.5",
  "secp256k1-sys",
  "serde",
-]
-
-[[package]]
-name = "secp256k1"
-version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b50c5943d326858130af85e049f2661ba3c78b26589b8ab98e65e80ae44a1252"
-dependencies = [
- "bitcoin_hashes",
- "rand 0.8.5",
- "secp256k1-sys",
 ]
 
 [[package]]
