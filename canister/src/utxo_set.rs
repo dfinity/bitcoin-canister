@@ -368,7 +368,7 @@ impl UtxoSet {
                 return Slicing::Paused(vout);
             }
 
-            if !(output.script_pubkey.is_provably_unspendable()) {
+            if !(output.script_pubkey.is_op_return()) {
                 let ins_start = performance_counter();
                 let txid = tx.txid();
                 stats.ins_txids += performance_counter() - ins_start;
