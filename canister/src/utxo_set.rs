@@ -309,10 +309,9 @@ impl UtxoSet {
             let outpoint = (&input.previous_output).into();
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
-                    if let Ok(address) = Address::from_script(
-                        &Script::from_bytes(&txout.script_pubkey),
-                        self.network,
-                    ) {
+                    if let Ok(address) =
+                        Address::from_script(Script::from_bytes(&txout.script_pubkey), self.network)
+                    {
                         let address_utxo = AddressUtxo {
                             address: address.clone(),
                             height,

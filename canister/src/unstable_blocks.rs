@@ -81,7 +81,7 @@ impl UnstableBlocks {
     }
 
     pub fn normalized_stability_threshold(&self) -> u128 {
-        self.anchor_difficulty() as u128 * self.stability_threshold as u128
+        self.anchor_difficulty() * self.stability_threshold as u128
     }
 
     /// Returns the number of tips available in the current block tree.

@@ -232,7 +232,7 @@ impl BlockTree {
         for child in self.children.iter() {
             res = std::cmp::max(res, child.difficulty_based_depth(network));
         }
-        res += self.root.difficulty(network) as u128;
+        res += self.root.difficulty(network);
         res
     }
 
