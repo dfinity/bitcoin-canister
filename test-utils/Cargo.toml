@@ -14,4 +14,5 @@ bitcoin = { workspace = true, features = [
     "rand",
 ] } # needed for generating secp256k1 keys.
 ic-btc-types = { workspace = true }
-secp256k1 = { workspace = true }
+secp256k1 = { version = "0.30.0", features = ["rand"] }
+getrandom = { version = "0.2", features = ["js"] }
