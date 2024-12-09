@@ -7,7 +7,7 @@ use bitcoin::{
     hashes::Hash,
     secp256k1::rand::{rngs::OsRng, RngCore},
     secp256k1::Secp256k1,
-    Address as BitcoinAddress, PublicKey, Script, WScriptHash, Witness,
+    Address as BitcoinAddress, CompressedPublicKey, PublicKey, Script, WScriptHash, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -16,6 +16,7 @@ use ic_btc_test_utils::{
 use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use std::{
+    convert::{TryFrom, TryInto},
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
@@ -38,10 +39,10 @@ pub fn random_p2tr_address(network: Network) -> Address {
 pub fn random_p2wpkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
     BitcoinAddress::p2wpkh(
-        &PublicKey::new(secp.generate_keypair(&mut OsRng).1),
+        &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(&mut OsRng).1))
+            .expect("failed to create p2wpkh address"),
         into_bitcoin_network(network),
     )
-    .expect("failed to create p2wpkh address")
     .into()
 }
 
