@@ -41,6 +41,7 @@ pub async fn send_transaction(request: SendTransactionRequest) -> Result<(), Sen
 #[cfg(test)]
 mod test {
     use super::*;
+    use bitcoin::{absolute::LockTime, transaction::Version};
     use ic_btc_interface::{Fees, Flag, InitConfig, Network, NetworkInRequest};
 
     fn empty_transaction() -> Vec<u8> {
@@ -48,8 +49,8 @@ mod test {
 
         use bitcoin::consensus::Encodable;
         Transaction {
-            version: 0,
-            lock_time: 0,
+            version: Version(0),
+            lock_time: LockTime::from_consensus(0),
             input: vec![],
             output: vec![],
         }

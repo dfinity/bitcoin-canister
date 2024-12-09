@@ -3,8 +3,11 @@ use crate::{
     types::{into_bitcoin_network, Address},
 };
 use bitcoin::{
-    hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
-    Header, PublicKey, Script, WScriptHash, Witness,
+    block::Header,
+    hashes::Hash,
+    secp256k1::rand::{rngs::OsRng, RngCore},
+    secp256k1::Secp256k1,
+    Address as BitcoinAddress, PublicKey, Script, WScriptHash, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -12,7 +15,6 @@ use ic_btc_test_utils::{
 };
 use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
-use proptest::prelude::RngCore;
 use std::{
     ops::{Bound, RangeBounds},
     str::FromStr,
@@ -132,7 +134,7 @@ pub fn is_stable_btreemap_equal<
 /// as opposed to `bitcoin::Block`.
 pub struct BlockBuilder {
     builder: ExternalBlockBuilder,
-    mock_difficulty: Option<u64>,
+    mock_difficulty: Option<u128>,
 }
 
 impl BlockBuilder {
@@ -157,7 +159,7 @@ impl BlockBuilder {
         }
     }
 
-    pub fn with_difficulty(self, difficulty: u64) -> Self {
+    pub fn with_difficulty(self, difficulty: u128) -> Self {
         Self {
             mock_difficulty: Some(difficulty),
             ..self
@@ -170,7 +172,7 @@ impl BlockBuilder {
         block
     }
 
-    pub fn build_with_mock_difficulty(self, mock_difficulty: u64) -> Block {
+    pub fn build_with_mock_difficulty(self, mock_difficulty: u128) -> Block {
         let mut block = self.build();
         block.mock_difficulty = Some(mock_difficulty);
         block
@@ -219,7 +221,9 @@ impl TransactionBuilder {
     pub fn with_output(self, address: &Address, value: u64) -> Self {
         Self {
             builder: self.builder.with_output(
-                &BitcoinAddress::from_str(&address.to_string()).unwrap(),
+                &BitcoinAddress::from_str(&address.to_string())
+                    .map(|a| a.assume_checked())
+                    .unwrap(),
                 value,
             ),
         }
@@ -234,7 +238,7 @@ pub struct BlockChainBuilder {
     num_blocks: u32,
     prev_block_header: Option<Header>,
     #[allow(clippy::type_complexity)]
-    difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u64)>,
+    difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u128)>,
 }
 
 impl BlockChainBuilder {
@@ -255,7 +259,7 @@ impl BlockChainBuilder {
     }
 
     /// Sets the difficulty of blocks at the given range of heights.
-    pub fn with_difficulty<R: RangeBounds<usize>>(mut self, difficulty: u64, range: R) -> Self {
+    pub fn with_difficulty<R: RangeBounds<usize>>(mut self, difficulty: u128, range: R) -> Self {
         self.difficulty_ranges.push((
             (range.start_bound().cloned(), range.end_bound().cloned()),
             difficulty,
@@ -287,7 +291,7 @@ impl BlockChainBuilder {
         blocks
     }
 
-    fn get_difficulty(&self, i: usize) -> Option<u64> {
+    fn get_difficulty(&self, i: usize) -> Option<u128> {
         for (range, difficulty) in &self.difficulty_ranges {
             if range.contains(&i) {
                 return Some(*difficulty);

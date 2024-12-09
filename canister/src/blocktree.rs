@@ -394,7 +394,12 @@ mod test {
             for i in 1..chain.len() {
                 assert_eq!(
                     chain[i - 1].block_hash().to_vec(),
-                    chain[i].header().prev_blockhash.to_vec()
+                    chain[i]
+                        .header()
+                        .prev_blockhash
+                        .as_raw_hash()
+                        .as_byte_array()
+                        .to_vec()
                 )
             }
         }
@@ -435,7 +440,12 @@ mod test {
                 for i in 1..chain.len() {
                     assert_eq!(
                         chain[i - 1].block_hash().to_vec(),
-                        chain[i].header().prev_blockhash.to_vec()
+                        chain[i]
+                            .header()
+                            .prev_blockhash
+                            .as_raw_hash()
+                            .as_byte_array()
+                            .to_vec()
                     )
                 }
             }

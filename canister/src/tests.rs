@@ -12,8 +12,11 @@ use crate::{
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
 use crate::{init, test_utils::random_p2pkh_address};
-use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::{Block as BitcoinBlock, Header};
+use bitcoin::{
+    block::Header,
+    consensus::{Decodable, Encodable},
+    Block as BitcoinBlock,
+};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
@@ -50,7 +53,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
             magic,
             match network {
                 Network::Mainnet => 0xD9B4BEF9,
-                Network::Testnet | Network::Regtest => 0x0709110B,
+                Network::Testnet | Network::Testnet4 | Network::Regtest => 0x0709110B,
             }
         );
 

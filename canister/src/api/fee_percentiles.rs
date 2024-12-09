@@ -602,7 +602,7 @@ mod test {
             .with_output(&random_p2pkh_address(Network::Regtest), balance)
             .build();
 
-        let witness = Witness::from_vec(vec![
+        let witness = Witness::from_slice(&[
             vec![0u8, 2u8],
             vec![4u8, 2u8],
             vec![3u8, 2u8],
