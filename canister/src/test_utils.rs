@@ -13,7 +13,7 @@ use ic_btc_test_utils::{
     BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
 };
 use ic_btc_types::{Block, OutPoint, Transaction};
-use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
+use ic_stable_structures::{Memory, StableBTreeMap, Storable};
 use std::{
     convert::TryFrom,
     ops::{Bound, RangeBounds},
@@ -109,11 +109,7 @@ fn build_chain_with_genesis_block(
 }
 
 /// Returns true if the instances of `StableBTreeMap` provided are equal.
-pub fn is_stable_btreemap_equal<
-    M: Memory,
-    K: BoundedStorable + Ord + Eq + Clone,
-    V: BoundedStorable + Eq,
->(
+pub fn is_stable_btreemap_equal<M: Memory, K: Storable + Ord + Eq + Clone, V: Storable + Eq>(
     a: &StableBTreeMap<K, V, M>,
     b: &StableBTreeMap<K, V, M>,
 ) -> bool {
