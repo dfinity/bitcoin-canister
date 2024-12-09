@@ -4,10 +4,9 @@ use crate::{
 };
 use bitcoin::{
     block::Header,
-    hashes::Hash,
     secp256k1::rand::{rngs::OsRng, RngCore},
     secp256k1::Secp256k1,
-    Address as BitcoinAddress, CompressedPublicKey, PublicKey, Script, WScriptHash, Witness,
+    Address as BitcoinAddress, CompressedPublicKey, PublicKey, Script, Witness,
 };
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
@@ -16,7 +15,7 @@ use ic_btc_test_utils::{
 use ic_btc_types::{Block, OutPoint, Transaction};
 use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
@@ -26,7 +25,7 @@ pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
 
     BitcoinAddress::p2pkh(
-        &PublicKey::new(secp.generate_keypair(&mut OsRng).1),
+        PublicKey::new(secp.generate_keypair(&mut OsRng).1),
         into_bitcoin_network(network),
     )
     .into()
