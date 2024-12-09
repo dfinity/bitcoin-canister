@@ -89,7 +89,7 @@ fn init() {
             block = block.with_transaction(
                 TransactionBuilder::new()
                     .with_lock_time(i)
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             );
         }

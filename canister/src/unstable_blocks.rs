@@ -6,7 +6,7 @@ use crate::{
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader as Header;
+use bitcoin::block::Header;
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
@@ -76,12 +76,12 @@ impl UnstableBlocks {
         self.stability_threshold = stability_threshold;
     }
 
-    pub fn anchor_difficulty(&self) -> u64 {
+    pub fn anchor_difficulty(&self) -> u128 {
         self.tree.root.difficulty(self.network)
     }
 
     pub fn normalized_stability_threshold(&self) -> u128 {
-        self.anchor_difficulty() as u128 * self.stability_threshold as u128
+        self.anchor_difficulty() * self.stability_threshold as u128
     }
 
     /// Returns the number of tips available in the current block tree.
@@ -348,7 +348,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     match depths.last() {
         Some((deepest_depth, child_idx)) => {
             match network {
-                Network::Testnet | Network::Regtest => {
+                Network::Testnet | Network::Testnet4 | Network::Regtest => {
                     // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
                     // in case a block hasn't been found for 20 minutes. This can be problematic.
                     // Consider the following scenario:
@@ -946,7 +946,7 @@ mod test {
         // of the anchor block.
         assert_eq!(
             unstable_blocks.normalized_stability_threshold(),
-            anchor_block_difficulty as u128 * stability_threshold as u128
+            anchor_block_difficulty * stability_threshold as u128
         );
 
         // The normalized stability threshold is still not met, which means that, in theory,

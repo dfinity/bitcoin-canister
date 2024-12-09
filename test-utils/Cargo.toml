@@ -10,5 +10,9 @@ include = ["src", "Cargo.toml", "../LICENSE"]
 repository = "https://github.com/dfinity/bitcoin-canister"
 
 [dependencies]
-bitcoin = {version = "0.28.1", features = ["rand"]} # needed for generating secp256k1 keys.
+bitcoin = { workspace = true, features = [
+    "rand",
+] } # needed for generating secp256k1 keys.
 ic-btc-types = { workspace = true }
+secp256k1 = { version = "0.29.1", features = ["rand-std"] }
+#getrandom = { version = "0.2", features = ["js"] }

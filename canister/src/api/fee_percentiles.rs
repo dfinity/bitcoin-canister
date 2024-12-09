@@ -96,7 +96,7 @@ fn get_fees_per_byte(
             if tx_i >= number_of_transactions {
                 break;
             }
-            if !tx.is_coin_base() {
+            if !tx.is_coinbase() {
                 tx_i += 1;
             }
             if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
@@ -112,7 +112,7 @@ fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
 ) -> Option<MillisatoshiPerByte> {
-    if tx.is_coin_base() {
+    if tx.is_coinbase() {
         // Coinbase transactions do not have a fee.
         return None;
     }
@@ -127,7 +127,7 @@ fn get_tx_fee_per_byte(
             .value;
     }
     for tx_out in tx.output() {
-        satoshi -= tx_out.value;
+        satoshi -= tx_out.value.to_sat();
     }
 
     if tx.vsize() > 0 {
@@ -602,7 +602,7 @@ mod test {
             .with_output(&random_p2pkh_address(Network::Regtest), balance)
             .build();
 
-        let witness = Witness::from_vec(vec![
+        let witness = Witness::from_slice(&[
             vec![0u8, 2u8],
             vec![4u8, 2u8],
             vec![3u8, 2u8],
