@@ -946,7 +946,7 @@ mod test {
         // of the anchor block.
         assert_eq!(
             unstable_blocks.normalized_stability_threshold(),
-            anchor_block_difficulty as u128 * stability_threshold as u128
+            anchor_block_difficulty * stability_threshold as u128
         );
 
         // The normalized stability threshold is still not met, which means that, in theory,
