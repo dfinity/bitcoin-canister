@@ -41,4 +41,4 @@ benches:
         instructions: 2381902913
         heap_increase: 2048
         stable_memory_increase: 0
-version: 0.1.8
+version: 0.1.4
