@@ -29,9 +29,9 @@ resolver = "2"
 assert_matches = "1.5.0"
 bitcoin = "0.28.1"
 byteorder = "1.4.3"
-canbench-rs = { version = "0.1.8" }
+canbench-rs = "0.1.8"
 candid = "0.10.6"
-candid_parser = { version = "0.1.4" }
+candid_parser = "0.1.4"
 ciborium = "0.2.1"
 clap = { version = "4.0.11", features = ["derive"] }
 futures = "0.3.28"
