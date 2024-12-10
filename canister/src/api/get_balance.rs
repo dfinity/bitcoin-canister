@@ -108,11 +108,12 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, state,
-        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        test_utils::{BlockBuilder, TransactionBuilder},
         with_state_mut,
     };
     use ic_btc_interface::{Fees, InitConfig, Network};
-    use ic_btc_types::OutPoint;
+    use ic_btc_test_utils::random_p2pkh_address;
+    use ic_btc_types::{into_bitcoin_network, OutPoint};
 
     #[test]
     fn get_balance_error_on_malformed_address() {
@@ -151,6 +152,7 @@ mod test {
     #[test]
     fn retrieves_the_balance_of_address() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
@@ -158,7 +160,7 @@ mod test {
         });
 
         // Create a block where 1000 satoshis are given to an address.
-        let address = random_p2pkh_address(network);
+        let address = random_p2pkh_address(btc_network).into();
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
@@ -196,13 +198,14 @@ mod test {
     #[test]
     fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
         });
 
-        let address = random_p2pkh_address(network);
+        let address: Address = random_p2pkh_address(btc_network).into();
 
         for min_confirmations in [Some(0), None, Some(1)] {
             assert_eq!(
@@ -229,6 +232,7 @@ mod test {
     #[test]
     fn retrieves_balances_of_addresses_with_different_confirmations() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         crate::init(InitConfig {
             stability_threshold: Some(2),
@@ -237,8 +241,8 @@ mod test {
         });
 
         // Generate addresses.
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         // Create a chain where 1000 satoshis are given to the address_1, then
         // address_1 gives 1000 satoshis to address_2.
@@ -308,6 +312,8 @@ mod test {
 
     #[test]
     fn charges_cycles() {
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_balance: 10,
@@ -317,7 +323,7 @@ mod test {
         });
 
         get_balance(GetBalanceRequest {
-            address: random_p2pkh_address(Network::Regtest).to_string(),
+            address: random_p2pkh_address(btc_network).to_string(),
             min_confirmations: None,
         })
         .unwrap();

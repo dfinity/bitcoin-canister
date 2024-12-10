@@ -296,7 +296,7 @@ impl UtxoSet {
         start_idx: usize,
         utxos_delta: &mut UtxosDelta,
     ) -> Slicing<usize, ()> {
-        if tx.is_coin_base() {
+        if tx.is_coinbase() {
             return Slicing::Done(());
         }
 
@@ -309,10 +309,9 @@ impl UtxoSet {
             let outpoint = (&input.previous_output).into();
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
-                    if let Ok(address) = Address::from_script(
-                        &Script::from(txout.script_pubkey.clone()),
-                        self.network,
-                    ) {
+                    if let Ok(address) =
+                        Address::from_script(Script::from_bytes(&txout.script_pubkey), self.network)
+                    {
                         let address_utxo = AddressUtxo {
                             address: address.clone(),
                             height,
@@ -369,7 +368,7 @@ impl UtxoSet {
                 return Slicing::Paused(vout);
             }
 
-            if !(output.script_pubkey.is_provably_unspendable()) {
+            if !(output.script_pubkey.is_op_return()) {
                 let ins_start = performance_counter();
                 let txid = tx.txid();
                 stats.ins_txids += performance_counter() - ins_start;
@@ -416,7 +415,7 @@ impl UtxoSet {
             // Update the balance of the address.
             let address_balance = self.balances.get(&address).unwrap_or(0);
             self.balances
-                .insert(address.clone(), address_balance + output.value);
+                .insert(address.clone(), address_balance + output.value.to_sat());
 
             utxos_delta.insert(address, outpoint.clone(), tx_out.clone(), self.next_height);
         }
@@ -569,10 +568,17 @@ fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
 mod test {
     use super::*;
     use crate::runtime;
-    use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
+    use crate::test_utils::{BlockBuilder, TransactionBuilder};
     use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
-    use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
+    use bitcoin::{
+        absolute::LockTime,
+        blockdata::{opcodes::all::OP_RETURN, script::Builder},
+        transaction::Version,
+        Amount,
+    };
     use ic_btc_interface::Network;
+    use ic_btc_test_utils::random_p2pkh_address;
+    use ic_btc_types::into_bitcoin_network;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
 
@@ -599,8 +605,8 @@ mod test {
             let coinbase_empty_tx = Transaction::new(bitcoin::Transaction {
                 output: vec![],
                 input: vec![],
-                version: 1,
-                lock_time: 0,
+                version: Version(1),
+                lock_time: LockTime::from_consensus(0),
             });
             ingest_tx(&mut utxo, &coinbase_empty_tx);
 
@@ -618,12 +624,12 @@ mod test {
             let block = BlockBuilder::genesis()
                 .with_transaction(Transaction::new(bitcoin::Transaction {
                     output: vec![BitcoinTxOut {
-                        value: 50_0000_0000,
+                        value: Amount::from_sat(50_0000_0000),
                         script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
                     }],
                     input: vec![],
-                    version: 1,
-                    lock_time: 0,
+                    version: Version(1),
+                    lock_time: LockTime::from_consensus(0),
                 }))
                 .build();
 
@@ -658,8 +664,9 @@ mod test {
     }
 
     fn spending(network: Network) {
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let btc_network = into_bitcoin_network(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let mut utxo = UtxoSet::new(network);
 
@@ -744,9 +751,11 @@ mod test {
 
     #[test]
     fn utxos_are_sorted_by_height() {
-        let address = random_p2pkh_address(Network::Testnet);
+        let network = Network::Testnet;
+        let btc_network = into_bitcoin_network(network);
+        let address: Address = random_p2pkh_address(btc_network).into();
 
-        let mut utxo = UtxoSet::new(Network::Testnet);
+        let mut utxo = UtxoSet::new(network);
 
         // Insert some entries into the map with different heights in some random order.
         for height in [17u32, 0, 31, 4, 2].iter() {
@@ -784,8 +793,9 @@ mod test {
     #[should_panic]
     fn inserting_same_outpoint_panics() {
         let network = Network::Testnet;
+        let btc_network = into_bitcoin_network(network);
         let mut utxo_set = UtxoSet::new(network);
-        let address = random_p2pkh_address(network);
+        let address = random_p2pkh_address(btc_network).into();
 
         let tx_out_1 = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
@@ -810,9 +820,10 @@ mod test {
     #[test]
     fn addresses_with_empty_balances_are_removed() {
         let network = Network::Testnet;
+        let btc_network = into_bitcoin_network(network);
         let mut utxo_set = UtxoSet::new(network);
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let tx_1 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
@@ -846,9 +857,10 @@ mod test {
     #[test]
     fn consuming_an_input_with_value_zero() {
         let network = Network::Testnet;
+        let btc_network = into_bitcoin_network(network);
         let mut utxo_set = UtxoSet::new(network);
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let tx_1 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
@@ -891,9 +903,10 @@ mod test {
     #[test]
     fn ingest_block_test_block_ingestion_stats() {
         let network = Network::Testnet;
+        let btc_network = into_bitcoin_network(network);
         let mut utxo_set = UtxoSet::new(network);
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
         let tx_1 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
             .with_output(&address_1, 0) // an input with zero value
@@ -946,10 +959,11 @@ mod test {
                 Just(Network::Testnet),
                 Just(Network::Regtest),
             ]) {
+            let btc_network = into_bitcoin_network(network);
 
-            let address_1 = random_p2pkh_address(network);
-            let address_2 = random_p2pkh_address(network);
-            let address_3 = random_p2pkh_address(network);
+            let address_1 = random_p2pkh_address(btc_network).into();
+            let address_2 = random_p2pkh_address(btc_network).into();
+            let address_3 = random_p2pkh_address(btc_network).into();
 
             let mut utxo_set = UtxoSet::new(network);
 
