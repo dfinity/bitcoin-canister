@@ -32,7 +32,7 @@ fi
 # Navigate to root directory.
 cd ..
 
-cargo install ic-wasm --version 0.2.0 --root ./target
+cargo install ic-wasm --version 0.9.1 --root ./target
 STATUS=$?
 if [[ "$STATUS" -eq "0" ]]; then
     ./target/bin/ic-wasm \
