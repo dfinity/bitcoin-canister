@@ -68,23 +68,23 @@ jobs:
           rustup default $RUST_VERSION
           rustup target add wasm32-unknown-unknown
 
-      # - name: Install PocketIC (mac)
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-darwin.gz
-      #     gzip -d pocket-ic-x86_64-darwin.gz
-      #     mv pocket-ic-x86_64-darwin pocket-ic
-      #     chmod +x pocket-ic
-      #     mv pocket-ic ./canister/
+      - name: Install PocketIC (mac)
+        if: runner.os == 'macOS'
+        run: |
+          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-darwin.gz
+          gzip -d pocket-ic-x86_64-darwin.gz
+          mv pocket-ic-x86_64-darwin pocket-ic
+          chmod +x pocket-ic
+          mv pocket-ic ./canister/
 
-      # - name: Install PocketIC (linux)
-      #   if: runner.os == 'Linux'
-      #   run: |
-      #     wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-linux.gz
-      #     gzip -d pocket-ic-x86_64-linux.gz
-      #     mv pocket-ic-x86_64-linux pocket-ic
-      #     chmod +x pocket-ic
-      #     mv pocket-ic ./canister/
+      - name: Install PocketIC (linux)
+        if: runner.os == 'Linux'
+        run: |
+          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-linux.gz
+          gzip -d pocket-ic-x86_64-linux.gz
+          mv pocket-ic-x86_64-linux pocket-ic
+          chmod +x pocket-ic
+          mv pocket-ic ./canister/
 
       - name: Install brew packages (mac)
         if: runner.os == 'macOS'
