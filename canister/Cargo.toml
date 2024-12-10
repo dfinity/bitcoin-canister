@@ -45,9 +45,9 @@ ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
 maplit = "1.0.2"
 pocket-ic = { workspace = true }
 proptest = "0.9.4"
+secp256k1 = { workspace = true }
 tempfile = { workspace = true }
 test-strategy = "0.3.1"
-secp256k1 = { version = "0.29.1", features = ["rand-std"] }
 
 [features]
 file_memory = []
