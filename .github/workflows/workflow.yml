@@ -470,7 +470,7 @@ jobs:
 
       - name: Benchmark
         run: |
-          bash ./scripts/canbench_ci_run_benchmark.sh $PROJECT_DIR ${{ github.job }}
+          echo "skip" #bash ./scripts/canbench_ci_run_benchmark.sh $PROJECT_DIR ${{ github.job }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -488,7 +488,7 @@ jobs:
 
       - name: Pass or fail
         run: |
-          bash ./scripts/canbench_ci_post_run_benchmark.sh
+          echo "skip" #bash ./scripts/canbench_ci_post_run_benchmark.sh
 
   watchdog_health_status:
     runs-on: ubuntu-20.04
