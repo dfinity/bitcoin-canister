@@ -3,11 +3,15 @@ use bitcoin::{
     absolute::LockTime,
     block::{Header, Version},
     key::Keypair,
-    Address, Amount, Block as BitcoinBlock, BlockHash, Network, OutPoint, PublicKey, Script,
-    Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    Address, Amount, Block as BitcoinBlock, BlockHash, CompressedPublicKey, Network, OutPoint,
+    PublicKey, Script, Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness,
+    XOnlyPublicKey,
 };
 use ic_btc_types::Block;
-use secp256k1::{rand::rngs::OsRng, Secp256k1};
+use secp256k1::{
+    rand::{rngs::OsRng, RngCore},
+    Secp256k1,
+};
 use std::str::FromStr;
 
 /// Generates a random P2PKH address.
@@ -23,6 +27,21 @@ pub fn random_p2tr_address(network: Network) -> Address {
     let (xonly, _) = XOnlyPublicKey::from_keypair(&key_pair);
 
     Address::p2tr(&secp, xonly, None, network)
+}
+
+pub fn random_p2wpkh_address(network: Network) -> Address {
+    let secp = Secp256k1::new();
+    Address::p2wpkh(
+        &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(&mut OsRng).1))
+            .expect("failed to create p2wpkh address"),
+        network,
+    )
+}
+
+pub fn random_p2wsh_address(network: Network) -> Address {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    Address::p2wsh(&Script::from_bytes(&bytes).to_p2wsh(), network)
 }
 
 fn coinbase_input() -> TxIn {

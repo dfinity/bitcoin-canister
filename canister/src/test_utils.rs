@@ -1,60 +1,16 @@
-use crate::{
-    genesis_block,
-    types::{into_bitcoin_network, Address},
-};
-use bitcoin::{
-    block::Header, Address as BitcoinAddress, CompressedPublicKey, PublicKey, Script, Witness,
-};
+use crate::{genesis_block, types::Address};
+use bitcoin::{block::Header, Address as BitcoinAddress, Witness};
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
-    BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
+    random_p2pkh_address, BlockBuilder as ExternalBlockBuilder,
+    TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_btc_types::{Block, OutPoint, Transaction};
+use ic_btc_types::{into_bitcoin_network, Block, OutPoint, Transaction};
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
-use secp256k1::{
-    rand::{rngs::OsRng, RngCore},
-    Secp256k1,
-};
 use std::{
-    convert::TryFrom,
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
-
-/// Generates a random P2PKH address.
-pub fn random_p2pkh_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
-
-    BitcoinAddress::p2pkh(
-        PublicKey::new(secp.generate_keypair(&mut OsRng).1),
-        into_bitcoin_network(network),
-    )
-    .into()
-}
-
-pub fn random_p2tr_address(network: Network) -> Address {
-    ic_btc_test_utils::random_p2tr_address(into_bitcoin_network(network)).into()
-}
-
-pub fn random_p2wpkh_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
-    BitcoinAddress::p2wpkh(
-        &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(&mut OsRng).1))
-            .expect("failed to create p2wpkh address"),
-        into_bitcoin_network(network),
-    )
-    .into()
-}
-
-pub fn random_p2wsh_address(network: Network) -> Address {
-    let mut bytes = [0u8; 32];
-    OsRng.fill_bytes(&mut bytes);
-    BitcoinAddress::p2wsh(
-        &Script::from_bytes(&bytes).to_p2wsh(),
-        into_bitcoin_network(network),
-    )
-    .into()
-}
 
 /// Builds a random chain with the given number of block and transactions.
 /// The genesis block used in the chain is also random.
@@ -77,7 +33,7 @@ fn build_chain_with_genesis_block(
     num_blocks: u32,
     num_transactions_per_block: u32,
 ) -> Vec<Block> {
-    let address = random_p2pkh_address(network);
+    let address = random_p2pkh_address(into_bitcoin_network(network)).into();
     let mut blocks = vec![genesis_block.clone()];
     let mut prev_block: Block = genesis_block;
     let mut value = 1;

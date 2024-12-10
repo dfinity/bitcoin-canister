@@ -287,14 +287,14 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, runtime, state,
-        test_utils::{
-            random_p2pkh_address, random_p2tr_address, random_p2wpkh_address, random_p2wsh_address,
-            BlockBuilder, BlockChainBuilder, TransactionBuilder,
-        },
+        test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
         with_state_mut,
     };
-    use ic_btc_interface::{Fees, InitConfig, Network};
-    use ic_btc_interface::{OutPoint, Utxo};
+    use ic_btc_interface::{Fees, InitConfig, Network, OutPoint, Utxo};
+    use ic_btc_test_utils::{
+        random_p2pkh_address, random_p2tr_address, random_p2wpkh_address, random_p2wsh_address,
+    };
     use ic_btc_types::Block;
     use proptest::prelude::*;
 
@@ -333,6 +333,7 @@ mod test {
     #[test]
     fn genesis_block_only() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
@@ -341,7 +342,7 @@ mod test {
 
         assert_eq!(
             get_utxos(GetUtxosRequest {
-                address: random_p2pkh_address(network).to_string(),
+                address: random_p2pkh_address(btc_network).to_string(),
                 filter: None
             })
             .unwrap(),
@@ -357,6 +358,7 @@ mod test {
     #[test]
     fn single_block() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
@@ -364,7 +366,7 @@ mod test {
         });
 
         // Generate an address.
-        let address = random_p2pkh_address(network);
+        let address = random_p2pkh_address(btc_network).into();
 
         // Create a block where 1000 satoshis are given to the address.
         let coinbase_tx = TransactionBuilder::coinbase()
@@ -404,6 +406,7 @@ mod test {
     #[test]
     fn returns_results_in_descending_height_order() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         crate::init(InitConfig {
             stability_threshold: Some(1),
@@ -412,8 +415,8 @@ mod test {
         });
 
         // Generate addresses.
-        let address_1 = random_p2tr_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2tr_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         // Create a blockchain which alternates between giving some BTC to
         // address_1 and address_2 based on whether we're creating an even
@@ -500,19 +503,28 @@ mod test {
     #[test]
     fn supports_taproot_addresses() {
         let network = Network::Regtest;
-        supports_address(network, random_p2tr_address(network));
+        supports_address(
+            network,
+            random_p2tr_address(into_bitcoin_network(network)).into(),
+        );
     }
 
     #[test]
     fn supports_p2wpkh_addresses() {
         let network = Network::Regtest;
-        supports_address(network, random_p2wpkh_address(network));
+        supports_address(
+            network,
+            random_p2wpkh_address(into_bitcoin_network(network)).into(),
+        );
     }
 
     #[test]
     fn supports_p2wsh_addresses() {
         let network = Network::Regtest;
-        supports_address(network, random_p2wsh_address(network));
+        supports_address(
+            network,
+            random_p2wsh_address(into_bitcoin_network(network)).into(),
+        );
     }
 
     // Tests that the provided address is supported and its UTXOs can be fetched.
@@ -562,6 +574,7 @@ mod test {
     #[test]
     fn min_confirmations() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         crate::init(InitConfig {
             stability_threshold: Some(2),
@@ -570,9 +583,9 @@ mod test {
         });
 
         // Generate addresses.
-        let address_1 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
 
-        let address_2 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         // Create a block where 1000 satoshis are given to the address_1, followed
         // by a block where address_1 gives 1000 satoshis to address_2.
@@ -675,13 +688,14 @@ mod test {
     #[test]
     fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
         });
 
-        let address = random_p2pkh_address(network);
+        let address: Address = random_p2pkh_address(btc_network).into();
 
         for filter in [None, Some(UtxosFilter::MinConfirmations(1))] {
             assert_eq!(
@@ -713,12 +727,13 @@ mod test {
     #[test]
     fn utxos_forks() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         // Create some BTC addresses.
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
-        let address_3 = random_p2pkh_address(network);
-        let address_4 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
+        let address_3 = random_p2pkh_address(btc_network).into();
+        let address_4 = random_p2pkh_address(btc_network).into();
 
         // Create a genesis block where 1000 satoshis are given to address 1.
         let coinbase_tx = TransactionBuilder::coinbase()
@@ -943,7 +958,8 @@ mod test {
     #[test]
     fn get_utxos_min_confirmations_greater_than_chain_height() {
         let network = Network::Regtest;
-        let address_1 = random_p2pkh_address(network);
+        let btc_network = into_bitcoin_network(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
 
         // Create a block where 1000 satoshis are given to the address_1.
         let tx = TransactionBuilder::coinbase()
@@ -1013,10 +1029,11 @@ mod test {
     #[test]
     fn get_utxos_does_not_include_other_addresses() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         // Generate addresses.
-        let address_1 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
 
-        let address_2 = random_p2pkh_address(network);
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         // Create a genesis block where 1000 satoshis are given to the address_1, followed
         // by a block where address_1 gives 1000 satoshis to address_2.
@@ -1059,9 +1076,10 @@ mod test {
 
     #[test]
     fn get_utxos_for_address_with_many_of_them_respects_utxo_limit() {
-        for network in [Network::Mainnet, Network::Testnet, Network::Regtest].iter() {
+        for network in [Network::Mainnet, Network::Testnet, Network::Regtest] {
+            let btc_network = into_bitcoin_network(network);
             // Generate an address.
-            let address = random_p2pkh_address(*network);
+            let address = random_p2pkh_address(btc_network).into();
 
             let num_transactions = 10;
             let mut transactions = vec![];
@@ -1078,7 +1096,7 @@ mod test {
                 block_builder = block_builder.with_transaction(transaction.clone());
             }
             let block_0 = block_builder.build();
-            let state = State::new(2, *network, block_0.clone());
+            let state = State::new(2, network, block_0.clone());
             let tip_block_hash = block_0.block_hash();
 
             let utxo_set = get_utxos_internal(
@@ -1154,9 +1172,10 @@ mod test {
             ],
         ) {
             let network = Network::Regtest;
+            let btc_network = into_bitcoin_network(network);
 
             // Generate an address.
-            let address = random_p2pkh_address(network);
+            let address = random_p2pkh_address(btc_network).into();
 
             let mut prev_block: Option<Block> = None;
             let mut value = 1;
@@ -1226,6 +1245,8 @@ mod test {
 
     #[test]
     fn charges_cycles() {
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_utxos_base: 10,
@@ -1236,7 +1257,7 @@ mod test {
         });
 
         get_utxos(GetUtxosRequest {
-            address: random_p2pkh_address(Network::Regtest).to_string(),
+            address: random_p2pkh_address(btc_network).to_string(),
             filter: None,
         })
         .unwrap();
@@ -1246,6 +1267,8 @@ mod test {
 
     #[test]
     fn charges_cycles_capped_at_maximum() {
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_utxos_base: 10,
@@ -1260,7 +1283,7 @@ mod test {
         runtime::inc_performance_counter();
 
         get_utxos(GetUtxosRequest {
-            address: random_p2pkh_address(Network::Regtest).to_string(),
+            address: random_p2pkh_address(btc_network).to_string(),
             filter: None,
         })
         .unwrap();
@@ -1271,6 +1294,8 @@ mod test {
 
     #[test]
     fn charges_cycles_per_instructions() {
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         crate::init(InitConfig {
             fees: Some(Fees {
                 get_utxos_base: 10,
@@ -1286,7 +1311,7 @@ mod test {
         runtime::inc_performance_counter();
 
         get_utxos(GetUtxosRequest {
-            address: random_p2pkh_address(Network::Regtest).to_string(),
+            address: random_p2pkh_address(btc_network).to_string(),
             filter: None,
         })
         .unwrap();
@@ -1382,8 +1407,10 @@ mod test {
 
     // Asserts that the given block hash is the tip at the given number of confirmations.
     fn assert_tip_at_confirmations(confirmations: u32, expected_tip: BlockHash) {
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         // To fetch the tip, we call `get_utxos` using a random address.
-        let address = random_p2pkh_address(Network::Regtest).to_string();
+        let address = random_p2pkh_address(btc_network).to_string();
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address,

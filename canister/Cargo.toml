@@ -36,7 +36,7 @@ bench = false
 assert_matches = { workspace = true }
 async-std = { version = "1.12.0", features = ["attributes"] }
 bitcoin = { workspace = true, features = [
-    "rand",
+    #"rand",
 ] } # for generating secp256k1 keys.
 byteorder = { workspace = true }
 candid_parser = { workspace = true }
@@ -45,7 +45,7 @@ ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
 maplit = "1.0.2"
 pocket-ic = { workspace = true }
 proptest = "0.9.4"
-secp256k1 = { workspace = true }
+#secp256k1 = { workspace = true }
 tempfile = { workspace = true }
 test-strategy = "0.3.1"
 
