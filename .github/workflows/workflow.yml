@@ -3,6 +3,7 @@ name: CI
 env:
   RUST_VERSION: 1.76.0
   DFX_VERSION: 0.21.0
+  POCKET_IC_SERVER_VERSION: 7.0.0
 
 on:
   push:
@@ -70,7 +71,7 @@ jobs:
       - name: Install PocketIC (mac)
         if: runner.os == 'macOS'
         run: |
-          wget https://github.com/dfinity/pocketic/releases/download/5.0.0/pocket-ic-x86_64-darwin.gz
+          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-darwin.gz
           gzip -d pocket-ic-x86_64-darwin.gz
           mv pocket-ic-x86_64-darwin pocket-ic
           chmod +x pocket-ic
@@ -79,7 +80,7 @@ jobs:
       - name: Install PocketIC (linux)
         if: runner.os == 'Linux'
         run: |
-          wget https://github.com/dfinity/pocketic/releases/download/5.0.0/pocket-ic-x86_64-linux.gz
+          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-linux.gz
           gzip -d pocket-ic-x86_64-linux.gz
           mv pocket-ic-x86_64-linux pocket-ic
           chmod +x pocket-ic
