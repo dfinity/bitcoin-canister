@@ -6,8 +6,9 @@
 //!   --network testnet \
 //!   --output output-dir \
 //!   --utxos-dump-path utxos-dump.csv
-use bitcoin::{Address, Txid as BitcoinTxid};
+use bitcoin::{hashes::Hash, Address, Txid as BitcoinTxid};
 use clap::Parser;
+use ic_btc_canister::types::into_bitcoin_network;
 use ic_btc_canister::{types::TxOut, with_state, with_state_mut};
 use ic_btc_interface::{Flag, InitConfig, Network};
 use ic_btc_types::{OutPoint, Txid};
@@ -90,7 +91,8 @@ fn main() {
                 BitcoinTxid::from_str(parts[1])
                     .unwrap()
                     .as_raw_hash()
-                    .as_byte_array(),
+                    .as_byte_array()
+                    .to_vec(),
             );
             let vout: u32 = parts[2].parse().unwrap();
             let amount: u64 = parts[3].parse().unwrap();
@@ -107,7 +109,8 @@ fn main() {
             // address. Otherwise, we use the script in the chainstate database as-is.
             let script = match Address::from_str(address_str) {
                 Ok(address) => address
-                    .require_network(args.network.into())
+                    .require_network(into_bitcoin_network(args.network))
+                    .unwrap()
                     .script_pubkey()
                     .as_bytes()
                     .to_vec(),
