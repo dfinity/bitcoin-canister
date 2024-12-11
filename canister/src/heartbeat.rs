@@ -266,12 +266,16 @@ mod test {
     use crate::{
         genesis_block, init,
         runtime::{self, GetSuccessorsReply},
-        test_utils::{random_p2pkh_address, BlockBuilder, BlockChainBuilder, TransactionBuilder},
-        types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
+        test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
+        types::{
+            into_bitcoin_network, Address, BlockBlob, GetSuccessorsCompleteResponse,
+            GetSuccessorsPartialResponse,
+        },
         utxo_set::IngestingBlock,
     };
     use bitcoin::BlockHeader as Header;
     use ic_btc_interface::{InitConfig, Network};
+    use ic_btc_test_utils::random_p2pkh_address;
 
     fn build_block(prev_header: &Header, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
@@ -371,6 +375,7 @@ mod test {
     #[async_std::test]
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         init(InitConfig {
             stability_threshold: Some(0),
@@ -379,7 +384,7 @@ mod test {
         });
 
         // Setup a chain of two blocks.
-        let address = random_p2pkh_address(network);
+        let address: Address = random_p2pkh_address(btc_network).into();
         let block_1 = build_block(genesis_block(network).header(), address.clone(), 6);
         let block_2 = build_block(block_1.header(), address, 1);
 
@@ -456,6 +461,8 @@ mod test {
     #[async_std::test]
     async fn time_slices_large_transactions() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
+
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
@@ -465,8 +472,8 @@ mod test {
             ..Default::default()
         });
 
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         // Create a transaction where a few inputs are given to address 1.
         let mut tx_1 = TransactionBuilder::coinbase();
@@ -610,6 +617,7 @@ mod test {
     #[async_std::test]
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         init(InitConfig {
             stability_threshold: Some(0),
@@ -617,7 +625,7 @@ mod test {
             ..Default::default()
         });
 
-        let address = random_p2pkh_address(network);
+        let address = random_p2pkh_address(btc_network).into();
         let block = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(
                 TransactionBuilder::coinbase()

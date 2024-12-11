@@ -1,27 +1,28 @@
 use crate::{
     api::{get_balance, get_current_fee_percentiles, get_utxos},
-    genesis_block, heartbeat,
+    genesis_block, heartbeat, init,
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
     types::{
-        BlockBlob, BlockHeaderBlob, GetBalanceRequest, GetSuccessorsCompleteResponse,
-        GetSuccessorsResponse, GetUtxosRequest,
+        into_bitcoin_network, BlockBlob, BlockHeaderBlob, GetBalanceRequest,
+        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
-use crate::{init, test_utils::random_p2pkh_address};
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::{Block as BitcoinBlock, BlockHeader as Header};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
+use ic_btc_test_utils::random_p2pkh_address;
 use ic_btc_types::{Block, BlockHash};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
 use std::{fs::File, panic::catch_unwind};
+
 mod confirmation_counts;
 
 async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
@@ -415,14 +416,15 @@ async fn testnet_10k_blocks() {
 #[async_std::test]
 async fn time_slices_large_block_with_multiple_transactions() {
     let network = Network::Regtest;
+    let btc_network = into_bitcoin_network(network);
     init(InitConfig {
         stability_threshold: Some(0),
         network: Some(network),
         ..Default::default()
     });
 
-    let address_1 = random_p2pkh_address(network);
-    let address_2 = random_p2pkh_address(network);
+    let address_1 = random_p2pkh_address(btc_network).into();
+    let address_2 = random_p2pkh_address(btc_network).into();
 
     let tx_1 = TransactionBuilder::coinbase()
         .with_output(&address_1, 1000)
@@ -779,19 +781,21 @@ async fn fee_percentiles_evaluation_helper() {
     let block_0 = {
         let fee = 1;
         let balance = 1000;
+        let network = Network::Regtest;
+        let btc_newtork = into_bitcoin_network(network);
 
         let tx_1 = TransactionBuilder::coinbase()
-            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .with_output(&random_p2pkh_address(btc_newtork).into(), balance)
             .build();
         let tx_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint {
                 txid: tx_1.txid(),
                 vout: 0,
             })
-            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .with_output(&random_p2pkh_address(btc_newtork).into(), balance - fee)
             .build();
 
-        BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+        BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(tx_1)
             .with_transaction(tx_2.clone())
             .build()

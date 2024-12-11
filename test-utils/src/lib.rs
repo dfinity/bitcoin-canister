@@ -226,7 +226,7 @@ impl TransactionBuilder {
             // Use default of 50 BTC.
             vec![TxOut {
                 value: 50_0000_0000,
-                script_pubkey: random_p2pkh_address(Network::Regtest).script_pubkey(),
+                script_pubkey: random_p2pkh_address(bitcoin::Network::Regtest).script_pubkey(),
             }]
         } else {
             self.output
@@ -274,8 +274,10 @@ fn solve(header: &mut Header) {
 #[cfg(test)]
 mod test {
     mod transaction_builder {
-        use crate::{random_p2pkh_address, TransactionBuilder};
+        use crate::types::into_bitcoin_network;
+        use crate::TransactionBuilder;
         use bitcoin::{Network, OutPoint};
+        use ic_btc_test_utils::random_p2pkh_address;
 
         #[test]
         fn new_build() {
@@ -302,7 +304,9 @@ mod test {
             expected = "A call `with_input` should not be possible if `coinbase` was called"
         )]
         fn with_input_panic() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let btc_network = into_bitcoin_network(network);
+            let address = random_p2pkh_address(btc_network);
             let coinbase_tx = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
@@ -313,7 +317,9 @@ mod test {
 
         #[test]
         fn with_output() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let btc_network = into_bitcoin_network(network);
+            let address = random_p2pkh_address(btc_network);
             let tx = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
@@ -328,8 +334,10 @@ mod test {
 
         #[test]
         fn with_output_2() {
-            let address_0 = random_p2pkh_address(Network::Regtest);
-            let address_1 = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let btc_network = into_bitcoin_network(network);
+            let address_0 = random_p2pkh_address(btc_network);
+            let address_1 = random_p2pkh_address(btc_network);
             let tx = TransactionBuilder::coinbase()
                 .with_output(&address_0, 1000)
                 .with_output(&address_1, 2000)
@@ -347,7 +355,9 @@ mod test {
 
         #[test]
         fn with_input() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let btc_network = into_bitcoin_network(network);
+            let address = random_p2pkh_address(btc_network);
             let coinbase_tx = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
@@ -367,7 +377,9 @@ mod test {
 
         #[test]
         fn with_input_2() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let btc_network = into_bitcoin_network(network);
+            let address = random_p2pkh_address(btc_network);
             let coinbase_tx_0 = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
