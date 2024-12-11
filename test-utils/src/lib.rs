@@ -13,23 +13,25 @@ mod simple_rng;
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
+    let (_, pk) = generate_keypair(&secp);
 
-    Address::p2pkh(&PublicKey::new(generate_keypair(&secp).1), network)
+    Address::p2pkh(&PublicKey::new(pk), network)
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
     let secp = Secp256k1::new();
     let (sk, _) = generate_keypair(&secp);
-    let key_pair = KeyPair::from_secret_key(&secp, sk);
-    let xonly = XOnlyPublicKey::from_keypair(&key_pair);
+    let keypair = KeyPair::from_secret_key(&secp, sk);
+    let xonly = XOnlyPublicKey::from_keypair(&keypair);
 
     Address::p2tr(&secp, xonly, None, network)
 }
 
 pub fn random_p2wpkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    Address::p2wpkh(&PublicKey::new(generate_keypair(&secp).1), network)
-        .expect("failed to create p2wpkh address")
+    let (_, pk) = generate_keypair(&secp);
+
+    Address::p2wpkh(&PublicKey::new(pk), network).expect("failed to create p2wpkh address")
 }
 
 pub fn random_p2wsh_address(network: Network) -> Address {
