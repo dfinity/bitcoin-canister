@@ -568,10 +568,13 @@ fn default_should_time_slice() -> Box<dyn FnMut() -> bool> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::runtime;
-    use crate::test_utils::{BlockBuilder, TransactionBuilder};
-    use crate::types::into_bitcoin_network;
-    use crate::{address_utxoset::AddressUtxoSet, unstable_blocks::UnstableBlocks};
+    use crate::{
+        address_utxoset::AddressUtxoSet,
+        runtime,
+        test_utils::{BlockBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
+        unstable_blocks::UnstableBlocks,
+    };
     use bitcoin::blockdata::{opcodes::all::OP_RETURN, script::Builder};
     use ic_btc_interface::Network;
     use ic_btc_test_utils::random_p2pkh_address;

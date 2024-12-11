@@ -307,18 +307,15 @@ fn compute_next_difficulty(
 
 #[cfg(test)]
 mod test {
-
-    use std::{collections::HashMap, path::PathBuf, str::FromStr};
-
-    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode};
-    use csv::Reader;
-    use proptest::prelude::*;
-
     use super::*;
     use crate::constants::test::{
         MAINNET_HEADER_586656, MAINNET_HEADER_705600, MAINNET_HEADER_705601, MAINNET_HEADER_705602,
         TESTNET_HEADER_2132555, TESTNET_HEADER_2132556,
     };
+    use bitcoin::{consensus::deserialize, hashes::hex::FromHex, TxMerkleNode};
+    use csv::Reader;
+    use proptest::prelude::*;
+    use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
     const MOCK_CURRENT_TIME: u64 = 2_634_590_600;
 

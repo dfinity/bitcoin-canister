@@ -1,5 +1,4 @@
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::BitcoinNetwork;
+use crate::{bitcoin_block_apis::BitcoinBlockApi, config::BitcoinNetwork};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 

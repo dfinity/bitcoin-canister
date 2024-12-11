@@ -234,8 +234,10 @@ struct TxOutInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{BlockBuilder, TransactionBuilder};
-    use crate::types::into_bitcoin_network;
+    use crate::{
+        test_utils::{BlockBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
+    };
     use ic_btc_interface::Network;
     use ic_btc_test_utils::random_p2pkh_address;
 

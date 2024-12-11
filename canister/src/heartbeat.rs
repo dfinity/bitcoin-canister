@@ -6,8 +6,8 @@ use crate::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
         GetSuccessorsResponse,
     },
+    with_state, with_state_mut,
 };
-use crate::{with_state, with_state_mut};
 use bitcoin::consensus::Decodable;
 use bitcoin::Block as BitcoinBlock;
 use ic_btc_interface::Flag;

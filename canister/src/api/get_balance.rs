@@ -106,10 +106,10 @@ fn get_balance_private(request: GetBalanceRequest) -> Result<Satoshi, GetBalance
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::into_bitcoin_network;
     use crate::{
         genesis_block, state,
         test_utils::{BlockBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
         with_state_mut,
     };
     use ic_btc_interface::{Fees, InitConfig, Network};

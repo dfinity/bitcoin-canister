@@ -116,9 +116,11 @@ impl<'a> AddressUtxoSet<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{BlockBuilder, TransactionBuilder};
-    use crate::types::into_bitcoin_network;
-    use crate::unstable_blocks;
+    use crate::{
+        test_utils::{BlockBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
+        unstable_blocks,
+    };
     use ic_btc_interface::Network;
     use ic_btc_test_utils::random_p2pkh_address;
     use ic_btc_types::OutPoint;

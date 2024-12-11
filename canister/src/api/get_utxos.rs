@@ -285,14 +285,13 @@ fn get_utxos_from_chain(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::into_bitcoin_network;
     use crate::{
         genesis_block, runtime, state,
         test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
         with_state_mut,
     };
-    use ic_btc_interface::{Fees, InitConfig, Network};
-    use ic_btc_interface::{OutPoint, Utxo};
+    use ic_btc_interface::{Fees, InitConfig, Network, OutPoint, Utxo};
     use ic_btc_test_utils::{
         random_p2pkh_address, random_p2tr_address, random_p2wpkh_address, random_p2wsh_address,
     };

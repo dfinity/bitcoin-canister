@@ -1,5 +1,7 @@
-use crate::mock::{hash, Mock};
-use crate::transform::TransformFn;
+use crate::{
+    mock::{hash, Mock},
+    transform::TransformFn,
+};
 use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use std::collections::HashMap;
