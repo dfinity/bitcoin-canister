@@ -9,7 +9,7 @@ path = "src/main.rs"
 bench = false
 
 [dependencies]
-bitcoin = { workspace = true, features = ["use-serde"]}
+bitcoin = { workspace = true, features = ["serde"] }
 canbench-rs = { workspace = true }
 candid = { workspace = true }
 hex = { workspace = true }
