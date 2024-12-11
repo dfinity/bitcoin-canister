@@ -661,7 +661,7 @@ fn address_handles_script_edge_case() {
     ]);
 
     assert_eq!(
-        Address::from_script(&script, Network::Testnet),
+        Address::from_script(script, Network::Testnet),
         Err(InvalidAddress)
     );
 }
