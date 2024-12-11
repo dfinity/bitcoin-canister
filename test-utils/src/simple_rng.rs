@@ -36,7 +36,7 @@ struct SimpleRng {
 impl SimpleRng {
     pub fn new(seed: u64) -> Self {
         Self {
-            state: if seed == 0 { 0xDEADBEEF } else { seed }, // Seed value must not be zero.
+            state: if seed == 0 { 0xC0FFEE } else { seed }, // Seed value must not be zero.
         }
     }
 
