@@ -274,8 +274,7 @@ fn solve(header: &mut Header) {
 #[cfg(test)]
 mod test {
     mod transaction_builder {
-        use super::super::random_p2pkh_address;
-        use crate::TransactionBuilder;
+        use crate::{random_p2pkh_address, TransactionBuilder};
         use bitcoin::{Network, OutPoint};
 
         #[test]
