@@ -1,5 +1,5 @@
 use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
-use bitcoin::block::Header;
+use bitcoin::{block::Header, hashes::Hash};
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.
@@ -52,7 +52,7 @@ impl<'a> ValidationContext<'a> {
 impl<'a> HeaderStore for ValidationContext<'a> {
     fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<Header> {
         // Check if the header is in the chain.
-        let hash = ic_btc_types::BlockHash::from(hash.to_vec());
+        let hash = ic_btc_types::BlockHash::from(hash.as_raw_hash().as_byte_array().to_vec());
         for item in self.chain.iter() {
             if item.1 == hash {
                 return Some(*item.0);
