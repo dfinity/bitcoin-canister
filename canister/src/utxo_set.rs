@@ -309,10 +309,9 @@ impl UtxoSet {
             let outpoint = (&input.previous_output).into();
             match self.utxos.remove(&outpoint) {
                 Some((txout, height)) => {
-                    if let Ok(address) = Address::from_script(
-                        &Script::from_bytes(&txout.script_pubkey),
-                        self.network,
-                    ) {
+                    if let Ok(address) =
+                        Address::from_script(Script::from_bytes(&txout.script_pubkey), self.network)
+                    {
                         let address_utxo = AddressUtxo {
                             address: address.clone(),
                             height,
@@ -369,7 +368,7 @@ impl UtxoSet {
                 return Slicing::Paused(vout);
             }
 
-            if !(output.script_pubkey.is_provably_unspendable()) {
+            if !(output.script_pubkey.is_op_return()) {
                 let ins_start = performance_counter();
                 let txid = tx.txid();
                 stats.ins_txids += performance_counter() - ins_start;
