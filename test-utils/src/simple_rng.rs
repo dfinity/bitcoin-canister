@@ -1,7 +1,4 @@
-use bitcoin::{
-    secp256k1,
-    secp256k1::{constants::SECRET_KEY_SIZE, Secp256k1, Signing},
-};
+use bitcoin::secp256k1::{constants::SECRET_KEY_SIZE, PublicKey, Secp256k1, SecretKey, Signing};
 use std::cell::RefCell;
 
 thread_local! {
@@ -18,14 +15,12 @@ where
     })
 }
 
-pub fn generate_keypair<C: Signing>(
-    secp: &Secp256k1<C>,
-) -> (secp256k1::SecretKey, secp256k1::PublicKey) {
+pub fn generate_keypair<C: Signing>(secp: &Secp256k1<C>) -> (SecretKey, PublicKey) {
     with_rng(|rng| {
         let mut data = [0u8; SECRET_KEY_SIZE];
         rng.fill_bytes(&mut data);
-        let sk = secp256k1::SecretKey::from_slice(&data).unwrap();
-        let pk = secp256k1::PublicKey::from_secret_key(secp, &sk);
+        let sk = SecretKey::from_slice(&data).unwrap();
+        let pk = PublicKey::from_secret_key(secp, &sk);
         (sk, pk)
     })
 }
