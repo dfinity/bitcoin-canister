@@ -2,7 +2,7 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    util::uint::Uint256, Block as BitcoinBlock, BlockHeader as Header, Network as BitcoinNetwork,
+    util::uint::Uint256, Block as BitcoinBlock, block::Header, Network as BitcoinNetwork,
     OutPoint as BitcoinOutPoint,
 };
 use candid::CandidType;

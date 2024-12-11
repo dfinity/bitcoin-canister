@@ -1,4 +1,4 @@
-use bitcoin::{util::uint::Uint256, BlockHash, BlockHeader as Header, Network};
+use bitcoin::{block::Header, util::uint::Uint256, BlockHash, Network};
 
 use crate::{
     constants::{
@@ -634,7 +634,7 @@ mod test {
             let header = line.unwrap();
             // If this line fails make sure you install git-lfs.
             let header = hex::decode(header.trim()).unwrap();
-            let header = Header::consensus_decode(header.as_slice()).unwrap();
+            let header = Header::consensus_decode(&mut header.as_slice()).unwrap();
             headers.push(header);
         }
 

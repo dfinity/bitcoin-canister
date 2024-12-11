@@ -1,6 +1,6 @@
 use bitcoin::{
     blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
-    BlockHeader as Header, Network as BitcoinNetwork,
+    block::Header, Network as BitcoinNetwork,
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
