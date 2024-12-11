@@ -3832,6 +3832,7 @@ dependencies = [
  "ic-btc-types",
  "ic-stable-structures",
  "integer-encoding",
+ "rand 0.8.5",
  "rand_chacha 0.3.1",
  "rusty-leveldb",
  "tempfile",
