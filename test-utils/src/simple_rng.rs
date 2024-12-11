@@ -41,7 +41,7 @@ impl SimpleRng {
     }
 
     fn next_u64(&mut self) -> u64 {
-        // XOR-Shift implementation
+        // XOR-Shift implementation, see https://en.wikipedia.org/wiki/Xorshift
         self.state ^= self.state << 13;
         self.state ^= self.state >> 7;
         self.state ^= self.state << 17;
