@@ -2,7 +2,7 @@ use bitcoin::secp256k1::{constants::SECRET_KEY_SIZE, PublicKey, Secp256k1, Secre
 use std::cell::RefCell;
 
 thread_local! {
-    static RNG: RefCell<SimpleRng> = RefCell::new(SimpleRng::new(0));
+    static RNG: RefCell<SimpleRng> = RefCell::new(SimpleRng::new(37));
 }
 
 fn with_rng<F, R>(f: F) -> R
