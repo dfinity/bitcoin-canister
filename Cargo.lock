@@ -1776,7 +1776,6 @@ version = "0.1.0"
 dependencies = [
  "bitcoin",
  "ic-btc-types",
- "rand 0.8.5",
  "secp256k1",
 ]
 
@@ -3497,7 +3496,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
  "bitcoin_hashes",
- "rand 0.8.5",
  "secp256k1-sys",
  "serde",
 ]

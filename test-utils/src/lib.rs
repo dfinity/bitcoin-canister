@@ -8,7 +8,8 @@ use bitcoin::{
     XOnlyPublicKey,
 };
 use ic_btc_types::Block;
-use secp256k1::{rand::RngCore, Secp256k1};
+use secp256k1::{constants::SECRET_KEY_SIZE, Secp256k1, Signing};
+use simple_rng::SimpleRng;
 use std::cell::RefCell;
 use std::str::FromStr;
 
@@ -28,19 +29,31 @@ where
     })
 }
 
+pub fn generate_keypair<C: Signing>(
+    secp: &Secp256k1<C>,
+    rng: &mut SimpleRng,
+) -> (secp256k1::SecretKey, secp256k1::PublicKey) {
+    let mut data = [0u8; SECRET_KEY_SIZE];
+    rng.fill_bytes(&mut data);
+    let sk = secp256k1::SecretKey::from_slice(&data).unwrap();
+    let pk = secp256k1::PublicKey::from_secret_key(secp, &sk);
+    (sk, pk)
+}
+
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     with_rng(|rng| {
         let secp = Secp256k1::new();
 
-        Address::p2pkh(PublicKey::new(secp.generate_keypair(rng).1), network)
+        Address::p2pkh(PublicKey::new(generate_keypair(&secp, rng).1), network)
     })
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
     with_rng(|rng| {
         let secp = Secp256k1::new();
-        let key_pair = Keypair::new(&secp, rng);
+        let (sk, _) = generate_keypair(&secp, rng);
+        let key_pair = Keypair::from_secret_key(&secp, &sk);
         let (xonly, _) = XOnlyPublicKey::from_keypair(&key_pair);
 
         Address::p2tr(&secp, xonly, None, network)
@@ -51,7 +64,7 @@ pub fn random_p2wpkh_address(network: Network) -> Address {
     with_rng(|rng| {
         let secp = Secp256k1::new();
         Address::p2wpkh(
-            &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(rng).1))
+            &CompressedPublicKey::try_from(PublicKey::new(generate_keypair(&secp, rng).1))
                 .expect("failed to create p2wpkh address"),
             network,
         )
