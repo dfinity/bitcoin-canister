@@ -12,7 +12,7 @@ use crate::{
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
 use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::{Block as BitcoinBlock, BlockHeader as Header};
+use bitcoin::{Block as BitcoinBlock, block::Header};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};

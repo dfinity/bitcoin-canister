@@ -1,7 +1,7 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    hashes::Hash, secp256k1::Secp256k1, util::uint::Uint256, Address, Block as BitcoinBlock,
-    BlockHash, BlockHeader as Header, KeyPair, Network, OutPoint, PublicKey, Script, Transaction,
+    block::Header, hashes::Hash, secp256k1::Secp256k1, util::uint::Uint256, Address,
+    Block as BitcoinBlock, BlockHash, KeyPair, Network, OutPoint, PublicKey, Script, Transaction,
     TxIn, TxMerkleNode, TxOut, WScriptHash, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;

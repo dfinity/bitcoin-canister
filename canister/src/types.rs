@@ -1,5 +1,5 @@
 use bitcoin::{
-    Address as BitcoinAddress, BlockHeader as Header, Network as BitcoinNetwork, Script,
+    Address as BitcoinAddress, block::Header, Network as BitcoinNetwork, Script,
     TxOut as BitcoinTxOut,
 };
 use candid::CandidType;

@@ -1,6 +1,6 @@
 use crate::{memory::Memory, types::BlockHeaderBlob};
+use bitcoin::block::Header;
 use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::BlockHeader as Header;
 use ic_btc_interface::Height;
 use ic_btc_types::{Block, BlockHash};
 use ic_stable_structures::StableBTreeMap;
@@ -84,7 +84,7 @@ impl BlockHeaderStore {
 }
 
 fn deserialize_block_header(block_header_blob: BlockHeaderBlob) -> Header {
-    Header::consensus_decode(block_header_blob.as_slice())
+    Header::consensus_decode(&mut block_header_blob.as_slice())
         .expect("block header decoding must succeed")
 }
 

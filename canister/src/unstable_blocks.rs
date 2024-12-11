@@ -6,7 +6,7 @@ use crate::{
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader as Header;
+use bitcoin::block::Header;
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;

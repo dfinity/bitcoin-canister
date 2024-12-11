@@ -1,5 +1,5 @@
 use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
-use bitcoin::BlockHeader as Header;
+use bitcoin::block::Header;
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.

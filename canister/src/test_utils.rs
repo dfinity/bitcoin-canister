@@ -2,7 +2,7 @@ use crate::{
     genesis_block,
     types::{into_bitcoin_network, Address},
 };
-use bitcoin::{Address as BitcoinAddress, BlockHeader as Header, Witness};
+use bitcoin::{Address as BitcoinAddress, block::Header, Witness};
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     random_p2pkh_address, BlockBuilder as ExternalBlockBuilder,
