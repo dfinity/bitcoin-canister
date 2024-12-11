@@ -8,40 +8,62 @@ use bitcoin::{
     XOnlyPublicKey,
 };
 use ic_btc_types::Block;
-use secp256k1::{
-    rand::{rngs::OsRng, RngCore},
-    Secp256k1,
-};
+use secp256k1::{rand::RngCore, Secp256k1};
+use std::cell::RefCell;
 use std::str::FromStr;
+
+mod simple_rng;
+
+thread_local! {
+    static RNG: RefCell<simple_rng::SimpleRng> = RefCell::new(simple_rng::SimpleRng::new(std::time::Instant::now().elapsed().as_nanos() as u64));
+}
+
+fn with_rng<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut simple_rng::SimpleRng) -> R,
+{
+    RNG.with(|rng| {
+        let mut rng = rng.borrow_mut();
+        f(&mut rng)
+    })
+}
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
+    with_rng(|rng| {
+        let secp = Secp256k1::new();
 
-    Address::p2pkh(PublicKey::new(secp.generate_keypair(&mut OsRng).1), network)
+        Address::p2pkh(PublicKey::new(secp.generate_keypair(rng).1), network)
+    })
 }
 
 pub fn random_p2tr_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
-    let key_pair = Keypair::new(&secp, &mut OsRng);
-    let (xonly, _) = XOnlyPublicKey::from_keypair(&key_pair);
+    with_rng(|rng| {
+        let secp = Secp256k1::new();
+        let key_pair = Keypair::new(&secp, rng);
+        let (xonly, _) = XOnlyPublicKey::from_keypair(&key_pair);
 
-    Address::p2tr(&secp, xonly, None, network)
+        Address::p2tr(&secp, xonly, None, network)
+    })
 }
 
 pub fn random_p2wpkh_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
-    Address::p2wpkh(
-        &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(&mut OsRng).1))
-            .expect("failed to create p2wpkh address"),
-        network,
-    )
+    with_rng(|rng| {
+        let secp = Secp256k1::new();
+        Address::p2wpkh(
+            &CompressedPublicKey::try_from(PublicKey::new(secp.generate_keypair(rng).1))
+                .expect("failed to create p2wpkh address"),
+            network,
+        )
+    })
 }
 
 pub fn random_p2wsh_address(network: Network) -> Address {
-    let mut bytes = [0u8; 32];
-    OsRng.fill_bytes(&mut bytes);
-    Address::p2wsh(&Script::from_bytes(&bytes).to_p2wsh(), network)
+    with_rng(|rng| {
+        let mut bytes = [0u8; 32];
+        rng.fill_bytes(&mut bytes);
+        Address::p2wsh(&Script::from_bytes(&bytes).to_p2wsh(), network)
+    })
 }
 
 fn coinbase_input() -> TxIn {
