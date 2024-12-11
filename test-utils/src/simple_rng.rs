@@ -1,4 +1,35 @@
-pub struct SimpleRng {
+use bitcoin::secp256k1::{constants::SECRET_KEY_SIZE, PublicKey, Secp256k1, SecretKey, Signing};
+use std::cell::RefCell;
+
+thread_local! {
+    static RNG: RefCell<SimpleRng> = RefCell::new(SimpleRng::new(37));
+}
+
+fn with_rng<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut SimpleRng) -> R,
+{
+    RNG.with(|rng| {
+        let mut rng = rng.borrow_mut();
+        f(&mut rng)
+    })
+}
+
+pub fn generate_keypair<C: Signing>(secp: &Secp256k1<C>) -> (SecretKey, PublicKey) {
+    with_rng(|rng| {
+        let mut data = [0u8; SECRET_KEY_SIZE];
+        rng.fill_bytes(&mut data);
+        let sk = SecretKey::from_slice(&data).unwrap();
+        let pk = PublicKey::from_secret_key(secp, &sk);
+        (sk, pk)
+    })
+}
+
+pub fn fill_bytes(dest: &mut [u8]) {
+    with_rng(|rng| rng.fill_bytes(dest))
+}
+
+struct SimpleRng {
     state: u64,
 }
 
@@ -26,11 +57,5 @@ impl SimpleRng {
             let value = self.next_u64().to_le_bytes();
             remainder.copy_from_slice(&value[..remainder.len()]);
         }
-    }
-
-    pub fn random_32_bytes(&mut self) -> [u8; 32] {
-        let mut ret = [0u8; 32];
-        self.fill_bytes(&mut ret);
-        ret
     }
 }
