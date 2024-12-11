@@ -1,8 +1,12 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    block::Header, hashes::Hash, secp256k1::Secp256k1, util::uint::Uint256, Address,
-    Block as BitcoinBlock, BlockHash, KeyPair, Network, OutPoint, PublicKey, Script, Transaction,
-    TxIn, TxMerkleNode, TxOut, WScriptHash, Witness, XOnlyPublicKey,
+    absolute::LockTime,
+    block::{Header, Version},
+    key::Keypair,
+    secp256k1::Secp256k1,
+    Address, Amount, Block as BitcoinBlock, BlockHash, CompressedPublicKey, Network, OutPoint,
+    PublicKey, Script, Sequence, Target, Transaction, TxIn, TxMerkleNode, TxOut, Witness,
+    XOnlyPublicKey,
 };
 use ic_btc_types::Block;
 use simple_rng::{fill_bytes, generate_keypair};
@@ -15,15 +19,15 @@ pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
     let (_, pk) = generate_keypair(&secp);
 
-    Address::p2pkh(&PublicKey::new(pk), network)
+    Address::p2pkh(PublicKey::new(pk), network)
 }
 
 /// Generates a random P2SH address.
 pub fn random_p2tr_address(network: Network) -> Address {
     let secp = Secp256k1::new();
     let (sk, _) = generate_keypair(&secp);
-    let keypair = KeyPair::from_secret_key(&secp, sk);
-    let xonly = XOnlyPublicKey::from_keypair(&keypair);
+    let keypair = Keypair::from_secret_key(&secp, &sk);
+    let (xonly, _) = XOnlyPublicKey::from_keypair(&keypair);
 
     Address::p2tr(&secp, xonly, None, network)
 }
@@ -33,24 +37,25 @@ pub fn random_p2wpkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
     let (_, pk) = generate_keypair(&secp);
 
-    Address::p2wpkh(&PublicKey::new(pk), network).expect("failed to create p2wpkh address")
+    Address::p2wpkh(
+        &CompressedPublicKey::try_from(PublicKey::new(pk))
+            .expect("failed to create p2wpkh address"),
+        network,
+    )
 }
 
 /// Generates a random P2WSH address.
 pub fn random_p2wsh_address(network: Network) -> Address {
     let mut bytes = [0u8; 32];
     fill_bytes(&mut bytes);
-    Address::p2wsh(
-        &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&bytes).unwrap())),
-        network,
-    )
+    Address::p2wsh(&Script::from_bytes(&bytes).to_p2wsh(), network)
 }
 
 fn coinbase_input() -> TxIn {
     TxIn {
         previous_output: OutPoint::null(),
-        script_sig: Script::new(),
-        sequence: 0xffffffff,
+        script_sig: Script::new().into(),
+        sequence: Sequence(0xffffffff),
         witness: Witness::new(),
     }
 }
@@ -88,14 +93,18 @@ impl BlockBuilder {
             self.transactions
         };
 
-        let merkle_root =
-            bitcoin::util::hash::bitcoin_merkle_root(txdata.iter().map(|tx| tx.txid().as_hash()))
-                .unwrap();
-        let merkle_root = TxMerkleNode::from_hash(merkle_root);
+        let merkle_root = bitcoin::merkle_tree::calculate_root(
+            txdata
+                .iter()
+                .map(|tx| *tx.compute_txid().as_raw_hash())
+                .clone(),
+        )
+        .unwrap();
+        let merkle_root = TxMerkleNode::from_raw_hash(merkle_root);
 
         let header = match self.prev_header {
-            Some(prev_header) => header(&prev_header, merkle_root),
             None => genesis(merkle_root),
+            Some(prev_header) => header(&prev_header, merkle_root),
         };
 
         BitcoinBlock { header, txdata }
@@ -105,11 +114,14 @@ impl BlockBuilder {
 /// Builds a random chain with the given number of block and transactions
 /// starting with the Regtest genesis block.
 pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
-    let genesis_block = Block::new(genesis_block(Network::Regtest));
+    let bitcoin_newtork = Network::Regtest;
+    let genesis_block = Block::new(genesis_block(bitcoin_newtork));
 
     // Use a static address to send outputs to.
     // `random_p2pkh_address` isn't used here as it doesn't work in wasm.
-    let address = Address::from_str("bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8").unwrap();
+    let address = Address::from_str("bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8")
+        .unwrap()
+        .assume_checked();
     let mut blocks = vec![genesis_block.clone()];
     let mut prev_block: Block = genesis_block;
     let mut value = 1;
@@ -142,21 +154,16 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
 }
 
 fn genesis(merkle_root: TxMerkleNode) -> Header {
-    let target = Uint256([
-        0xffffffffffffffffu64,
-        0xffffffffffffffffu64,
-        0xffffffffffffffffu64,
-        0x7fffffffffffffffu64,
-    ]);
-    let bits = Header::compact_target_from_u256(&target);
+    let target = Target::MAX;
+    let bits = target.to_compact_lossy();
 
     let mut header = Header {
-        version: 1,
+        version: Version::from_consensus(1),
         time: 0,
         nonce: 0,
         bits,
         merkle_root,
-        prev_blockhash: BlockHash::default(),
+        prev_blockhash: BlockHash::from_raw_hash(bitcoin::hashes::Hash::all_zeros()),
     };
     solve(&mut header);
 
@@ -194,17 +201,17 @@ impl TransactionBuilder {
         let witness = witness.map_or(Witness::new(), |w| w);
         let input = TxIn {
             previous_output,
-            script_sig: Script::new(),
-            sequence: 0xffffffff,
+            script_sig: Script::new().into(),
+            sequence: Sequence(0xffffffff),
             witness,
         };
         self.input.push(input);
         self
     }
 
-    pub fn with_output(mut self, address: &Address, value: u64) -> Self {
+    pub fn with_output(mut self, address: &Address, satoshi: u64) -> Self {
         self.output.push(TxOut {
-            value,
+            value: Amount::from_sat(satoshi),
             script_pubkey: address.script_pubkey(),
         });
         self
@@ -225,16 +232,16 @@ impl TransactionBuilder {
         let output = if self.output.is_empty() {
             // Use default of 50 BTC.
             vec![TxOut {
-                value: 50_0000_0000,
-                script_pubkey: random_p2pkh_address(bitcoin::Network::Regtest).script_pubkey(),
+                value: Amount::from_sat(50_0000_0000),
+                script_pubkey: random_p2pkh_address(Network::Regtest).script_pubkey(),
             }]
         } else {
             self.output
         };
 
         Transaction {
-            version: 1,
-            lock_time: self.lock_time,
+            version: bitcoin::transaction::Version(1),
+            lock_time: LockTime::from_consensus(self.lock_time),
             input,
             output,
         }
@@ -249,10 +256,10 @@ impl Default for TransactionBuilder {
 
 fn header(prev_header: &Header, merkle_root: TxMerkleNode) -> Header {
     let time = prev_header.time + 60 * 10; // 10 minutes.
-    let bits = Header::compact_target_from_u256(&prev_header.target());
+    let bits = prev_header.target().to_compact_lossy();
 
     let mut header = Header {
-        version: 1,
+        version: Version::from_consensus(1),
         time,
         nonce: 0,
         bits,
@@ -266,7 +273,7 @@ fn header(prev_header: &Header, merkle_root: TxMerkleNode) -> Header {
 
 fn solve(header: &mut Header) {
     let target = header.target();
-    while header.validate_pow(&target).is_err() {
+    while header.validate_pow(target).is_err() {
         header.nonce += 1;
     }
 }
@@ -280,21 +287,21 @@ mod test {
         #[test]
         fn new_build() {
             let tx = TransactionBuilder::new().build();
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
 
         #[test]
         fn coinbase() {
             let tx = TransactionBuilder::coinbase().build();
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
 
         #[test]
@@ -308,7 +315,7 @@ mod test {
                 .build();
 
             TransactionBuilder::coinbase()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None);
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0), None);
         }
 
         #[test]
@@ -318,59 +325,56 @@ mod test {
                 .with_output(&address, 1000)
                 .build();
 
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 1000);
+            assert_eq!(tx.output[0].value.to_sat(), 1000);
             assert_eq!(tx.output[0].script_pubkey, address.script_pubkey());
         }
 
         #[test]
         fn with_output_2() {
-            let network = Network::Regtest;
-            let address_0 = random_p2pkh_address(network);
-            let address_1 = random_p2pkh_address(network);
+            let address_0 = random_p2pkh_address(Network::Regtest);
+            let address_1 = random_p2pkh_address(Network::Regtest);
             let tx = TransactionBuilder::coinbase()
                 .with_output(&address_0, 1000)
                 .with_output(&address_1, 2000)
                 .build();
 
-            assert!(tx.is_coin_base());
+            assert!(tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(tx.input[0].previous_output, OutPoint::null());
             assert_eq!(tx.output.len(), 2);
-            assert_eq!(tx.output[0].value, 1000);
+            assert_eq!(tx.output[0].value.to_sat(), 1000);
             assert_eq!(tx.output[0].script_pubkey, address_0.script_pubkey());
-            assert_eq!(tx.output[1].value, 2000);
+            assert_eq!(tx.output[1].value.to_sat(), 2000);
             assert_eq!(tx.output[1].script_pubkey, address_1.script_pubkey());
         }
 
         #[test]
         fn with_input() {
-            let network = Network::Regtest;
-            let address = random_p2pkh_address(network);
+            let address = random_p2pkh_address(Network::Regtest);
             let coinbase_tx = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx.txid(), 0), None)
+                .with_input(bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0), None)
                 .build();
-            assert!(!tx.is_coin_base());
+            assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 1);
             assert_eq!(
                 tx.input[0].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx.compute_txid(), 0)
             );
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
 
         #[test]
         fn with_input_2() {
-            let network = Network::Regtest;
-            let address = random_p2pkh_address(network);
+            let address = random_p2pkh_address(Network::Regtest);
             let coinbase_tx_0 = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
@@ -379,21 +383,27 @@ mod test {
                 .build();
 
             let tx = TransactionBuilder::new()
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0), None)
-                .with_input(bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0), None)
+                .with_input(
+                    bitcoin::OutPoint::new(coinbase_tx_0.compute_txid(), 0),
+                    None,
+                )
+                .with_input(
+                    bitcoin::OutPoint::new(coinbase_tx_1.compute_txid(), 0),
+                    None,
+                )
                 .build();
-            assert!(!tx.is_coin_base());
+            assert!(!tx.is_coinbase());
             assert_eq!(tx.input.len(), 2);
             assert_eq!(
                 tx.input[0].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx_0.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx_0.compute_txid(), 0)
             );
             assert_eq!(
                 tx.input[1].previous_output,
-                bitcoin::OutPoint::new(coinbase_tx_1.txid(), 0)
+                bitcoin::OutPoint::new(coinbase_tx_1.compute_txid(), 0)
             );
             assert_eq!(tx.output.len(), 1);
-            assert_eq!(tx.output[0].value, 50_0000_0000);
+            assert_eq!(tx.output[0].value.to_sat(), 50_0000_0000);
         }
     }
 }
