@@ -297,34 +297,35 @@ jobs:
         run: |
           bash e2e-tests/charge-cycles-on-reject.sh
 
-  upgradability:
-    runs-on: ubuntu-20.04
-    needs: cargo-build
+  # TODO(EXC-1813): enable upgradability test after rolling out a new version.
+  # upgradability:
+  #   runs-on: ubuntu-20.04
+  #   needs: cargo-build
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           ~/.cargo/registry
+  #           ~/.cargo/git
+  #           target
+  #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
+  #     - name: Install Rust
+  #       run: |
+  #         rustup update ${{ matrix.rust }} --no-self-update
+  #         rustup default ${{ matrix.rust }}
+  #         rustup target add wasm32-unknown-unknown
 
-      - name: Install dfx
-        uses: dfinity/setup-dfx@main
-        with:
-          dfx-version: $DFX_VERSION
+  #     - name: Install dfx
+  #       uses: dfinity/setup-dfx@main
+  #       with:
+  #         dfx-version: $DFX_VERSION
 
-      - name: Run upgradability test
-        run: |
-          bash e2e-tests/upgradability.sh
+  #     - name: Run upgradability test
+  #       run: |
+  #         bash e2e-tests/upgradability.sh
 
   set_config:
     runs-on: ubuntu-20.04
@@ -650,7 +651,7 @@ jobs:
     if: always()
     needs: [cargo-tests, shell-checks, cargo-clippy, rustfmt, e2e-disable-api-if-not-fully-synced-flag, e2e-scenario-1, e2e-scenario-2,
       e2e-scenario-3, charge-cycles-on-reject, 
-      #upgradability, TODO: enable upgradability test after rolling out new version.
+      #upgradability, TODO(EXC-1813): enable upgradability test after rolling out a new version.
       set_config, cycles_burn, benchmark, watchdog_health_status, 
       watchdog_get_config, watchdog_metrics, watchdog_upgradability, canister-build-reproducibility, bitcoin_canister_metadata]
     runs-on: ubuntu-20.04
@@ -682,7 +683,7 @@ jobs:
       - name: check charge-cycles-on-reject result
         if: ${{ needs.charge-cycles-on-reject.result != 'success' }}
         run: exit 1
-      # TODO: enable upgradability test after rolling out new version.
+      # TODO(EXC-1813): enable upgradability test after rolling out a new version.
       # - name: check upgradability result
       #   if: ${{ needs.upgradability.result != 'success' }}
       #   run: exit 1
