@@ -72,7 +72,7 @@ impl Block {
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
     pub fn target_difficulty(network: Network, target: Target) -> u128 {
-        target.difficulty(Params::new(into_bitcoin_network(network))) // TODO: verfiy it's correct
+        target.difficulty(Params::new(into_bitcoin_network(network)))
     }
 
     pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
