@@ -649,7 +649,9 @@ jobs:
     # Always run this job!
     if: always()
     needs: [cargo-tests, shell-checks, cargo-clippy, rustfmt, e2e-disable-api-if-not-fully-synced-flag, e2e-scenario-1, e2e-scenario-2,
-      e2e-scenario-3, charge-cycles-on-reject, upgradability, set_config, cycles_burn, benchmark, watchdog_health_status, 
+      e2e-scenario-3, charge-cycles-on-reject, 
+      #upgradability, TODO: enable upgradability test after rolling out new version.
+      set_config, cycles_burn, benchmark, watchdog_health_status, 
       watchdog_get_config, watchdog_metrics, watchdog_upgradability, canister-build-reproducibility, bitcoin_canister_metadata]
     runs-on: ubuntu-20.04
     steps:
