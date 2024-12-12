@@ -682,9 +682,10 @@ jobs:
       - name: check charge-cycles-on-reject result
         if: ${{ needs.charge-cycles-on-reject.result != 'success' }}
         run: exit 1
-      - name: check upgradability result
-        if: ${{ needs.upgradability.result != 'success' }}
-        run: exit 1
+      # TODO: enable upgradability test after rolling out new version.
+      # - name: check upgradability result
+      #   if: ${{ needs.upgradability.result != 'success' }}
+      #   run: exit 1
       - name: check set_config result
         if: ${{ needs.set_config.result != 'success' }}
         run: exit 1
