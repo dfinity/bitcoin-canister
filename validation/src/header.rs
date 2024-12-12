@@ -212,6 +212,7 @@ fn find_next_difficulty_in_chain(
             let mut current_height = prev_height;
             let mut current_hash = current_header.block_hash();
             let initial_header_hash = store.get_initial_hash();
+
             // Keep traversing the blockchain backwards from the recent block to initial
             // header hash.
             loop {
@@ -221,10 +222,12 @@ fn find_next_difficulty_in_chain(
                 {
                     return current_header.bits;
                 }
+
                 // Stop if we reach the initial header.
                 if current_hash == initial_header_hash {
                     break;
                 }
+
                 // Traverse to the previous header.
                 let prev_blockhash = current_header.prev_blockhash;
                 current_header = store
