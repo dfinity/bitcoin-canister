@@ -1,6 +1,4 @@
-use crate::config::BitcoinNetwork;
-use crate::endpoints::*;
-use crate::print;
+use crate::{config::BitcoinNetwork, endpoints::*, print};
 use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
 use serde::{Deserialize, Serialize};

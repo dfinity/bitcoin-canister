@@ -1,27 +1,49 @@
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::{
-    secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, util::uint::Uint256, Address,
-    Block as BitcoinBlock, BlockHash, BlockHeader as Header, KeyPair, Network, OutPoint, PublicKey,
-    Script, Transaction, TxIn, TxMerkleNode, TxOut, Witness, XOnlyPublicKey,
+    hashes::Hash, secp256k1::Secp256k1, util::uint::Uint256, Address, Block as BitcoinBlock,
+    BlockHash, BlockHeader as Header, KeyPair, Network, OutPoint, PublicKey, Script, Transaction,
+    TxIn, TxMerkleNode, TxOut, WScriptHash, Witness, XOnlyPublicKey,
 };
 use ic_btc_types::Block;
+use simple_rng::{fill_bytes, generate_keypair};
 use std::str::FromStr;
+
+mod simple_rng;
 
 /// Generates a random P2PKH address.
 pub fn random_p2pkh_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
+    let (_, pk) = generate_keypair(&secp);
 
-    Address::p2pkh(&PublicKey::new(secp.generate_keypair(&mut rng).1), network)
+    Address::p2pkh(&PublicKey::new(pk), network)
 }
 
+/// Generates a random P2SH address.
 pub fn random_p2tr_address(network: Network) -> Address {
     let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
-    let key_pair = KeyPair::new(&secp, &mut rng);
-    let xonly = XOnlyPublicKey::from_keypair(&key_pair);
+    let (sk, _) = generate_keypair(&secp);
+    let keypair = KeyPair::from_secret_key(&secp, sk);
+    let xonly = XOnlyPublicKey::from_keypair(&keypair);
 
     Address::p2tr(&secp, xonly, None, network)
+}
+
+/// Generates a random P2WPKH address.
+pub fn random_p2wpkh_address(network: Network) -> Address {
+    let secp = Secp256k1::new();
+    let (_, pk) = generate_keypair(&secp);
+
+    Address::p2wpkh(&PublicKey::new(pk), network).expect("failed to create p2wpkh address")
+}
+
+/// Generates a random P2WSH address.
+pub fn random_p2wsh_address(network: Network) -> Address {
+    let mut bytes = [0u8; 32];
+    fill_bytes(&mut bytes);
+    Address::p2wsh(
+        &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&bytes).unwrap())),
+        network,
+    )
 }
 
 fn coinbase_input() -> TxIn {
@@ -204,7 +226,7 @@ impl TransactionBuilder {
             // Use default of 50 BTC.
             vec![TxOut {
                 value: 50_0000_0000,
-                script_pubkey: random_p2pkh_address(Network::Regtest).script_pubkey(),
+                script_pubkey: random_p2pkh_address(bitcoin::Network::Regtest).script_pubkey(),
             }]
         } else {
             self.output
@@ -306,8 +328,9 @@ mod test {
 
         #[test]
         fn with_output_2() {
-            let address_0 = random_p2pkh_address(Network::Regtest);
-            let address_1 = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let address_0 = random_p2pkh_address(network);
+            let address_1 = random_p2pkh_address(network);
             let tx = TransactionBuilder::coinbase()
                 .with_output(&address_0, 1000)
                 .with_output(&address_1, 2000)
@@ -325,7 +348,8 @@ mod test {
 
         #[test]
         fn with_input() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let address = random_p2pkh_address(network);
             let coinbase_tx = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
@@ -345,7 +369,8 @@ mod test {
 
         #[test]
         fn with_input_2() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let address = random_p2pkh_address(network);
             let coinbase_tx_0 = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();

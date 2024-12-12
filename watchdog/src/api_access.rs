@@ -1,5 +1,7 @@
-use crate::health::{HealthStatus, HeightStatus};
-use crate::print;
+use crate::{
+    health::{HealthStatus, HeightStatus},
+    print,
+};
 use ic_btc_interface::{Config as BitcoinCanisterConfig, Flag, SetConfigRequest};
 
 /// Calculates the target value of the Bitcoin canister API access flag.

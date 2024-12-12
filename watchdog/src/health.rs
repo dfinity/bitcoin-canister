@@ -1,6 +1,4 @@
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::Config;
-use crate::fetch::BlockInfo;
+use crate::{bitcoin_block_apis::BitcoinBlockApi, config::Config, fetch::BlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 

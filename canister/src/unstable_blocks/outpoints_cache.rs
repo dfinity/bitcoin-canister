@@ -234,8 +234,12 @@ struct TxOutInfo {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder};
+    use crate::{
+        test_utils::{BlockBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
+    };
     use ic_btc_interface::Network;
+    use ic_btc_test_utils::random_p2pkh_address;
 
     #[test]
     fn empty_when_initialized() {
@@ -246,8 +250,9 @@ mod test {
     #[test]
     fn caches_outpoint_info_of_blocks() {
         let network = Network::Mainnet;
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let btc_network = into_bitcoin_network(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let tx_0 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
@@ -373,8 +378,9 @@ mod test {
     #[test]
     fn errors_if_tx_out_is_not_found() {
         let network = Network::Mainnet;
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let btc_network = into_bitcoin_network(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let tx_0 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
@@ -411,8 +417,9 @@ mod test {
     #[test]
     fn inserting_a_block_is_atomic() {
         let network = Network::Mainnet;
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let btc_network = into_bitcoin_network(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let tx_0 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)

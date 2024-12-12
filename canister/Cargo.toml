@@ -35,7 +35,6 @@ bench = false
 [dev-dependencies]
 assert_matches = { workspace = true }
 async-std = { version = "1.12.0", features = ["attributes"] }
-bitcoin = { workspace = true, features = ["rand"] } # needed for generating secp256k1 keys.
 byteorder = { workspace = true }
 candid_parser = { workspace = true }
 ic-btc-test-utils = { workspace = true }

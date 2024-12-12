@@ -12,12 +12,14 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::{BitcoinNetwork, Config};
-use crate::endpoints::*;
-use crate::fetch::BlockInfo;
-use crate::health::HealthStatus;
-use crate::types::{CandidHttpRequest, CandidHttpResponse};
+use crate::{
+    bitcoin_block_apis::BitcoinBlockApi,
+    config::{BitcoinNetwork, Config},
+    endpoints::*,
+    fetch::BlockInfo,
+    health::HealthStatus,
+    types::{CandidHttpRequest, CandidHttpResponse},
+};
 use ic_btc_interface::Flag;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};

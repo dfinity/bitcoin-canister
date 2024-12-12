@@ -1,9 +1,7 @@
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::Config;
-use crate::fetch::BlockInfo;
-use crate::API_ACCESS_TARGET;
-use crate::BLOCK_INFO_DATA;
-use crate::CONFIG;
+use crate::{
+    bitcoin_block_apis::BitcoinBlockApi, config::Config, fetch::BlockInfo, API_ACCESS_TARGET,
+    BLOCK_INFO_DATA, CONFIG,
+};
 use ic_btc_interface::Flag;
 
 /// Returns the configuration from the local storage.

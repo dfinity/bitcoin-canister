@@ -166,12 +166,14 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, heartbeat, state,
-        test_utils::{random_p2pkh_address, BlockBuilder, TransactionBuilder},
+        test_utils::{BlockBuilder, TransactionBuilder},
+        types::into_bitcoin_network,
         with_state,
     };
     use async_std::task::block_on;
     use bitcoin::Witness;
     use ic_btc_interface::{Fees, InitConfig, Network, Satoshi};
+    use ic_btc_test_utils::random_p2pkh_address;
     use ic_btc_types::OutPoint;
     use std::iter::FromIterator;
 
@@ -246,11 +248,12 @@ mod test {
     // Fee is choosen to be a multiple of transaction size to have round values of fee.
     fn generate_blocks(initial_balance: Satoshi, number_of_blocks: u32) -> Vec<Block> {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
         let mut blocks = Vec::new();
 
         let pay: Satoshi = 1;
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address_1, initial_balance)
@@ -353,17 +356,19 @@ mod test {
         let balance = 1000;
         let fee = 1;
         let fee_in_millisatoshi = fee * 1000;
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         let tx_1 = TransactionBuilder::coinbase()
-            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance)
             .build();
         let tx_2 = TransactionBuilder::new()
             .with_input(OutPoint::new(tx_1.txid(), 0))
-            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
         let blocks = vec![
-            BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+            BlockBuilder::with_prev_header(genesis_block(network).header())
                 .with_transaction(tx_1)
                 .with_transaction(tx_2.clone())
                 .build(),
@@ -386,10 +391,11 @@ mod test {
     async fn returns_cached_result_if_no_transactions_in_unstable_blocks() {
         let stability_threshold = 0;
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         crate::init(InitConfig {
             stability_threshold: Some(stability_threshold),
-            network: Some(Network::Regtest),
+            network: Some(network),
             ..Default::default()
         });
 
@@ -399,11 +405,11 @@ mod test {
             let balance = 1000;
 
             let tx_1 = TransactionBuilder::coinbase()
-                .with_output(&random_p2pkh_address(Network::Regtest), balance)
+                .with_output(&random_p2pkh_address(btc_network).into(), balance)
                 .build();
             let tx_2 = TransactionBuilder::new()
                 .with_input(OutPoint::new(tx_1.txid(), 0))
-                .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+                .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
                 .build();
 
             BlockBuilder::with_prev_header(genesis_block(network).header())
@@ -597,9 +603,11 @@ mod test {
         let balance = 1000;
         let fee = 1;
         let fee_in_millisatoshi = 1000;
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         let coinbase_tx = TransactionBuilder::coinbase()
-            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance)
             .build();
 
         let witness = Witness::from_vec(vec![
@@ -610,12 +618,12 @@ mod test {
         ]);
         let tx = TransactionBuilder::new()
             .with_input_and_witness(OutPoint::new(coinbase_tx.txid(), 0), witness)
-            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
         let tx_without_witness = TransactionBuilder::new()
             .with_input(OutPoint::new(coinbase_tx.txid(), 0))
-            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
         // Check that vsize() is not the same as size() of a transaction.
@@ -623,7 +631,7 @@ mod test {
         assert_eq!(tx_without_witness.vsize(), tx_without_witness.size());
 
         let blocks = vec![
-            BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+            BlockBuilder::with_prev_header(genesis_block(network).header())
                 .with_transaction(coinbase_tx)
                 .with_transaction(tx.clone())
                 .build(),
