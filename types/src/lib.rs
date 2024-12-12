@@ -113,12 +113,24 @@ impl Transaction {
     }
 
     /// Returns the “virtual size” (vsize) of this transaction.
+    ///
+    /// Virtual transaction size is defined as Transaction weight / 4 (rounded up to the next integer).
     pub fn vsize(&self) -> usize {
         self.tx.vsize()
     }
 
-    pub fn size(&self) -> usize {
-        self.tx.total_size() // TODO: clarify to use base_size or total_size
+    /// Returns the total size of this transaction in bytes.
+    ///
+    /// Total transaction size is the transaction size in bytes serialized as described in BIP144, including base data and witness data.
+    pub fn total_size(&self) -> usize {
+        self.tx.total_size()
+    }
+
+    /// Returns the base size of this transaction in bytes.
+    ///
+    /// Base transaction size is the size of the transaction serialised with the witness data stripped.
+    pub fn base_size(&self) -> usize {
+        self.tx.base_size()
     }
 
     pub fn txid(&self) -> Txid {
