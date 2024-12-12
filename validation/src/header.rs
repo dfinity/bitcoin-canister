@@ -150,7 +150,7 @@ fn get_next_target(
     prev_height: BlockHeight,
     timestamp: u32,
 ) -> Target {
-    let compact = match network {
+    match network {
         Network::Testnet | Network::Testnet4 | Network::Regtest => {
             if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
                 // This if statements is reached only for Regtest and Testnet networks
@@ -161,22 +161,34 @@ fn get_next_target(
                 if timestamp > prev_header.time + TEN_MINUTES * 2 {
                     // If no block has been found in 20 minutes, then use the maximum difficulty
                     // target
-                    return max_target(network);
+                    max_target(network)
                 } else {
                     // If the block has been found within 20 minutes, then use the previous
                     // difficulty target that is not equal to the maximum difficulty target
-                    find_next_difficulty_in_chain(network, store, prev_header, prev_height)
+                    Target::from_compact(find_next_difficulty_in_chain(
+                        network,
+                        store,
+                        prev_header,
+                        prev_height,
+                    ))
                 }
             } else {
-                compute_next_difficulty(network, store, prev_header, prev_height)
+                Target::from_compact(compute_next_difficulty(
+                    network,
+                    store,
+                    prev_header,
+                    prev_height,
+                ))
             }
         }
-        Network::Bitcoin | Network::Signet => {
-            compute_next_difficulty(network, store, prev_header, prev_height)
-        }
+        Network::Bitcoin | Network::Signet => Target::from_compact(compute_next_difficulty(
+            network,
+            store,
+            prev_header,
+            prev_height,
+        )),
         &other => unreachable!("Unsupported network: {:?}", other),
-    };
-    Target::from_compact(compact)
+    }
 }
 
 /// This method is only valid when used for testnet and regtest networks.
