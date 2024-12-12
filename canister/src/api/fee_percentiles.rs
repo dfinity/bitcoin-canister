@@ -165,7 +165,6 @@ fn percentiles(mut values: Vec<u64>) -> Vec<u64> {
 mod test {
     use super::*;
     use crate::{
-        api::fee_percentiles,
         genesis_block, heartbeat, state,
         test_utils::{BlockBuilder, TransactionBuilder},
         types::into_bitcoin_network,
