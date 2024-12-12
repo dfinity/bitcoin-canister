@@ -1,8 +1,8 @@
 type network = variant {
   mainnet;
   testnet;
-  testnet4;
   regtest;
+  testnet4;
 };
 
 type satoshi = nat64;
@@ -127,7 +127,7 @@ type get_block_headers_response = record {
   block_headers : vec block_header;
 };
 
-service bitcoin : (init_config) -> {
+service bitcoin : (opt set_config_request) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
   bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
