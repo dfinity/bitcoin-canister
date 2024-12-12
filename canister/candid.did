@@ -1,8 +1,8 @@
 type network = variant {
   mainnet;
   testnet;
-  testnet4;
   regtest;
+  testnet4;
 };
 
 type satoshi = nat64;

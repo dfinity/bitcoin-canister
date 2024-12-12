@@ -58,7 +58,7 @@ fi
 sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ./canister/candid.did
 
 echo "Deploy new version of canister..."
-dfx deploy --no-wallet bitcoin --argument "(null)" -y
+dfx deploy --no-wallet bitcoin --argument "(null)"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
