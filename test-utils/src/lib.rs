@@ -335,8 +335,9 @@ mod test {
 
         #[test]
         fn with_output_2() {
-            let address_0 = random_p2pkh_address(Network::Regtest);
-            let address_1 = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let address_0 = random_p2pkh_address(network);
+            let address_1 = random_p2pkh_address(network);
             let tx = TransactionBuilder::coinbase()
                 .with_output(&address_0, 1000)
                 .with_output(&address_1, 2000)
@@ -354,7 +355,8 @@ mod test {
 
         #[test]
         fn with_input() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let address = random_p2pkh_address(network);
             let coinbase_tx = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
@@ -374,7 +376,8 @@ mod test {
 
         #[test]
         fn with_input_2() {
-            let address = random_p2pkh_address(Network::Regtest);
+            let network = Network::Regtest;
+            let address = random_p2pkh_address(network);
             let coinbase_tx_0 = TransactionBuilder::coinbase()
                 .with_output(&address, 1000)
                 .build();
