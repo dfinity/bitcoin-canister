@@ -154,7 +154,7 @@ pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> 
 }
 
 fn genesis(merkle_root: TxMerkleNode) -> Header {
-    let target = Target::MAX;
+    let target = Target::MAX_ATTAINABLE_REGTEST;
     let bits = target.to_compact_lossy();
 
     let mut header = Header {
