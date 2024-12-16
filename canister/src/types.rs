@@ -1,5 +1,5 @@
 use bitcoin::{
-    Address as BitcoinAddress, BlockHeader as Header, Network as BitcoinNetwork, Script,
+    block::Header, Address as BitcoinAddress, Network as BitcoinNetwork, Script,
     TxOut as BitcoinTxOut,
 };
 use candid::CandidType;
@@ -36,7 +36,7 @@ pub struct TxOut {
 impl From<&BitcoinTxOut> for TxOut {
     fn from(bitcoin_txout: &BitcoinTxOut) -> Self {
         Self {
-            value: bitcoin_txout.value,
+            value: bitcoin_txout.value.to_sat(),
             script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
         }
     }
@@ -435,7 +435,7 @@ impl Address {
     /// Creates a new address from a bitcoin script.
     pub fn from_script(script: &Script, network: Network) -> Result<Self, InvalidAddress> {
         let address = BitcoinAddress::from_script(script, into_bitcoin_network(network))
-            .ok_or(InvalidAddress)?;
+            .map_err(|_| InvalidAddress)?;
 
         // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
         // that `Address:from_script` succeeds even if the address is invalid.
@@ -464,7 +464,7 @@ impl FromStr for Address {
 
     fn from_str(s: &str) -> Result<Self, InvalidAddress> {
         BitcoinAddress::from_str(s)
-            .map(|address| Address(address.to_string()))
+            .map(|address| Address(address.assume_checked().to_string()))
             .map_err(|_| InvalidAddress)
     }
 }
@@ -572,7 +572,7 @@ impl PartialOrd for Utxo {
 pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     match network {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
-        Network::Testnet => BitcoinNetwork::Testnet,
+        Network::Testnet => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
     }
 }
@@ -655,12 +655,12 @@ fn address_handles_script_edge_case() {
     // (https://github.com/rust-bitcoin/rust-bitcoin/issues/995)
     //
     // This test verifies that we're protecting ourselves from that case.
-    let script = Script::from(vec![
+    let script = Script::from_bytes(&[
         0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
     ]);
 
     assert_eq!(
-        Address::from_script(&script, Network::Testnet),
+        Address::from_script(script, Network::Testnet),
         Err(InvalidAddress)
     );
 }

@@ -1,3 +1,4 @@
+use bitcoin::hashes::Hash;
 use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
@@ -146,7 +147,12 @@ impl BlockTree {
             Some((block_subtree, _)) => {
                 assert_eq!(
                     block_subtree.root.block_hash().to_vec(),
-                    block.header().prev_blockhash.to_vec()
+                    block
+                        .header()
+                        .prev_blockhash
+                        .as_raw_hash()
+                        .as_byte_array()
+                        .to_vec()
                 );
                 // Add the block as a successor.
                 block_subtree.children.push(BlockTree::new(block));
@@ -226,7 +232,7 @@ impl BlockTree {
         for child in self.children.iter() {
             res = std::cmp::max(res, child.difficulty_based_depth(network));
         }
-        res += self.root.difficulty(network) as u128;
+        res += self.root.difficulty(network);
         res
     }
 
@@ -388,7 +394,12 @@ mod test {
             for i in 1..chain.len() {
                 assert_eq!(
                     chain[i - 1].block_hash().to_vec(),
-                    chain[i].header().prev_blockhash.to_vec()
+                    chain[i]
+                        .header()
+                        .prev_blockhash
+                        .as_raw_hash()
+                        .as_byte_array()
+                        .to_vec()
                 )
             }
         }
@@ -429,7 +440,12 @@ mod test {
                 for i in 1..chain.len() {
                     assert_eq!(
                         chain[i - 1].block_hash().to_vec(),
-                        chain[i].header().prev_blockhash.to_vec()
+                        chain[i]
+                            .header()
+                            .prev_blockhash
+                            .as_raw_hash()
+                            .as_byte_array()
+                            .to_vec()
                     )
                 }
             }

@@ -96,7 +96,7 @@ fn get_fees_per_byte(
             if tx_i >= number_of_transactions {
                 break;
             }
-            if !tx.is_coin_base() {
+            if !tx.is_coinbase() {
                 tx_i += 1;
             }
             if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
@@ -112,7 +112,7 @@ fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
 ) -> Option<MillisatoshiPerByte> {
-    if tx.is_coin_base() {
+    if tx.is_coinbase() {
         // Coinbase transactions do not have a fee.
         return None;
     }
@@ -127,7 +127,7 @@ fn get_tx_fee_per_byte(
             .value;
     }
     for tx_out in tx.output() {
-        satoshi -= tx_out.value;
+        satoshi -= tx_out.value.to_sat();
     }
 
     if tx.vsize() > 0 {
@@ -610,7 +610,7 @@ mod test {
             .with_output(&random_p2pkh_address(btc_network).into(), balance)
             .build();
 
-        let witness = Witness::from_vec(vec![
+        let witness = Witness::from_slice(&[
             vec![0u8, 2u8],
             vec![4u8, 2u8],
             vec![3u8, 2u8],
@@ -626,9 +626,11 @@ mod test {
             .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
-        // Check that vsize() is not the same as size() of a transaction.
-        assert_ne!(tx.vsize(), tx.size());
-        assert_eq!(tx_without_witness.vsize(), tx_without_witness.size());
+        // Check that vsize() is not the same as total_size() of a transaction.
+        assert_ne!(tx.vsize(), tx.total_size());
+        assert_ne!(tx.vsize(), tx.base_size());
+        assert_eq!(tx_without_witness.vsize(), tx_without_witness.total_size());
+        assert_eq!(tx_without_witness.vsize(), tx_without_witness.base_size());
 
         let blocks = vec![
             BlockBuilder::with_prev_header(genesis_block(network).header())
@@ -642,14 +644,11 @@ mod test {
 
         with_state_mut(|s| {
             // Coinbase txs are ignored, so the percentiles should be the fee / vbyte of the second transaction.
-            assert_ne!(
-                get_current_fee_percentiles_with_number_of_transactions(s, 1),
-                vec![fee_in_millisatoshi / tx.size() as u64; PERCENTILE_BUCKETS]
-            );
-            assert_eq!(
-                get_current_fee_percentiles_with_number_of_transactions(s, 1),
-                vec![fee_in_millisatoshi / tx.vsize() as u64; PERCENTILE_BUCKETS]
-            );
+            let x = get_current_fee_percentiles_with_number_of_transactions(s, 1);
+            let fee_per_total_size = fee_in_millisatoshi / tx.total_size() as u64;
+            let fee_per_vsize = fee_in_millisatoshi / tx.vsize() as u64;
+            assert_ne!(x, vec![fee_per_total_size; PERCENTILE_BUCKETS]);
+            assert_eq!(x, vec![fee_per_vsize; PERCENTILE_BUCKETS]);
         });
     }
 }

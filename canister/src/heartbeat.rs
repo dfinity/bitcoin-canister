@@ -8,8 +8,7 @@ use crate::{
     },
     with_state, with_state_mut,
 };
-use bitcoin::consensus::Decodable;
-use bitcoin::Block as BitcoinBlock;
+use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
 
@@ -152,7 +151,7 @@ fn maybe_process_response() {
                 ));
                 for block_bytes in response.blocks.iter() {
                     // Deserialize the block.
-                    let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
+                    let block = match BitcoinBlock::consensus_decode(&mut block_bytes.as_slice()) {
                         Ok(block) => block,
                         Err(err) => {
                             print(&format!(
@@ -273,7 +272,7 @@ mod test {
         },
         utxo_set::IngestingBlock,
     };
-    use bitcoin::BlockHeader as Header;
+    use bitcoin::block::Header;
     use ic_btc_interface::{InitConfig, Network};
     use ic_btc_test_utils::random_p2pkh_address;
 

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitcoin = { workspace = true, features = ["use-serde"] }
+bitcoin = { workspace = true, features = ["serde"] }
 candid = { workspace = true }
 hex = { workspace = true }
 ic-btc-interface = { workspace = true }
