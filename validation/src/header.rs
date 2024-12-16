@@ -69,8 +69,9 @@ pub fn validate_header(
         }
     };
 
-    if *network == Network::Bitcoin {
-        // Validate timestamp only for Bitcoin mainnet; testnets may have invalid timestamps.
+    if *network != Network::Testnet4 {
+        // Skip timestamp validation for Testnet4; the first 2 blocks are 2 days apart.
+        // https://mempool.space/testnet4/block/00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043
         is_timestamp_valid(store, header, current_time)?;
     }
 
