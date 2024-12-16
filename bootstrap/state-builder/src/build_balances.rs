@@ -59,15 +59,15 @@ fn main() {
 
         // Load the address. The UTXO dump tool we use doesn't output all the addresses
         // we support, so if parsing the address itself fails, we try parsing the script directly.
-        let bitcoin_newtork = into_bitcoin_network(args.network);
+        let bitcoin_network = into_bitcoin_network(args.network);
         let address = if let Ok(address) = BitcoinAddress::from_str(address_str) {
             let checked_address = address
-                .require_network(bitcoin_newtork)
+                .require_network(bitcoin_network)
                 .expect("Address must be valid for network");
             Some(checked_address)
         } else {
             let bytes = hex::decode(script).expect("script must be valid hex");
-            BitcoinAddress::from_script(Script::from_bytes(&bytes), bitcoin_newtork).ok()
+            BitcoinAddress::from_script(Script::from_bytes(&bytes), bitcoin_network).ok()
         };
 
         if let Some(address) = address {

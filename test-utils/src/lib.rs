@@ -114,8 +114,8 @@ impl BlockBuilder {
 /// Builds a random chain with the given number of block and transactions
 /// starting with the Regtest genesis block.
 pub fn build_regtest_chain(num_blocks: u32, num_transactions_per_block: u32) -> Vec<Block> {
-    let bitcoin_newtork = Network::Regtest;
-    let genesis_block = Block::new(genesis_block(bitcoin_newtork));
+    let bitcoin_network = Network::Regtest;
+    let genesis_block = Block::new(genesis_block(bitcoin_network));
 
     // Use a static address to send outputs to.
     // `random_p2pkh_address` isn't used here as it doesn't work in wasm.

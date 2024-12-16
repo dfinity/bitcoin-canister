@@ -782,17 +782,17 @@ async fn fee_percentiles_evaluation_helper() {
         let fee = 1;
         let balance = 1000;
         let network = Network::Regtest;
-        let btc_newtork = into_bitcoin_network(network);
+        let btc_network = into_bitcoin_network(network);
 
         let tx_1 = TransactionBuilder::coinbase()
-            .with_output(&random_p2pkh_address(btc_newtork).into(), balance)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance)
             .build();
         let tx_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint {
                 txid: tx_1.txid(),
                 vout: 0,
             })
-            .with_output(&random_p2pkh_address(btc_newtork).into(), balance - fee)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
         BlockBuilder::with_prev_header(genesis_block(network).header())
