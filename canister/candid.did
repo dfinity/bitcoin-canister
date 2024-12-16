@@ -1,6 +1,6 @@
 type network = variant {
   mainnet;
-  testnet;
+  testnet;  // Bitcoin testnet4.
   regtest;
 };
 

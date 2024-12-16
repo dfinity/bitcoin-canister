@@ -16,10 +16,15 @@ pub type BlockHeader = Vec<u8>;
 
 #[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
 pub enum Network {
+    /// Bitcoin Mainnet.
     #[serde(rename = "mainnet")]
     Mainnet,
+
+    /// Bitcoin Testnet4.
     #[serde(rename = "testnet")]
     Testnet,
+
+    /// Bitcoin Regtest.
     #[serde(rename = "regtest")]
     Regtest,
 }
@@ -75,13 +80,21 @@ impl From<NetworkInRequest> for Network {
 /// while not breaking current dapps that are using uppercase variants.
 #[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
 pub enum NetworkInRequest {
+    /// Bitcoin Mainnet.
     Mainnet,
+    /// Bitcoin Mainnet.
     #[allow(non_camel_case_types)]
     mainnet,
+
+    /// Bitcoin Testnet4.
     Testnet,
+    /// Bitcoin Testnet4.
     #[allow(non_camel_case_types)]
     testnet,
+
+    /// Bitcoin Regtest.
     Regtest,
+    /// Bitcoin Regtest.
     #[allow(non_camel_case_types)]
     regtest,
 }
