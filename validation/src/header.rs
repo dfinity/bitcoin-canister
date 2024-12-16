@@ -122,9 +122,7 @@ fn is_timestamp_valid(
     header: &Header,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
-    timestamp_is_less_than_2h_in_future(header.time as u64, current_time).map_err(|err| {
-        panic!("ABC block hash: {}, err: {:?}", header.block_hash(), err);
-    })?;
+    timestamp_is_less_than_2h_in_future(header.time as u64, current_time)?;
     let mut times = vec![];
     let mut current_header: Header = *header;
     let initial_hash = store.get_initial_hash();
