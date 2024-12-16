@@ -32,7 +32,7 @@ go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce6
 
 ```shell
 BITCOIN_DIR=/path/to/bitcoin-22.0/
-NETWORK=<mainnet or testnet>
+NETWORK=<mainnet or testnet4>
 HEIGHT=<height of the state you want to compute>
 STABILITY_THRESHOLD=<desired stability threshold>
 ```

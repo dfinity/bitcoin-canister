@@ -19,7 +19,8 @@ export CANISTER_STATE_FILE="$OUTPUT_DIR/canister_state.bin"
 # Validate the network input.
 validate_network() {
     local network=$1
-    local valid_networks=("mainnet" "testnet" "testnet4")
+    # Don't add "testnet" because testnet3 is deprecated.
+    local valid_networks=("mainnet" "testnet4")
 
     for valid_network in "${valid_networks[@]}"; do
         if [[ "$network" == "$valid_network" ]]; then
@@ -57,7 +58,6 @@ EOF
     # Add network-specific settings.
     case "$network" in
         "mainnet") echo "# Mainnet settings" >> "$conf_file" ;;
-        "testnet") echo "chain=test" >> "$conf_file" ;;
         "testnet4") echo "chain=testnet4" >> "$conf_file" ;;
     esac
 
