@@ -69,7 +69,10 @@ pub fn validate_header(
         }
     };
 
-    is_timestamp_valid(store, header, current_time)?;
+    if *network == Network::Bitcoin {
+        // Validate timestamp only for Bitcoin mainnet; testnets may have invalid timestamps.
+        is_timestamp_valid(store, header, current_time)?;
+    }
 
     let header_target = header.target();
     if header_target > max_target(network) {
@@ -118,9 +121,11 @@ fn is_timestamp_valid(
     header: &Header,
     current_time: u64,
 ) -> Result<(), ValidateHeaderError> {
-    timestamp_is_less_than_2h_in_future(header.time as u64, current_time)?;
+    timestamp_is_less_than_2h_in_future(header.time as u64, current_time).map_err(|err| {
+        panic!("ABC block hash: {}, err: {:?}", header.block_hash(), err);
+    })?;
     let mut times = vec![];
-    let mut current_header = *header;
+    let mut current_header: Header = *header;
     let initial_hash = store.get_initial_hash();
     for _ in 0..11 {
         if let Some(prev_header) = store.get_with_block_hash(&current_header.prev_blockhash) {
