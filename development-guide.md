@@ -37,8 +37,9 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
     09f5647a45ff6d5d05b2b0ed48613fb2365b5fe6573ba0e901509c39fb9564ac  ic-btc-canister.wasm.gz
     cc58b2a32517f9907f0d3c77bc8c099d0a65d8194a8d9bc0ad7df357ee867a07  watchdog-canister.wasm.gz
     ```
-4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes (and nothing else).
+4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes.
     - Add calculated checksums into release notes
-5. Finalize the release once all the expected canisters were upgraded
+5. Attach the candid file of the Bitcoin Canister to the release notes.
+6. Finalize the release once all the expected canisters were upgraded
     - (Optional) Provide links to corresponding NNS proposals
     - Uncheck `Set as a pre-release` box and check `Set as the latest release ` to indicate that the release is fully deployed
