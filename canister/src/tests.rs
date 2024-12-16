@@ -11,8 +11,12 @@ use crate::{
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
-use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::{block::Header, Block as BitcoinBlock};
+use bitcoin::{
+    block::Header,
+    consensus::{Decodable, Encodable},
+    p2p::Magic,
+    Block as BitcoinBlock, Network as BitcoinNetwork,
+};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
@@ -43,16 +47,18 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
                     // Reached EOF
                     break;
                 }
-                magic
+                Magic::from_bytes(magic.to_le_bytes())
             }
         };
 
         assert_eq!(
             magic,
             match network {
-                Network::Mainnet => 0xD9B4BEF9,
-                Network::Testnet | Network::Testnet4 | Network::Regtest => 0x0709110B,
+                Network::Mainnet => BitcoinNetwork::Bitcoin,
+                Network::Testnet => BitcoinNetwork::Testnet4,
+                Network::Regtest => BitcoinNetwork::Regtest,
             }
+            .magic()
         );
 
         let _block_size = blk_file.read_u32::<LittleEndian>().unwrap();
@@ -111,16 +117,16 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
 }
 
 fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
-    let block_hash = BlockHash::from_str(block_hash).unwrap();
-
     let header = state.stable_block_headers.get_with_height(height).unwrap();
+    let hash = header.block_hash().to_string();
+    assert_eq!(block_hash, hash, "Block hash mismatch at height {}", height);
+
+    let block_hash = BlockHash::from_str(block_hash).unwrap();
     let header_2 = state
         .stable_block_headers
         .get_with_block_hash(&block_hash)
         .unwrap();
-
     assert_eq!(header, header_2);
-    assert_eq!(block_hash, header.block_hash().into());
 }
 
 #[async_std::test]
@@ -377,7 +383,12 @@ async fn testnet_10k_blocks() {
     // Set a reasonable performance counter step to trigger time-slicing.
     runtime::set_performance_counter_step(100_000);
 
-    process_chain(Network::Testnet, "test-data/testnet_10k_blocks.dat", 10_000).await;
+    process_chain(
+        Network::Testnet,
+        "test-data/testnet4_10k_blocks.dat",
+        10_000,
+    )
+    .await;
 
     // Validate we've ingested all the blocks.
     assert_eq!(with_state(main_chain_height), 10_000);
@@ -390,25 +401,29 @@ async fn testnet_10k_blocks() {
 
     // Check the block headers/heights of a few random blocks.
     crate::with_state(|state| {
+        // https://mempool.space/testnet4/block/00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043
         verify_block_header(
             state,
             0,
             &genesis_block(Network::Testnet).block_hash().to_string(),
         );
+        // https://mempool.space/testnet4/block/000000004deda718e1471a0b5899303e84df0d7a437284b93d29698724f11a0c
         verify_block_header(
             state,
             10,
-            "00000000700e92a916b46b8b91a14d1303d5d91ef0b09eecc3151fb958fd9a2e",
+            "000000004deda718e1471a0b5899303e84df0d7a437284b93d29698724f11a0c",
         );
+        // https://mempool.space/testnet4/block/000000000286736136f91cad37d93209b204eb26ac5df3908a5695d8c38b2ffd
         verify_block_header(
             state,
             7182,
-            "00000000077ba5bfae938af835f0d6431a55a1dee5ca64de23786ff180ebe033",
+            "000000000286736136f91cad37d93209b204eb26ac5df3908a5695d8c38b2ffd",
         );
+        // https://mempool.space/testnet4/block/000000000033c3815a71dde90eb10608a83fcef1f8448ce2e4de9a91a457350f
         verify_block_header(
             state,
             9997,
-            "00000000346b2ce3eab1bc5043d2a59e0e5b1e2da6554de26d8a4c683ecf5fdd",
+            "000000000033c3815a71dde90eb10608a83fcef1f8448ce2e4de9a91a457350f",
         );
     });
 }

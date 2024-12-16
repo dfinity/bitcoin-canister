@@ -1,7 +1,6 @@
 type network = variant {
   mainnet;
   testnet;
-  testnet4;
   regtest;
 };
 

@@ -10,16 +10,16 @@ Rather than syncing the Bitcoin canister from genesis, which can take several we
 
 ## 1. Download Bitcoin Core
 
-Download Bitcoin Core 22.0
+Download Bitcoin Core 28.0
 
 ```shell
-curl -O https://bitcoin.org/bin/bitcoin-core-22.0/bitcoin-22.0-x86_64-linux-gnu.tar.gz
+curl -O https://bitcoincore.org/bin/bitcoin-core-28.0/bitcoin-28.0-x86_64-linux-gnu.tar.gz
 ```
 
 Unpack the `tar.gz` file
 
 ```shell
-tar -xvf bitcoin-22.0-x86_64-linux-gnu.tar.gz
+tar -xvf bitcoin-28.0-x86_64-linux-gnu.tar.gz
 ```
 
 Install the `bitcoin-utxo-dump` utility (requires `go` lang to be installed):

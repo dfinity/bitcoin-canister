@@ -20,8 +20,6 @@ pub enum Network {
     Mainnet,
     #[serde(rename = "testnet")]
     Testnet,
-    #[serde(rename = "testnet4")]
-    Testnet4,
     #[serde(rename = "regtest")]
     Regtest,
 }
@@ -31,7 +29,6 @@ impl fmt::Display for Network {
         match self {
             Self::Mainnet => write!(f, "mainnet"),
             Self::Testnet => write!(f, "testnet"),
-            Self::Testnet4 => write!(f, "testnet4"),
             Self::Regtest => write!(f, "regtest"),
         }
     }
@@ -44,7 +41,6 @@ impl FromStr for Network {
         match s {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
-            "testnet4" => Ok(Network::Testnet4),
             "regtest" => Ok(Network::Regtest),
             _ => Err("Bad network".to_string()),
         }
@@ -56,7 +52,6 @@ impl From<Network> for NetworkInRequest {
         match network {
             Network::Mainnet => Self::Mainnet,
             Network::Testnet => Self::Testnet,
-            Network::Testnet4 => Self::Testnet4,
             Network::Regtest => Self::Regtest,
         }
     }
@@ -69,8 +64,6 @@ impl From<NetworkInRequest> for Network {
             NetworkInRequest::mainnet => Self::Mainnet,
             NetworkInRequest::Testnet => Self::Testnet,
             NetworkInRequest::testnet => Self::Testnet,
-            NetworkInRequest::Testnet4 => Self::Testnet4,
-            NetworkInRequest::testnet4 => Self::Testnet4,
             NetworkInRequest::Regtest => Self::Regtest,
             NetworkInRequest::regtest => Self::Regtest,
         }
@@ -88,9 +81,6 @@ pub enum NetworkInRequest {
     Testnet,
     #[allow(non_camel_case_types)]
     testnet,
-    Testnet4,
-    #[allow(non_camel_case_types)]
-    testnet4,
     Regtest,
     #[allow(non_camel_case_types)]
     regtest,
@@ -101,11 +91,9 @@ impl fmt::Display for NetworkInRequest {
         match self {
             Self::Mainnet => write!(f, "mainnet"),
             Self::Testnet => write!(f, "testnet"),
-            Self::Testnet4 => write!(f, "testnet4"),
             Self::Regtest => write!(f, "regtest"),
             Self::mainnet => write!(f, "mainnet"),
             Self::testnet => write!(f, "testnet"),
-            Self::testnet4 => write!(f, "testnet4"),
             Self::regtest => write!(f, "regtest"),
         }
     }
