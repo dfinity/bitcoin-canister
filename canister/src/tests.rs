@@ -29,9 +29,8 @@ use std::{fs::File, panic::catch_unwind};
 
 mod confirmation_counts;
 
-const SAVE_CHAIN_AS_HEX_FILE: bool = false;
-
 /// Helper function to save a chain to a file in hex format.
+#[cfg(feature = "save_chain_as_hex")]
 fn save_chain_as_hex_file(chain: &[BitcoinBlock], file_name: &str) -> std::io::Result<()> {
     use std::io::{BufWriter, Write};
     let file = File::create(file_name)?;
@@ -98,7 +97,8 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
 
     println!("Built chain with length: {}", chain.len());
 
-    if SAVE_CHAIN_AS_HEX_FILE && network == Network::Testnet {
+    #[cfg(feature = "save_chain_as_hex")]
+    if network == Network::Testnet {
         save_chain_as_hex_file(
             &chain[..4000.min(chain.len())],
             "../benchmarks/src/testnet_blocks.txt",
