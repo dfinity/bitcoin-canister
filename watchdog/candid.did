@@ -29,6 +29,8 @@ type bitcoin_block_api = variant {
     blockstream_info_mainnet;
     blockstream_info_testnet;
     chain_api_btc_com_mainnet;
+    mempool_mainnet;
+    mempool_testnet;
 };
 
 /// Information about a Bitcoin block from a specific API provider.

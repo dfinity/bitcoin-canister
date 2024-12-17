@@ -43,6 +43,12 @@ pub enum BitcoinBlockApi {
 
     #[serde(rename = "chain_api_btc_com_mainnet")]
     ChainApiBtcComMainnet,
+
+    #[serde(rename = "mempool_mainnet")]
+    MempoolMainnet,
+
+    #[serde(rename = "mempool_testnet")]
+    MempoolTestnet,
 }
 
 impl std::fmt::Display for BitcoinBlockApi {
@@ -103,6 +109,7 @@ impl BitcoinBlockApi {
             BitcoinBlockApi::BlockchainInfoMainnet,
             BitcoinBlockApi::BlockstreamInfoMainnet,
             BitcoinBlockApi::ChainApiBtcComMainnet,
+            BitcoinBlockApi::MempoolMainnet,
         ];
         // Remove the explorers that are not configured.
         let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
@@ -118,6 +125,7 @@ impl BitcoinBlockApi {
             BitcoinBlockApi::ApiBlockchairComTestnet,
             BitcoinBlockApi::ApiBlockcypherComTestnet,
             BitcoinBlockApi::BlockstreamInfoTestnet,
+            BitcoinBlockApi::MempoolTestnet,
         ];
         // Remove the explorers that are not configured.
         let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
@@ -201,6 +209,12 @@ impl BitcoinBlockApi {
             }
             BitcoinBlockApi::ChainApiBtcComMainnet => {
                 http_request(endpoint_chain_api_btc_com_block_mainnet()).await
+            }
+            BitcoinBlockApi::MempoolMainnet => {
+                http_request(endpoint_mempool_height_mainnet()).await
+            }
+            BitcoinBlockApi::MempoolTestnet => {
+                http_request(endpoint_mempool_height_testnet()).await
             }
         }
     }

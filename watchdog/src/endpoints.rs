@@ -5,7 +5,7 @@ use crate::{
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
     transform_bitcoinexplorer_org_block, transform_blockchain_info_hash,
     transform_blockchain_info_height, transform_blockstream_info_hash,
-    transform_blockstream_info_height, transform_chain_api_btc_com_block,
+    transform_blockstream_info_height, transform_chain_api_btc_com_block, transform_mempool_height,
 };
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use regex::Regex;
@@ -312,6 +312,43 @@ pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
     )
 }
 
+/// Creates a config for fetching mainnet height data from blockchain.info.
+pub fn endpoint_mempool_height(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://mempool.space/api/blocks/tip/height",
+        BitcoinNetwork::Testnet => "https://mempool.space/testnet4/api/blocks/tip/height",
+    };
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_mempool_height",
+            func: transform_mempool_height,
+        }),
+        |raw| {
+            apply_to_body(raw, |text| {
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet block data from api.blockcypher.com.
+pub fn endpoint_mempool_height_mainnet() -> HttpRequestConfig {
+    endpoint_mempool_height(BitcoinNetwork::Mainnet)
+}
+
+/// Creates a config for fetching testnet block data from api.blockcypher.com.
+pub fn endpoint_mempool_height_testnet() -> HttpRequestConfig {
+    endpoint_mempool_height(BitcoinNetwork::Testnet)
+}
+
 /// Applies the given transformation function to the body of the response.
 fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpResponse {
     let mut response = HttpResponse {
@@ -561,7 +598,8 @@ mod test {
                 "transform_blockchain_info_height",
                 "transform_blockstream_info_hash",
                 "transform_blockstream_info_height",
-                "transform_chain_api_btc_com_block"
+                "transform_chain_api_btc_com_block",
+                "transform_mempool_height",
             ]
         );
     }

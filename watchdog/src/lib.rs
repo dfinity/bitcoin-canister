@@ -185,6 +185,11 @@ fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
     endpoint_chain_api_btc_com_block_mainnet().transform(raw)
 }
 
+#[query]
+fn transform_mempool_height(raw: TransformArgs) -> HttpResponse {
+    endpoint_mempool_height_mainnet().transform(raw)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

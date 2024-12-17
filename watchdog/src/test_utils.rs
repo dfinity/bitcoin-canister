@@ -43,6 +43,10 @@ pub fn mock_mainnet_outcalls() {
             endpoint_chain_api_btc_com_block_mainnet(),
             CHAIN_API_BTC_COM_MAINNET_RESPONSE,
         ),
+        (
+            endpoint_mempool_height_mainnet(),
+            MEMPOOL_HEIGHT_MAINNET_RESPONSE,
+        ),
     ];
     for (config, response_body) in mocks {
         let request = config.request();
@@ -81,6 +85,10 @@ pub fn mock_testnet_outcalls() {
             endpoint_blockstream_info_height_testnet(),
             BLOCKSTREAM_INFO_HEIGHT_TESTNET_RESPONSE,
         ),
+        (
+            endpoint_mempool_height_testnet(),
+            MEMPOOL_HEIGHT_TESTNET_RESPONSE,
+        ),
     ];
     for (config, response_body) in mocks {
         let request = config.request();
@@ -108,6 +116,8 @@ pub fn mock_all_outcalls_404() {
         endpoint_blockstream_info_height_mainnet(),
         endpoint_blockstream_info_height_testnet(),
         endpoint_chain_api_btc_com_block_mainnet(),
+        endpoint_mempool_height_mainnet(),
+        endpoint_mempool_height_testnet(),
     ];
     for config in mocks {
         let request = config.request();
@@ -132,6 +142,8 @@ pub fn mock_all_outcalls_abusing_api() {
         endpoint_blockstream_info_height_mainnet(),
         endpoint_blockstream_info_height_testnet(),
         endpoint_chain_api_btc_com_block_mainnet(),
+        endpoint_mempool_height_mainnet(),
+        endpoint_mempool_height_testnet(),
     ];
     for config in mocks {
         let request = config.request();
@@ -420,3 +432,9 @@ pub const CHAIN_API_BTC_COM_MAINNET_RESPONSE: &str = r#"{
     "message":"success",
     "status":"success"
 }"#;
+
+// https://mempool.space/api/blocks/tip/height
+pub const MEMPOOL_HEIGHT_MAINNET_RESPONSE: &str = r#"700007"#;
+
+// https://mempool.space/testnet4/api/blocks/tip/height
+pub const MEMPOOL_HEIGHT_TESTNET_RESPONSE: &str = r#"700008"#;
