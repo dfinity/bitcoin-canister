@@ -2,7 +2,7 @@
 
 To generate the `testnet_blocks.txt` file from `./canister/test-data/testnet4_10k_blocks.dat`:
 
-1. Uncomment the call to `save_chain_as_hex_file()` in `process_chain()` located in `./canister/src/tests.rs`.
+1. Set `SAVE_CHAIN_AS_HEX_FILE = true` in `./canister/src/tests.rs`.
 2. Run the `testnet_10k_blocks` test from the `ic-btc-canister` package.
 
 Run the following command:
