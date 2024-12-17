@@ -11,20 +11,11 @@ pub enum BitcoinBlockApi {
     #[serde(rename = "api_bitaps_com_mainnet")]
     ApiBitapsComMainnet,
 
-    #[serde(rename = "api_bitaps_com_testnet")]
-    ApiBitapsComTestnet,
-
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
-    #[serde(rename = "api_blockchair_com_testnet")]
-    ApiBlockchairComTestnet,
-
     #[serde(rename = "api_blockcypher_com_mainnet")]
     ApiBlockcypherComMainnet,
-
-    #[serde(rename = "api_blockcypher_com_testnet")]
-    ApiBlockcypherComTestnet,
 
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
@@ -38,11 +29,14 @@ pub enum BitcoinBlockApi {
     #[serde(rename = "blockstream_info_mainnet")]
     BlockstreamInfoMainnet,
 
-    #[serde(rename = "blockstream_info_testnet")]
-    BlockstreamInfoTestnet,
-
     #[serde(rename = "chain_api_btc_com_mainnet")]
     ChainApiBtcComMainnet,
+
+    #[serde(rename = "mempool_mainnet")]
+    MempoolMainnet,
+
+    #[serde(rename = "mempool_testnet")]
+    MempoolTestnet,
 }
 
 impl std::fmt::Display for BitcoinBlockApi {
@@ -103,6 +97,7 @@ impl BitcoinBlockApi {
             BitcoinBlockApi::BlockchainInfoMainnet,
             BitcoinBlockApi::BlockstreamInfoMainnet,
             BitcoinBlockApi::ChainApiBtcComMainnet,
+            BitcoinBlockApi::MempoolMainnet,
         ];
         // Remove the explorers that are not configured.
         let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
@@ -113,12 +108,7 @@ impl BitcoinBlockApi {
 
     /// Returns the list of testnet explorers only.
     fn explorers_testnet() -> Vec<Self> {
-        let mut explorers = vec![
-            BitcoinBlockApi::ApiBitapsComTestnet,
-            BitcoinBlockApi::ApiBlockchairComTestnet,
-            BitcoinBlockApi::ApiBlockcypherComTestnet,
-            BitcoinBlockApi::BlockstreamInfoTestnet,
-        ];
+        let mut explorers = vec![BitcoinBlockApi::MempoolTestnet];
         // Remove the explorers that are not configured.
         let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
         explorers.retain(|x| configured.contains(x));
@@ -132,20 +122,11 @@ impl BitcoinBlockApi {
             BitcoinBlockApi::ApiBitapsComMainnet => {
                 http_request(endpoint_api_bitaps_com_block_mainnet()).await
             }
-            BitcoinBlockApi::ApiBitapsComTestnet => {
-                http_request(endpoint_api_bitaps_com_block_testnet()).await
-            }
             BitcoinBlockApi::ApiBlockchairComMainnet => {
                 http_request(endpoint_api_blockchair_com_block_mainnet()).await
             }
-            BitcoinBlockApi::ApiBlockchairComTestnet => {
-                http_request(endpoint_api_blockchair_com_block_testnet()).await
-            }
             BitcoinBlockApi::ApiBlockcypherComMainnet => {
                 http_request(endpoint_api_blockcypher_com_block_mainnet()).await
-            }
-            BitcoinBlockApi::ApiBlockcypherComTestnet => {
-                http_request(endpoint_api_blockcypher_com_block_testnet()).await
             }
             BitcoinBlockApi::BitcoinCanister => http_request(endpoint_bitcoin_canister()).await,
             BitcoinBlockApi::BitcoinExplorerOrgMainnet => {
@@ -183,24 +164,14 @@ impl BitcoinBlockApi {
                     _ => json!({}),
                 }
             }
-            BitcoinBlockApi::BlockstreamInfoTestnet => {
-                let futures = vec![
-                    http_request(endpoint_blockstream_info_height_testnet()),
-                    http_request(endpoint_blockstream_info_hash_testnet()),
-                ];
-                let results = futures::future::join_all(futures).await;
-                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                    (Some(height), Some(hash)) => {
-                        json!({
-                            "height": height,
-                            "hash": hash,
-                        })
-                    }
-                    _ => json!({}),
-                }
-            }
             BitcoinBlockApi::ChainApiBtcComMainnet => {
                 http_request(endpoint_chain_api_btc_com_block_mainnet()).await
+            }
+            BitcoinBlockApi::MempoolMainnet => {
+                http_request(endpoint_mempool_height_mainnet()).await
+            }
+            BitcoinBlockApi::MempoolTestnet => {
+                http_request(endpoint_mempool_height_testnet()).await
             }
         }
     }
@@ -276,20 +247,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_bitaps_com_testnet() {
-        test_utils::mock_testnet_outcalls();
-        run_test(
-            BitcoinBlockApi::ApiBitapsComTestnet,
-            vec![(endpoint_api_bitaps_com_block_testnet(), 1)],
-            json!({
-                "height": 2000001,
-                "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_bitcoinexplorer_org_mainnet() {
         test_utils::mock_mainnet_outcalls();
         run_test(
@@ -318,20 +275,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_blockchair_com_testnet() {
-        test_utils::mock_testnet_outcalls();
-        run_test(
-            BitcoinBlockApi::ApiBlockchairComTestnet,
-            vec![(endpoint_api_blockchair_com_block_testnet(), 1)],
-            json!({
-                "height": 2000002,
-                "hash": "0000000000000000000fff222222222222222222222222222222222222222222",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_api_blockcypher_com_mainnet() {
         test_utils::mock_mainnet_outcalls();
         run_test(
@@ -341,21 +284,6 @@ mod test {
                 "height": 700003,
                 "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
                 "previous_hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_api_blockcypher_com_testnet() {
-        test_utils::mock_testnet_outcalls();
-        run_test(
-            BitcoinBlockApi::ApiBlockcypherComTestnet,
-            vec![(endpoint_api_blockcypher_com_block_testnet(), 1)],
-            json!({
-                "height": 2000003,
-                "hash": "0000000000000000000fff333333333333333333333333333333333333333333",
-                "previous_hash": "0000000000000000000fff222222222222222222222222222222222222222222",
             }),
         )
         .await;
@@ -409,23 +337,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_blockstream_info_testnet() {
-        test_utils::mock_testnet_outcalls();
-        run_test(
-            BitcoinBlockApi::BlockstreamInfoTestnet,
-            vec![
-                (endpoint_blockstream_info_hash_testnet(), 1),
-                (endpoint_blockstream_info_height_testnet(), 1),
-            ],
-            json!({
-                "height": 2000004,
-                "hash": "0000000000000000000fff555555555555555555555555555555555555555555",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_chain_api_btc_com_mainnet() {
         test_utils::mock_mainnet_outcalls();
         run_test(
@@ -435,6 +346,32 @@ mod test {
                 "height": 700006,
                 "hash": "0000000000000000000aaa666666666666666666666666666666666666666666",
                 "previous_hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_mempool_mainnet() {
+        test_utils::mock_mainnet_outcalls();
+        run_test(
+            BitcoinBlockApi::MempoolMainnet,
+            vec![(endpoint_mempool_height_mainnet(), 1)],
+            json!({
+                "height": 700008,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_mempool_testnet() {
+        test_utils::mock_testnet_outcalls();
+        run_test(
+            BitcoinBlockApi::MempoolTestnet,
+            vec![(endpoint_mempool_height_testnet(), 1)],
+            json!({
+                "height": 55002,
             }),
         )
         .await;
@@ -472,24 +409,12 @@ mod test {
                 "api_bitaps_com_mainnet",
             ),
             (
-                BitcoinBlockApi::ApiBitapsComTestnet,
-                "api_bitaps_com_testnet",
-            ),
-            (
                 BitcoinBlockApi::ApiBlockchairComMainnet,
                 "api_blockchair_com_mainnet",
             ),
             (
-                BitcoinBlockApi::ApiBlockchairComTestnet,
-                "api_blockchair_com_testnet",
-            ),
-            (
                 BitcoinBlockApi::ApiBlockcypherComMainnet,
                 "api_blockcypher_com_mainnet",
-            ),
-            (
-                BitcoinBlockApi::ApiBlockcypherComTestnet,
-                "api_blockcypher_com_testnet",
             ),
             (BitcoinBlockApi::BitcoinCanister, "bitcoin_canister"),
             (
@@ -505,13 +430,11 @@ mod test {
                 "blockstream_info_mainnet",
             ),
             (
-                BitcoinBlockApi::BlockstreamInfoTestnet,
-                "blockstream_info_testnet",
-            ),
-            (
                 BitcoinBlockApi::ChainApiBtcComMainnet,
                 "chain_api_btc_com_mainnet",
             ),
+            (BitcoinBlockApi::MempoolMainnet, "mempool_mainnet"),
+            (BitcoinBlockApi::MempoolTestnet, "mempool_testnet"),
         ]
         .iter()
         .cloned()
