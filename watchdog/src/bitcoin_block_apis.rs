@@ -352,6 +352,32 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_mempool_mainnet() {
+        test_utils::mock_mainnet_outcalls();
+        run_test(
+            BitcoinBlockApi::MempoolMainnet,
+            vec![(endpoint_mempool_height_mainnet(), 1)],
+            json!({
+                "height": 700008,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_mempool_testnet() {
+        test_utils::mock_testnet_outcalls();
+        run_test(
+            BitcoinBlockApi::MempoolTestnet,
+            vec![(endpoint_mempool_height_testnet(), 1)],
+            json!({
+                "height": 55002,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
     async fn test_http_request_failed_with_404() {
         test_utils::mock_all_outcalls_404();
         let all_providers = BitcoinBlockApi::providers_mainnet()
