@@ -18,16 +18,12 @@ type height_status = variant {
 /// Bitcoin block API providers.
 type bitcoin_block_api = variant {
     api_bitaps_com_mainnet;
-    api_bitaps_com_testnet;
     api_blockchair_com_mainnet;
-    api_blockchair_com_testnet;
     api_blockcypher_com_mainnet;
-    api_blockcypher_com_testnet;
     bitcoin_canister;
     bitcoinexplorer_org_mainnet;
     blockchain_info_mainnet;
     blockstream_info_mainnet;
-    blockstream_info_testnet;
     chain_api_btc_com_mainnet;
     mempool_mainnet;
     mempool_testnet;

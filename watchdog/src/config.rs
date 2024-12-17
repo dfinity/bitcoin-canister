@@ -73,6 +73,7 @@ impl Config {
                 BitcoinBlockApi::BlockchainInfoMainnet,
                 BitcoinBlockApi::BlockstreamInfoMainnet,
                 BitcoinBlockApi::ChainApiBtcComMainnet,
+                BitcoinBlockApi::MempoolMainnet,
             ],
         }
     }
@@ -88,12 +89,7 @@ impl Config {
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
-            explorers: vec![
-                BitcoinBlockApi::ApiBitapsComTestnet,
-                BitcoinBlockApi::ApiBlockchairComTestnet,
-                BitcoinBlockApi::ApiBlockcypherComTestnet,
-                BitcoinBlockApi::BlockstreamInfoTestnet,
-            ],
+            explorers: vec![BitcoinBlockApi::MempoolTestnet],
         }
     }
 
