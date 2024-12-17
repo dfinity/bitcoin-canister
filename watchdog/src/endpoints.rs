@@ -494,6 +494,32 @@ mod test {
         .await;
     }
 
+    #[tokio::test]
+    async fn test_mempool_height_mainnet() {
+        run_http_request_test(
+            endpoint_mempool_height_mainnet(),
+            "https://mempool.space/api/blocks/tip/height",
+            test_utils::MEMPOOL_HEIGHT_MAINNET_RESPONSE,
+            json!({
+                "height": 700008,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_mempool_height_testnet() {
+        run_http_request_test(
+            endpoint_mempool_height_testnet(),
+            "https://mempool.space/testnet4/api/blocks/tip/height",
+            test_utils::MEMPOOL_HEIGHT_TESTNET_RESPONSE,
+            json!({
+                "height": 55002,
+            }),
+        )
+        .await;
+    }
+
     #[test]
     fn test_transform_function_names() {
         test_utils::mock_mainnet_outcalls();
