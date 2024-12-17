@@ -29,7 +29,7 @@ use std::{fs::File, panic::catch_unwind};
 
 mod confirmation_counts;
 
-// Helper function to save a chain to a file in hex format.
+/// Helper function to save a chain to a file in hex format.
 #[allow(dead_code)]
 fn save_chain_as_hex_file(chain: &[BitcoinBlock], file_name: &str) -> std::io::Result<()> {
     use std::io::{BufWriter, Write};
