@@ -286,13 +286,16 @@ fn compute_next_difficulty(
     // IMPORTANT: The bitcoin protocol allows for a roughly 3-hour window around
     // timestamp (1 hour in the past, 2 hours in the future) meaning that
     // the timespan can be negative on testnet networks.
-    let actual_interval = prev_header.time.saturating_sub(last_adjustment_time) as u64;
 
+    // let timespan = prev_header.time.saturating_sub(last_adjustment_time) as u64;
+    // CompactTarget::from_next_work_required(prev_header.bits, timespan, *network)
+
+    let timespan = prev_header.time.saturating_sub(last_adjustment_time) as u64;
     let previous_difficulty = match network {
         Network::Testnet4 => last_adjustment_header.bits,
         _ => prev_header.bits,
     };
-    CompactTarget::from_next_work_required(previous_difficulty, actual_interval, *network)
+    CompactTarget::from_next_work_required(previous_difficulty, timespan, *network)
 }
 
 #[cfg(test)]
@@ -678,7 +681,7 @@ mod test {
     fn genesis_header(network: Network, bits: CompactTarget) -> Header {
         Header {
             bits,
-            ..genesis_block(Params::new(network)).header
+            ..genesis_block(network).header
         }
     }
 
