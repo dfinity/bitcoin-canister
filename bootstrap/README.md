@@ -219,7 +219,7 @@ $ ARG="(opt record {
         get_balance_maximum = 40_000_000 : nat;
         send_transaction_base = 2_000_000_000 : nat;
     };
-    watchdog_canister = opt opt principal \"gjqfs-iaaaa-aaaan-aaada-cai\";
+    watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
 })"
 ```
 

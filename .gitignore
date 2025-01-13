@@ -12,5 +12,5 @@ pocket-ic
 *.wasm.gz
 
 bootstrap/bitcoin-*
-bootstrap/output
+bootstrap/output*
 chunk_hashes.txt
