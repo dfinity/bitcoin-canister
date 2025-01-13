@@ -141,12 +141,13 @@ $ docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-c
 
 # Verify SHA-256 of the canister's WASM.
 $ sha256sum *.wasm.gz
-7393ede3c8388dcc739df02dc99b375a040e58788d6611bb248331e031a0bc1c  ic-btc-canister.wasm.gz
+c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-canister.wasm.gz
 2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
 ```
 
-## 7. Prepare Install Arguments
+## 7. Install Uploader Canister & Upload Chunks
 
+Prepare install arguments
 ```shell
 # Get canister state size
 $ ls -al ./bootstrap/output/canister_state.bin
@@ -164,8 +165,6 @@ $ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
 e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
 ```
 
-## 8. Install Uploader Canister
-
 ```shell
 EFFECTIVE_CANISTER_ID="5v3p4-iyaaa-aaaaa-qaaaa-cai"; \
     TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
@@ -174,10 +173,70 @@ EFFECTIVE_CANISTER_ID="5v3p4-iyaaa-aaaaa-qaaaa-cai"; \
     MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
 ```
 
+Install uploader canister
 ```shell
 $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
     --argument "(17537 : nat64)"
+```
+
+```shell
+$ dfx canister status --network testnet $TESTNET_BITCOIN_CANISTER_ID
+```
+
+Upload chunks
+```shell
+$ cargo run --example upload -- \
+    --canister-id $TESTNET_BITCOIN_CANISTER_ID \
+    --state ./bootstrap/output/canister_state.bin \
+    --ic-network http://\[2602:fb2b:110:10:5046:3fff:fe47:54cb\]:8080 \
+    --fetch-root-key
+```
+
+## 8. Upgrade Bitcoin Canister
+
+Prepare upgrade arguments
+```shell
+$ ARG="(opt record {
+    stability_threshold = opt 144;
+    syncing = opt variant { enabled };
+    burn_cycles = opt variant { enabled };
+    api_access = opt variant { enabled };
+    lazily_evaluate_fee_percentiles = opt variant { enabled };
+    fees = opt record {
+        get_current_fee_percentiles = 4_000_000 : nat;
+        get_block_headers_base = 20_000_000;
+        get_block_headers_cycles_per_ten_instructions = 4;
+        get_block_headers_maximum = 4_000_000_000;
+        get_utxos_maximum = 4_000_000_000 : nat;
+        get_current_fee_percentiles_maximum = 40_000_000 : nat;
+        send_transaction_per_byte = 8_000_000 : nat;
+        get_balance = 4_000_000 : nat;
+        get_utxos_cycles_per_ten_instructions = 4 : nat;
+        get_utxos_base = 20_000_000 : nat;
+        get_balance_maximum = 40_000_000 : nat;
+        send_transaction_base = 2_000_000_000 : nat;
+    };
+    watchdog_canister = opt opt principal \"gjqfs-iaaaa-aaaan-aaada-cai\";
+})"
+```
+
+```shell
+$ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$ARG" | xxd -r -p | sha256sum
+e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89
+```
+
+Upgrade bitcoin canister
+```shell
+$ dfx canister stop --network testnet $TESTNET_BITCOIN_CANISTER_ID
+
+$ dfx canister install \
+    --network testnet $TESTNET_BITCOIN_CANISTER_ID \
+    --mode upgrade \
+    --wasm ./ic-btc-canister.wasm.gz \
+    --argument "$ARG"
+
+$ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
