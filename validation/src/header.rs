@@ -1,4 +1,4 @@
-use bitcoin::{block::Header, params::Params, BlockHash, CompactTarget, Network, Target};
+use bitcoin::{block::Header, BlockHash, CompactTarget, Network, Target};
 
 use crate::{
     constants::{
