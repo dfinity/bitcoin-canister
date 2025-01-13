@@ -10,6 +10,12 @@ Rather than syncing the Bitcoin canister from genesis, which can take several we
 
 ## 1. Download Bitcoin Core
 
+Go to `bootstrap` directory:
+
+```shell
+cd ./bootstrap
+```
+
 Download Bitcoin Core 28.0
 
 ```shell
@@ -31,8 +37,8 @@ go install github.com/in3rsha/bitcoin-utxo-dump@5723696e694ebbfe52687f51e7fc0ce6
 ## 2. Setup Environment Variables
 
 ```shell
-BITCOIN_DIR=/path/to/bitcoin-22.0/
-NETWORK=<mainnet or testnet4>
+BITCOIN_DIR=./bitcoin-28.0
+NETWORK=<mainnet or testnet>
 HEIGHT=<height of the state you want to compute>
 STABILITY_THRESHOLD=<desired stability threshold>
 ```
@@ -94,6 +100,19 @@ for a minute or two, which downloads more Bitcoin blocks, and try again.
 ./6_compute_canister_state.sh $NETWORK $HEIGHT $STABILITY_THRESHOLD
 ```
 
+(Optional) check output data size:
+```shell
+$ du -sh ./output/*
+13M     ./output/block_headers
+1.1G    ./output/canister_state
+1.1G    ./output/canister_state.bin
+2.4G    ./output/data
+2.4G    ./output/data_bk
+120K    ./output/unstable_blocks
+469M    ./output/utxodump.csv
+469M    ./output/utxodump_shuffled.csv
+```
+
 Once all these steps are complete, the canister's state will be available in this directory with the name `canister_state.bin`.
 
 ## 5. Compute the State Hashes
@@ -106,3 +125,59 @@ cargo run --release --example compute_hashes -- --file ./output/canister_state.b
 ```
 
 The hashes of each chunk are saved in `./bootstrap/chunk_hashes.txt` and can be used later when building the `uploader` canister in Docker.
+
+## 6. Build Canisters
+
+```shell
+# Go back to root repo directory
+$ cd ..
+
+# Build all, specifying the path to chunk_hashes.txt
+$ docker build --build-arg CHUNK_HASHES_PATH=/bootstrap/chunk_hashes.txt  -t canisters .
+
+# Extract canister's WASM
+$ docker run --rm --entrypoint cat canisters /uploader.wasm.gz > uploader.wasm.gz
+$ docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
+
+# Verify SHA-256 of the canister's WASM.
+$ sha256sum *.wasm.gz
+7393ede3c8388dcc739df02dc99b375a040e58788d6611bb248331e031a0bc1c  ic-btc-canister.wasm.gz
+2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
+```
+
+## 7. Prepare Install Arguments
+
+```shell
+# Get canister state size
+$ ls -al ./bootstrap/output/canister_state.bin
+-rw-rw-r-- 1 maksym maksym 1149304832 Jan 13 11:46 ./bootstrap/output/canister_state.bin
+```
+
+Calculate required number of pages, page is `64 * 1024` bytes
+```txt
+1149304832 / (64 * 1024) = 17537
+```
+
+Calculate args hash
+```shell
+$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
+e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
+```
+
+## 8. Install Uploader Canister
+
+```shell
+EFFECTIVE_CANISTER_ID="5v3p4-iyaaa-aaaaa-qaaaa-cai"; \
+    TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
+    TESTNET_WATCHDOG_CANISTER_ID="gjqfs-iaaaa-aaaan-aaada-cai"; \
+    MAINNET_BITCOIN_CANISTER_ID="ghsi2-tqaaa-aaaan-aaaca-cai"; \
+    MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
+```
+
+```shell
+$ dfx canister install \
+    --network testnet $TESTNET_BITCOIN_CANISTER_ID \
+    --mode reinstall \
+    --wasm ./uploader.wasm.gz \
+    --argument "(17537 : nat64)"
+```

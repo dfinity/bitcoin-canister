@@ -11,6 +11,8 @@ NETWORK="$2"
 HEIGHT="$3"
 STABLE_HEIGHT=$((HEIGHT - 12))
 
+validate_file_exists "$BITCOIN_D"
+validate_file_exists "$BITCOIN_CLI"
 validate_network "$NETWORK"
 
 # Kill all background processes on exit.

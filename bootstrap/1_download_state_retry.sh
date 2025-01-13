@@ -8,6 +8,7 @@ source "./utils.sh"
 BITCOIN_D="$1/bin/bitcoind"
 NETWORK="$2"
 
+validate_file_exists "$BITCOIN_D"
 validate_network "$NETWORK"
 
 # Create a temporary bitcoin.conf file with the required settings.

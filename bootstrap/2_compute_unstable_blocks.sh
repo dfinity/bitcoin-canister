@@ -11,6 +11,8 @@ BITCOIN_CLI="$1/bin/bitcoin-cli"
 NETWORK="$2"
 HEIGHT="$3"
 
+validate_file_exists "$BITCOIN_D"
+validate_file_exists "$BITCOIN_CLI"
 validate_network "$NETWORK"
 
 # Kill all background processes on exit.

@@ -9,11 +9,12 @@ BITCOIN_D="$1/bin/bitcoind"
 NETWORK="$2"
 HEIGHT="$3"
 
+validate_file_exists "$BITCOIN_D"
 validate_network "$NETWORK"
 
 # Check if the data directory already exists.
 if [[ -d "$DATA_DIR" ]]; then
-    echo "Error: The 'data' directory already exists. Please remove it or choose another directory."
+    echo "Error: The '$DATA_DIR' directory already exists. Please remove it or choose another directory."
     exit 1
 fi
 # Create the data directory (including parent directories if needed).
