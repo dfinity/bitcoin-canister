@@ -199,7 +199,7 @@ $ cargo run --example upload -- \
 Prepare upgrade arguments
 ```shell
 $ ARG="(opt record {
-    stability_threshold = opt 144;
+    stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
     burn_cycles = opt variant { enabled };
     api_access = opt variant { enabled };
