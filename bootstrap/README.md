@@ -172,6 +172,49 @@ TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
     MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
 ```
 
+When installing canister on a testnet first start a testnet:
+
+```shell
+# In a separate terminal and in separate folder clone IC-repo
+$ git clone git@github.com:dfinity/ic.git
+$ cd ic
+
+# If you are on remote machine make sure to propagate your credentials 
+# (otherwise grafana will not start)
+$ ssh-add -L
+
+# Start a container and create a `small_high_perf` testnet inside it
+$ ./ci/container/container-run.sh
+$ clear; ict testnet create small_high_perf --lifetime-mins=10080 --output-dir=./test_tmpdir > output.secret
+```
+
+In the `output.secret` file find and save system subnet IPv6 and links to grafana
+
+```shell
+      {
+        "nodes": [
+          {
+            "domain": null,
+            "id": "zvqrm-xxxxxx-zae",
+            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47"
+          }
+        ],
+        "subnet_id": "sj5e7-xxxx-eae",
+        "subnet_type": "system"
+      },
+
+  "bn_aaaa_records": {
+    "aaaa_records": [
+      "2602:xx:xx:xx:xx:xx:xx:4dd4"
+    ],
+    "url": "XXX"
+  },
+  "prometheus": "Prometheus Web UI at http://prometheus.XXX",
+  "grafana": "Grafana at http://grafana.XXX",
+
+```
+
+
 Install uploader canister
 ```shell
 $ dfx canister install \
