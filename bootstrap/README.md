@@ -214,6 +214,16 @@ In the `output.secret` file find and save system subnet IPv6 and links to grafan
 
 ```
 
+Update your `dfx.json` with IPv6 from the above:
+
+```json
+    "testnet": {
+      "providers": [
+        "http://[2602:xx:xx:xx:xx:xx:xx:df47]:8080"
+      ],
+      "type": "persistent"
+    }
+```
 
 Install uploader canister
 ```shell
@@ -233,7 +243,7 @@ Upload chunks
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
     --state ./bootstrap/output/canister_state.bin \
-    --ic-network http://\[2602:fb2b:110:10:5046:3fff:fe47:54cb\]:8080 \
+    --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
     --fetch-root-key
 ```
 
