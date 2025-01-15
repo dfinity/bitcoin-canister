@@ -1,4 +1,4 @@
-use bitcoin::{block::Header, params::Params, BlockHash, CompactTarget, Network, Target};
+use bitcoin::{block::Header, BlockHash, CompactTarget, Network, Target};
 
 use crate::{
     constants::{
@@ -275,7 +275,16 @@ fn compute_next_difficulty(
     let last_adjustment_header = store
         .get_with_height(last_adjustment_height)
         .expect("Last adjustment header must exist");
-    let last_adjustment_time = last_adjustment_header.time;
+
+    // Block Storm Fix
+    // The mitigation consists of no longer applying the adjustment factor
+    // to the last block of the previous difficulty period. Instead,
+    // the first block of the difficulty period is used as the base.
+    // See https://github.com/bitcoin/bips/blob/master/bip-0094.mediawiki#block-storm-fix
+    let last = match network {
+        Network::Testnet4 => last_adjustment_header.bits,
+        _ => prev_header.bits,
+    };
 
     // Computing the time interval between the last adjustment header time and
     // current time. The expected value timespan is 2 weeks assuming
@@ -286,9 +295,10 @@ fn compute_next_difficulty(
     // IMPORTANT: The bitcoin protocol allows for a roughly 3-hour window around
     // timestamp (1 hour in the past, 2 hours in the future) meaning that
     // the timespan can be negative on testnet networks.
+    let last_adjustment_time = last_adjustment_header.time;
     let timespan = prev_header.time.saturating_sub(last_adjustment_time) as u64;
 
-    CompactTarget::from_next_work_required(prev_header.bits, timespan, Params::new(*network))
+    CompactTarget::from_next_work_required(last, timespan, *network)
 }
 
 #[cfg(test)]
@@ -674,7 +684,7 @@ mod test {
     fn genesis_header(network: Network, bits: CompactTarget) -> Header {
         Header {
             bits,
-            ..genesis_block(Params::new(network)).header
+            ..genesis_block(network).header
         }
     }
 

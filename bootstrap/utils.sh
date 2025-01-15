@@ -16,11 +16,20 @@ export UTXO_DUMP_SHUFFLED="$OUTPUT_DIR/utxodump_shuffled.csv"
 export CANISTER_STATE_DIR="$OUTPUT_DIR/canister_state"
 export CANISTER_STATE_FILE="$OUTPUT_DIR/canister_state.bin"
 
+# Function to validate that a file exists
+validate_file_exists() {
+    local file_path="$1"
+    if [[ ! -f "$file_path" ]]; then
+        echo "Error: File not found at $file_path" >&2
+        exit 1
+    fi
+}
+
 # Validate the network input.
 validate_network() {
     local network=$1
-    # Don't add "testnet" because testnet3 is deprecated.
-    local valid_networks=("mainnet" "testnet4")
+    # "testnet" refers to testnet4.
+    local valid_networks=("mainnet" "testnet")
 
     for valid_network in "${valid_networks[@]}"; do
         if [[ "$network" == "$valid_network" ]]; then
@@ -58,7 +67,7 @@ EOF
     # Add network-specific settings.
     case "$network" in
         "mainnet") echo "# Mainnet settings" >> "$conf_file" ;;
-        "testnet4") echo "chain=testnet4" >> "$conf_file" ;;
+        "testnet") echo "chain=testnet4" >> "$conf_file" ;;
     esac
 
     # Add additional parameters.
