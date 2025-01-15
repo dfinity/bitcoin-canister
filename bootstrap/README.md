@@ -156,7 +156,7 @@ $ wc -c < ./bootstrap/output/canister_state.bin
 
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
-1149304832 / (64 * 1024) = 17537
+ceil(1149304832 / (64 * 1024)) = 17537
 ```
 
 Calculate args hash
