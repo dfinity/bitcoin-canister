@@ -172,7 +172,7 @@ TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
     MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
 ```
 
-When installing canister on a testnet first start a testnet:
+When installing canister on a testnet first start a farm testnet via `$ ict testnet create`:
 
 ```shell
 # In a separate terminal and in separate folder clone IC-repo
@@ -223,6 +223,18 @@ Update your `dfx.json` with IPv6 from the above:
       ],
       "type": "persistent"
     }
+```
+
+If you want to deploy both `testnet` and `mainnet` canisters via dfx you might want to clone their setups in `dfx.json`, so instead of having `bitcoin` you have `bitcoin_t` and `bitcoin_m`, same for `watchdog` (`watchdog_t`, `watchdog_m`).
+
+Create corresponding canister
+```shell
+$ dfx canister create bitcoin_t --no-wallet \
+    --network testnet \
+    --subnet-type system \
+    --specified-id $TESTNET_BITCOIN_CANISTER_ID \
+    --provisional-create-canister-effective-canister-id $EFFECTIVE_CANISTER_ID \
+    --with-cycles 1000000000000000000
 ```
 
 Install uploader canister
