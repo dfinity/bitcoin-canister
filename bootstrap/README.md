@@ -136,8 +136,8 @@ $ cd ..
 $ docker build --build-arg CHUNK_HASHES_PATH=/bootstrap/chunk_hashes.txt  -t canisters .
 
 # Extract canister's WASM
-$ docker run --rm --entrypoint cat canisters /uploader.wasm.gz > uploader.wasm.gz
-$ docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
+$ docker run --rm canisters cat /uploader.wasm.gz > uploader.wasm.gz
+$ docker run --rm canisters cat /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
 
 # Verify SHA-256 of the canister's WASM.
 $ sha256sum *.wasm.gz
@@ -150,8 +150,8 @@ c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-caniste
 Prepare install arguments
 ```shell
 # Get canister state size
-$ ls -al ./bootstrap/output/canister_state.bin
--rw-rw-r-- 1 maksym maksym 1149304832 Jan 13 11:46 ./bootstrap/output/canister_state.bin
+$ wc -c < ./bootstrap/output/canister_state.bin
+1149304832
 ```
 
 Calculate required number of pages, page is `64 * 1024` bytes
