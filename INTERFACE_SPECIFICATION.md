@@ -16,6 +16,8 @@ type network = variant {
   regtest;
 };
 
+type satoshi = nat64;
+
 type address = text;
 
 type block_hash = blob;
@@ -96,6 +98,16 @@ It provides a quick result, without incurring any costs in cycles, but the resul
 
 ### `bitcoin_get_balance`
 
+```
+type get_balance_request = record {
+  network : network;
+  address : address;
+  min_confirmations : opt nat32;
+};
+
+bitcoin_get_balance : (get_balance_request) -> (satoshi);
+```
+
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
 Given a `get_balance_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet` or `testnet`), the function returns the current balance of this address in `Satoshi` (10^8 Satoshi = 1 Bitcoin) in the specified Bitcoin network. The same address formats as for `bitcoin_get_utxos` are supported.
@@ -108,10 +120,24 @@ Given an address and the optional `min_confirmations` parameter, `bitcoin_get_ba
 
 ### `bitcoin_get_balance_query`
 
+```
+bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
+```
+
 This endpoint is identical to `bitcoin_get_balance` but can _only_ be invoked in a query call.
 It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
 
 ### `bitcoin_get_current_fee_percentiles`
+
+```
+type get_current_fee_percentiles_request = record {
+  network : network;
+};
+
+type millisatoshi_per_byte = nat64;
+
+bitcoin_get_current_fee_percentiles : (get_current_fee_percentiles_request) -> (vec millisatoshi_per_byte);
+```
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
@@ -122,6 +148,23 @@ This function returns fee percentiles, measured in millisatoshi/vbyte (1000 mill
 The [standard nearest-rank estimation method](https://en.wikipedia.org/wiki/Percentile#The_nearest-rank_method), inclusive, with the addition of a 0th percentile is used. Concretely, for any i from 1 to 100, the ith percentile is the fee with rank `⌈i * 100⌉`. The 0th percentile is defined as the smallest fee (excluding coinbase transactions).
 
 ### `bitcoin_get_block_headers`
+
+```
+type block_header = blob;
+
+type get_block_headers_request = record {
+  start_height : block_height;
+  end_height : opt block_height;
+  network : network;
+};
+
+type get_block_headers_response = record {
+  tip_height : block_height;
+  block_headers : vec block_header;
+};
+
+bitcoin_get_block_headers : (get_block_headers_request) -> (get_block_headers_response);
+```
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
@@ -136,6 +179,14 @@ The response is a record consisting of the tip height and the vector of block he
 The block headers are 80-byte blobs in the [standard Bitcoin format](https://developer.bitcoin.org/reference/block_chain.html#block-headers).
 
 ### `bitcoin_send_transaction`
+```
+type send_transaction_request = record {
+  network : network;
+  transaction : blob;
+};
+
+bitcoin_send_transaction : (send_transaction_request) -> ();
+```
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
@@ -152,6 +203,42 @@ If at least one of these checks fails, the call is rejected.
 If the transaction passes these tests, the transaction is forwarded to the specified Bitcoin network. Note that the function does not provide any guarantees that the transaction will make it into the mempool or that the transaction will ever appear in a block.
 
 ### `get_config`
+```
+type flag = variant {
+  enabled;
+  disabled;
+};
+
+type fees = record {
+  get_utxos_base : nat;
+  get_utxos_cycles_per_ten_instructions : nat;
+  get_utxos_maximum : nat;
+  get_balance : nat;
+  get_balance_maximum : nat;
+  get_current_fee_percentiles : nat;
+  get_current_fee_percentiles_maximum : nat;
+  send_transaction_base : nat;
+  send_transaction_per_byte : nat;
+  get_block_headers_base : nat;
+  get_block_headers_cycles_per_ten_instructions : nat;
+  get_block_headers_maximum : nat;
+};
+
+type config = record {
+  stability_threshold : nat;
+  network : network;
+  blocks_source : principal;
+  syncing : flag;
+  fees : fees;
+  api_access : flag;
+  disable_api_if_not_fully_synced : flag;
+  watchdog_canister : opt principal;
+  burn_cycles : flag;
+  lazily_evaluate_fee_percentiles : flag;
+};
+
+get_config : () -> (config) query;
+```
 
 This endpoint returns the current configuration of the Bitcoin canister.
 It specifies the following parameters:
@@ -167,5 +254,19 @@ It specifies the following parameters:
 * `lazily_evaluate_fee_percentiles`: This flag indicates whether fee percentiles are only evaluated when fees are requested, rather than updating them automatically whenever a newly received block is processed.
 
 ### `set_config`
+```
+type set_config_request = record {
+  stability_threshold : opt nat;
+  syncing : opt flag;
+  fees : opt fees;
+  api_access : opt flag;
+  disable_api_if_not_fully_synced : opt flag;
+  watchdog_canister : opt opt principal;
+  burn_cycles : opt flag;
+  lazily_evaluate_fee_percentiles : opt flag;
+};
+
+set_config : (set_config_request) -> ();
+```
 
 This endpoint is used to update the configuration. The watchdog canister can only set the API access flag. All other configuration can only be updated by the controller of the canister. For the main Bitcoin canister (connected to Bitcoin mainnet), the only controller is the NNS root canister.
