@@ -1,13 +1,58 @@
 ## The Bitcoin Canister API
 
-The canister ID of the Bitcoin canister for Bitcoin mainnet is `ghsi2-tqaaa-aaaan-aaaca-cai`.\
-The canister ID of the Bitcoin canister for Bitcoin testnet (v4) is `g4xu7-jiaaa-aaaan-aaaaq-cai`.
+The canister IDs of the Bitcoin canisters for Bitcoin mainnet and testnet:
 
-Information about Bitcoin and the IC Bitcoin integration can be found in the [Bitcoin developer guides](https://developer.bitcoin.org/devguide/) and    the [Bitcoin integration documentation](https://internetcomputer.org/docs/current/references/bitcoin-how-it-works).
+* `mainnet`:  [`ghsi2-tqaaa-aaaan-aaaca-cai`](https://dashboard.internetcomputer.org/canister/ghsi2-tqaaa-aaaan-aaaca-cai)
+* `testnet` (v4):  [`g4xu7-jiaaa-aaaan-aaaaq-cai`](https://dashboard.internetcomputer.org/canister/g4xu7-jiaaa-aaaan-aaaaq-cai)
+
+Information about Bitcoin and the IC Bitcoin integration can be found in the [Bitcoin developer guides](https://developer.bitcoin.org/devguide/) and the [Bitcoin integration documentation](https://internetcomputer.org/docs/current/references/bitcoin-how-it-works).
 
 ### `bitcoin_get_utxos`
 
-This endpoint can only be called by cani    sters, i.e., it cannot be called by external users via ingress messages.
+```
+type network = variant {
+  mainnet;
+  testnet;  // Bitcoin testnet4.
+  regtest;
+};
+
+type address = text;
+
+type block_hash = blob;
+
+type block_height = nat32;
+
+type outpoint = record {
+  txid : blob;
+  vout : nat32;
+};
+
+type utxo = record {
+  outpoint : outpoint;
+  value : satoshi;
+  height : block_height;
+};
+
+type get_utxos_request = record {
+  network : network;
+  address : address;
+  filter : opt variant {
+    min_confirmations : nat32;
+    page : blob;
+  };
+};
+
+type get_utxos_response = record {
+  utxos : vec utxo;
+  tip_block_hash : block_hash;
+  tip_height : block_height;
+  next_page : opt blob;
+};
+
+bitcoin_get_utxos : (get_utxos_request) -> (get_utxos_response);
+```
+
+This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
 Given a `get_utxos_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet` or `testnet`), the function returns all unspent transaction outputs (UTXOs) associated with the provided address in the specified Bitcoin network based on the current view of the Bitcoin blockchain available to the Bitcoin component. The UTXOs are returned sorted by block height in descending order.
 
@@ -40,6 +85,11 @@ A `get_utxos_request` without the optional `filter` results in a request that co
 The recommended workflow is to issue a request with the desired number of confirmations. If the `next_page` field in the response is not empty, there are more UTXOs than in the returned vector. In that case, the `page` field should be set to the `next_page` bytes in the subsequent request to obtain the next batch of UTXOs.
 
 ### `bitcoin_get_utxos_query`
+
+```
+bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
+```
+
 
 This endpoint is identical to `bitcoin_get_utxos` but can _only_ be invoked in a query call.
 It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
