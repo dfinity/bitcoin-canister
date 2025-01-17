@@ -1,13 +1,13 @@
-## The Internet Computer Bitcoin API
+## The Bitcoin Canister API
 
 The canister ID of the Bitcoin canister for Bitcoin mainnet is `ghsi2-tqaaa-aaaan-aaaca-cai`.
 The canister ID of the Bitcoin canister for Bitcoin testnet (v4) is `g4xu7-jiaaa-aaaan-aaaaq-cai`.
 
 Information about Bitcoin and the IC Bitcoin integration can be found in the [Bitcoin developer guides](https://developer.bitcoin.org/devguide/) and    the [Bitcoin integration documentation](https://internetcomputer.org/docs/current/references/bitcoin-how-it-works).
 
-### bitcoin_get_utxos
+### `bitcoin_get_utxos`
 
-This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
+This endpoint can only be called by cani    sters, i.e., it cannot be called by external users via ingress messages.
 
 Given a `get_utxos_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet` or `testnet`), the function returns all unspent transaction outputs (UTXOs) associated with the provided address in the specified Bitcoin network based on the current view of the Bitcoin blockchain available to the Bitcoin component. The UTXOs are returned sorted by block height in descending order.
 
@@ -39,12 +39,12 @@ A `get_utxos_request` without the optional `filter` results in a request that co
 
 The recommended workflow is to issue a request with the desired number of confirmations. If the `next_page` field in the response is not empty, there are more UTXOs than in the returned vector. In that case, the `page` field should be set to the `next_page` bytes in the subsequent request to obtain the next batch of UTXOs.
 
-### bitcoin_get_utxos_query
+### `bitcoin_get_utxos_query`
 
 This endpoint is identical to `bitcoin_get_utxos` but can _only_ be invoked in a query call.
 It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
 
-### bitcoin_get_balance
+### `bitcoin_get_balance`
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
@@ -56,7 +56,7 @@ The optional `min_confirmations` parameter can be used to limit the set of consi
 
 Given an address and the optional `min_confirmations` parameter, `bitcoin_get_balance` iterates over all UTXOs, i.e., the same balance is returned as when calling `bitcoin_get_utxos` for the same address and the same number of confirmations and, if necessary, using pagination to get all UTXOs for the same tip hash.
 
-### bitcoin_get_balance_query
+### `bitcoin_get_balance_query`
 
 This endpoint is identical to `bitcoin_get_balance` but can _only_ be invoked in a query call.
 It provides a quick result, without incurring any costs in cycles, but the result may not be considered trustworthy as it comes from a single replica.
@@ -71,7 +71,7 @@ This function returns fee percentiles, measured in millisatoshi/vbyte (1000 mill
 
 The [standard nearest-rank estimation method](https://en.wikipedia.org/wiki/Percentile#The_nearest-rank_method), inclusive, with the addition of a 0th percentile is used. Concretely, for any i from 1 to 100, the ith percentile is the fee with rank `⌈i * 100⌉`. The 0th percentile is defined as the smallest fee (excluding coinbase transactions).
 
-### bitcoin_get_block_headers
+### `bitcoin_get_block_headers`
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
@@ -85,7 +85,7 @@ The response is guaranteed to contain the block headers in order: if it contains
 The response is a record consisting of the tip height and the vector of block headers.
 The block headers are 80-byte blobs in the [standard Bitcoin format](https://developer.bitcoin.org/reference/block_chain.html#block-headers).
 
-### bitcoin_send_transaction
+### `bitcoin_send_transaction`
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
@@ -101,7 +101,7 @@ If at least one of these checks fails, the call is rejected.
 
 If the transaction passes these tests, the transaction is forwarded to the specified Bitcoin network. Note that the function does not provide any guarantees that the transaction will make it into the mempool or that the transaction will ever appear in a block.
 
-### get_config
+### `get_config`
 
 This endpoint returns the current configuration of the Bitcoin canister.
 It specifies the following parameters:
