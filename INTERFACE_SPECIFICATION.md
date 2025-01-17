@@ -1,6 +1,6 @@
 ## The Bitcoin Canister API
 
-The canister ID of the Bitcoin canister for Bitcoin mainnet is `ghsi2-tqaaa-aaaan-aaaca-cai`.
+The canister ID of the Bitcoin canister for Bitcoin mainnet is `ghsi2-tqaaa-aaaan-aaaca-cai`.\
 The canister ID of the Bitcoin canister for Bitcoin testnet (v4) is `g4xu7-jiaaa-aaaan-aaaaq-cai`.
 
 Information about Bitcoin and the IC Bitcoin integration can be found in the [Bitcoin developer guides](https://developer.bitcoin.org/devguide/) and    the [Bitcoin integration documentation](https://internetcomputer.org/docs/current/references/bitcoin-how-it-works).
