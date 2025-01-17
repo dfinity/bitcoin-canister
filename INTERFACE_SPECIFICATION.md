@@ -9,7 +9,7 @@ Information about Bitcoin and the IC Bitcoin integration can be found in the [Bi
 
 ### `bitcoin_get_utxos`
 
-```yaml
+```
 type network = variant {
   mainnet;
   testnet;  // Bitcoin testnet4.
@@ -88,7 +88,7 @@ The recommended workflow is to issue a request with the desired number of confir
 
 ### `bitcoin_get_utxos_query`
 
-```yaml
+```
 bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
 ```
 
@@ -98,7 +98,7 @@ It provides a quick result, without incurring any costs in cycles, but the resul
 
 ### `bitcoin_get_balance`
 
-```yaml
+```
 type get_balance_request = record {
   network : network;
   address : address;
@@ -120,7 +120,7 @@ Given an address and the optional `min_confirmations` parameter, `bitcoin_get_ba
 
 ### `bitcoin_get_balance_query`
 
-```yaml
+```
 bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
 ```
 
@@ -129,7 +129,7 @@ It provides a quick result, without incurring any costs in cycles, but the resul
 
 ### `bitcoin_get_current_fee_percentiles`
 
-```yaml
+```
 type get_current_fee_percentiles_request = record {
   network : network;
 };
@@ -149,7 +149,7 @@ The [standard nearest-rank estimation method](https://en.wikipedia.org/wiki/Perc
 
 ### `bitcoin_get_block_headers`
 
-```yaml
+```
 type block_header = blob;
 
 type get_block_headers_request = record {
@@ -179,7 +179,7 @@ The response is a record consisting of the tip height and the vector of block he
 The block headers are 80-byte blobs in the [standard Bitcoin format](https://developer.bitcoin.org/reference/block_chain.html#block-headers).
 
 ### `bitcoin_send_transaction`
-```yaml
+```
 type send_transaction_request = record {
   network : network;
   transaction : blob;
@@ -203,7 +203,7 @@ If at least one of these checks fails, the call is rejected.
 If the transaction passes these tests, the transaction is forwarded to the specified Bitcoin network. Note that the function does not provide any guarantees that the transaction will make it into the mempool or that the transaction will ever appear in a block.
 
 ### `get_config`
-```yaml
+```
 type flag = variant {
   enabled;
   disabled;
@@ -254,7 +254,7 @@ It specifies the following parameters:
 * `lazily_evaluate_fee_percentiles`: This flag indicates whether fee percentiles are only evaluated when fees are requested, rather than updating them automatically whenever a newly received block is processed.
 
 ### `set_config`
-```yaml
+```
 type set_config_request = record {
   stability_threshold : opt nat;
   syncing : opt flag;
