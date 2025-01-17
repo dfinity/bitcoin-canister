@@ -116,3 +116,6 @@ It specifies the following parameters:
 * `burn_cycles`: This flag indicates whether received cycles are burned.
 * `lazily_evaluate_fee_percentiles`: This flag indicates whether fee percentiles are only evaluated when fees are requested, rather than updating them automatically whenever a newly received block is processed.
 
+### `set_config`
+
+This endpoint is used to update the configuration. The watchdog canister can only set the API access flag. All other configuration can only be updated by the controller of the canister. For the main Bitcoin canister (connected to Bitcoin mainnet), the only controller is the NNS root canister.
