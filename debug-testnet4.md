@@ -14,6 +14,9 @@ $ dfx canister create bitcoin_t --no-wallet \
     --provisional-create-canister-effective-canister-id $EFFECTIVE_CANISTER_ID \
     --with-cycles 1000000000000000000
 
+# Start polling logs.
+$ ./poll_logs.sh > canister.log
+
 # Deploy first time.
 $ dfx deploy --network testnet bitcoin_t --argument "(record {
   stability_threshold = opt 144;
@@ -34,7 +37,7 @@ $ dfx deploy --network testnet bitcoin_t --mode reinstall --argument "(record {
   watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
 })"
 
-# Start polling logs.
+# Re-start polling logs.
 $ ./poll_logs.sh > canister.log
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
