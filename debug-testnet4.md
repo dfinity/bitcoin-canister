@@ -14,6 +14,7 @@ $ dfx canister create bitcoin_t --no-wallet \
     --provisional-create-canister-effective-canister-id $EFFECTIVE_CANISTER_ID \
     --with-cycles 1000000000000000000
 
+# Deploy first time.
 $ dfx deploy --network testnet bitcoin_t --argument "(record {
   stability_threshold = opt 144;
   network = opt variant { testnet };
@@ -21,4 +22,20 @@ $ dfx deploy --network testnet bitcoin_t --argument "(record {
   api_access = opt variant { disabled };
   watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
 })"
+
+# Re-deploy.
+$ dfx canister stop --network testnet $TESTNET_BITCOIN_CANISTER_ID
+
+$ dfx deploy --network testnet bitcoin_t --mode reinstall --argument "(record {
+  stability_threshold = opt 144;
+  network = opt variant { testnet };
+  syncing = opt variant { enabled };
+  api_access = opt variant { disabled };
+  watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
+})"
+
+# Start polling logs.
+$ ./poll_logs.sh > canister.log
+
+$ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
