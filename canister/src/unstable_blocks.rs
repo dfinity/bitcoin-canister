@@ -17,7 +17,7 @@ use self::next_block_headers::NextBlockHeaders;
 
 // The maximum number of blocks that a chain on testnet can exceed other chains before its
 // anchor block is marked as stable.
-const TESTNET_CHAIN_MAX_DEPTH: u128 = 1000;
+const TESTNET_CHAIN_MAX_DEPTH: u128 = 1_000_000;
 
 /// A data structure for maintaining all unstable blocks.
 ///

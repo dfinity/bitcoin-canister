@@ -1,13 +1,25 @@
 {
   "dfx": "0.21.0",
   "canisters": {
-    "bitcoin": {
+    "bitcoin_t": {
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
-    "watchdog": {
+    "bitcoin_m": {
+      "type": "custom",
+      "candid": "./canister/candid.did",
+      "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
+      "build": "./scripts/build-canister.sh ic-btc-canister"
+    },
+    "watchdog_t": {
+      "type": "custom",
+      "candid": "./watchdog/candid.did",
+      "build": "./scripts/build-canister.sh watchdog",
+      "wasm": "./target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+    },
+    "watchdog_m": {
       "type": "custom",
       "candid": "./watchdog/candid.did",
       "build": "./scripts/build-canister.sh watchdog",
@@ -79,7 +91,7 @@
     },
     "testnet": {
       "providers": [
-        "http://[2a00:fb01:400:42:5000:aaff:fea4:ae46]:8080"
+        "http://[2602:fb2b:110:10:507d:41ff:fe87:abbd]:8080"
       ],
       "type": "persistent"
     }
