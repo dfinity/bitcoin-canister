@@ -182,8 +182,7 @@ async fn maybe_fetch_blocks() -> bool {
                 ));
             }
         },
-        Err((code, msg)) => {
-            print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
+        Err(_) => {
         }
     }
 
