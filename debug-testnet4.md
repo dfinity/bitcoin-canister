@@ -1,4 +1,6 @@
 
+## Deploy and re-deploy the canister from start
+
 ```bash
 $ EFFECTIVE_CANISTER_ID="5v3p4-iyaaa-aaaaa-qaaaa-cai"; \
     TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
@@ -41,4 +43,15 @@ $ dfx deploy --network testnet bitcoin_t --mode reinstall --argument "(record {
 $ ./poll_logs.sh > canister.log
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
+```
+
+## Pre-calculate the state
+
+See [./bootstrap/README.md]
+
+```bash
+BITCOIN_DIR=./bitcoin-28.0; \
+NETWORK=testnet; \
+HEIGHT=65700; \
+STABILITY_THRESHOLD=144
 ```

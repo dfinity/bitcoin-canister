@@ -151,18 +151,18 @@ Prepare install arguments
 ```shell
 # Get canister state size
 $ wc -c < ./bootstrap/output/canister_state.bin
-1149304832
+1921056768
 ```
 
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
-ceil(1149304832 / (64 * 1024)) = 17537
+ceil(1921056768 / (64 * 1024)) = 29313
 ```
 
 Calculate args hash
 ```shell
-$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
-e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
+$ didc encode -t '(nat64)' "(29313)" | xxd -r -p | sha256sum
+5ef4a1cfc36960d159815910f43f4ffd42c93813f549b0fcdb0312aa37fc7116  -
 ```
 
 ```shell
@@ -242,9 +242,21 @@ Install uploader canister
 ```shell
 $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
+    --wasm ./uploader.wasm.gz \
+    --argument "(29313 : nat64)"
+```
+
+(Optional) Re-install uploader canister
+```shell
+$ dfx canister stop --network testnet $TESTNET_BITCOIN_CANISTER_ID
+
+$ dfx canister install \
+    --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
-    --argument "(17537 : nat64)"
+    --argument "(29313 : nat64)"
+
+$ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
 
 ```shell
@@ -255,8 +267,8 @@ Upload chunks
 ```shell
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
-    --state ./bootstrap/output/canister_state.bin \
-    --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
+    --state ./bootstrap/output-60000/canister_state.bin \
+    --ic-network http://\[2602:fb2b:110:10:5066:b7ff:fea5:f713\]:8080 \
     --fetch-root-key
 ```
 
