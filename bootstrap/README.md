@@ -151,17 +151,17 @@ Prepare install arguments
 ```shell
 # Get canister state size
 $ wc -c < ./bootstrap/output/canister_state.bin
-1921056768
+1149304832
 ```
 
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
-ceil(1921056768 / (64 * 1024)) = 29313
+ceil(1149304832 / (64 * 1024)) = 17537
 ```
 
 Calculate args hash
 ```shell
-$ didc encode -t '(nat64)' "(29313)" | xxd -r -p | sha256sum
+$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
 5ef4a1cfc36960d159815910f43f4ffd42c93813f549b0fcdb0312aa37fc7116  -
 ```
 
@@ -243,7 +243,7 @@ Install uploader canister
 $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --wasm ./uploader.wasm.gz \
-    --argument "(29313 : nat64)"
+    --argument "(17537 : nat64)"
 ```
 
 (Optional) Re-install uploader canister
@@ -254,7 +254,7 @@ $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
-    --argument "(29313 : nat64)"
+    --argument "(17537 : nat64)"
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
@@ -268,7 +268,7 @@ Upload chunks
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
     --state ./bootstrap/output-60000/canister_state.bin \
-    --ic-network http://\[2602:fb2b:110:10:5066:b7ff:fea5:f713\]:8080 \
+    --ic-network http://\[2600:c00:2:100:5007:89ff:feb6:d0c1\]:8080 \
     --fetch-root-key
 ```
 
@@ -314,6 +314,12 @@ $ dfx canister install \
     --mode upgrade \
     --wasm ./ic-btc-canister.wasm.gz \
     --argument "$ARG"
+
+$ dfx canister snapshot list   --network testnet $TESTNET_BITCOIN_CANISTER_ID
+$ dfx canister snapshot create --network testnet $TESTNET_BITCOIN_CANISTER_ID
+Created a new snapshot of canister g4xu7-jiaaa-aaaan-aaaaq-cai. Snapshot ID: 00000000000000000000000001a000010101
+$ dfx canister snapshot list   --network testnet $TESTNET_BITCOIN_CANISTER_ID
+00000000000000000000000001a000010101: 1.07GiB, taken at 2025-01-23 11:54:02 UTC
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```

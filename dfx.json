@@ -1,5 +1,5 @@
 {
-  "dfx": "0.21.0",
+  "dfx": "0.24.3",
   "canisters": {
     "bitcoin_t": {
       "type": "custom",
@@ -91,7 +91,7 @@
     },
     "testnet": {
       "providers": [
-        "http://[2602:fb2b:110:10:503e:b3ff:fe86:f289]:8080"
+        "http://[2600:c00:2:100:5007:89ff:feb6:d0c1]:8080"
       ],
       "type": "persistent"
     }
