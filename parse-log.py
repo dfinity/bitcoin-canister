@@ -31,9 +31,12 @@ humeric_fields = [
 ]
 
 fields = humeric_fields + [
-    "is_synced", 
+    "is_synced",
     "complete_response_blocks", 
-    "complete_response_size"
+    "complete_response_size",
+    "sending_request",
+    "ingested_stable_blocks",
+    "id",
 ]
 
 def init_data():
@@ -46,11 +49,13 @@ log_pattern = re.compile(r"\[(\d+)\. (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}
 relative_start_time = None
 current_data = init_data()
 parsed_data = []
+ingested_blocks_count = None
 
 with open(log_file, "r") as file:
     for line in file:
         match = log_pattern.match(line)
         if match:
+            current_data["id"] = int(match.group(1))
             timestamp_raw, message = match.group(2), match.group(3)
             timestamp = datetime.strptime(timestamp_raw, "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -82,10 +87,24 @@ with open(log_file, "r") as file:
             if field_match:
                 current_data[field] = 1 if field_match.group(1) == "true" else 0
 
+            field_match = re.search(rf"Sending request: ", message)
+            if field_match:
+                current_data["sending_request"] = int(1)
+
             field_match = re.search(rf"Received complete response with (\d+) blocks of size (\d+) bytes", message)
             if field_match:
                 current_data["complete_response_blocks"] = int(field_match.group(1))
                 current_data["complete_response_size"] = int(field_match.group(2))
+
+            field_match = re.search(rf"Ingesting new stable block", message)
+            if field_match:
+                if ingested_blocks_count is None:
+                    ingested_blocks_count = 0
+                ingested_blocks_count += 1
+            field_match = re.search(rf"Done ingesting stable blocks", message)
+            if field_match:
+                current_data["ingested_stable_blocks"] = ingested_blocks_count
+                ingested_blocks_count = None
 
 
 # Write to CSV
@@ -94,6 +113,5 @@ with open(csv_file, "w", newline="") as file:
     writer.writerow(["time"] + fields)
     for data in parsed_data:
         writer.writerow([data.get("time", "")] + [data.get(field, "") for field in fields])
-        #writer.writerow([data.get("time", "")] + [data.get(field, "") for field in fields])
 
 print(f"CSV file '{csv_file}' has been created.")
