@@ -4,7 +4,10 @@ out
 
 # Exclude intermediate files for computing canister state,
 # except `chunk_hashes.txt`.
-bootstrap/output
+bootstrap/bitcoin-*
+bootstrap/output*
+*.log
+*.csv
 
 # Exclude all hidden files and directories
 .*

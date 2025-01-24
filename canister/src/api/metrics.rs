@@ -145,11 +145,18 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The cycles balance of the canister.",
         )?;
 
+        let block_ingestion_stats = state.metrics.block_ingestion_stats.clone();
         encode_labeled_gauge(
             w,
             "block_ingestion_stats",
-            "The stats of the most recent block ingested into the stable UTXO set.",
-            &state.metrics.block_ingestion_stats.get_labels_and_values(),
+            "The instruction stats of the most recent block ingested into the stable UTXO set.",
+            &block_ingestion_stats.get_instruction_labels_and_values(),
+        )?;
+
+        w.encode_gauge(
+            "block_ingestion_rounds",
+            block_ingestion_stats.get_num_rounds() as f64,
+            "The number of rounds of block ingestion.",
         )?;
 
         w.encode_gauge(

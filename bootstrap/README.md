@@ -141,7 +141,7 @@ $ docker run --rm canisters cat /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.
 
 # Verify SHA-256 of the canister's WASM.
 $ sha256sum *.wasm.gz
-c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-canister.wasm.gz
+714cff3b54ca03927972d4ce30465c922e517d9710188b8a18699b4c4b7899a7  ic-btc-canister.wasm.gz
 2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
 ```
 
@@ -242,9 +242,21 @@ Install uploader canister
 ```shell
 $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
+    --wasm ./uploader.wasm.gz \
+    --argument "(17537 : nat64)"
+```
+
+(Optional) Re-install uploader canister
+```shell
+$ dfx canister stop --network testnet $TESTNET_BITCOIN_CANISTER_ID
+
+$ dfx canister install \
+    --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
     --argument "(17537 : nat64)"
+
+$ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
 
 ```shell
@@ -255,8 +267,8 @@ Upload chunks
 ```shell
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
-    --state ./bootstrap/output/canister_state.bin \
-    --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
+    --state ./bootstrap/output-60000/canister_state.bin \
+    --ic-network http://\[2602:fb2b:110:10:5058:8dff:fe9f:c138\]:8080 \
     --fetch-root-key
 ```
 
@@ -290,7 +302,7 @@ $ ARG="(opt record {
 
 ```shell
 $ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$ARG" | xxd -r -p | sha256sum
-e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89
+e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89  -
 ```
 
 Upgrade bitcoin canister
@@ -302,6 +314,12 @@ $ dfx canister install \
     --mode upgrade \
     --wasm ./ic-btc-canister.wasm.gz \
     --argument "$ARG"
+
+$ dfx canister snapshot list   --network testnet $TESTNET_BITCOIN_CANISTER_ID
+$ dfx canister snapshot create --network testnet $TESTNET_BITCOIN_CANISTER_ID
+Created a new snapshot of canister g4xu7-jiaaa-aaaan-aaaaq-cai. Snapshot ID: 00000000000000000000000001a000010101
+$ dfx canister snapshot list   --network testnet $TESTNET_BITCOIN_CANISTER_ID
+00000000000000000000000001a000010101: 1.07GiB, taken at 2025-01-23 11:54:02 UTC
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
