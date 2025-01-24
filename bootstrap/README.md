@@ -141,7 +141,7 @@ $ docker run --rm canisters cat /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.
 
 # Verify SHA-256 of the canister's WASM.
 $ sha256sum *.wasm.gz
-c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-canister.wasm.gz
+714cff3b54ca03927972d4ce30465c922e517d9710188b8a18699b4c4b7899a7  ic-btc-canister.wasm.gz
 2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
 ```
 
@@ -162,7 +162,7 @@ ceil(1149304832 / (64 * 1024)) = 17537
 Calculate args hash
 ```shell
 $ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
-5ef4a1cfc36960d159815910f43f4ffd42c93813f549b0fcdb0312aa37fc7116  -
+e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
 ```
 
 ```shell
@@ -268,7 +268,7 @@ Upload chunks
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
     --state ./bootstrap/output-60000/canister_state.bin \
-    --ic-network http://\[2600:c00:2:100:5007:89ff:feb6:d0c1\]:8080 \
+    --ic-network http://\[2602:fb2b:110:10:5058:8dff:fe9f:c138\]:8080 \
     --fetch-root-key
 ```
 
@@ -302,7 +302,7 @@ $ ARG="(opt record {
 
 ```shell
 $ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$ARG" | xxd -r -p | sha256sum
-e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89
+e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89  -
 ```
 
 Upgrade bitcoin canister
