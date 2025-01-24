@@ -55,7 +55,7 @@ with open(log_file, "r") as file:
     for line in file:
         match = log_pattern.match(line)
         if match:
-            current_data["id"] = int(match.group(1))
+            current_id = int(match.group(1))
             timestamp_raw, message = match.group(2), match.group(3)
             timestamp = datetime.strptime(timestamp_raw, "%Y-%m-%dT%H:%M:%S.%f")
 
@@ -73,6 +73,7 @@ with open(log_file, "r") as file:
             relative_time = timestamp - relative_start_time
             relative_time_str = str(relative_time).split(".")[0] + f".{relative_time.microseconds // 1000:03d}"
             if current_data.get("time") != relative_time_str:
+                current_data["id"] = current_id
                 current_data = init_data()
                 current_data["time"] = relative_time_str
 
