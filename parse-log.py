@@ -73,8 +73,8 @@ with open(log_file, "r") as file:
             relative_time = timestamp - relative_start_time
             relative_time_str = str(relative_time).split(".")[0] + f".{relative_time.microseconds // 1000:03d}"
             if current_data.get("time") != relative_time_str:
-                current_data["id"] = current_id
                 current_data = init_data()
+                current_data["id"] = current_id
                 current_data["time"] = relative_time_str
 
             # Extract fields from the message
