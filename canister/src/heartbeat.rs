@@ -18,7 +18,7 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
-    //log_metrics(); // TODO: do not submit! this is only for testing.
+    log_metrics(); // TODO: do not submit! this is only for testing.
 
     maybe_burn_cycles();
 
