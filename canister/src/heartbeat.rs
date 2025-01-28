@@ -83,27 +83,27 @@ async fn maybe_fetch_blocks() -> bool {
         match response {
             GetSuccessorsResponse::Complete(response) => {
                 // Received complete response.
+                assert!(
+                    s.syncing_state.response_to_process.is_none(),
+                    "Received complete response before processing previous response."
+                );
                 print(&format!(
                     "Received complete response with {} blocks of size {} bytes.",
                     response.blocks.len(),
                     response.blocks.iter().map(|b| b.len()).sum::<usize>()
                 ));
-                assert!(
-                    s.syncing_state.response_to_process.is_none(),
-                    "Received complete response before processing previous response."
-                );
                 s.syncing_state.response_to_process = Some(ResponseToProcess::Complete(response));
             }
             GetSuccessorsResponse::Partial(partial_response) => {
                 // Received partial response.
-                print(&format!(
-                    "Received partial response with a partial block of {} bytes with remaining follow ups: {}.",
-                    partial_response.partial_block.len(),
-                    partial_response.remaining_follow_ups,
-                ));
                 assert!(
                     s.syncing_state.response_to_process.is_none(),
                     "Received partial response before processing previous response."
+                );
+                println!(
+                    "Received partial response with {} bytes and {} follow-ups remaining.",
+                    partial_response.partial_block.len(),
+                    partial_response.remaining_follow_ups,
                 );
                 s.syncing_state.response_to_process =
                     Some(ResponseToProcess::Partial(partial_response, 0));
