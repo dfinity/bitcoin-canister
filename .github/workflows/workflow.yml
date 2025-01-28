@@ -4,6 +4,7 @@ env:
   RUST_VERSION: 1.76.0
   DFX_VERSION: 0.21.0
   POCKET_IC_SERVER_VERSION: 7.0.0
+  CARGO_TERM_COLOR: always # Force Cargo to use colors
 
 on:
   push:
@@ -12,12 +13,11 @@ on:
   pull_request:
 
 jobs:
-
   cargo-build:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-20.04, macos-13 ]
+        os: [ubuntu-20.04, macos-13]
 
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +48,7 @@ jobs:
     needs: cargo-build
     strategy:
       matrix:
-        os: [ ubuntu-20.04, macos-13 ]
+        os: [ubuntu-20.04, macos-13]
 
     steps:
       - uses: actions/checkout@v4
@@ -146,11 +146,11 @@ jobs:
     name: ShellCheck
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v4
-    - name: Run ShellCheck
-      uses: ludeeus/action-shellcheck@master
-      env:
-        SHELLCHECK_OPTS: -e SC1090 -e SC2119 -e SC1091
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        env:
+          SHELLCHECK_OPTS: -e SC1090 -e SC2119 -e SC1091
 
   e2e-scenario-1:
     runs-on: ubuntu-20.04
@@ -648,9 +648,28 @@ jobs:
   checks-pass:
     # Always run this job!
     if: always()
-    needs: [cargo-tests, shell-checks, cargo-clippy, rustfmt, e2e-disable-api-if-not-fully-synced-flag, e2e-scenario-1, e2e-scenario-2,
-      e2e-scenario-3, charge-cycles-on-reject, upgradability, set_config, cycles_burn, benchmark, watchdog_health_status, 
-      watchdog_get_config, watchdog_metrics, watchdog_upgradability, canister-build-reproducibility, bitcoin_canister_metadata]
+    needs:
+      [
+        cargo-tests,
+        shell-checks,
+        cargo-clippy,
+        rustfmt,
+        e2e-disable-api-if-not-fully-synced-flag,
+        e2e-scenario-1,
+        e2e-scenario-2,
+        e2e-scenario-3,
+        charge-cycles-on-reject,
+        upgradability,
+        set_config,
+        cycles_burn,
+        benchmark,
+        watchdog_health_status,
+        watchdog_get_config,
+        watchdog_metrics,
+        watchdog_upgradability,
+        canister-build-reproducibility,
+        bitcoin_canister_metadata,
+      ]
     runs-on: ubuntu-20.04
     steps:
       - name: check cargo-tests result
