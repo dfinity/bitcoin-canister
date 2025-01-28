@@ -326,6 +326,8 @@ pub struct SyncingState {
     /// The number of errors occurred when inserting a block.
     pub num_insert_block_errors: u64,
 
+    /// Stats about the responses received from GetSuccessors.
+    #[serde(default)] // Ensures backward compatibility during deserialization
     pub successor_response_stats: Option<SuccessorsResponseStats>,
 }
 
