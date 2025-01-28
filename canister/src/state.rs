@@ -339,7 +339,7 @@ impl Default for SyncingState {
             num_get_successors_rejects: 0,
             num_block_deserialize_errors: 0,
             num_insert_block_errors: 0,
-            successor_response_stats: None,
+            //successor_response_stats: None,
         }
     }
 }
