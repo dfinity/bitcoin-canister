@@ -325,9 +325,9 @@ pub struct SyncingState {
 
     /// The number of errors occurred when inserting a block.
     pub num_insert_block_errors: u64,
-    // /// Stats about the responses received from GetSuccessors.
-    // #[serde(default)] // Ensures backward compatibility during deserialization
-    // pub successor_response_stats: Option<SuccessorsResponseStats>,
+    /// Stats about the responses received from GetSuccessors.
+    #[serde(default)] // Ensures backward compatibility during deserialization
+    pub successor_response_stats: Option<SuccessorsResponseStats>,
 }
 
 impl Default for SyncingState {
@@ -339,7 +339,7 @@ impl Default for SyncingState {
             num_get_successors_rejects: 0,
             num_block_deserialize_errors: 0,
             num_insert_block_errors: 0,
-            //successor_response_stats: None,
+            successor_response_stats: None,
         }
     }
 }
