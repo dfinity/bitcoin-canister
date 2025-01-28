@@ -325,6 +325,8 @@ pub struct SyncingState {
 
     /// The number of errors occurred when inserting a block.
     pub num_insert_block_errors: u64,
+
+    pub successor_response_stats: Option<SuccessorsResponseStats>,
 }
 
 impl Default for SyncingState {
@@ -336,7 +338,50 @@ impl Default for SyncingState {
             num_get_successors_rejects: 0,
             num_block_deserialize_errors: 0,
             num_insert_block_errors: 0,
+            successor_response_stats: None,
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
+pub struct SuccessorsResponseStats {
+    pub total_block_count: u64,
+    pub total_block_size: u64,
+
+    pub complete_block_count: u64,
+    pub complete_block_size: u64,
+
+    pub partial_block_count: u64,
+    pub partial_block_size: u64,
+    pub partial_follow_ups_remaining: u64,
+
+    pub follow_up_count: u64,
+    pub follow_up_size: u64,
+}
+
+impl SuccessorsResponseStats {
+    pub fn get_block_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("total_block_count", "total"), self.total_block_count),
+            (
+                ("complete_block_count", "complete"),
+                self.complete_block_count,
+            ),
+            (("partial_block_count", "partial"), self.partial_block_count),
+            (("follow_up_count", "follow_up"), self.follow_up_count),
+        ]
+    }
+
+    pub fn get_block_size_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("total_block_size", "total"), self.total_block_size),
+            (
+                ("complete_block_size", "complete"),
+                self.complete_block_size,
+            ),
+            (("partial_block_size", "partial"), self.partial_block_size),
+            (("follow_up_size", "follow_up"), self.follow_up_size),
+        ]
     }
 }
 
