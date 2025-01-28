@@ -169,20 +169,20 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("flag", "enabled")], enabled)?
         .value(&[("flag", "disabled")], disabled)?;
 
-        if let Some(stats) = &state.syncing_state.successor_response_stats {
-            encode_labeled_gauge(
-                w,
-                "successor_response_block_count",
-                "Block count statistics for the latest GetSuccessorsResponse.",
-                &stats.get_block_count_metrics(),
-            )?;
-            encode_labeled_gauge(
-                w,
-                "successor_response_block_size",
-                "Block size statistics for the latest GetSuccessorsResponse.",
-                &stats.get_block_size_metrics(),
-            )?;
-        }
+        // if let Some(stats) = &state.syncing_state.successor_response_stats {
+        //     encode_labeled_gauge(
+        //         w,
+        //         "successor_response_block_count",
+        //         "Block count statistics for the latest GetSuccessorsResponse.",
+        //         &stats.get_block_count_metrics(),
+        //     )?;
+        //     encode_labeled_gauge(
+        //         w,
+        //         "successor_response_block_size",
+        //         "Block size statistics for the latest GetSuccessorsResponse.",
+        //         &stats.get_block_size_metrics(),
+        //     )?;
+        // }
 
         Ok(())
     })
