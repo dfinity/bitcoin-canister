@@ -363,19 +363,19 @@ pub struct SuccessorsResponseStats {
 impl SuccessorsResponseStats {
     pub fn get_block_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("block_count", "total"), self.total_block_count),
-            (("block_count", "complete"), self.complete_block_count),
-            (("block_count", "partial"), self.partial_block_count),
-            (("block_count", "follow_up"), self.follow_up_count),
+            (("response_type", "total"), self.total_block_count),
+            (("response_type", "complete"), self.complete_block_count),
+            (("response_type", "partial"), self.partial_block_count),
+            (("response_type", "follow_up"), self.follow_up_count),
         ]
     }
 
     pub fn get_block_size_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("block_size", "total"), self.total_block_size),
-            (("block_size", "complete"), self.complete_block_size),
-            (("block_size", "partial"), self.partial_block_size),
-            (("block_size", "follow_up"), self.follow_up_size),
+            (("response_type", "total"), self.total_block_size),
+            (("response_type", "complete"), self.complete_block_size),
+            (("response_type", "partial"), self.partial_block_size),
+            (("response_type", "follow_up"), self.follow_up_size),
         ]
     }
 }
