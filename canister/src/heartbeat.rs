@@ -166,7 +166,7 @@ async fn maybe_fetch_blocks() -> bool {
                 );
                 let count = response.blocks.len() as u64;
                 let bytes = response.blocks.iter().map(|b| b.len() as u64).sum::<u64>();
-                println!(
+                print!(
                     "Received complete response: {} blocks, total {} bytes.",
                     count, bytes
                 );
@@ -188,7 +188,7 @@ async fn maybe_fetch_blocks() -> bool {
                 );
                 let bytes = partial_response.partial_block.len() as u64;
                 let remaining = partial_response.remaining_follow_ups as u64;
-                println!(
+                print!(
                     "Received partial response: {} bytes, {} follow-ups remaining.",
                     bytes, remaining,
                 );
@@ -209,7 +209,7 @@ async fn maybe_fetch_blocks() -> bool {
                 // A follow-up response is only expected, and only makes sense, when there's
                 // a partial response to process.
                 let bytes = block_bytes.len() as u64;
-                println!("Received follow-up response: {} bytes.", bytes);
+                print!("Received follow-up response: {} bytes.", bytes);
                 if let Some(successor_response_stats) =
                     s.syncing_state.successor_response_stats.as_mut()
                 {
