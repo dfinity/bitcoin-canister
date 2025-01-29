@@ -18,7 +18,7 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
-    log_metrics(); // TODO: do not submit! this is only for testing.
+    //log_metrics(); // TODO: do not submit! this is only for testing.
 
     maybe_burn_cycles();
 
@@ -41,6 +41,7 @@ pub async fn heartbeat() {
     maybe_compute_fee_percentiles();
 }
 
+#[allow(dead_code)]
 fn log_metrics() {
     with_state(|s| {
         // General stats
