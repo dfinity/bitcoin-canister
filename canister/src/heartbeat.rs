@@ -138,19 +138,14 @@ async fn maybe_fetch_blocks() -> bool {
     };
 
     with_state_mut(|s| {
-        let successor_request_stats = s
+        let stats = s
             .syncing_state
-            .successor_request_stats
+            .get_successors_request_stats
             .get_or_insert_with(SuccessorsRequestStats::default);
-
-        successor_request_stats.total_tx_count += 1;
+        stats.total_rx_count += 1;
         match request {
-            GetSuccessorsRequest::Initial(_) => {
-                successor_request_stats.initial_tx_count += 1;
-            }
-            GetSuccessorsRequest::FollowUp(_) => {
-                successor_request_stats.follow_up_tx_count += 1;
-            }
+            GetSuccessorsRequest::Initial(_) => stats.initial_rx_count += 1,
+            GetSuccessorsRequest::FollowUp(_) => stats.follow_up_rx_count += 1,
         }
     });
 
@@ -171,8 +166,9 @@ async fn maybe_fetch_blocks() -> bool {
             }
         };
 
-        if s.syncing_state.successor_response_stats.is_none() {
-            s.syncing_state.successor_response_stats = Some(SuccessorsResponseStats::default());
+        if s.syncing_state.get_successors_response_stats.is_none() {
+            s.syncing_state.get_successors_response_stats =
+                Some(SuccessorsResponseStats::default());
         }
         match response {
             GetSuccessorsResponse::Complete(response) => {
@@ -187,13 +183,11 @@ async fn maybe_fetch_blocks() -> bool {
                     "Received complete response: {} blocks, total {} bytes.",
                     count, bytes,
                 ));
-                if let Some(successor_response_stats) =
-                    s.syncing_state.successor_response_stats.as_mut()
-                {
-                    successor_response_stats.complete_block_count += count;
-                    successor_response_stats.complete_block_size += bytes;
-                    successor_response_stats.total_block_count += count;
-                    successor_response_stats.total_block_size += bytes;
+                if let Some(stats) = s.syncing_state.get_successors_response_stats.as_mut() {
+                    stats.complete_block_count += count;
+                    stats.complete_block_size += bytes;
+                    stats.total_block_count += count;
+                    stats.total_block_size += bytes;
                 }
                 s.syncing_state.response_to_process = Some(ResponseToProcess::Complete(response));
             }
@@ -209,14 +203,12 @@ async fn maybe_fetch_blocks() -> bool {
                     "Received partial response: {} bytes, {} follow-ups remaining.",
                     bytes, remaining,
                 ));
-                if let Some(successor_response_stats) =
-                    s.syncing_state.successor_response_stats.as_mut()
-                {
-                    successor_response_stats.partial_block_count += 1;
-                    successor_response_stats.partial_block_size += bytes;
-                    successor_response_stats.partial_follow_ups_remaining += remaining;
-                    successor_response_stats.total_block_count += 1;
-                    successor_response_stats.total_block_size += bytes;
+                if let Some(stats) = s.syncing_state.get_successors_response_stats.as_mut() {
+                    stats.partial_block_count += 1;
+                    stats.partial_block_size += bytes;
+                    stats.partial_follow_ups_remaining += remaining;
+                    stats.total_block_count += 1;
+                    stats.total_block_size += bytes;
                 }
                 s.syncing_state.response_to_process =
                     Some(ResponseToProcess::Partial(partial_response, 0));
@@ -227,13 +219,11 @@ async fn maybe_fetch_blocks() -> bool {
                 // a partial response to process.
                 let bytes = block_bytes.len() as u64;
                 print(&format!("Received follow-up response: {} bytes.", bytes));
-                if let Some(successor_response_stats) =
-                    s.syncing_state.successor_response_stats.as_mut()
-                {
-                    successor_response_stats.follow_up_count += 1;
-                    successor_response_stats.follow_up_size += bytes;
-                    successor_response_stats.total_block_count += 1;
-                    successor_response_stats.total_block_size += bytes;
+                if let Some(stats) = s.syncing_state.get_successors_response_stats.as_mut() {
+                    stats.follow_up_count += 1;
+                    stats.follow_up_size += bytes;
+                    stats.total_block_count += 1;
+                    stats.total_block_size += bytes;
                 }
 
                 let (mut partial_response, mut follow_up_index) = match s.syncing_state.response_to_process.take() {

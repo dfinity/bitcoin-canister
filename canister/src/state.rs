@@ -328,11 +328,11 @@ pub struct SyncingState {
 
     /// Stats about the request sent to GetSuccessors.
     #[serde(default)] // Ensures backward compatibility during deserialization
-    pub successor_request_stats: Option<SuccessorsRequestStats>,
+    pub get_successors_request_stats: Option<SuccessorsRequestStats>,
 
     /// Stats about the responses received from GetSuccessors.
     #[serde(default)] // Ensures backward compatibility during deserialization
-    pub successor_response_stats: Option<SuccessorsResponseStats>,
+    pub get_successors_response_stats: Option<SuccessorsResponseStats>,
 }
 
 impl Default for SyncingState {
@@ -344,25 +344,25 @@ impl Default for SyncingState {
             num_get_successors_rejects: 0,
             num_block_deserialize_errors: 0,
             num_insert_block_errors: 0,
-            successor_request_stats: None,
-            successor_response_stats: None,
+            get_successors_request_stats: None,
+            get_successors_response_stats: None,
         }
     }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub struct SuccessorsRequestStats {
-    pub total_tx_count: u64,
-    pub initial_tx_count: u64,
-    pub follow_up_tx_count: u64,
+    pub total_rx_count: u64,
+    pub initial_rx_count: u64,
+    pub follow_up_rx_count: u64,
 }
 
 impl SuccessorsRequestStats {
     pub fn get_request_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("request_type", "total"), self.total_tx_count),
-            (("request_type", "initial"), self.initial_tx_count),
-            (("request_type", "follow_up"), self.follow_up_tx_count),
+            (("request_type", "total"), self.total_rx_count),
+            (("request_type", "initial"), self.initial_rx_count),
+            (("request_type", "follow_up"), self.follow_up_rx_count),
         ]
     }
 }
