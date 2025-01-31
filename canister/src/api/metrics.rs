@@ -172,9 +172,9 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         if let Some(stats) = &state.syncing_state.successor_request_stats {
             encode_labeled_gauge(
                 w,
-                "successor_request_tx_count",
+                "successor_request_count",
                 "Transaction count statistics for GetSuccessorsRequest.",
-                &stats.get_tx_count_metrics(),
+                &stats.get_request_count_metrics(),
             )?;
         }
 

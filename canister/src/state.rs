@@ -358,7 +358,7 @@ pub struct SuccessorsRequestStats {
 }
 
 impl SuccessorsRequestStats {
-    pub fn get_tx_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+    pub fn get_request_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
             (("request_type", "total"), self.total_tx_count),
             (("request_type", "initial"), self.initial_tx_count),
