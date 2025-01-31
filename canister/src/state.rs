@@ -352,53 +352,65 @@ impl Default for SyncingState {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub struct SuccessorsRequestStats {
-    pub total_rx_count: u64,
-    pub initial_rx_count: u64,
-    pub follow_up_rx_count: u64,
+    pub total_count: u64,
+    pub initial_count: u64,
+    pub follow_up_count: u64,
 }
 
 impl SuccessorsRequestStats {
-    pub fn get_request_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+    pub fn get_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("request_type", "total"), self.total_rx_count),
-            (("request_type", "initial"), self.initial_rx_count),
-            (("request_type", "follow_up"), self.follow_up_rx_count),
+            (("type", "total"), self.total_count),
+            (("type", "initial"), self.initial_count),
+            (("type", "follow_up"), self.follow_up_count),
         ]
     }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub struct SuccessorsResponseStats {
+    pub total_count: u64,
     pub total_block_count: u64,
     pub total_block_size: u64,
 
+    pub complete_count: u64,
     pub complete_block_count: u64,
     pub complete_block_size: u64,
 
+    pub partial_count: u64,
     pub partial_block_count: u64,
     pub partial_block_size: u64,
-    pub partial_follow_ups_remaining: u64,
 
     pub follow_up_count: u64,
-    pub follow_up_size: u64,
+    pub follow_up_block_count: u64,
+    pub follow_up_block_size: u64,
 }
 
 impl SuccessorsResponseStats {
+    pub fn get_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_count),
+            (("type", "complete"), self.complete_count),
+            (("type", "partial"), self.partial_count),
+            (("type", "follow_up"), self.follow_up_count),
+        ]
+    }
+
     pub fn get_block_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("response_type", "total"), self.total_block_count),
-            (("response_type", "complete"), self.complete_block_count),
-            (("response_type", "partial"), self.partial_block_count),
-            (("response_type", "follow_up"), self.follow_up_count),
+            (("type", "total"), self.total_block_count),
+            (("type", "complete"), self.complete_block_count),
+            (("type", "partial"), self.partial_block_count),
+            (("type", "follow_up"), self.follow_up_block_count),
         ]
     }
 
     pub fn get_block_size_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("response_type", "total"), self.total_block_size),
-            (("response_type", "complete"), self.complete_block_size),
-            (("response_type", "partial"), self.partial_block_size),
-            (("response_type", "follow_up"), self.follow_up_size),
+            (("type", "total"), self.total_block_size),
+            (("type", "complete"), self.complete_block_size),
+            (("type", "partial"), self.partial_block_size),
+            (("type", "follow_up"), self.follow_up_block_size),
         ]
     }
 }
