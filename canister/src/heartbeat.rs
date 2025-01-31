@@ -166,10 +166,10 @@ async fn maybe_fetch_blocks() -> bool {
             }
         };
 
-        if s.syncing_state.get_successors_response_stats.is_none() {
-            s.syncing_state.get_successors_response_stats =
-                Some(SuccessorsResponseStats::default());
-        }
+        s.syncing_state
+            .get_successors_response_stats
+            .get_or_insert_with(SuccessorsResponseStats::default);
+
         match response {
             GetSuccessorsResponse::Complete(response) => {
                 // Received complete response.
