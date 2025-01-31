@@ -1,7 +1,7 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
     runtime::{call_get_successors, cycles_burn, print},
-    state::{self, ResponseToProcess, SuccessorsResponseStats},
+    state::{self, ResponseToProcess, SuccessorsRequestStats, SuccessorsResponseStats},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
         GetSuccessorsResponse,
@@ -136,6 +136,23 @@ async fn maybe_fetch_blocks() -> bool {
             return false;
         }
     };
+
+    with_state_mut(|s| {
+        let successor_request_stats = s
+            .syncing_state
+            .successor_request_stats
+            .get_or_insert_with(SuccessorsRequestStats::default);
+
+        successor_request_stats.total_tx_count += 1;
+        match request {
+            GetSuccessorsRequest::Initial(_) => {
+                successor_request_stats.initial_tx_count += 1;
+            }
+            GetSuccessorsRequest::FollowUp(_) => {
+                successor_request_stats.follow_up_tx_count += 1;
+            }
+        }
+    });
 
     print(&format!("Sending request: {:?}", request));
 
