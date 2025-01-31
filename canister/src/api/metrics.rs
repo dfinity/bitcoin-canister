@@ -173,7 +173,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             encode_labeled_gauge(
                 w,
                 "get_successors_request_count",
-                "Transaction count statistics for GetSuccessorsRequest.",
+                "The statistics of the GetSuccessorsRequest.",
                 &stats.get_request_count_metrics(),
             )?;
         }
