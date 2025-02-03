@@ -360,9 +360,9 @@ pub struct SuccessorsRequestStats {
 impl SuccessorsRequestStats {
     pub fn get_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "tx_total"), self.total_count),
-            (("type", "tx_initial"), self.initial_count),
-            (("type", "tx_follow_up"), self.follow_up_count),
+            (("type", "total"), self.total_count),
+            (("type", "initial"), self.initial_count),
+            (("type", "follow_up"), self.follow_up_count),
         ]
     }
 }
@@ -389,28 +389,28 @@ pub struct SuccessorsResponseStats {
 impl SuccessorsResponseStats {
     pub fn get_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "rx_total"), self.total_count),
-            (("type", "rx_complete"), self.complete_count),
-            (("type", "rx_partial"), self.partial_count),
-            (("type", "rx_follow_up"), self.follow_up_count),
+            (("type", "total"), self.total_count),
+            (("type", "complete"), self.complete_count),
+            (("type", "partial"), self.partial_count),
+            (("type", "follow_up"), self.follow_up_count),
         ]
     }
 
     pub fn get_block_count_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "rx_total"), self.total_block_count),
-            (("type", "rx_complete"), self.complete_block_count),
-            (("type", "rx_partial"), self.partial_block_count),
-            (("type", "rx_follow_up"), self.follow_up_block_count),
+            (("type", "total"), self.total_block_count),
+            (("type", "complete"), self.complete_block_count),
+            (("type", "partial"), self.partial_block_count),
+            (("type", "follow_up"), self.follow_up_block_count),
         ]
     }
 
     pub fn get_block_size_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "rx_total"), self.total_block_size),
-            (("type", "rx_complete"), self.complete_block_size),
-            (("type", "rx_partial"), self.partial_block_size),
-            (("type", "rx_follow_up"), self.follow_up_block_size),
+            (("type", "total"), self.total_block_size),
+            (("type", "complete"), self.complete_block_size),
+            (("type", "partial"), self.partial_block_size),
+            (("type", "follow_up"), self.follow_up_block_size),
         ]
     }
 }
