@@ -18,8 +18,6 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
-    //log_metrics(); // TODO: do not submit! this is only for testing.
-
     maybe_burn_cycles();
 
     if ingest_stable_blocks_into_utxoset() {
@@ -39,78 +37,6 @@ pub async fn heartbeat() {
     maybe_process_response();
 
     maybe_compute_fee_percentiles();
-}
-
-#[allow(dead_code)]
-fn log_metrics() {
-    with_state(|s| {
-        // General stats
-        print(&format!(
-            "main_chain_height: {}",
-            state::main_chain_height(s)
-        ));
-        print(&format!("stable_height: {}", s.stable_height()));
-        print(&format!("utxos_length: {}", s.utxos.utxos_len()));
-        print(&format!(
-            "address_utxos_length: {}",
-            s.utxos.address_utxos_len()
-        ));
-
-        // Unstable blocks and stability threshold
-        print(&format!(
-            "anchor_difficulty: {}",
-            s.unstable_blocks.anchor_difficulty()
-        ));
-        print(&format!(
-            "normalized_stability_threshold: {}",
-            s.unstable_blocks.normalized_stability_threshold()
-        ));
-        print(&format!(
-            "unstable_blocks_num_tips: {}",
-            s.unstable_blocks.num_tips()
-        ));
-        print(&format!(
-            "unstable_blocks_total: {}",
-            state::get_unstable_blocks(s).len()
-        ));
-        print(&format!(
-            "unstable_blocks_depth: {}",
-            s.unstable_blocks.blocks_depth()
-        ));
-        print(&format!(
-            "unstable_blocks_difficulty_based_depth: {}",
-            s.unstable_blocks.blocks_difficulty_based_depth()
-        ));
-
-        // Errors
-        print(&format!(
-            "num_get_successors_rejects: {}",
-            s.syncing_state.num_get_successors_rejects
-        ));
-        print(&format!(
-            "num_block_deserialize_errors: {}",
-            s.syncing_state.num_block_deserialize_errors
-        ));
-        print(&format!(
-            "num_insert_block_errors: {}",
-            s.syncing_state.num_insert_block_errors
-        ));
-
-        // Metrics
-        print(&format!(
-            "send_transaction_count: {}",
-            s.metrics.send_transaction_count
-        ));
-        print(&format!(
-            "cycles_burnt: {}",
-            s.metrics.cycles_burnt.unwrap_or_default()
-        ));
-        print(&format!(
-            "cycles_balance: {}",
-            ic_cdk::api::canister_balance()
-        ));
-        print(&format!("is_synced: {}", crate::is_synced()));
-    });
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
