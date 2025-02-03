@@ -68,8 +68,6 @@ async fn maybe_fetch_blocks() -> bool {
     let response: Result<(GetSuccessorsResponse,), _> =
         call_get_successors(with_state(|s| s.blocks_source), request).await;
 
-    print(&format!("Received response: {:?}", response));
-
     // Save the response.
     with_state_mut(|s| {
         let response = match response {
@@ -89,6 +87,12 @@ async fn maybe_fetch_blocks() -> bool {
                     s.syncing_state.response_to_process.is_none(),
                     "Received complete response before processing previous response."
                 );
+                let count = response.blocks.len() as u64;
+                let bytes = response.blocks.iter().map(|b| b.len() as u64).sum::<u64>();
+                print(&format!(
+                    "Received complete response: {} blocks, total {} bytes.",
+                    count, bytes,
+                ));
                 s.syncing_state.response_to_process = Some(ResponseToProcess::Complete(response));
             }
             GetSuccessorsResponse::Partial(partial_response) => {
@@ -97,6 +101,12 @@ async fn maybe_fetch_blocks() -> bool {
                     s.syncing_state.response_to_process.is_none(),
                     "Received partial response before processing previous response."
                 );
+                let bytes = partial_response.partial_block.len() as u64;
+                let remaining = partial_response.remaining_follow_ups as u64;
+                print(&format!(
+                    "Received partial response: {} bytes, {} follow-ups remaining.",
+                    bytes, remaining,
+                ));
                 s.syncing_state.response_to_process =
                     Some(ResponseToProcess::Partial(partial_response, 0));
             }
@@ -104,7 +114,8 @@ async fn maybe_fetch_blocks() -> bool {
                 // Received a follow-up response.
                 // A follow-up response is only expected, and only makes sense, when there's
                 // a partial response to process.
-
+                let bytes = block_bytes.len() as u64;
+                print(&format!("Received follow-up response: {} bytes.", bytes));
                 let (mut partial_response, mut follow_up_index) = match s.syncing_state.response_to_process.take() {
                     Some(ResponseToProcess::Partial(res, pages)) => (res, pages),
                     other => unreachable!("Cannot receive follow-up response without a previous partial response. Previous response found: {:?}", other)
