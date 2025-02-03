@@ -230,7 +230,6 @@ async fn maybe_fetch_blocks() -> bool {
                     rx_stats.total_block_count += 1;
                     rx_stats.total_block_size += bytes;
                 }
-
                 let (mut partial_response, mut follow_up_index) = match s.syncing_state.response_to_process.take() {
                     Some(ResponseToProcess::Partial(res, pages)) => (res, pages),
                     other => unreachable!("Cannot receive follow-up response without a previous partial response. Previous response found: {:?}", other)
