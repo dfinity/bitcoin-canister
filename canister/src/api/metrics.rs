@@ -169,6 +169,36 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("flag", "enabled")], enabled)?
         .value(&[("flag", "disabled")], disabled)?;
 
+        if let Some(stats) = &state.syncing_state.get_successors_request_stats {
+            encode_labeled_gauge(
+                w,
+                "get_successors_tx_count",
+                "The number of get_successors requests.",
+                &stats.get_count_metrics(),
+            )?;
+        }
+
+        if let Some(stats) = &state.syncing_state.get_successors_response_stats {
+            encode_labeled_gauge(
+                w,
+                "get_successors_rx_count",
+                "The number of get_successors responses.",
+                &stats.get_count_metrics(),
+            )?;
+            encode_labeled_gauge(
+                w,
+                "get_successors_rx_block_count",
+                "The number of blocks in get_successors responses.",
+                &stats.get_block_count_metrics(),
+            )?;
+            encode_labeled_gauge(
+                w,
+                "get_successors_rx_block_size",
+                "The total size of the blocks in get_successors responses.",
+                &stats.get_block_size_metrics(),
+            )?;
+        }
+
         Ok(())
     })
 }
