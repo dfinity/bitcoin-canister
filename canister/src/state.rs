@@ -327,11 +327,13 @@ pub struct SyncingState {
     pub num_insert_block_errors: u64,
 
     /// Stats about the request sent to GetSuccessors.
-    #[serde(default)] // Ensures backward compatibility during deserialization
+    /// NOTE: serde(default) is used here for backward-compatibility.
+    #[serde(default)]
     pub get_successors_request_stats: SuccessorsRequestStats,
 
     /// Stats about the responses received from GetSuccessors.
-    #[serde(default)] // Ensures backward compatibility during deserialization
+    /// NOTE: serde(default) is used here for backward-compatibility.
+    #[serde(default)]
     pub get_successors_response_stats: SuccessorsResponseStats,
 }
 
