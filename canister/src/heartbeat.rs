@@ -1,7 +1,7 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
     runtime::{call_get_successors, cycles_burn, print},
-    state::{self, ResponseToProcess, SuccessorsRequestStats, SuccessorsResponseStats},
+    state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
         GetSuccessorsResponse,

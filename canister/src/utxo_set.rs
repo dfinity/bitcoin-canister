@@ -519,7 +519,11 @@ pub struct BlockIngestionStats {
 }
 
 impl BlockIngestionStats {
-    pub fn get_labels_and_values(&self) -> Vec<((&str, &str), u64)> {
+    pub fn get_num_rounds(&self) -> u32 {
+        self.num_rounds
+    }
+    
+    pub fn get_instruction_labels_and_values(&self) -> Vec<((&str, &str), u64)> {
         vec![
             (("instruction_count", "total"), self.ins_total),
             (

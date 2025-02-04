@@ -149,7 +149,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             w,
             "block_ingestion_stats",
             "The stats of the most recent block ingested into the stable UTXO set.",
-            &state.metrics.block_ingestion_stats.get_labels_and_values(),
+            &state
+                .metrics
+                .block_ingestion_stats
+                .get_instruction_labels_and_values(),
+        )?;
+
+        w.encode_gauge(
+            "block_ingestion_num_rounds",
+            state.metrics.block_ingestion_stats.get_num_rounds() as f64,
+            "The number of rounds it took the most recent block to get ingested into the stable UTXO set.",
         )?;
 
         w.encode_gauge(
@@ -183,19 +192,28 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             w,
             "get_successors_response_count",
             "The number of get_successors responses.",
-            &state.syncing_state.get_successors_response_stats.get_count_metrics(),
+            &state
+                .syncing_state
+                .get_successors_response_stats
+                .get_count_metrics(),
         )?;
         encode_labeled_gauge(
             w,
             "get_successors_response_block_count",
             "The number of blocks in get_successors responses.",
-            &state.syncing_state.get_successors_response_stats.get_block_count_metrics(),
+            &state
+                .syncing_state
+                .get_successors_response_stats
+                .get_block_count_metrics(),
         )?;
         encode_labeled_gauge(
             w,
             "get_successors_response_block_size",
             "The total size of the blocks in get_successors responses.",
-            &state.syncing_state.get_successors_response_stats.get_block_size_metrics(),
+            &state
+                .syncing_state
+                .get_successors_response_stats
+                .get_block_size_metrics(),
         )?;
 
         Ok(())
