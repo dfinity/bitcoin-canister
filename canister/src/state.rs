@@ -328,11 +328,11 @@ pub struct SyncingState {
 
     /// Stats about the request sent to GetSuccessors.
     #[serde(default)] // Ensures backward compatibility during deserialization
-    pub get_successors_request_stats: Option<SuccessorsRequestStats>,
+    pub get_successors_request_stats: SuccessorsRequestStats,
 
     /// Stats about the responses received from GetSuccessors.
     #[serde(default)] // Ensures backward compatibility during deserialization
-    pub get_successors_response_stats: Option<SuccessorsResponseStats>,
+    pub get_successors_response_stats: SuccessorsResponseStats,
 }
 
 impl Default for SyncingState {
@@ -344,8 +344,8 @@ impl Default for SyncingState {
             num_get_successors_rejects: 0,
             num_block_deserialize_errors: 0,
             num_insert_block_errors: 0,
-            get_successors_request_stats: None,
-            get_successors_response_stats: None,
+            get_successors_request_stats: SuccessorsRequestStats::default(),
+            get_successors_response_stats: SuccessorsResponseStats::default(),
         }
     }
 }
