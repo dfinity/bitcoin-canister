@@ -71,14 +71,14 @@ async fn maybe_fetch_blocks() -> bool {
             GetSuccessorsRequest::FollowUp(_) => stats.follow_up_count += 1,
         }
 
-        let current_time = time_nanos();
-        if let Some(last_request_time) = &mut stats.last_request_time {
-            let elapsed = std::time::Duration::from_nanos(current_time - *last_request_time);
+        let curr_time = time_nanos();
+        if let Some(prev_time) = &mut stats.last_request_time {
+            let interval = std::time::Duration::from_nanos(curr_time - *prev_time);
             s.metrics
                 .get_successors_request_interval
-                .observe(elapsed.as_secs_f64());
+                .observe(interval.as_secs_f64());
         }
-        stats.last_request_time = Some(current_time);
+        stats.last_request_time = Some(curr_time);
     });
 
     print(&format!("Sending request: {:?}", request));
