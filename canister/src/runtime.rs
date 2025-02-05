@@ -202,6 +202,7 @@ pub fn get_cycles_balance() -> u64 {
 }
 
 pub fn time() -> u64 {
+    // to get seconds from nanoseconds
     time_nanos() / 1_000_000_000
 }
 
