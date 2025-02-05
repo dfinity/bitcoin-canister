@@ -1,5 +1,7 @@
 use crate::{
-    metrics::DurationHistogram, metrics::InstructionHistogram, state, types::HttpResponse,
+    metrics::{DurationHistogram, InstructionHistogram},
+    state,
+    types::HttpResponse,
     with_state,
 };
 use ic_btc_interface::Flag;
