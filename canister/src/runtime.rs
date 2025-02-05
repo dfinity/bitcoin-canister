@@ -201,7 +201,7 @@ pub fn get_cycles_balance() -> u64 {
     CYCLES_BALANCE.with(|c| *c.borrow())
 }
 
-pub fn time_secs() -> u64 {
+pub fn time() -> u64 {
     time_nanos() / 1_000_000_000
 }
 
