@@ -38,8 +38,8 @@ pub struct Metrics {
     pub cycles_burnt: Option<u128>,
 
     /// The time interval between two consecutive GetSuccessors requests.
-    #[serde(default = "get_successors_request_interval_seconds")]
-    pub get_successors_request_interval_seconds: DurationHistogram,
+    #[serde(default = "get_successors_request_interval")]
+    pub get_successors_request_interval: DurationHistogram,
 }
 
 impl Default for Metrics {
@@ -87,7 +87,7 @@ impl Default for Metrics {
 
             cycles_burnt: Some(0),
 
-            get_successors_request_interval_seconds: get_successors_request_interval_seconds(),
+            get_successors_request_interval: get_successors_request_interval(),
         }
     }
 }
@@ -246,10 +246,10 @@ impl DurationHistogram {
     }
 }
 
-fn get_successors_request_interval_seconds() -> DurationHistogram {
+fn get_successors_request_interval() -> DurationHistogram {
     DurationHistogram::new(
-        "get_successors_request_interval_seconds",
-        "The time interval between two consecutive GetSuccessors requests.",
+        "get_successors_request_interval",
+        "The time interval between two consecutive GetSuccessors requests in seconds.",
     )
 }
 

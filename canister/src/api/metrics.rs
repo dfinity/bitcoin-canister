@@ -193,7 +193,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
                 .get_count_metrics(),
         )?;
 
-        encode_duration_histogram(w, &state.metrics.get_successors_request_interval_seconds)?;
+        encode_duration_histogram(w, &state.metrics.get_successors_request_interval)?;
 
         encode_labeled_gauge(
             w,

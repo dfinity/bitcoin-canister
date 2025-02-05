@@ -75,7 +75,7 @@ async fn maybe_fetch_blocks() -> bool {
         if let Some(last_request_time) = &mut stats.last_request_time {
             let elapsed = std::time::Duration::from_nanos(current_time - *last_request_time);
             s.metrics
-                .get_successors_request_interval_seconds
+                .get_successors_request_interval
                 .observe(elapsed.as_secs_f64());
         }
         stats.last_request_time = Some(current_time);
