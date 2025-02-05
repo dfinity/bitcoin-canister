@@ -1,7 +1,7 @@
 {
   "dfx": "0.21.0",
   "canisters": {
-    "bitcoin_t": {
+    "bitcoin": {
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
@@ -79,7 +79,7 @@
     },
     "testnet": {
       "providers": [
-        "http://[2602:fb2b:110:10:5046:dbff:fe83:f6a7]:8080"
+        "http://[2a00:fb01:400:42:5000:aaff:fea4:ae46]:8080"
       ],
       "type": "persistent"
     }
