@@ -218,6 +218,22 @@ pub fn time() -> u64 {
         .as_secs()
 }
 
+/// Returns the current time in seconds.
+#[cfg(target_arch = "wasm32")]
+pub fn time_nanos() -> u64 {
+    ic_cdk::api::time()
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn time_nanos() -> u64 {
+    use std::time::SystemTime;
+
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos() as u64
+}
+
 #[cfg(target_arch = "wasm32")]
 pub fn cycles_burn() -> u128 {
     ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128())

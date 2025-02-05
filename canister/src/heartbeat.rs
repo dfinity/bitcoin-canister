@@ -1,6 +1,6 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
-    runtime::{call_get_successors, cycles_burn, print},
+    runtime::{call_get_successors, cycles_burn, print, time_nanos},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
@@ -71,7 +71,7 @@ async fn maybe_fetch_blocks() -> bool {
             GetSuccessorsRequest::FollowUp(_) => stats.follow_up_count += 1,
         }
 
-        let current_time = ic_cdk::api::time();
+        let current_time = time_nanos();
         if let Some(last_request_time) = &mut stats.last_request_time {
             let elapsed = std::time::Duration::from_nanos(current_time - *last_request_time);
             s.metrics
