@@ -70,6 +70,15 @@ async fn maybe_fetch_blocks() -> bool {
             GetSuccessorsRequest::Initial(_) => stats.initial_count += 1,
             GetSuccessorsRequest::FollowUp(_) => stats.follow_up_count += 1,
         }
+
+        let current_time = ic_cdk::api::time();
+        if let Some(last_request_time) = &mut stats.last_request_time {
+            let elapsed = std::time::Duration::from_nanos(current_time - *last_request_time);
+            s.metrics
+                .get_successors_request_interval_seconds
+                .observe(elapsed.as_secs_f64());
+        }
+        stats.last_request_time = Some(current_time);
     });
 
     print(&format!("Sending request: {:?}", request));
