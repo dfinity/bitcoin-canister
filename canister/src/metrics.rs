@@ -208,7 +208,7 @@ impl DurationHistogram {
     }
 
     /// Returns the bucket thresholds.
-    /// Example buckets: (1s, 2s, 5s, ..., 500_000s, +Inf)
+    /// Example buckets: (1s, 2s, 5s, ..., 50_000s, +Inf)
     fn thresholds() -> Vec<u64> {
         decimal_buckets(0, 4)
     }
