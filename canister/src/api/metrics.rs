@@ -1,4 +1,9 @@
-use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
+use crate::{
+    metrics::{DurationHistogram, InstructionHistogram},
+    state,
+    types::HttpResponse,
+    with_state,
+};
 use ic_btc_interface::Flag;
 use ic_cdk::api::time;
 use ic_metrics_encoder::MetricsEncoder;
@@ -188,6 +193,8 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
                 .get_count_metrics(),
         )?;
 
+        encode_duration_histogram(w, &state.metrics.get_successors_request_interval)?;
+
         encode_labeled_gauge(
             w,
             "get_successors_response_count",
@@ -223,6 +230,13 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
 fn encode_instruction_histogram(
     metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
     h: &InstructionHistogram,
+) -> io::Result<()> {
+    metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
+}
+
+fn encode_duration_histogram(
+    metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
+    h: &DurationHistogram,
 ) -> io::Result<()> {
     metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
 }

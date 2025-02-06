@@ -201,21 +201,25 @@ pub fn get_cycles_balance() -> u64 {
     CYCLES_BALANCE.with(|c| *c.borrow())
 }
 
-/// Returns the current time in seconds.
-#[cfg(target_arch = "wasm32")]
 pub fn time() -> u64 {
     // to get seconds from nanoseconds
-    ic_cdk::api::time() / 1_000_000_000
+    time_nanos() / 1_000_000_000
+}
+
+/// Returns the current time in seconds.
+#[cfg(target_arch = "wasm32")]
+pub fn time_nanos() -> u64 {
+    ic_cdk::api::time()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn time() -> u64 {
+pub fn time_nanos() -> u64 {
     use std::time::SystemTime;
 
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
-        .as_secs()
+        .as_nanos() as u64
 }
 
 #[cfg(target_arch = "wasm32")]

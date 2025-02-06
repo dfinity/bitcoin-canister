@@ -36,6 +36,10 @@ pub struct Metrics {
 
     /// The total number of cycles burnt.
     pub cycles_burnt: Option<u128>,
+
+    /// The time interval between two consecutive GetSuccessors requests.
+    #[serde(default = "get_successors_request_interval")]
+    pub get_successors_request_interval: DurationHistogram,
 }
 
 impl Default for Metrics {
@@ -82,6 +86,8 @@ impl Default for Metrics {
             ),
 
             cycles_burnt: Some(0),
+
+            get_successors_request_interval: get_successors_request_interval(),
         }
     }
 }
@@ -159,6 +165,91 @@ fn default_get_block_headers_unstable_blocks() -> InstructionHistogram {
     InstructionHistogram::new(
         "inst_count_get_block_headers_unstable_blocks",
         "Instructions needed to build the block headers vec in a get_block_headers request from unstable blocks.",
+    )
+}
+
+/// Generates logarithmic buckets in decimal format.
+/// Example: `decimal_buckets(0, 4)` produces `[1, 2, 5, 10, ..., 50000]`
+fn decimal_buckets(min_power: u32, max_power: u32) -> Vec<u64> {
+    assert!(
+        min_power <= max_power,
+        "min_power must be <= max_power, given {} and {}",
+        min_power,
+        max_power
+    );
+    let mut buckets = Vec::with_capacity(3 * (max_power - min_power + 1) as usize);
+    for n in min_power..=max_power {
+        for &m in &[1, 2, 5] {
+            buckets.push(m * 10_u64.pow(n));
+        }
+    }
+    buckets
+}
+
+/// A histogram for observing time intervals.
+#[derive(Serialize, Deserialize, PartialEq)]
+pub struct DurationHistogram {
+    pub name: String,
+    pub help: String,
+    thresholds: Vec<u64>,  // Stores bucket thresholds
+    pub buckets: Vec<u64>, // Stores observation counts per bucket
+    pub sum: f64,
+}
+
+impl DurationHistogram {
+    pub fn new<S: Into<String>>(name: S, help: S) -> Self {
+        Self {
+            name: name.into(),
+            help: help.into(),
+            sum: 0.0,
+            thresholds: Self::thresholds(),
+            buckets: vec![0; Self::thresholds().len()], // One count per threshold
+        }
+    }
+
+    /// Returns the bucket thresholds.
+    /// Example buckets: (1s, 2s, 5s, ..., 50_000s, +Inf)
+    fn thresholds() -> Vec<u64> {
+        decimal_buckets(0, 4)
+    }
+
+    /// Observes a new value by updating the corresponding bucket count.
+    pub fn observe(&mut self, value: f64) {
+        if value < 0.0 {
+            return; // Ignore negative values
+        }
+        let bucket_idx = self.get_bucket(value);
+        self.buckets[bucket_idx] += 1;
+        self.sum += value;
+    }
+
+    /// Finds the index of the bucket where `value` belongs.
+    fn get_bucket(&self, value: f64) -> usize {
+        if value == 0.0 {
+            return 0; // Zero goes into the first bucket
+        }
+
+        let value = value as u64;
+        match Self::thresholds().binary_search(&value) {
+            Ok(idx) => idx,                              // Exact match found
+            Err(idx) => idx.min(self.buckets.len() - 1), // Next larger bucket or last bucket
+        }
+    }
+
+    /// Returns an iterator over bucket thresholds and their observed counts.
+    pub fn buckets(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
+        self.thresholds
+            .iter()
+            .map(|&e| e as f64)
+            .chain(std::iter::once(f64::INFINITY))
+            .zip(self.buckets.iter().map(|&e| e as f64))
+    }
+}
+
+fn get_successors_request_interval() -> DurationHistogram {
+    DurationHistogram::new(
+        "get_successors_request_interval",
+        "The time interval between two consecutive GetSuccessors requests in seconds.",
     )
 }
 

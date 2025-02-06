@@ -357,6 +357,8 @@ pub struct SuccessorsRequestStats {
     pub total_count: u64,
     pub initial_count: u64,
     pub follow_up_count: u64,
+
+    pub last_request_time: Option<u64>,
 }
 
 impl SuccessorsRequestStats {
