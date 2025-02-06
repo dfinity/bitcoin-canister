@@ -187,7 +187,6 @@ fn decimal_buckets(min_power: u32, max_power: u32) -> Vec<u64> {
 }
 
 /// A histogram for observing time intervals.
-/// Example buckets: (0s, 1s, 2s, 5s, ..., 50_000s, +Inf)
 #[derive(Serialize, Deserialize, PartialEq)]
 pub struct DurationHistogram {
     pub name: String,
@@ -209,8 +208,9 @@ impl DurationHistogram {
     }
 
     /// Returns the bucket thresholds.
+    /// Example buckets: (1s, 2s, 5s, ..., 500_000s, +Inf)
     fn thresholds() -> Vec<u64> {
-        decimal_buckets(0, 3)
+        decimal_buckets(0, 4)
     }
 
     /// Observes a new value by updating the corresponding bucket count.
