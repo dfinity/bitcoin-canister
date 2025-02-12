@@ -283,7 +283,13 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             // We are guaranteed that there's always at least one block.
             let anchor = processed_block_hashes.remove(0);
 
-            let unique: HashSet<_> = processed_block_hashes.iter().cloned().collect();
+            // Deduplicate while maintaining order
+            let mut seen = HashSet::new();
+            let unique: Vec<BlockHash> = processed_block_hashes
+                .iter()
+                .filter(|hash| seen.insert((*hash).clone())) // Insert returns false if already present
+                .cloned()
+                .collect();
             if unique.len() != processed_block_hashes.len() {
                 print(&format!(
                     "Error: Duplicate block hashes detected! Processed: {}, Unique: {}",
