@@ -11,6 +11,7 @@ use crate::{
 use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
+use std::collections::HashSet;
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -282,10 +283,19 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
             // We are guaranteed that there's always at least one block.
             let anchor = processed_block_hashes.remove(0);
 
+            let unique: HashSet<_> = processed_block_hashes.iter().cloned().collect();
+            if unique.len() != processed_block_hashes.len() {
+                print(&format!(
+                    "Error: Duplicate block hashes detected! Processed: {}, Unique: {}",
+                    processed_block_hashes.len(),
+                    unique.len(),
+                ));
+            }
+
             Some(GetSuccessorsRequest::Initial(GetSuccessorsRequestInitial {
                 network: state.network(),
                 anchor,
-                processed_block_hashes,
+                processed_block_hashes: unique.into_iter().collect(),
             }))
         }
     })
