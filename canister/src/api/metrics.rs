@@ -8,6 +8,7 @@ use ic_btc_interface::Flag;
 use ic_cdk::api::time;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
+use std::collections::HashSet;
 use std::io;
 
 const WASM_PAGE_SIZE: u64 = 65536;
@@ -78,9 +79,14 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.unstable_blocks.num_tips() as f64,
             "The number of tips in the unstable block tree.",
         )?;
+
+        let unique: HashSet<_> = state::get_unstable_blocks(state)
+            .iter()
+            .map(|b| b.block_hash())
+            .collect();
         w.encode_gauge(
             "unstable_blocks_total",
-            state::get_unstable_blocks(state).len() as f64,
+            unique.len() as f64,
             "The number of unstable blocks.",
         )?;
         w.encode_gauge(
