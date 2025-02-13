@@ -12,6 +12,7 @@ use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use datasize::data_size;
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
+use std::time::Duration;
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -82,7 +83,7 @@ async fn maybe_fetch_blocks() -> bool {
 
         let curr_time = time_nanos();
         if let Some(prev_time) = stats.last_request_time.replace(curr_time) {
-            let interval = std::time::Duration::from_nanos(curr_time - prev_time).as_secs_f64();
+            let interval = Duration::from_nanos(curr_time - prev_time).as_secs_f64();
             s.metrics.get_successors_request_interval.observe(interval);
         }
     });
