@@ -39,6 +39,8 @@ pub async fn heartbeat() {
     maybe_process_response();
 
     maybe_compute_fee_percentiles();
+
+    collect_metrics();
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
@@ -311,6 +313,14 @@ fn maybe_burn_cycles() {
         let cycles_burnt = cycles_burn();
         add_cycles_burnt_to_metric(cycles_burnt);
     }
+}
+
+fn collect_metrics() {
+    with_state_mut(|s| {
+        for depth in s.unstable_blocks.tip_depths() {
+            s.metrics.unstable_blocks_tip_depths.observe(depth as f64);
+        }
+    })
 }
 
 #[cfg(test)]

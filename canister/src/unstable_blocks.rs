@@ -84,9 +84,14 @@ impl UnstableBlocks {
         self.anchor_difficulty() * self.stability_threshold as u128
     }
 
-    /// Returns the number of tips available in the current block tree.
-    pub fn num_tips(&self) -> u32 {
-        self.tree.num_tips()
+    /// Returns the number of tips in the tree.
+    pub fn tip_count(&self) -> u32 {
+        self.tree.tip_count()
+    }
+
+    /// Returns the depths of all tips in the tree.
+    pub fn tip_depths(&self) -> Vec<usize> {
+        self.tree.tip_depths()
     }
 
     fn get_network(&self) -> Network {

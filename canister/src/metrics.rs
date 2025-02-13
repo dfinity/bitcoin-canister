@@ -39,7 +39,11 @@ pub struct Metrics {
 
     /// The time interval between two consecutive GetSuccessors requests.
     #[serde(default = "get_successors_request_interval")]
-    pub get_successors_request_interval: DurationHistogram,
+    pub get_successors_request_interval: Histogram,
+
+    /// The depth distribution of unstable block branches.
+    #[serde(default = "unstable_blocks_tip_depths")]
+    pub unstable_blocks_tip_depths: Histogram,
 }
 
 impl Default for Metrics {
@@ -88,6 +92,8 @@ impl Default for Metrics {
             cycles_burnt: Some(0),
 
             get_successors_request_interval: get_successors_request_interval(),
+
+            unstable_blocks_tip_depths: unstable_blocks_tip_depths(),
         }
     }
 }
@@ -168,27 +174,9 @@ fn default_get_block_headers_unstable_blocks() -> InstructionHistogram {
     )
 }
 
-/// Generates logarithmic buckets in decimal format.
-/// Example: `decimal_buckets(0, 4)` produces `[1, 2, 5, 10, ..., 50000]`
-fn decimal_buckets(min_power: u32, max_power: u32) -> Vec<u64> {
-    assert!(
-        min_power <= max_power,
-        "min_power must be <= max_power, given {} and {}",
-        min_power,
-        max_power
-    );
-    let mut buckets = Vec::with_capacity(3 * (max_power - min_power + 1) as usize);
-    for n in min_power..=max_power {
-        for &m in &[1, 2, 5] {
-            buckets.push(m * 10_u64.pow(n));
-        }
-    }
-    buckets
-}
-
-/// A histogram for observing time intervals.
+/// A histogram for observing values, using custom bucket thresholds.
 #[derive(Serialize, Deserialize, PartialEq)]
-pub struct DurationHistogram {
+pub struct Histogram {
     pub name: String,
     pub help: String,
     thresholds: Vec<u64>,  // Stores bucket thresholds
@@ -196,21 +184,23 @@ pub struct DurationHistogram {
     pub sum: f64,
 }
 
-impl DurationHistogram {
-    pub fn new<S: Into<String>>(name: S, help: S) -> Self {
+impl Histogram {
+    /// Creates a new histogram with custom bucket thresholds.
+    ///
+    /// `thresholds` must be a sorted vector of bucket limits (e.g., from `decimal_buckets()`).
+    pub fn new<S: Into<String>>(name: S, help: S, thresholds: Vec<u64>) -> Self {
+        assert!(
+            thresholds.windows(2).all(|w| w[0] < w[1]),
+            "Thresholds must be strictly increasing"
+        );
+
         Self {
             name: name.into(),
             help: help.into(),
             sum: 0.0,
-            thresholds: Self::thresholds(),
-            buckets: vec![0; Self::thresholds().len()], // One count per threshold
+            buckets: vec![0; thresholds.len()], // One count per threshold
+            thresholds,
         }
-    }
-
-    /// Returns the bucket thresholds.
-    /// Example buckets: (1s, 2s, 5s, ..., 50_000s, +Inf)
-    fn thresholds() -> Vec<u64> {
-        decimal_buckets(0, 4)
     }
 
     /// Observes a new value by updating the corresponding bucket count.
@@ -225,12 +215,8 @@ impl DurationHistogram {
 
     /// Finds the index of the bucket where `value` belongs.
     fn get_bucket(&self, value: f64) -> usize {
-        if value == 0.0 {
-            return 0; // Zero goes into the first bucket
-        }
-
         let value = value as u64;
-        match Self::thresholds().binary_search(&value) {
+        match self.thresholds.binary_search(&value) {
             Ok(idx) => idx,                              // Exact match found
             Err(idx) => idx.min(self.buckets.len() - 1), // Next larger bucket or last bucket
         }
@@ -246,10 +232,41 @@ impl DurationHistogram {
     }
 }
 
-fn get_successors_request_interval() -> DurationHistogram {
-    DurationHistogram::new(
+/// Generates logarithmic bucket thresholds using powers of 10 with `[1, 2, 5]` steps.
+///
+/// Example: `logarithmic_buckets(0, 4)` → `[1, 2, 5, 10, ..., 50_000]`
+///
+/// # Panics
+/// Panics if `min_power > max_power`.
+fn logarithmic_buckets(min_power: u32, max_power: u32) -> Vec<u64> {
+    assert!(
+        min_power <= max_power,
+        "min_power must be <= max_power, given {} and {}",
+        min_power,
+        max_power
+    );
+    let mut buckets = Vec::with_capacity(3 * (max_power - min_power + 1) as usize);
+    for n in min_power..=max_power {
+        for &m in &[1, 2, 5] {
+            buckets.push(m * 10_u64.pow(n));
+        }
+    }
+    buckets
+}
+
+fn get_successors_request_interval() -> Histogram {
+    Histogram::new(
         "get_successors_request_interval",
-        "The time interval between two consecutive GetSuccessors requests in seconds.",
+        "Time between consecutive GetSuccessors requests (1s to 50,000s).",
+        logarithmic_buckets(0, 4),
+    )
+}
+
+fn unstable_blocks_tip_depths() -> Histogram {
+    Histogram::new(
+        "unstable_blocks_tip_depths",
+        "Depth distribution of unstable block branches (1 to 50,000).",
+        logarithmic_buckets(0, 4),
     )
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    metrics::{DurationHistogram, InstructionHistogram},
+    metrics::{Histogram, InstructionHistogram},
     state,
     types::HttpResponse,
     with_state,
@@ -75,9 +75,10 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "unstable_blocks_num_tips",
-            state.unstable_blocks.num_tips() as f64,
+            state.unstable_blocks.tip_count() as f64,
             "The number of tips in the unstable block tree.",
         )?;
+        encode_histogram(w, &state.metrics.unstable_blocks_tip_depths)?;
         w.encode_gauge(
             "unstable_blocks_total",
             state::unstable_blocks_total(state) as f64,
@@ -197,7 +198,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             &stats.get_size_metrics(),
         )?;
 
-        encode_duration_histogram(w, &state.metrics.get_successors_request_interval)?;
+        encode_histogram(w, &state.metrics.get_successors_request_interval)?;
 
         let stats = &state.syncing_state.get_successors_response_stats;
         encode_labeled_gauge(
@@ -230,9 +231,9 @@ fn encode_instruction_histogram(
     metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
 }
 
-fn encode_duration_histogram(
+fn encode_histogram(
     metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
-    h: &DurationHistogram,
+    h: &Histogram,
 ) -> io::Result<()> {
     metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
 }
