@@ -78,7 +78,6 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.unstable_blocks.num_tips() as f64,
             "The number of tips in the unstable block tree.",
         )?;
-
         w.encode_gauge(
             "unstable_blocks_total",
             state::get_block_hashes(state).len() as f64,
