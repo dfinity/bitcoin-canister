@@ -317,9 +317,11 @@ fn maybe_burn_cycles() {
 
 fn collect_metrics() {
     with_state_mut(|s| {
-        for depth in s.unstable_blocks.tip_depths() {
-            s.metrics.unstable_blocks_tip_depths.observe(depth as f64);
-        }
+        let metric = &mut s.metrics.unstable_blocks_tip_depths;
+        s.unstable_blocks
+            .tip_depths()
+            .into_iter()
+            .for_each(|depth| metric.observe(depth as f64));
     })
 }
 
