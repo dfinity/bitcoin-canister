@@ -291,6 +291,15 @@ impl BlockTree {
         hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
         hashes
     }
+
+    /// Returns the number of blocks in the tree.
+    pub fn blocks_count(&self) -> usize {
+        1 + self
+            .children
+            .iter()
+            .map(|child| child.blocks_count())
+            .sum::<usize>()
+    }
 }
 
 /// An error thrown when trying to add a block that isn't a successor

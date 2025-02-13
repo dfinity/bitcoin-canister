@@ -268,6 +268,10 @@ pub fn get_block_hashes(state: &State) -> Vec<BlockHash> {
     unstable_blocks::get_block_hashes(&state.unstable_blocks)
 }
 
+pub fn unstable_blocks_total(state: &State) -> usize {
+    unstable_blocks::blocks_count(&state.unstable_blocks)
+}
+
 // The maximum size in bytes of a bitcoin script for it to be considered "small".
 const TX_OUT_SCRIPT_MAX_SIZE_SMALL: u32 = 25;
 

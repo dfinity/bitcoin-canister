@@ -312,6 +312,10 @@ pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
     blocks.tree.get_hashes()
 }
 
+pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
+    blocks.tree.blocks_count()
+}
+
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
 ///
 /// If the `tip` doesn't exist in the tree, `None` is returned.
