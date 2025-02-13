@@ -66,11 +66,10 @@ async fn maybe_fetch_blocks() -> bool {
 
     with_state_mut(|s| {
         let stats = &mut s.syncing_state.get_successors_request_stats;
-        stats.total_count += 1;
-
         let bytes = data_size(&request) as u64;
+        stats.total_count += 1;
         stats.total_size += bytes;
-        match &request {
+        match request {
             GetSuccessorsRequest::Initial(_) => {
                 stats.initial_count += 1;
                 stats.initial_size += bytes;
@@ -82,13 +81,12 @@ async fn maybe_fetch_blocks() -> bool {
         }
 
         let curr_time = time_nanos();
-        if let Some(prev_time) = &mut stats.last_request_time {
-            let interval = std::time::Duration::from_nanos(curr_time - *prev_time);
+        if let Some(prev_time) = stats.last_request_time.replace(curr_time) {
+            let interval = std::time::Duration::from_nanos(curr_time - prev_time);
             s.metrics
                 .get_successors_request_interval
                 .observe(interval.as_secs_f64());
         }
-        stats.last_request_time = Some(curr_time);
     });
 
     print(&format!("Sending request: {:?}", request));
