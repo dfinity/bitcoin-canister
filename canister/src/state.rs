@@ -362,9 +362,9 @@ pub struct SuccessorsRequestStats {
     pub initial_count: u64,
     pub follow_up_count: u64,
 
-    pub total_bytes: u64,
-    pub initial_bytes: u64,
-    pub follow_up_bytes: u64,
+    pub total_size: u64,
+    pub initial_size: u64,
+    pub follow_up_size: u64,
 
     pub last_request_time: Option<u64>,
 }
@@ -378,11 +378,11 @@ impl SuccessorsRequestStats {
         ]
     }
 
-    pub fn get_bytes_metrics(&self) -> Vec<((&str, &str), u64)> {
+    pub fn get_size_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "total"), self.total_bytes),
-            (("type", "initial"), self.initial_bytes),
-            (("type", "follow_up"), self.follow_up_bytes),
+            (("type", "total"), self.total_size),
+            (("type", "initial"), self.initial_size),
+            (("type", "follow_up"), self.follow_up_size),
         ]
     }
 }
@@ -399,10 +399,10 @@ pub struct SuccessorsResponseStats {
     pub partial_block_count: u64,
     pub follow_up_block_count: u64,
 
-    pub total_bytes: u64,
-    pub complete_bytes: u64,
-    pub partial_bytes: u64,
-    pub follow_up_bytes: u64,
+    pub total_size: u64,
+    pub complete_size: u64,
+    pub partial_size: u64,
+    pub follow_up_size: u64,
 }
 
 impl SuccessorsResponseStats {
@@ -424,12 +424,12 @@ impl SuccessorsResponseStats {
         ]
     }
 
-    pub fn get_bytes_metrics(&self) -> Vec<((&str, &str), u64)> {
+    pub fn get_size_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "total"), self.total_bytes),
-            (("type", "complete"), self.complete_bytes),
-            (("type", "partial"), self.partial_bytes),
-            (("type", "follow_up"), self.follow_up_bytes),
+            (("type", "total"), self.total_size),
+            (("type", "complete"), self.complete_size),
+            (("type", "partial"), self.partial_size),
+            (("type", "follow_up"), self.follow_up_size),
         ]
     }
 }

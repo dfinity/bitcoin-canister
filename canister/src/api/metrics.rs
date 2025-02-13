@@ -194,12 +194,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         encode_labeled_gauge(
             w,
-            "get_successors_request_bytes",
+            "get_successors_request_size",
             "The size of get_successors requests.",
             &state
                 .syncing_state
                 .get_successors_request_stats
-                .get_bytes_metrics(),
+                .get_size_metrics(),
         )?;
 
         encode_duration_histogram(w, &state.metrics.get_successors_request_interval)?;
@@ -224,12 +224,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         encode_labeled_gauge(
             w,
-            "get_successors_response_bytes",
+            "get_successors_response_size",
             "The size of the get_successors responses.",
             &state
                 .syncing_state
                 .get_successors_response_stats
-                .get_bytes_metrics(),
+                .get_size_metrics(),
         )?;
 
         Ok(())
