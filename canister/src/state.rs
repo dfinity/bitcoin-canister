@@ -264,8 +264,8 @@ pub fn main_chain_height(state: &State) -> Height {
         - 1
 }
 
-pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
-    unstable_blocks::get_blocks(&state.unstable_blocks)
+pub fn get_block_hashes(state: &State) -> Vec<BlockHash> {
+    unstable_blocks::get_block_hashes(&state.unstable_blocks)
 }
 
 // The maximum size in bytes of a bitcoin script for it to be considered "small".

@@ -275,33 +275,15 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
         }
         None => {
             // No response is present. Send an initial request for new blocks.
-            let mut processed_block_hashes: Vec<BlockHash> = state::get_unstable_blocks(state)
-                .iter()
-                .map(|b| b.block_hash())
-                .collect();
+            let mut processed_block_hashes: Vec<BlockHash> = state::get_block_hashes(state);
 
             // We are guaranteed that there's always at least one block.
             let anchor = processed_block_hashes.remove(0);
 
-            // Deduplicate while maintaining order.
-            let mut seen = HashSet::new();
-            let unique: Vec<BlockHash> = processed_block_hashes
-                .iter()
-                .filter(|hash| seen.insert((*hash).clone()))
-                .cloned()
-                .collect();
-            if unique.len() != processed_block_hashes.len() {
-                print(&format!(
-                    "Error: Duplicate block hashes detected! Processed: {}, Unique: {}",
-                    processed_block_hashes.len(),
-                    unique.len(),
-                ));
-            }
-
             Some(GetSuccessorsRequest::Initial(GetSuccessorsRequestInitial {
                 network: state.network(),
                 anchor,
-                processed_block_hashes: unique.into_iter().collect(),
+                processed_block_hashes,
             }))
         }
     })

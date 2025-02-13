@@ -80,13 +80,9 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             "The number of tips in the unstable block tree.",
         )?;
 
-        let unique: HashSet<_> = state::get_unstable_blocks(state)
-            .iter()
-            .map(|b| b.block_hash())
-            .collect();
         w.encode_gauge(
             "unstable_blocks_total",
-            unique.len() as f64,
+            state::get_block_hashes(state).len() as f64,
             "The number of unstable blocks.",
         )?;
         w.encode_gauge(
