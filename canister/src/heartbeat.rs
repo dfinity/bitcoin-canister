@@ -11,7 +11,6 @@ use crate::{
 use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
-use std::collections::HashSet;
 
 /// The heartbeat of the Bitcoin canister.
 ///

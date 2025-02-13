@@ -8,7 +8,6 @@ use ic_btc_interface::Flag;
 use ic_cdk::api::time;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
-use std::collections::HashSet;
 use std::io;
 
 const WASM_PAGE_SIZE: u64 = 65536;
