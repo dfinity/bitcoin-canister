@@ -6,6 +6,7 @@ use bitcoin::{
     OutPoint as BitcoinOutPoint, Target,
 };
 use candid::CandidType;
+use datasize::DataSize;
 use ic_btc_interface::{Network, Txid as PublicTxid};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde::{Deserialize, Serialize};
@@ -233,7 +234,9 @@ impl std::fmt::Display for Txid {
 }
 
 // A blob representing a block hash.
-#[derive(CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash)]
+#[derive(
+    CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash, DataSize,
+)]
 pub struct BlockHash(Vec<u8>);
 
 impl Storable for BlockHash {

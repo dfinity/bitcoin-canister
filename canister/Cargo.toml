@@ -11,6 +11,7 @@ bitcoin = { workspace = true, features = ["serde"] }
 canbench-rs = { workspace = true, optional = true }
 candid = { workspace = true }
 ciborium = { workspace = true }
+datasize = { workspace = true }
 hex = { workspace = true }
 ic-btc-interface = { workspace = true }
 ic-btc-types = { workspace = true }

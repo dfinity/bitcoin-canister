@@ -9,6 +9,7 @@ use crate::{
     with_state, with_state_mut,
 };
 use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
+use datasize::data_size;
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
 
@@ -66,9 +67,18 @@ async fn maybe_fetch_blocks() -> bool {
     with_state_mut(|s| {
         let stats = &mut s.syncing_state.get_successors_request_stats;
         stats.total_count += 1;
-        match request {
-            GetSuccessorsRequest::Initial(_) => stats.initial_count += 1,
-            GetSuccessorsRequest::FollowUp(_) => stats.follow_up_count += 1,
+
+        let bytes = data_size(&request) as u64;
+        stats.total_bytes += bytes;
+        match &request {
+            GetSuccessorsRequest::Initial(_) => {
+                stats.initial_count += 1;
+                stats.initial_bytes += bytes;
+            }
+            GetSuccessorsRequest::FollowUp(_) => {
+                stats.follow_up_count += 1;
+                stats.follow_up_bytes += bytes;
+            }
         }
 
         let curr_time = time_nanos();
@@ -106,7 +116,7 @@ async fn maybe_fetch_blocks() -> bool {
                     "Received complete response before processing previous response."
                 );
                 let count = response.blocks.len() as u64;
-                let bytes = response.blocks.iter().map(|b| b.len() as u64).sum::<u64>();
+                let bytes = data_size(&response) as u64;
                 print(&format!(
                     "Received complete response: {} blocks, total {} bytes.",
                     count, bytes,
@@ -114,10 +124,10 @@ async fn maybe_fetch_blocks() -> bool {
                 let stats = &mut s.syncing_state.get_successors_response_stats;
                 stats.complete_count += 1;
                 stats.complete_block_count += count;
-                stats.complete_block_size += bytes;
+                stats.complete_bytes += bytes;
                 stats.total_count += 1;
                 stats.total_block_count += count;
-                stats.total_block_size += bytes;
+                stats.total_bytes += bytes;
                 s.syncing_state.response_to_process = Some(ResponseToProcess::Complete(response));
             }
             GetSuccessorsResponse::Partial(partial_response) => {
@@ -126,7 +136,7 @@ async fn maybe_fetch_blocks() -> bool {
                     s.syncing_state.response_to_process.is_none(),
                     "Received partial response before processing previous response."
                 );
-                let bytes = partial_response.partial_block.len() as u64;
+                let bytes = data_size(&partial_response) as u64;
                 let remaining = partial_response.remaining_follow_ups as u64;
                 print(&format!(
                     "Received partial response: {} bytes, {} follow-ups remaining.",
@@ -135,10 +145,10 @@ async fn maybe_fetch_blocks() -> bool {
                 let stats = &mut s.syncing_state.get_successors_response_stats;
                 stats.partial_count += 1;
                 stats.partial_block_count += 1;
-                stats.partial_block_size += bytes;
+                stats.partial_bytes += bytes;
                 stats.total_count += 1;
                 stats.total_block_count += 1;
-                stats.total_block_size += bytes;
+                stats.total_bytes += bytes;
                 s.syncing_state.response_to_process =
                     Some(ResponseToProcess::Partial(partial_response, 0));
             }
@@ -146,7 +156,7 @@ async fn maybe_fetch_blocks() -> bool {
                 // Received a follow-up response.
                 // A follow-up response is only expected, and only makes sense, when there's
                 // a partial response to process.
-                let bytes = block_bytes.len() as u64;
+                let bytes = data_size(&block_bytes) as u64;
                 print(&format!("Received follow-up response: {} bytes.", bytes));
                 let (mut partial_response, mut follow_up_index) = match s.syncing_state.response_to_process.take() {
                     Some(ResponseToProcess::Partial(res, pages)) => (res, pages),
@@ -155,10 +165,10 @@ async fn maybe_fetch_blocks() -> bool {
                 let stats = &mut s.syncing_state.get_successors_response_stats;
                 stats.follow_up_count += 1;
                 stats.follow_up_block_count += 1;
-                stats.follow_up_block_size += bytes;
+                stats.follow_up_bytes += bytes;
                 stats.total_count += 1;
                 stats.total_block_count += 1;
-                stats.total_block_size += bytes;
+                stats.total_bytes += bytes;
 
                 // Append block to partial response and increment # pages processed.
                 partial_response.partial_block.append(&mut block_bytes);
