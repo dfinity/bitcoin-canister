@@ -80,7 +80,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "unstable_blocks_total",
-            state::get_unstable_blocks(state).len() as f64,
+            state::unstable_blocks_total(state) as f64,
             "The number of unstable blocks.",
         )?;
         w.encode_gauge(

@@ -269,7 +269,7 @@ impl BlockTree {
         find_mut_helper(self, blockhash, 0)
     }
 
-    // Returns true if a block exists in the tree, false otherwise.
+    /// Returns true if a block exists in the tree, false otherwise.
     fn contains(&self, block: &Block) -> bool {
         if self.root.block_hash() == block.block_hash() {
             return true;
@@ -282,6 +282,23 @@ impl BlockTree {
         }
 
         false
+    }
+
+    /// Returns the hashes of all blocks in the tree.
+    pub fn get_hashes(&self) -> Vec<BlockHash> {
+        let mut hashes = Vec::with_capacity(self.children.len() + 1);
+        hashes.push(self.root.block_hash());
+        hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
+        hashes
+    }
+
+    /// Returns the number of blocks in the tree.
+    pub fn blocks_count(&self) -> usize {
+        1 + self
+            .children
+            .iter()
+            .map(|child| child.blocks_count())
+            .sum::<usize>()
     }
 }
 

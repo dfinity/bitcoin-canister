@@ -308,13 +308,12 @@ pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
     unreachable!("There must be at least one height with exactly one block.");
 }
 
-pub fn get_blocks(blocks: &UnstableBlocks) -> Vec<&Block> {
-    blocks
-        .tree
-        .blockchains()
-        .into_iter()
-        .flat_map(|bc| bc.into_chain())
-        .collect()
+pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
+    blocks.tree.get_hashes()
+}
+
+pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
+    blocks.tree.blocks_count()
 }
 
 /// Returns a blockchain starting from the anchor and ending with the `tip`.

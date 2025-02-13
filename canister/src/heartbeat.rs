@@ -274,10 +274,7 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
         }
         None => {
             // No response is present. Send an initial request for new blocks.
-            let mut processed_block_hashes: Vec<BlockHash> = state::get_unstable_blocks(state)
-                .iter()
-                .map(|b| b.block_hash())
-                .collect();
+            let mut processed_block_hashes: Vec<BlockHash> = state::get_block_hashes(state);
 
             // We are guaranteed that there's always at least one block.
             let anchor = processed_block_hashes.remove(0);
