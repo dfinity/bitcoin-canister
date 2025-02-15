@@ -20,6 +20,7 @@ use std::time::Duration;
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
+    collect_metrics();
     maybe_burn_cycles();
 
     if ingest_stable_blocks_into_utxoset() {
@@ -39,8 +40,6 @@ pub async fn heartbeat() {
     maybe_process_response();
 
     maybe_compute_fee_percentiles();
-
-    collect_metrics();
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
