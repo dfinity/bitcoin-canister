@@ -314,19 +314,11 @@ pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
-    let _ = blocks.tree.get_hashes();
-    blocks
-        .tree
-        .blockchains()
-        .into_iter()
-        .flat_map(|bc| bc.into_chain())
-        .map(|block| block.block_hash())
-        .collect()
+    blocks.tree.get_hashes()
 }
 
 pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
-    let _ = blocks.tree.blocks_count();
-    get_block_hashes(blocks).len()
+    blocks.tree.blocks_count()
 }
 
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
