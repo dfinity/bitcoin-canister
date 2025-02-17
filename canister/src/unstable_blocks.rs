@@ -325,7 +325,8 @@ pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
 }
 
 pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
-    blocks.tree.blocks_count()
+    let _ = blocks.tree.blocks_count();
+    get_block_hashes(blocks).len()
 }
 
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
