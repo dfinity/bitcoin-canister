@@ -53,7 +53,7 @@ popd
 time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
 commit_hash=$( [[ -s "$COMMIT_HASH_PATH" ]] && cat "$COMMIT_HASH_PATH" || echo "" )
 
-echo "# \`canbench\` 🏋 (dir: $CANISTER_PATH) $time ${commit_hash:+(commit: $commit_hash)}" > "$COMMENT_MESSAGE_PATH"
+echo "# \`canbench\` 🏋 ${commit_hash:+$commit_hash} (dir: $CANISTER_PATH) $time" > "$COMMENT_MESSAGE_PATH"
 
 # Detect if there are performance changes relative to the main branch.
 if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
