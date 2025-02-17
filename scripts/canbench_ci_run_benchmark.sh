@@ -37,13 +37,13 @@ fi
 pushd "$CANISTER_PATH"
 canbench --less-verbose > $CANBENCH_OUTPUT
 if grep -q "(regress\|(improved by \|(new)" "$CANBENCH_OUTPUT"; then
-  UPDATED_MSG="**\`$CANBENCH_RESULTS_FILE\` is not up to date ❌**
+  UPDATED_MSG="**❌ \`$CANBENCH_RESULTS_FILE\` is not up to date**
   If the performance change is expected, run \`canbench --persist\` to save the updated benchmark results.";
 
   # canbench results file not up to date. Fail the job.
   echo "EXIT_STATUS=1" >> "$GITHUB_ENV"
 else
-  UPDATED_MSG="**\`$CANBENCH_RESULTS_FILE\` is up to date ✅**";
+  UPDATED_MSG="**✅ \`$CANBENCH_RESULTS_FILE\` is up to date**";
 
   # canbench results file is up to date. The job succeeds.
   echo "EXIT_STATUS=0" >> "$GITHUB_ENV"
@@ -66,9 +66,9 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   # Append markers to individual benchmark results
   sed -i 's/\(improved by[^)]*\)/\1 🟢/' "$CANBENCH_OUTPUT"
   sed -i 's/\(regress[^)]*\)/\1 🔴/' "$CANBENCH_OUTPUT"
+  sed -i 's/\(new[^)]*\)/\1 🟡/' "$CANBENCH_OUTPUT"
 
   time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-
   if [[ -s "$COMMIT_HASH_PATH" ]]; then
     commit_hash=$(cat "$COMMIT_HASH_PATH")
     echo "Last updated: $time (commit: $commit_hash)" >> "$COMMENT_MESSAGE_PATH"
