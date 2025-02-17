@@ -84,7 +84,7 @@ impl Config {
             bitcoin_network: BitcoinNetwork::Testnet,
             blocks_behind_threshold: 1000,
             blocks_ahead_threshold: 1000,
-            min_explorers: 2,
+            min_explorers: 1,
             bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
