@@ -55,15 +55,20 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   # Move the results of the main branch into the current branch.
   mv "$MAIN_BRANCH_RESULTS_FILE" "$CANBENCH_RESULTS_FILE"
 
-  # Run canbench to compare result to main branch.
+  # Run canbench to compare results to the main branch.
   pushd "$CANISTER_PATH"
   canbench --less-verbose > "$CANBENCH_OUTPUT"
   popd
 
+  # Append markers to individual benchmark results
+  sed -i 's/\(improved by[^)]*\)/\1 🟢/' "$CANBENCH_OUTPUT"
+  sed -i 's/\(regress[^)]*\)/\1 🔴/' "$CANBENCH_OUTPUT"
+
+  # Add a top-level summary of detected performance changes
   if grep -q "(improved by" "${CANBENCH_OUTPUT}"; then
     echo "**🟢 Performance improvements detected! 🎉**" >> "$COMMENT_MESSAGE_PATH"
   elif grep -q "(regress" "${CANBENCH_OUTPUT}"; then
-    echo "**🔴 Performance improvements detected! 😱**" >> "$COMMENT_MESSAGE_PATH"
+    echo "**🔴 Performance regressions detected! 😱**" >> "$COMMENT_MESSAGE_PATH"
   else
     echo "**ℹ️ No significant performance changes detected 👍**" >> "$COMMENT_MESSAGE_PATH"
   fi
