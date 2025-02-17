@@ -28,11 +28,15 @@ jobs:
     strategy:
       matrix: ${{fromJSON(needs.download-results.outputs.matrix)}}
     steps:
+      - name: Get current timestamp
+        id: timestamp
+        run: echo "time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_ENV
+
       - name: Post comment
         uses: thollander/actions-comment-pull-request@v2
         with:
           message: |
-            **Last updated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            **Last updated:** ${{ env.time }}
 
             ${{ matrix.benchmark.result }}
           comment_tag: ${{ matrix.benchmark.title }}
