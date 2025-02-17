@@ -65,9 +65,9 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   popd
 
   # Append markers to individual benchmark results
-  sed -i 's/\(improved by[^)]*\)/\1 🟢/' "$CANBENCH_OUTPUT"
-  sed -i 's/\(regress[^)]*\)/\1 🔴/' "$CANBENCH_OUTPUT"
-  sed -i 's/\(new[^)]*\)/\1 🟡/' "$CANBENCH_OUTPUT"
+  sed -i 's/\(improved [^)]*\))/\1/; s/$/ 🟢/' "$CANBENCH_OUTPUT"
+  sed -i 's/\(regressed [^)]*\))/\1/; s/$/ 🔴/' "$CANBENCH_OUTPUT"
+  sed -i 's/\(new[^)]*\))/\1/; s/$/ 🟡/' "$CANBENCH_OUTPUT"
 
   # Add a top-level summary of detected performance changes
   if grep -q "(improved by" "${CANBENCH_OUTPUT}"; then
