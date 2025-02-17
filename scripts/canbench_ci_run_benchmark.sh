@@ -51,7 +51,9 @@ fi
 popd
 
 time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-commit_hash=$( [[ -s "$COMMIT_HASH_PATH" ]] && cat "$COMMIT_HASH_PATH" || echo "" )
+#commit_hash=$( [[ -s "$COMMIT_HASH_PATH" ]] && cat "$COMMIT_HASH_PATH" || echo "" )
+# Get the latest commit from the PR branch (not the merge commit)
+commit_hash=$(git rev-parse HEAD^2 2>/dev/null || git rev-parse HEAD)
 
 echo "# \`canbench\` 🏋 ${commit_hash:+$commit_hash} (dir: $CANISTER_PATH) $time" > "$COMMENT_MESSAGE_PATH"
 
