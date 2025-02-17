@@ -314,7 +314,7 @@ pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
-    //blocks.tree.get_hashes()
+    let _ = blocks.tree.get_hashes();
     blocks
         .tree
         .blockchains()
