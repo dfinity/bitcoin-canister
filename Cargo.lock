@@ -1008,6 +1008,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 
 [[package]]
+name = "datasize"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e65c07d59e45d77a8bda53458c24a828893a99ac6cdd9c84111e09176ab739a2"
+dependencies = [
+ "datasize_derive",
+]
+
+[[package]]
+name = "datasize_derive"
+version = "0.2.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613e4ee15899913285b7612004bbd490abd605be7b11d35afada5902fb6b91d5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "der"
 version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1740,6 +1760,7 @@ dependencies = [
  "candid 0.10.10",
  "candid_parser",
  "ciborium",
+ "datasize",
  "hex",
  "ic-btc-interface",
  "ic-btc-test-utils",
@@ -1765,6 +1786,7 @@ version = "0.2.2"
 dependencies = [
  "candid 0.10.10",
  "ciborium",
+ "datasize",
  "proptest 1.5.0",
  "serde",
  "serde_bytes",
@@ -1784,6 +1806,7 @@ version = "0.1.0"
 dependencies = [
  "bitcoin",
  "candid 0.10.10",
+ "datasize",
  "hex",
  "ic-btc-interface",
  "ic-btc-validation",

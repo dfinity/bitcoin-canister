@@ -362,6 +362,10 @@ pub struct SuccessorsRequestStats {
     pub initial_count: u64,
     pub follow_up_count: u64,
 
+    pub total_size: u64,
+    pub initial_size: u64,
+    pub follow_up_size: u64,
+
     pub last_request_time: Option<u64>,
 }
 
@@ -373,25 +377,32 @@ impl SuccessorsRequestStats {
             (("type", "follow_up"), self.follow_up_count),
         ]
     }
+
+    pub fn get_size_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_size),
+            (("type", "initial"), self.initial_size),
+            (("type", "follow_up"), self.follow_up_size),
+        ]
+    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
 pub struct SuccessorsResponseStats {
     pub total_count: u64,
-    pub total_block_count: u64,
-    pub total_block_size: u64,
-
     pub complete_count: u64,
-    pub complete_block_count: u64,
-    pub complete_block_size: u64,
-
     pub partial_count: u64,
-    pub partial_block_count: u64,
-    pub partial_block_size: u64,
-
     pub follow_up_count: u64,
+
+    pub total_block_count: u64,
+    pub complete_block_count: u64,
+    pub partial_block_count: u64,
     pub follow_up_block_count: u64,
-    pub follow_up_block_size: u64,
+
+    pub total_size: u64,
+    pub complete_size: u64,
+    pub partial_size: u64,
+    pub follow_up_size: u64,
 }
 
 impl SuccessorsResponseStats {
@@ -413,12 +424,12 @@ impl SuccessorsResponseStats {
         ]
     }
 
-    pub fn get_block_size_metrics(&self) -> Vec<((&str, &str), u64)> {
+    pub fn get_size_metrics(&self) -> Vec<((&str, &str), u64)> {
         vec![
-            (("type", "total"), self.total_block_size),
-            (("type", "complete"), self.complete_block_size),
-            (("type", "partial"), self.partial_block_size),
-            (("type", "follow_up"), self.follow_up_block_size),
+            (("type", "total"), self.total_size),
+            (("type", "complete"), self.complete_size),
+            (("type", "partial"), self.partial_size),
+            (("type", "follow_up"), self.follow_up_size),
         ]
     }
 }

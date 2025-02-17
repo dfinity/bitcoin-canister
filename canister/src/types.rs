@@ -3,6 +3,7 @@ use bitcoin::{
     TxOut as BitcoinTxOut,
 };
 use candid::CandidType;
+use datasize::DataSize;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
     GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, UtxosFilter,
@@ -297,7 +298,7 @@ impl Storable for (Height, OutPoint) {
 pub type BlockBlob = Vec<u8>;
 
 // A blob representing a block header in the standard bitcoin format.
-#[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash)]
+#[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash, DataSize)]
 pub struct BlockHeaderBlob(Vec<u8>);
 
 impl StableStructuresStorable for BlockHeaderBlob {
@@ -358,7 +359,7 @@ pub struct SendTransactionInternalRequest {
 }
 
 /// A request to retrieve more blocks from the Bitcoin network.
-#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, DataSize)]
 pub enum GetSuccessorsRequest {
     /// A request containing the hashes of blocks we'd like to retrieve succeessors for.
     #[serde(rename = "initial")]
@@ -369,7 +370,7 @@ pub enum GetSuccessorsRequest {
     FollowUp(PageNumber),
 }
 
-#[derive(CandidType, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(CandidType, Clone, PartialEq, Eq, Serialize, Deserialize, DataSize)]
 pub struct GetSuccessorsRequestInitial {
     pub network: Network,
     pub anchor: BlockHash,
@@ -391,7 +392,7 @@ impl std::fmt::Debug for GetSuccessorsRequestInitial {
 }
 
 /// A response containing new successor blocks from the Bitcoin network.
-#[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
+#[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize, DataSize)]
 pub enum GetSuccessorsResponse {
     /// A complete response that doesn't require pagination.
     #[serde(rename = "complete")]
@@ -406,13 +407,17 @@ pub enum GetSuccessorsResponse {
     FollowUp(BlockBlob),
 }
 
-#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+#[derive(
+    CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize, DataSize,
+)]
 pub struct GetSuccessorsCompleteResponse {
     pub blocks: Vec<BlockBlob>,
     pub next: Vec<BlockHeaderBlob>,
 }
 
-#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+#[derive(
+    CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize, DataSize,
+)]
 pub struct GetSuccessorsPartialResponse {
     /// A block that is partial (i.e. the full blob has not been sent).
     pub partial_block: BlockBlob,

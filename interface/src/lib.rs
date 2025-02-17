@@ -1,6 +1,7 @@
 //! Types used in the interface of the Bitcoin Canister.
 
 use candid::{CandidType, Deserialize, Principal};
+use datasize::DataSize;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 use std::fmt;
@@ -14,7 +15,7 @@ pub type Height = u32;
 pub type Page = ByteBuf;
 pub type BlockHeader = Vec<u8>;
 
-#[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
+#[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash, DataSize)]
 pub enum Network {
     /// Bitcoin Mainnet.
     #[serde(rename = "mainnet")]
