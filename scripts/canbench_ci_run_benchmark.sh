@@ -65,14 +65,17 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   popd
 
   # Append markers to individual benchmark results
-  sed -i 's/\(improved by[^)]*\)/\1 🟢/' "$CANBENCH_OUTPUT"
-  sed -i 's/\(regress[^)]*\)/\1 🔴/' "$CANBENCH_OUTPUT"
-  sed -i 's/\(new[^)]*\)/\1 🟡/' "$CANBENCH_OUTPUT"
+  awk '
+  /\(improved / { print $0, "🟢"; next }
+  /\(regressed / { print $0, "🔴"; next }
+  /\(new\)/ { print $0, "🟡"; next }
+  { print }
+  ' "$CANBENCH_OUTPUT" > "${CANBENCH_OUTPUT}.tmp" && mv "${CANBENCH_OUTPUT}.tmp" "$CANBENCH_OUTPUT"
 
   # Add a top-level summary of detected performance changes
-  if grep -q "(improved by" "${CANBENCH_OUTPUT}"; then
+  if grep -q "(improved " "${CANBENCH_OUTPUT}"; then
     echo "**🟢 Performance improvements detected! 🎉**" >> "$COMMENT_MESSAGE_PATH"
-  elif grep -q "(regress" "${CANBENCH_OUTPUT}"; then
+  elif grep -q "(regressed " "${CANBENCH_OUTPUT}"; then
     echo "**🔴 Performance regressions detected! 😱**" >> "$COMMENT_MESSAGE_PATH"
   else
     echo "**ℹ️ No significant performance changes detected 👍**" >> "$COMMENT_MESSAGE_PATH"
