@@ -50,8 +50,10 @@ else
 fi
 popd
 
+time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+commit_hash=$( [[ -s "$COMMIT_HASH_PATH" ]] && cat "$COMMIT_HASH_PATH" || echo "" )
 
-echo "# \`canbench\` 🏋 (dir: $CANISTER_PATH)" > "$COMMENT_MESSAGE_PATH"
+echo "# \`canbench\` 🏋 (dir: $CANISTER_PATH) $time ${commit_hash:+(commit: $commit_hash)}" > "$COMMENT_MESSAGE_PATH"
 
 # Detect if there are performance changes relative to the main branch.
 if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
@@ -67,14 +69,6 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   sed -i 's/\(improved by[^)]*\)/\1 🟢/' "$CANBENCH_OUTPUT"
   sed -i 's/\(regress[^)]*\)/\1 🔴/' "$CANBENCH_OUTPUT"
   sed -i 's/\(new[^)]*\)/\1 🟡/' "$CANBENCH_OUTPUT"
-
-  time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-  if [[ -s "$COMMIT_HASH_PATH" ]]; then
-    commit_hash=$(cat "$COMMIT_HASH_PATH")
-    echo "Last updated: $time (commit: $commit_hash)" >> "$COMMENT_MESSAGE_PATH"
-  else
-    echo "Last updated: $time" >> "$COMMENT_MESSAGE_PATH"
-  fi
 
   # Add a top-level summary of detected performance changes
   if grep -q "(improved by" "${CANBENCH_OUTPUT}"; then
