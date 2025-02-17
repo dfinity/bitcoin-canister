@@ -66,8 +66,8 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
 
   # Append markers to individual benchmark results
   awk '
-  /\(improved by/ { print $0, "🟢"; next }
-  /\(regressed by/ { print $0, "🔴"; next }
+  /\(improved / { print $0, "🟢"; next }
+  /\(regressed / { print $0, "🔴"; next }
   /\(new\)/ { print $0, "🟡"; next }
   { print }
   ' "$CANBENCH_OUTPUT" > "${CANBENCH_OUTPUT}.tmp" && mv "${CANBENCH_OUTPUT}.tmp" "$CANBENCH_OUTPUT"
