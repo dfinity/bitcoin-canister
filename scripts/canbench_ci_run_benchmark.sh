@@ -47,11 +47,12 @@ else
 fi
 popd
 
+# Get the latest commit hash
+commit_hash=$(git rev-parse HEAD)
 time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-# Get the latest commit from the PR branch (not the merge commit)
-commit_hash=$(git rev-parse HEAD^2 2>/dev/null || git rev-parse HEAD)
 
-echo "# \`canbench\` 🏋 (dir: $CANISTER_PATH) ${commit_hash:+$commit_hash} $time" > "$COMMENT_MESSAGE_PATH"
+# Print output with correct formatting
+echo "# \`canbench\` 🏋 (dir: $CANISTER_PATH) $commit_hash $time" > "$COMMENT_MESSAGE_PATH"
 
 # Detect if there are performance changes relative to the main branch.
 if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
