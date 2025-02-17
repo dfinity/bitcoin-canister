@@ -448,10 +448,6 @@ jobs:
       - name: Checkout current PR
         uses: actions/checkout@v4
 
-      - name: Save current commit hash
-        run: |
-          git rev-parse HEAD > /tmp/commit_hash
-
       - name: Checkout master branch
         uses: actions/checkout@v4
         with:

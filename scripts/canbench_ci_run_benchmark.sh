@@ -21,9 +21,6 @@ CANBENCH_OUTPUT=/tmp/canbench_output.txt
 CANBENCH_RESULTS_FILE="$CANISTER_PATH/canbench_results.yml"
 MAIN_BRANCH_RESULTS_FILE="$MAIN_BRANCH_DIR/$CANBENCH_RESULTS_FILE"
 
-# Define the path where the commit hash was saved
-COMMIT_HASH_PATH="/tmp/commit_hash"
-
 # Install canbench
 cargo install canbench --version 0.1.8
 
@@ -51,7 +48,6 @@ fi
 popd
 
 time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-#commit_hash=$( [[ -s "$COMMIT_HASH_PATH" ]] && cat "$COMMIT_HASH_PATH" || echo "" )
 # Get the latest commit from the PR branch (not the merge commit)
 commit_hash=$(git rev-parse HEAD^2 2>/dev/null || git rev-parse HEAD)
 
