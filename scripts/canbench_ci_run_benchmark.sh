@@ -21,6 +21,9 @@ CANBENCH_OUTPUT=/tmp/canbench_output.txt
 CANBENCH_RESULTS_FILE="$CANISTER_PATH/canbench_results.yml"
 MAIN_BRANCH_RESULTS_FILE="$MAIN_BRANCH_DIR/$CANBENCH_RESULTS_FILE"
 
+# Define the path where the commit hash was saved
+COMMIT_HASH_PATH="/tmp/commit_hash"
+
 # Install canbench
 cargo install canbench --version 0.1.8
 
@@ -63,6 +66,15 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   # Append markers to individual benchmark results
   sed -i 's/\(improved by[^)]*\)/\1 🟢/' "$CANBENCH_OUTPUT"
   sed -i 's/\(regress[^)]*\)/\1 🔴/' "$CANBENCH_OUTPUT"
+
+  time=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+  if [[ -s "$COMMIT_HASH_PATH" ]]; then
+    commit_hash=$(cat "$COMMIT_HASH_PATH")
+    echo "Last updated: $time (commit: $commit_hash)" >> "$COMMENT_MESSAGE_PATH"
+  else
+    echo "Last updated: $time" >> "$COMMENT_MESSAGE_PATH"
+  fi
 
   # Add a top-level summary of detected performance changes
   if grep -q "(improved by" "${CANBENCH_OUTPUT}"; then
