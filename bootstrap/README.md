@@ -237,8 +237,6 @@ $ wc -c < ./bootstrap/output/canister_state.bin
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
 ceil(1149304832 / (64 * 1024)) = 17537
-
-Use this number when installing `uploader` canister.
 ```
 
 Calculate args hash
