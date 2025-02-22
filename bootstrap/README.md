@@ -145,35 +145,7 @@ c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-caniste
 2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
 ```
 
-## 7. Install Uploader Canister & Upload Chunks
-
-Prepare install arguments
-```shell
-# Get canister state size
-$ wc -c < ./bootstrap/output/canister_state.bin
-1149304832
-```
-
-Calculate required number of pages, page is `64 * 1024` bytes
-```txt
-ceil(1149304832 / (64 * 1024)) = 17537
-
-Use this number when installing `uploader` canister.
-```
-
-Calculate args hash
-```shell
-$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
-e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
-```
-
-```shell
-EFFECTIVE_CANISTER_ID="5v3p4-iyaaa-aaaaa-qaaaa-cai"; \
-    TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
-    TESTNET_WATCHDOG_CANISTER_ID="gjqfs-iaaaa-aaaan-aaada-cai"; \
-    MAINNET_BITCOIN_CANISTER_ID="ghsi2-tqaaa-aaaan-aaaca-cai"; \
-    MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
-```
+## 7. (Optional) Setup Testing Subnet & Create Canisters
 
 When installing canister on a testnet first start a farm testnet via `$ ict testnet create`:
 
@@ -230,14 +202,49 @@ Update your `dfx.json` with IPv6 from the above:
 
 If you want to deploy both `testnet` and `mainnet` canisters via dfx you might want to clone their setups in `dfx.json`, so instead of having `bitcoin` you have `bitcoin_t` and `bitcoin_m`, same for `watchdog` (`watchdog_t`, `watchdog_m`).
 
+```shell
+# Helper constants
+NETWORK=testnet; \
+  STABILITY_THRESHOLD=144; \
+  TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
+  TESTNET_WATCHDOG_CANISTER_ID="gjqfs-iaaaa-aaaan-aaada-cai"; \
+  MAINNET_BITCOIN_CANISTER_ID="ghsi2-tqaaa-aaaan-aaaca-cai"; \
+  MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
+```
+
 Create corresponding canister
 ```shell
+# (Optional) remove current canister ids. 
+$ rm canister_ids.json
+
 $ dfx canister create bitcoin_t --no-wallet \
     --network testnet \
     --subnet-type system \
     --specified-id $TESTNET_BITCOIN_CANISTER_ID \
-    --provisional-create-canister-effective-canister-id $EFFECTIVE_CANISTER_ID \
+    --provisional-create-canister-effective-canister-id "5v3p4-iyaaa-aaaaa-qaaaa-cai" \
     --with-cycles 1000000000000000000
+```
+
+## 8. Install Uploader Canister & Upload Chunks
+
+Prepare install arguments
+```shell
+# Get canister state size
+$ wc -c < ./bootstrap/output/canister_state.bin
+1149304832
+```
+
+Calculate required number of pages, page is `64 * 1024` bytes
+```txt
+ceil(1149304832 / (64 * 1024)) = 17537
+
+Use this number when installing `uploader` canister.
+```
+
+Calculate args hash
+```shell
+$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
+e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
 ```
 
 Install uploader canister
@@ -247,10 +254,6 @@ $ dfx canister install \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
     --argument "(17537 : nat64)"  # Use calculated number of pages.
-```
-
-```shell
-$ dfx canister status --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
 
 Upload chunks
@@ -263,12 +266,13 @@ $ cargo run --example upload -- \
     --fetch-root-key
 ```
 
-## 8. Upgrade Bitcoin Canister
+## 9. Upgrade Bitcoin Canister
 
 Prepare upgrade arguments
 ```shell
 # Select a subset of init arguments or make sure they copy current prod configuration.
 $ ARG="(opt record {
+    network = opt variant { $NETWORK };
     stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
@@ -277,8 +281,8 @@ $ ARG="(opt record {
 ```
 
 ```shell
-$ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$ARG" | xxd -r -p | sha256sum
-a608762ab16eac97bd9361101a59c2c9281028e631746d15ce3df44cf658ffc4
+$ didc encode -d ./canister/candid.did -t '(opt init_config)' "$ARG" | xxd -r -p | sha256sum
+e463d2f266f7085036be3e23afc2a1b51f501c7ea677193647785d1a09c723e2  -
 ```
 
 Upgrade bitcoin canister
