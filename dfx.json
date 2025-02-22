@@ -7,6 +7,12 @@
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
+    "watchdog": {
+      "type": "custom",
+      "candid": "./watchdog/candid.did",
+      "build": "./scripts/build-canister.sh watchdog",
+      "wasm": "./target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+    },
     "watchdog-upgradability-test": {
       "type": "custom",
       "candid": "./watchdog/candid.did",
