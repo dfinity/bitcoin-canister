@@ -156,7 +156,7 @@ $ wc -c < ./bootstrap/output/canister_state.bin
 
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
-ceil(1149304832 / (64 * 1024)) = 17537
+ceil(1149304832 / (64 * 1024)) = 17537 # Use this number when installing `uploader` canister.
 ```
 
 Calculate args hash
@@ -189,15 +189,11 @@ $ ./ci/container/container-run.sh
 # Before starting the testnet double check `small_bitcoin` testnet settings.
 # https://github.com/dfinity/ic/blob/256c598835d637b0b58c5e2117bca011ec417a61/rs/tests/testnets/small_bitcoin.rs#L2
 # Setup lifetime big enough for your experiment, provide output directory and log file
-$ clear; ict testnet create small_bitcoin \
-  --lifetime-mins=10080 \
-  --output-dir=./test_tmpdir \
+$ clear; ict testnet create small_bitcoin --lifetime-mins=10080 --output-dir=./test_tmpdir \
   > output.secret
 
 # Same but with custom grafana dashboards
-$ clear; ict testnet create small_bitcoin \
-  --lifetime-mins=10080 \
-  --output-dir=./test_tmpdir \
+$ clear; ict testnet create small_bitcoin --lifetime-mins=10080 --output-dir=./test_tmpdir \
   --k8s-branch <repo-branch-name> \
   > output.secret
 ```

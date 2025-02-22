@@ -1,13 +1,19 @@
 {
-  "dfx": "0.21.0",
+  "dfx": "0.24.3",
   "canisters": {
-    "bitcoin": {
+    "bitcoin_t": {
       "type": "custom",
       "candid": "./canister/candid.did",
       "wasm": "target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
       "build": "./scripts/build-canister.sh ic-btc-canister"
     },
-    "watchdog": {
+    "watchdog_t": {
+      "type": "custom",
+      "candid": "./watchdog/candid.did",
+      "build": "./scripts/build-canister.sh watchdog",
+      "wasm": "./target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+    },
+    "watchdog_m": {
       "type": "custom",
       "candid": "./watchdog/candid.did",
       "build": "./scripts/build-canister.sh watchdog",
