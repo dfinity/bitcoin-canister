@@ -207,16 +207,14 @@ In the `output.secret` file find and save system subnet IPv6 and links to grafan
         "nodes": [
           {
             ...
-            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47" # <- YOU NEED THIS IPv6.
+            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47" # <- YOU NEED THIS IPv6 OF SYSTEM NODE
           }
         ],
         ...
         "subnet_type": "system"
       },
-
-  "prometheus": "Prometheus Web UI at http://prometheus.XXX",
+  ...
   "grafana": "Grafana at http://grafana.XXX", # <- YOU NEED THIS URL
-
 ```
 
 Update your `dfx.json` with IPv6 from the above:
@@ -234,7 +232,7 @@ If you want to deploy both `testnet` and `mainnet` canisters via dfx you might w
 
 Create corresponding canister
 ```shell
-$ dfx canister create bitcoin --no-wallet \
+$ dfx canister create bitcoin_t --no-wallet \
     --network testnet \
     --subnet-type system \
     --specified-id $TESTNET_BITCOIN_CANISTER_ID \
@@ -248,7 +246,7 @@ $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
-    --argument "(17537 : nat64)"
+    --argument "(17537 : nat64)"  # Use calculated number of pages.
 ```
 
 ```shell
@@ -269,6 +267,7 @@ $ cargo run --example upload -- \
 
 Prepare upgrade arguments
 ```shell
+# Select a subset of init arguments or make sure they copy current prod configuration.
 $ ARG="(opt record {
     stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
@@ -279,7 +278,7 @@ $ ARG="(opt record {
 
 ```shell
 $ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$ARG" | xxd -r -p | sha256sum
-e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89
+a608762ab16eac97bd9361101a59c2c9281028e631746d15ce3df44cf658ffc4
 ```
 
 Upgrade bitcoin canister
