@@ -180,13 +180,26 @@ When installing canister on a testnet first start a farm testnet via `$ ict test
 $ git clone git@github.com:dfinity/ic.git
 $ cd ic
 
-# If you are on remote machine make sure to propagate your credentials 
-# (otherwise grafana will not start)
+# If you are on remote machine make sure to propagate your credentials (otherwise grafana will not start)
 $ ssh-add -L
 
-# Start a container and create a `small_high_perf` testnet inside it
+# Start a container to run a testnet inside
 $ ./ci/container/container-run.sh
-$ clear; ict testnet create small_high_perf --lifetime-mins=10080 --output-dir=./test_tmpdir > output.secret
+
+# Before starting the testnet double check `small_bitcoin` testnet settings.
+# https://github.com/dfinity/ic/blob/256c598835d637b0b58c5e2117bca011ec417a61/rs/tests/testnets/small_bitcoin.rs#L2
+# Setup lifetime big enough for your experiment, provide output directory and log file
+$ clear; ict testnet create small_bitcoin \
+  --lifetime-mins=10080 \
+  --output-dir=./test_tmpdir \
+  > output.secret
+
+# Same but with custom grafana dashboards
+$ clear; ict testnet create small_bitcoin \
+  --lifetime-mins=10080 \
+  --output-dir=./test_tmpdir \
+  --k8s-branch <repo-branch-name> \
+  > output.secret
 ```
 
 In the `output.secret` file find and save system subnet IPv6 and links to grafana
@@ -195,23 +208,16 @@ In the `output.secret` file find and save system subnet IPv6 and links to grafan
       {
         "nodes": [
           {
-            "domain": null,
-            "id": "zvqrm-xxxxxx-zae",
-            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47"
+            ...
+            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47" # <- YOU NEED THIS IPv6.
           }
         ],
-        "subnet_id": "sj5e7-xxxx-eae",
+        ...
         "subnet_type": "system"
       },
 
-  "bn_aaaa_records": {
-    "aaaa_records": [
-      "2602:xx:xx:xx:xx:xx:xx:4dd4"
-    ],
-    "url": "XXX"
-  },
   "prometheus": "Prometheus Web UI at http://prometheus.XXX",
-  "grafana": "Grafana at http://grafana.XXX",
+  "grafana": "Grafana at http://grafana.XXX", # <- YOU NEED THIS URL
 
 ```
 
@@ -220,7 +226,7 @@ Update your `dfx.json` with IPv6 from the above:
 ```json
     "testnet": {
       "providers": [
-        "http://[2602:xx:xx:xx:xx:xx:xx:df47]:8080"
+        "http://[2602:xx:xx:xx:xx:xx:xx:df47]:8080" // <- USE IPv6 FROM THE ABOVE
       ],
       "type": "persistent"
     }
@@ -230,7 +236,7 @@ If you want to deploy both `testnet` and `mainnet` canisters via dfx you might w
 
 Create corresponding canister
 ```shell
-$ dfx canister create bitcoin_t --no-wallet \
+$ dfx canister create bitcoin --no-wallet \
     --network testnet \
     --subnet-type system \
     --specified-id $TESTNET_BITCOIN_CANISTER_ID \
@@ -256,6 +262,7 @@ Upload chunks
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
     --state ./bootstrap/output/canister_state.bin \
+    # USE IPv6 FROM THE ABOVE
     --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
     --fetch-root-key
 ```
@@ -267,23 +274,7 @@ Prepare upgrade arguments
 $ ARG="(opt record {
     stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
-    burn_cycles = opt variant { enabled };
-    api_access = opt variant { enabled };
-    lazily_evaluate_fee_percentiles = opt variant { enabled };
-    fees = opt record {
-        get_current_fee_percentiles = 4_000_000 : nat;
-        get_block_headers_base = 20_000_000;
-        get_block_headers_cycles_per_ten_instructions = 4;
-        get_block_headers_maximum = 4_000_000_000;
-        get_utxos_maximum = 4_000_000_000 : nat;
-        get_current_fee_percentiles_maximum = 40_000_000 : nat;
-        send_transaction_per_byte = 8_000_000 : nat;
-        get_balance = 4_000_000 : nat;
-        get_utxos_cycles_per_ten_instructions = 4 : nat;
-        get_utxos_base = 20_000_000 : nat;
-        get_balance_maximum = 40_000_000 : nat;
-        send_transaction_base = 2_000_000_000 : nat;
-    };
+    api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
 })"
 ```
