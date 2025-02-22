@@ -256,10 +256,10 @@ $ dfx canister install \
 
 Upload chunks
 ```shell
+# USE IPv6 FROM THE ABOVE
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
     --state ./bootstrap/output/canister_state.bin \
-    # USE IPv6 FROM THE ABOVE
     --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
     --fetch-root-key
 ```
