@@ -145,7 +145,87 @@ c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-caniste
 2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
 ```
 
-## 7. Install Uploader Canister & Upload Chunks
+## 7. (Optional) Setup Testing Subnet & Create Canisters
+
+When installing canister on a testnet first start a farm testnet via `$ ict testnet create`:
+
+```shell
+# In a separate terminal and in separate folder clone IC-repo
+$ git clone git@github.com:dfinity/ic.git
+$ cd ic
+
+# If you are on remote machine make sure to propagate your credentials (otherwise grafana will not start)
+$ ssh-add -L
+
+# Start a container to run a testnet inside
+$ ./ci/container/container-run.sh
+
+# Before starting the testnet double check `small_bitcoin` testnet settings.
+# https://github.com/dfinity/ic/blob/256c598835d637b0b58c5e2117bca011ec417a61/rs/tests/testnets/small_bitcoin.rs#L2
+# Setup lifetime big enough for your experiment, provide output directory and log file
+$ clear; ict testnet create small_bitcoin --lifetime-mins=10080 --output-dir=./test_tmpdir \
+  > output.secret
+
+# Same but with custom grafana dashboards
+$ clear; ict testnet create small_bitcoin --lifetime-mins=10080 --output-dir=./test_tmpdir \
+  --k8s-branch <repo-branch-name> \
+  > output.secret
+```
+
+In the `output.secret` file find and save system subnet IPv6 and links to grafana
+
+```shell
+      {
+        "nodes": [
+          {
+            ...
+            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47" # <- YOU NEED THIS IPv6 OF SYSTEM NODE
+          }
+        ],
+        ...
+        "subnet_type": "system"
+      },
+  ...
+  "grafana": "Grafana at http://grafana.XXX", # <- YOU NEED THIS URL
+```
+
+Update your `dfx.json` with IPv6 from the above:
+
+```json
+    "testnet": {
+      "providers": [
+        "http://[2602:xx:xx:xx:xx:xx:xx:df47]:8080" // <- USE IPv6 FROM THE ABOVE
+      ],
+      "type": "persistent"
+    }
+```
+
+If you want to deploy both `testnet` and `mainnet` canisters via dfx you might want to clone their setups in `dfx.json`, so instead of having `bitcoin` you have `bitcoin_t` and `bitcoin_m`, same for `watchdog` (`watchdog_t`, `watchdog_m`).
+
+```shell
+# Helper constants
+NETWORK=testnet; \
+  STABILITY_THRESHOLD=144; \
+  TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
+  TESTNET_WATCHDOG_CANISTER_ID="gjqfs-iaaaa-aaaan-aaada-cai"; \
+  MAINNET_BITCOIN_CANISTER_ID="ghsi2-tqaaa-aaaan-aaaca-cai"; \
+  MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
+```
+
+Create corresponding canister
+```shell
+# (Optional) remove current canister ids. 
+$ rm canister_ids.json
+
+$ dfx canister create bitcoin_t --no-wallet \
+    --network testnet \
+    --subnet-type system \
+    --specified-id $TESTNET_BITCOIN_CANISTER_ID \
+    --provisional-create-canister-effective-canister-id "5v3p4-iyaaa-aaaaa-qaaaa-cai" \
+    --with-cycles 1000000000000000000
+```
+
+## 8. Install Uploader Canister & Upload Chunks
 
 Prepare install arguments
 ```shell
@@ -165,94 +245,18 @@ $ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
 e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
 ```
 
-```shell
-EFFECTIVE_CANISTER_ID="5v3p4-iyaaa-aaaaa-qaaaa-cai"; \
-    TESTNET_BITCOIN_CANISTER_ID="g4xu7-jiaaa-aaaan-aaaaq-cai"; \
-    TESTNET_WATCHDOG_CANISTER_ID="gjqfs-iaaaa-aaaan-aaada-cai"; \
-    MAINNET_BITCOIN_CANISTER_ID="ghsi2-tqaaa-aaaan-aaaca-cai"; \
-    MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
-```
-
-When installing canister on a testnet first start a farm testnet via `$ ict testnet create`:
-
-```shell
-# In a separate terminal and in separate folder clone IC-repo
-$ git clone git@github.com:dfinity/ic.git
-$ cd ic
-
-# If you are on remote machine make sure to propagate your credentials 
-# (otherwise grafana will not start)
-$ ssh-add -L
-
-# Start a container and create a `small_high_perf` testnet inside it
-$ ./ci/container/container-run.sh
-$ clear; ict testnet create small_high_perf --lifetime-mins=10080 --output-dir=./test_tmpdir > output.secret
-```
-
-In the `output.secret` file find and save system subnet IPv6 and links to grafana
-
-```shell
-      {
-        "nodes": [
-          {
-            "domain": null,
-            "id": "zvqrm-xxxxxx-zae",
-            "ipv6": "2602:xx:xx:xx:xx:xx:xx:df47"
-          }
-        ],
-        "subnet_id": "sj5e7-xxxx-eae",
-        "subnet_type": "system"
-      },
-
-  "bn_aaaa_records": {
-    "aaaa_records": [
-      "2602:xx:xx:xx:xx:xx:xx:4dd4"
-    ],
-    "url": "XXX"
-  },
-  "prometheus": "Prometheus Web UI at http://prometheus.XXX",
-  "grafana": "Grafana at http://grafana.XXX",
-
-```
-
-Update your `dfx.json` with IPv6 from the above:
-
-```json
-    "testnet": {
-      "providers": [
-        "http://[2602:xx:xx:xx:xx:xx:xx:df47]:8080"
-      ],
-      "type": "persistent"
-    }
-```
-
-If you want to deploy both `testnet` and `mainnet` canisters via dfx you might want to clone their setups in `dfx.json`, so instead of having `bitcoin` you have `bitcoin_t` and `bitcoin_m`, same for `watchdog` (`watchdog_t`, `watchdog_m`).
-
-Create corresponding canister
-```shell
-$ dfx canister create bitcoin_t --no-wallet \
-    --network testnet \
-    --subnet-type system \
-    --specified-id $TESTNET_BITCOIN_CANISTER_ID \
-    --provisional-create-canister-effective-canister-id $EFFECTIVE_CANISTER_ID \
-    --with-cycles 1000000000000000000
-```
-
 Install uploader canister
 ```shell
 $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
-    --argument "(17537 : nat64)"
-```
-
-```shell
-$ dfx canister status --network testnet $TESTNET_BITCOIN_CANISTER_ID
+    --argument "(17537 : nat64)"  # Use calculated number of pages.
 ```
 
 Upload chunks
 ```shell
+# USE IPv6 FROM THE ABOVE
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
     --state ./bootstrap/output/canister_state.bin \
@@ -260,37 +264,23 @@ $ cargo run --example upload -- \
     --fetch-root-key
 ```
 
-## 8. Upgrade Bitcoin Canister
+## 9. Upgrade Bitcoin Canister
 
 Prepare upgrade arguments
 ```shell
+# Select a subset of init arguments or make sure they copy current prod configuration.
 $ ARG="(opt record {
+    network = opt variant { $NETWORK };
     stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
-    burn_cycles = opt variant { enabled };
-    api_access = opt variant { enabled };
-    lazily_evaluate_fee_percentiles = opt variant { enabled };
-    fees = opt record {
-        get_current_fee_percentiles = 4_000_000 : nat;
-        get_block_headers_base = 20_000_000;
-        get_block_headers_cycles_per_ten_instructions = 4;
-        get_block_headers_maximum = 4_000_000_000;
-        get_utxos_maximum = 4_000_000_000 : nat;
-        get_current_fee_percentiles_maximum = 40_000_000 : nat;
-        send_transaction_per_byte = 8_000_000 : nat;
-        get_balance = 4_000_000 : nat;
-        get_utxos_cycles_per_ten_instructions = 4 : nat;
-        get_utxos_base = 20_000_000 : nat;
-        get_balance_maximum = 40_000_000 : nat;
-        send_transaction_base = 2_000_000_000 : nat;
-    };
+    api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
 })"
 ```
 
 ```shell
-$ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$ARG" | xxd -r -p | sha256sum
-e129040f023b1b39c3016d604366cea83180c51ec0324426fee00f27ee731f89
+$ didc encode -d ./canister/candid.did -t '(opt init_config)' "$ARG" | xxd -r -p | sha256sum
+e463d2f266f7085036be3e23afc2a1b51f501c7ea677193647785d1a09c723e2  -
 ```
 
 Upgrade bitcoin canister
