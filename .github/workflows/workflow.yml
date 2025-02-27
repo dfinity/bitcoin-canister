@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  RUST_VERSION: 1.81.0
+  RUST_VERSION: 1.84.0
   DFX_VERSION: 0.23.0
   POCKET_IC_SERVER_VERSION: 7.0.0
   CARGO_TERM_COLOR: always # Force Cargo to use colors
