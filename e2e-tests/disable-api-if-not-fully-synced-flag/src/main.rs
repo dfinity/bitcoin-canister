@@ -69,11 +69,11 @@ struct GetSuccessorsPartialResponse {
 }
 
 thread_local! {
-    static BLOCKS: RefCell<Vec<BlockBlob>> = RefCell::new(Vec::new());
+    static BLOCKS: RefCell<Vec<BlockBlob>> = const { RefCell::new(Vec::new())};
 
-    static COUNT: Cell<usize> = Cell::new(0);
+    static COUNT: Cell<usize> = const { Cell::new(0) };
 
-    static BLOCK_HEADERS: RefCell<Vec<BlockHeaderBlob>> = RefCell::new(Vec::new());
+    static BLOCK_HEADERS: RefCell<Vec<BlockHeaderBlob>> = const { RefCell::new(Vec::new())};
 }
 
 // Initialize the blocks.

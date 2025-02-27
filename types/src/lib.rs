@@ -10,7 +10,7 @@ use datasize::DataSize;
 use ic_btc_interface::{Network, Txid as PublicTxid};
 use ic_stable_structures::{storable::Bound, Storable};
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, cell::RefCell, str::FromStr};
+use std::{borrow::Cow, cell::RefCell, fmt, str::FromStr};
 
 // NOTE: If new fields are added, then the implementation of `PartialEq` should be updated.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
@@ -292,11 +292,11 @@ impl FromStr for BlockHash {
     }
 }
 
-impl ToString for BlockHash {
-    fn to_string(&self) -> String {
+impl fmt::Display for BlockHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut b = self.0.clone();
         b.reverse();
-        hex::encode(b)
+        write!(f, "{}", hex::encode(b))
     }
 }
 
@@ -308,7 +308,7 @@ impl Default for BlockHash {
 
 impl std::fmt::Debug for BlockHash {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BlockHash({})", self.to_string())
+        write!(f, "BlockHash({})", self)
     }
 }
 
