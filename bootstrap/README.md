@@ -269,7 +269,7 @@ $ cargo run --example upload -- \
 Prepare upgrade arguments
 ```shell
 # Select a subset of init arguments or make sure they copy current prod configuration.
-$ ARG="(opt record {
+$ ARG="(record {
     network = opt variant { $NETWORK };
     stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
