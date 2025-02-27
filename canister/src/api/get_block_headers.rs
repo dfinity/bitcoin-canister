@@ -127,7 +127,7 @@ fn get_block_headers_internal(
 /// the function returns the block headers in the provided range.
 /// The range is inclusive, i.e., the block headers at the start
 /// and end heights are returned as well.
-
+///
 /// If no end height is specified, all blocks until the tip height,
 /// i.e., the largest available height, are returned. However, if
 /// the range from the start height to the end height or the tip
