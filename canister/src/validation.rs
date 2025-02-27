@@ -49,7 +49,7 @@ impl<'a> ValidationContext<'a> {
 }
 
 /// Implements the `HeaderStore` trait that's used for validating headers.
-impl<'a> HeaderStore for ValidationContext<'a> {
+impl HeaderStore for ValidationContext<'_> {
     fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<Header> {
         // Check if the header is in the chain.
         let hash = ic_btc_types::BlockHash::from(hash.as_raw_hash().as_byte_array().to_vec());

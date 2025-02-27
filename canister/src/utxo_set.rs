@@ -112,10 +112,7 @@ impl UtxoSet {
             mut next_output_idx,
             mut utxos_delta,
             mut stats,
-        } = match self.ingesting_block.take() {
-            Some(p) => p,
-            None => return None,
-        };
+        } = self.ingesting_block.take()?;
 
         stats.num_rounds += 1;
         for (tx_idx, tx) in block.txdata().iter().enumerate().skip(next_tx_idx) {

@@ -64,10 +64,9 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
 
     fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
         fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> Option<(Block, usize)> {
-            return seq
-                .next_element::<(BitcoinBlock, usize)>()
+            seq.next_element::<(BitcoinBlock, usize)>()
                 .expect("reading next element must succeed")
-                .map(|(b, n)| (Block::new(b), n));
+                .map(|(b, n)| (Block::new(b), n))
         }
 
         // A stack containing a `BlockTree` along with how many children remain to be added to it.

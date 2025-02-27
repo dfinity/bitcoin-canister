@@ -61,7 +61,7 @@ struct GetSuccessorsPartialResponse {
 }
 
 thread_local! {
-    static LAST_TRANSACTION: RefCell<Vec<u8>> = RefCell::new(Vec::new());
+    static LAST_TRANSACTION: RefCell<Vec<u8>> = const { RefCell::new(Vec::new())};
 }
 
 #[update]

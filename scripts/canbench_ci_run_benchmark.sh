@@ -73,13 +73,10 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
   ' "$CANBENCH_OUTPUT" > "${CANBENCH_OUTPUT}.tmp" && mv "${CANBENCH_OUTPUT}.tmp" "$CANBENCH_OUTPUT"
 
   # Add a top-level summary of detected performance changes
-  if grep -q "(improved " "${CANBENCH_OUTPUT}"; then
-    echo "**🟢 Performance improvements detected! 🎉**" >> "$COMMENT_MESSAGE_PATH"
-  elif grep -q "(regressed " "${CANBENCH_OUTPUT}"; then
-    echo "**🔴 Performance regressions detected! 😱**" >> "$COMMENT_MESSAGE_PATH"
-  else
-    echo "**ℹ️ No significant performance changes detected 👍**" >> "$COMMENT_MESSAGE_PATH"
-  fi
+  MESSAGE=""
+  grep -q "(improved " "${CANBENCH_OUTPUT}" && MESSAGE+="**🟢 Performance improvements detected! 🎉**\n"
+  grep -q "(regressed " "${CANBENCH_OUTPUT}" && MESSAGE+="**🔴 Performance regressions detected! 😱**\n"
+  echo -e "${MESSAGE:-**ℹ️ No significant performance changes detected 👍**}" >> "$COMMENT_MESSAGE_PATH"
 fi
 
 ## Add the output of canbench to the file.

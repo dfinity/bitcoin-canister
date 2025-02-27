@@ -10,7 +10,7 @@ include!(concat!(env!("OUT_DIR"), "/chunk_hashes.rs"));
 thread_local! {
     // A set containing the indices of chunks that have not yet been uploaded.
     // An index here refers to the index of the Wasm page in stable memory where the chunk begins.
-    static MISSING_CHUNKS: RefCell<BTreeSet<u64>> = RefCell::new(BTreeSet::new());
+    static MISSING_CHUNKS: RefCell<BTreeSet<u64>> = const { RefCell::new(BTreeSet::new()) };
 }
 
 #[init]

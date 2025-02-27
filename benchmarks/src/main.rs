@@ -9,7 +9,7 @@ use ic_cdk_macros::init;
 use std::cell::RefCell;
 
 thread_local! {
-    static TESTNET_BLOCKS: RefCell<Vec<Block>> =  RefCell::new(vec![]);
+    static TESTNET_BLOCKS: RefCell<Vec<Block>> =  const { RefCell::new(vec![])};
 }
 
 #[init]

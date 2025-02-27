@@ -46,7 +46,7 @@ use utxo_set::UtxoSet;
 const SYNCED_THRESHOLD: u32 = 2;
 
 thread_local! {
-    static STATE: RefCell<Option<State>> = RefCell::new(None);
+    static STATE: RefCell<Option<State>> = const { RefCell::new(None) };
 }
 
 /// A helper method to read the state.
