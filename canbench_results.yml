@@ -34,7 +34,7 @@ benches:
         heap_increase: 2048
         stable_memory_increase: 0
       serialize_blocktree_flatten:
-        instructions: 201596
+        instructions: 183700
         heap_increase: 0
         stable_memory_increase: 0
       serialize_blocktree_serialize_seq:
