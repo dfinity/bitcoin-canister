@@ -1,5 +1,5 @@
 {
-  "dfx": "0.21.0",
+  "dfx": "0.23.0",
   "canisters": {
     "bitcoin": {
       "type": "custom",

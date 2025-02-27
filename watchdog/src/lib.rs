@@ -37,7 +37,7 @@ thread_local! {
     static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
-    static API_ACCESS_TARGET: RefCell<Option<Flag>> = RefCell::new(None);
+    static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
 }
 
 /// This function is called when the canister is created.
