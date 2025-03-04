@@ -269,12 +269,43 @@ $ cargo run --example upload -- \
 Prepare upgrade arguments
 ```shell
 # Select a subset of init arguments or make sure they copy current prod configuration.
+$ TESTNET_FEES="record { 
+  get_utxos_base = 20_000_000 : nat;
+  get_utxos_cycles_per_ten_instructions = 10 : nat;
+  get_utxos_maximum = 4_000_000_000 : nat;
+  get_balance = 4_000_000 : nat;
+  get_balance_maximum = 40_000_000 : nat;
+  get_current_fee_percentiles = 4_000_000 : nat;
+  get_current_fee_percentiles_maximum = 40_000_000 : nat;
+  send_transaction_base = 2_000_000_000 : nat;
+  send_transaction_per_byte = 8_000_000 : nat;
+  get_block_headers_base = 20_000_000 : nat;
+  get_block_headers_cycles_per_ten_instructions = 10 : nat;
+  get_block_headers_maximum = 4_000_000_000 : nat;
+}"
+
+$ MAINNET_FEES="record { 
+  get_utxos_base = 50_000_000 : nat;
+  get_utxos_cycles_per_ten_instructions = 10 : nat;
+  get_utxos_maximum = 10_000_000_000 : nat;
+  get_balance = 10_000_000 : nat;
+  get_balance_maximum = 100_000_000 : nat;
+  get_current_fee_percentiles = 10_000_000 : nat;
+  get_current_fee_percentiles_maximum = 100_000_000 : nat;
+  send_transaction_base = 5_000_000_000 : nat;
+  send_transaction_per_byte = 20_000_000 : nat;
+  get_block_headers_base = 50_000_000 : nat;
+  get_block_headers_cycles_per_ten_instructions = 10 : nat;
+  get_block_headers_maximum = 10_000_000_000 : nat;
+}"
+
 $ ARG="(record {
     network = opt variant { $NETWORK };
     stability_threshold = opt $STABILITY_THRESHOLD;
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
+    fees = opt $TESTNET_FEES;
 })"
 ```
 
