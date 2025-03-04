@@ -268,7 +268,7 @@ $ cargo run --example upload -- \
 
 Prepare upgrade arguments
 ```shell
-# Select a subset of init arguments or make sure they copy current prod configuration.
+# https://internetcomputer.org/docs/references/bitcoin-how-it-works#api-fees-and-pricing
 $ TESTNET_FEES="record { 
   get_utxos_base = 20_000_000 : nat;
   get_utxos_cycles_per_ten_instructions = 10 : nat;
@@ -299,6 +299,7 @@ $ MAINNET_FEES="record {
   get_block_headers_maximum = 10_000_000_000 : nat;
 }"
 
+# Select a subset of init arguments or make sure they copy current prod configuration.
 $ ARG="(record {
     network = opt variant { $NETWORK };
     stability_threshold = opt $STABILITY_THRESHOLD;
