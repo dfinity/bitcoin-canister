@@ -269,22 +269,7 @@ $ cargo run --example upload -- \
 Prepare upgrade arguments
 ```shell
 # https://internetcomputer.org/docs/references/bitcoin-how-it-works#api-fees-and-pricing
-$ TESTNET_FEES="record { 
-  get_utxos_base = 20_000_000 : nat;
-  get_utxos_cycles_per_ten_instructions = 10 : nat;
-  get_utxos_maximum = 4_000_000_000 : nat;
-  get_current_fee_percentiles = 4_000_000 : nat;
-  get_current_fee_percentiles_maximum = 40_000_000 : nat;
-  get_balance = 4_000_000 : nat;
-  get_balance_maximum = 40_000_000 : nat;
-  send_transaction_base = 2_000_000_000 : nat;
-  send_transaction_per_byte = 8_000_000 : nat;
-  get_block_headers_base = 20_000_000 : nat;
-  get_block_headers_cycles_per_ten_instructions = 10 : nat;
-  get_block_headers_maximum = 4_000_000_000 : nat;
-}"
-
-$ MAINNET_FEES="record { 
+$ CUSTOM_FEES="record { 
   get_utxos_base = 50_000_000 : nat;
   get_utxos_cycles_per_ten_instructions = 10 : nat;
   get_utxos_maximum = 10_000_000_000 : nat;
@@ -306,7 +291,7 @@ $ ARG="(record {
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
-    fees = opt $TESTNET_FEES;
+    fees = opt $CUSTOM_FEES;
 })"
 ```
 
