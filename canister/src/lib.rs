@@ -293,7 +293,7 @@ pub(crate) fn is_synced() -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_btc_interface::{Network, NetworkInRequest};
+    use ic_btc_interface::{Fees, Network, NetworkInRequest};
     use ic_btc_test_utils::build_regtest_chain;
     use proptest::prelude::*;
 
@@ -627,5 +627,32 @@ mod test {
         with_state(|s| {
             assert!(s.disable_api_if_not_fully_synced == Flag::Enabled);
         });
+    }
+
+    #[test]
+    fn init_sets_default_fees() {
+        let custom = Fees {
+            get_utxos_base: 123,
+            ..Default::default()
+        };
+        let test_cases = [
+            (Network::Testnet, None, Fees::testnet()),
+            (Network::Mainnet, None, Fees::mainnet()),
+            (Network::Regtest, None, Fees::default()),
+            (Network::Testnet, Some(custom.clone()), custom.clone()),
+            (Network::Mainnet, Some(custom.clone()), custom.clone()),
+            (Network::Regtest, Some(custom.clone()), custom),
+        ];
+        for (network, fees, expected) in test_cases {
+            init(InitConfig {
+                network: Some(network),
+                fees,
+                ..Default::default()
+            });
+
+            with_state(|s| {
+                assert!(s.fees == expected);
+            });
+        }
     }
 }
