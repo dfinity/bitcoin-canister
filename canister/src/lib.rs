@@ -595,7 +595,7 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.syncing_state.syncing == Flag::Disabled);
+            assert_eq!(s.syncing_state.syncing, Flag::Disabled);
         });
 
         init(InitConfig {
@@ -604,7 +604,7 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.syncing_state.syncing == Flag::Enabled);
+            assert_eq!(s.syncing_state.syncing, Flag::Enabled);
         });
     }
 
@@ -616,7 +616,7 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.disable_api_if_not_fully_synced == Flag::Disabled);
+            assert_eq!(s.disable_api_if_not_fully_synced, Flag::Disabled);
         });
 
         init(InitConfig {
@@ -625,12 +625,12 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.disable_api_if_not_fully_synced == Flag::Enabled);
+            assert_eq!(s.disable_api_if_not_fully_synced, Flag::Enabled);
         });
     }
 
     #[test]
-    fn init_sets_default_fees_if_not_explicitly_provided() {
+    fn init_applies_default_fees_when_not_explicitly_provided() {
         let custom = Fees {
             get_utxos_base: 123,
             ..Default::default()
@@ -643,16 +643,14 @@ mod test {
             (Network::Mainnet, Some(custom.clone()), custom.clone()),
             (Network::Regtest, Some(custom.clone()), custom),
         ];
-        for (network, fees, expected) in test_cases {
+        for (network, provided_fees, expected_fees) in test_cases {
             init(InitConfig {
                 network: Some(network),
-                fees,
+                fees: provided_fees.clone(),
                 ..Default::default()
             });
 
-            with_state(|s| {
-                assert!(s.fees == expected);
-            });
+            with_state(|s| assert_eq!(s.fees, expected_fees));
         }
     }
 }
