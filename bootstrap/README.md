@@ -268,6 +268,7 @@ $ cargo run --example upload -- \
 
 Prepare upgrade arguments
 ```shell
+# https://internetcomputer.org/docs/references/bitcoin-how-it-works#api-fees-and-pricing
 $ CUSTOM_FEES="record { 
   get_utxos_base = 50_000_000 : nat;
   get_utxos_cycles_per_ten_instructions = 10 : nat;
