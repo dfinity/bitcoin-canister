@@ -664,7 +664,7 @@ impl From<InitConfig> for Config {
             config.fees = match config.network {
                 Network::Mainnet => Fees::mainnet(),
                 Network::Testnet => Fees::testnet(),
-                _ => config.fees, // Keep unchanged for the rest of the networks.
+                Network::Regtest => config.fees, // Keep unchanged for regtest.
             };
         }
 

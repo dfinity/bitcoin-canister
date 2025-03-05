@@ -86,7 +86,7 @@ impl State {
         let fees = match network {
             Network::Mainnet => Fees::mainnet(),
             Network::Testnet => Fees::testnet(),
-            _ => Fees::default(),
+            Network::Regtest => Fees::default(),
         };
 
         Self {
