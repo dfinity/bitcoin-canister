@@ -94,7 +94,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks
+          cargo test --release --all-targets --workspace --exclude benchmarks --color always -- --color always
         env:
           RUST_BACKTRACE: 1
 
