@@ -83,6 +83,12 @@ impl State {
         let unstable_blocks =
             UnstableBlocks::new(&utxos, stability_threshold, genesis_block, network);
 
+        let fees = match network {
+            Network::Mainnet => Fees::mainnet(),
+            Network::Testnet => Fees::testnet(),
+            _ => Fees::default(),
+        };
+
         Self {
             utxos,
             unstable_blocks,
@@ -90,7 +96,7 @@ impl State {
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
             stable_block_headers: BlockHeaderStore::init(),
-            fees: Fees::default(),
+            fees,
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
