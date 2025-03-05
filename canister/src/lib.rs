@@ -630,7 +630,7 @@ mod test {
     }
 
     #[test]
-    fn init_sets_default_fees() {
+    fn init_sets_default_fees_if_not_explicitly_provided() {
         let custom = Fees {
             get_utxos_base: 123,
             ..Default::default()
