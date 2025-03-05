@@ -634,14 +634,9 @@ impl From<InitConfig> for Config {
             config.syncing = syncing;
         }
 
+        let fees_explicitly_set = init_config.fees.is_some();
         if let Some(fees) = init_config.fees {
             config.fees = fees;
-        } else {
-            match config.network {
-                Network::Mainnet => config.fees = Fees::mainnet(),
-                Network::Testnet => config.fees = Fees::testnet(),
-                _ => config.fees = Fees::default(),
-            }
         }
 
         if let Some(api_access) = init_config.api_access {
@@ -662,6 +657,15 @@ impl From<InitConfig> for Config {
 
         if let Some(lazily_evaluate_fee_percentiles) = init_config.lazily_evaluate_fee_percentiles {
             config.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
+        }
+
+        // Config post-processing.
+        if !fees_explicitly_set {
+            config.fees = match config.network {
+                Network::Mainnet => Fees::mainnet(),
+                Network::Testnet => Fees::testnet(),
+                _ => config.fees, // Keep unchanged for the rest of the networks.
+            };
         }
 
         config
