@@ -636,6 +636,12 @@ impl From<InitConfig> for Config {
 
         if let Some(fees) = init_config.fees {
             config.fees = fees;
+        } else {
+            match config.network {
+                Network::Mainnet => config.fees = Fees::mainnet(),
+                Network::Testnet => config.fees = Fees::testnet(),
+                _ => config.fees = Fees::default(),
+            }
         }
 
         if let Some(api_access) = init_config.api_access {
@@ -723,6 +729,52 @@ pub struct Fees {
     /// The maximum amount of cycles that can be charged in a `get_block_headers` request.
     /// A request must send at least this amount for it to be accepted.
     pub get_block_headers_maximum: u128,
+}
+
+impl Fees {
+    pub fn testnet() -> Self {
+        // https://internetcomputer.org/docs/references/bitcoin-how-it-works#bitcoin-testnet
+        Self {
+            get_utxos_base: 20_000_000,
+            get_utxos_cycles_per_ten_instructions: 10,
+            get_utxos_maximum: 4_000_000_000,
+
+            get_current_fee_percentiles: 4_000_000,
+            get_current_fee_percentiles_maximum: 40_000_000,
+
+            get_balance: 4_000_000,
+            get_balance_maximum: 40_000_000,
+
+            send_transaction_base: 2_000_000_000,
+            send_transaction_per_byte: 8_000_000,
+
+            get_block_headers_base: 20_000_000,
+            get_block_headers_cycles_per_ten_instructions: 10,
+            get_block_headers_maximum: 4_000_000_000,
+        }
+    }
+
+    pub fn mainnet() -> Self {
+        // https://internetcomputer.org/docs/references/bitcoin-how-it-works#bitcoin-mainnet
+        Self {
+            get_utxos_base: 50_000_000,
+            get_utxos_cycles_per_ten_instructions: 10,
+            get_utxos_maximum: 10_000_000_000,
+
+            get_current_fee_percentiles: 10_000_000,
+            get_current_fee_percentiles_maximum: 100_000_000,
+
+            get_balance: 10_000_000,
+            get_balance_maximum: 100_000_000,
+
+            send_transaction_base: 5_000_000_000,
+            send_transaction_per_byte: 20_000_000,
+
+            get_block_headers_base: 50_000_000,
+            get_block_headers_cycles_per_ten_instructions: 10,
+            get_block_headers_maximum: 10_000_000_000,
+        }
+    }
 }
 
 #[cfg(test)]
