@@ -214,11 +214,28 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
         Some(stable_child_idx) => {
             let old_anchor = blocks.tree.root.clone();
 
+            let blocks_to_remove: Vec<_> = blocks
+                .tree
+                .children
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, child)| {
+                    if idx == stable_child_idx {
+                        None
+                    } else {
+                        Some(child.blocks())
+                    }
+                })
+                .chain(std::iter::once(vec![old_anchor.clone()]))
+                .collect();
+
+            // Remove the outpoints of the obsolete blocks from the cache.
+            for block in blocks_to_remove.iter().flatten() {
+                blocks.outpoints_cache.remove(block);
+            }
+
             // Replace the unstable block tree with that of the stable child.
             blocks.tree = blocks.tree.children.swap_remove(stable_child_idx);
-
-            // Remove the outpoints of the old anchor from the cache.
-            blocks.outpoints_cache.remove(&old_anchor);
 
             blocks.next_block_headers.remove_until_height(stable_height);
 

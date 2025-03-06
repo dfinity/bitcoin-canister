@@ -122,6 +122,15 @@ impl BlockTree {
         depth
     }
 
+    /// Returns all blocks in the tree.
+    pub fn blocks(&self) -> Vec<Block> {
+        let mut blocks = vec![self.root.clone()];
+        for child in self.children.iter() {
+            blocks.extend(child.blocks());
+        }
+        blocks
+    }
+
     /// Returns the number of tips in the tree.
     pub fn tip_count(&self) -> u32 {
         if self.children.is_empty() {
