@@ -312,6 +312,15 @@ impl BlockTree {
             .map(|child| child.blocks_count())
             .sum::<usize>()
     }
+
+    /// Returns all blocks in the tree.
+    pub fn blocks(&self) -> Vec<Block> {
+        let mut blocks = vec![self.root.clone()];
+        for child in self.children.iter() {
+            blocks.extend(child.blocks());
+        }
+        blocks
+    }
 }
 
 /// An error thrown when trying to add a block that isn't a successor
