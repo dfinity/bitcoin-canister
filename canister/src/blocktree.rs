@@ -122,15 +122,6 @@ impl BlockTree {
         depth
     }
 
-    /// Returns all blocks in the tree.
-    pub fn blocks(&self) -> Vec<Block> {
-        let mut blocks = vec![self.root.clone()];
-        for child in self.children.iter() {
-            blocks.extend(child.blocks());
-        }
-        blocks
-    }
-
     /// Returns the number of tips in the tree.
     pub fn tip_count(&self) -> u32 {
         if self.children.is_empty() {
@@ -320,6 +311,19 @@ impl BlockTree {
             .iter()
             .map(|child| child.blocks_count())
             .sum::<usize>()
+    }
+
+    /// Returns all blocks in the tree.
+    pub fn blocks(&self) -> Vec<Block> {
+        let mut result = Vec::with_capacity(self.blocks_count());
+        let mut stack = vec![self];
+
+        while let Some(node) = stack.pop() {
+            result.push(node.root.clone());
+            stack.extend(&node.children);
+        }
+
+        result
     }
 }
 
