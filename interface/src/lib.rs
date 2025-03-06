@@ -740,7 +740,7 @@ impl Fees {
         // https://internetcomputer.org/docs/references/bitcoin-how-it-works#bitcoin-testnet
         Self {
             get_utxos_base: 20_000_000,
-            get_utxos_cycles_per_ten_instructions: 10,
+            get_utxos_cycles_per_ten_instructions: 4,
             get_utxos_maximum: 4_000_000_000,
 
             get_current_fee_percentiles: 4_000_000,
@@ -753,7 +753,7 @@ impl Fees {
             send_transaction_per_byte: 8_000_000,
 
             get_block_headers_base: 20_000_000,
-            get_block_headers_cycles_per_ten_instructions: 10,
+            get_block_headers_cycles_per_ten_instructions: 4,
             get_block_headers_maximum: 4_000_000_000,
         }
     }
