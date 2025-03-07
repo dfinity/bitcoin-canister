@@ -76,6 +76,7 @@ impl fmt::Display for EmptyChainError {
     }
 }
 
+/// Depth of a block chain, measured in the number of blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Depth(pub u128);
 
@@ -105,6 +106,7 @@ impl fmt::Display for Depth {
     }
 }
 
+/// Depth based on accumulated difficulty, used for block stability checks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DifficultyBasedDepth(pub u128);
 
