@@ -15,9 +15,16 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
-// The maximum number of blocks that a chain on testnet can exceed other chains before its
-// anchor block is marked as stable.
-const TESTNET_CHAIN_MAX_DEPTH: u128 = 1000;
+/// The maximum allowed length difference between the longest and second-longest branch
+/// in the unstable block tree on `Testnet` and `Regtest`.
+///
+/// In these networks, difficulty resets to 1 if no block is found for 20 minutes,
+/// which can lead to excessive chain growth before an anchor block is considered stable.
+/// Without this limit, the unstable block tree could grow uncontrollably,
+/// causing stack overflows and excessive memory usage, potentially leading to out-of-memory (OOM) errors.  
+///
+/// This constraint applies only to test environments and does not affect `Mainnet` behavior.
+const TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE: u128 = 1_000;
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -374,9 +381,11 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                     //
                     // This scenario is only relevant for testnets, so this addition is safe and
                     // has no impact on the behavior of the mainnet canister.
-                    if blocks.tree.children[*child_idx].depth() >= TESTNET_CHAIN_MAX_DEPTH {
+                    if blocks.tree.children[*child_idx].depth()
+                        >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE
+                    {
                         // If there's another competing chain, verify that it's at least
-                        // `TESTNET_CHAIN_MAX_DEPTH` blocks behind the longest chain to mark the
+                        // `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE` blocks behind the longest chain to mark the
                         // current anchor as stable.
                         let second_deepest_depth = match depths.len().checked_sub(2) {
                             None => 0,
@@ -390,9 +399,9 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                         // `difficulty_based_depth`, whereas here the chains are compared by their
                         // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
                         if deepest_depth.saturating_sub(second_deepest_depth)
-                            >= TESTNET_CHAIN_MAX_DEPTH
+                            >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE
                         {
-                            print(&format!("Detected a chain that's > {TESTNET_CHAIN_MAX_DEPTH} blocks ahead of any other chain. Assuming its root is stable..."));
+                            print(&format!("Detected a chain that's > {TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE} blocks ahead of any other chain. Assuming its root is stable..."));
                             return Some(*child_idx);
                         }
                     }
@@ -919,7 +928,7 @@ mod test {
 
         // Assert the chain that will be built exceeds the maximum allowed, so that we can test
         // that case.
-        assert!(chain_len > TESTNET_CHAIN_MAX_DEPTH);
+        assert!(chain_len > TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE);
 
         // Build a long chain where the first block has a substantially higher difficulty than the
         // remaining blocks.
@@ -979,7 +988,7 @@ mod test {
 
         // Assert the chain that will be built exceeds the maximum allowed, so that we can test
         // that case.
-        assert!(chain_len > TESTNET_CHAIN_MAX_DEPTH);
+        assert!(chain_len > TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE);
 
         // Build a long chain where the first block has a substantially higher difficulty than the
         // remaining blocks.
@@ -991,9 +1000,10 @@ mod test {
             .build();
 
         // Build a second chain that's a fork of the first.
-        let second_chain = BlockChainBuilder::fork(&chain[0], TESTNET_CHAIN_MAX_DEPTH as u32 - 1)
-            .with_difficulty(remaining_blocks_difficulty, 0..)
-            .build();
+        let second_chain =
+            BlockChainBuilder::fork(&chain[0], TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE as u32 - 1)
+                .with_difficulty(remaining_blocks_difficulty, 0..)
+                .build();
 
         let mut unstable_blocks =
             UnstableBlocks::new(&utxos, stability_threshold, chain[0].clone(), network);
@@ -1014,10 +1024,10 @@ mod test {
         );
 
         // If there's a very long testnet chain `A`, and there exists another chain `B` s.t.
-        // depth(A) - depth(B) < TESTNET_CHAIN_MAX_DEPTH, the root of chain `A` is considered stable.
+        // depth(A) - depth(B) < TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE, the root of chain `A` is considered stable.
         assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
 
-        // Add one more block to the second chain, so that it's depth is `TESTNET_CHAIN_MAX_DEPTH`.
+        // Add one more block to the second chain, so that it's depth is `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE`.
         push(
             &mut unstable_blocks,
             &utxos,
@@ -1025,7 +1035,7 @@ mod test {
         )
         .unwrap();
 
-        // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
+        // Now, depth(A) - depth(B) >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE and the root of chain `A`
         // is considered unstable.
         assert_eq!(peek(&unstable_blocks), None);
     }
