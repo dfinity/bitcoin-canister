@@ -351,9 +351,9 @@ pub fn get_chain_with_tip<'a>(
 
 // Returns the index of the `anchor`'s stable child if it exists.
 fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
-    // Compute the difficulty based depth of all the children.
     let network = blocks.get_network();
 
+    // Compute and sort children by difficulty-based depth.
     let mut difficulty_based_depths: Vec<_> = blocks
         .tree
         .children
@@ -361,98 +361,84 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .enumerate()
         .map(|(idx, child)| (child.difficulty_based_depth(network), idx))
         .collect();
-
-    // Sort by depth.
-    difficulty_based_depths.sort_by_key(|(depth, _child_idx)| *depth);
+    difficulty_based_depths.sort_by_key(|(depth, _)| *depth);
 
     let normalized_stability_threshold =
         DifficultyBasedDepth(blocks.normalized_stability_threshold());
 
-    match difficulty_based_depths.last() {
-        Some((difficulty_based_deepest_depth, child_idx)) => {
-            match network {
-                Network::Testnet | Network::Regtest => {
-                    // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
-                    // in case a block hasn't been found for 20 minutes. This can be problematic.
-                    // Consider the following scenario:
-                    //
-                    // * Assume a `stability_threshold` of 144.
-                    // * The anchor at height `h` has difficulty of 4642.
-                    // * The anchor will be marked as stable if the difficulty-based depth of
-                    //   the successor blocks is `stability_threshold * difficulty(anchor)` = 668,448
-                    // * The difficulty is reset to the minimum of 1.
-                    // * The canister will now need to maintain a chain of length 668,448 just to
-                    //   mark the anchor block as stable!
-                    //
-                    // Very long chains can cause the stack to overflow, resulting in a broken
-                    // canister.
-                    //
-                    // The pragmatic solution in this case is to bound the length of the chain. If
-                    // one chain starts exceeding other chains by a certain length, we assume that
-                    // the anchor is stable even if the difficulty requirement hasn't been met.
-                    //
-                    // This scenario is only relevant for testnets, so this addition is safe and
-                    // has no impact on the behavior of the mainnet canister.
-                    let deepest_depth = blocks.tree.children[*child_idx].depth();
-                    if deepest_depth >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE {
-                        // If there's another competing chain, verify that it's at least
-                        // `TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE` blocks behind the longest chain
-                        // to mark the current anchor as stable.
-                        let second_deepest_depth =
-                            match difficulty_based_depths.len().checked_sub(2) {
-                                None => Depth(0),
-                                Some(idx) => {
-                                    let (_, second_child_idx) = difficulty_based_depths[idx];
-                                    blocks.tree.children[second_child_idx].depth()
-                                }
-                            };
+    let (difficulty_based_deepest_depth, child_idx) = difficulty_based_depths.last()?;
 
-                        // NOTE: We use `saturating_sub` because `depths` is sorted by
-                        // `difficulty_based_depth`, but here we compare chains by `depth`.
-                        // This means `deepest_depth` may be smaller than `second_deepest_depth`,
-                        // so subtraction must not underflow.
-                        if deepest_depth.saturating_sub(second_deepest_depth)
-                            >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE
-                        {
-                            print(&format!("Detected a chain that's > {TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE} blocks ahead of any other chain. Assuming its root is stable..."));
-                            return Some(*child_idx);
-                        }
-                    }
-                }
-                Network::Mainnet => {
-                    // The difficulty on mainnet is much more stable and is bounded to change by a
-                    // factor of 4, so there is no limit that needs to be imposed.
-                }
+    // Prevent excessive chain growth in testnets where difficulty resets.
+    if network == Network::Testnet || network == Network::Regtest {
+        // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
+        // in case a block hasn't been found for 20 minutes. This can be problematic.
+        // Consider the following scenario:
+        //
+        // * Assume a `stability_threshold` of 144.
+        // * The anchor at height `h` has difficulty of 4642.
+        // * The anchor will be marked as stable if the difficulty-based depth of
+        //   the successor blocks is `stability_threshold * difficulty(anchor)` = 668,448
+        // * The difficulty is reset to the minimum of 1.
+        // * The canister will now need to maintain a chain of length 668,448 just to
+        //   mark the anchor block as stable!
+        //
+        // Very long chains can cause the stack to overflow, resulting in a broken
+        // canister.
+        //
+        // The pragmatic solution in this case is to bound the length of the chain. If
+        // one chain starts exceeding other chains by a certain length, we assume that
+        // the anchor is stable even if the difficulty requirement hasn't been met.
+        //
+        // This scenario is only relevant for testnets, so this addition is safe and
+        // has no impact on the behavior of the mainnet canister.
+        let deepest_depth = blocks.tree.children[*child_idx].depth();
+        if deepest_depth >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE {
+            // Ensure the second-longest chain is far enough behind.
+            let second_deepest_depth = difficulty_based_depths
+                .len()
+                .checked_sub(2)
+                .map(|idx| {
+                    let (_, second_child_idx) = difficulty_based_depths[idx];
+                    blocks.tree.children[second_child_idx].depth()
+                })
+                .unwrap_or(Depth(0));
+
+            // NOTE: We use `saturating_sub` because `depths` is sorted by
+            // `difficulty_based_depth`, but here we compare chains by `depth`.
+            // This means `deepest_depth` may be smaller than `second_deepest_depth`,
+            // so subtraction must not underflow.
+            if deepest_depth.saturating_sub(second_deepest_depth)
+                >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE
+            {
+                print(&format!(
+                    "Detected a chain that's > {TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE} blocks ahead. \
+                    Assuming its root is stable..."
+                ));
+                return Some(*child_idx);
             }
-
-            // The deepest child tree must have a depth >= normalized_stability_threshold.
-            if *difficulty_based_deepest_depth < normalized_stability_threshold {
-                // Need a depth of at least >= normalized_stability_threshold.
-                return None;
-            }
-
-            // If there is more than one child, the difference in depth between
-            // the deepest child and all the others must be >= normalized_stability_threshold.
-            if difficulty_based_depths.len() >= 2 {
-                if let Some((difficulty_based_second_deepest_depth, _)) =
-                    difficulty_based_depths.get(difficulty_based_depths.len() - 2)
-                {
-                    if *difficulty_based_deepest_depth - *difficulty_based_second_deepest_depth
-                        < normalized_stability_threshold
-                    {
-                        // Difference must be >= normalized_stability_threshold.
-                        return None;
-                    }
-                }
-            }
-
-            Some(*child_idx)
-        }
-        None => {
-            // The anchor has no children. Nothing to return.
-            None
         }
     }
+
+    // Ensure the deepest child meets the stability threshold.
+    if *difficulty_based_deepest_depth < normalized_stability_threshold {
+        return None;
+    }
+
+    // If there are multiple children, ensure the longest chain is significantly ahead.
+    if difficulty_based_depths.len() >= 2 {
+        if let Some((difficulty_based_second_deepest_depth, _)) =
+            difficulty_based_depths.get(difficulty_based_depths.len() - 2)
+        {
+            if *difficulty_based_deepest_depth - *difficulty_based_second_deepest_depth
+                < normalized_stability_threshold
+            {
+                // Difference must be >= normalized_stability_threshold.
+                return None;
+            }
+        }
+    }
+
+    Some(*child_idx)
 }
 
 #[cfg(test)]
