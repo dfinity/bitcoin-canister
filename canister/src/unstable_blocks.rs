@@ -1040,10 +1040,12 @@ mod test {
         );
 
         // If there's a very long testnet chain `A`, and there exists another chain `B` s.t.
-        // depth(A) - depth(B) < TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE, the root of chain `A` is considered stable.
+        // depth(A) - depth(B) < TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE,
+        // the root of chain `A` is considered stable.
         assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
 
-        // Add one more block to the second chain, so that it's depth is `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE`.
+        // Add one more block to the second chain, so that it's depth
+        // is `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE`.
         push(
             &mut unstable_blocks,
             &utxos,
@@ -1051,8 +1053,8 @@ mod test {
         )
         .unwrap();
 
-        // Now, depth(A) - depth(B) >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE and the root of chain `A`
-        // is considered unstable.
+        // Now, depth(A) - depth(B) >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE
+        // and the root of chain `A` is considered unstable.
         assert_eq!(peek(&unstable_blocks), None);
     }
 
