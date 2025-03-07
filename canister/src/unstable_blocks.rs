@@ -27,7 +27,7 @@ use self::next_block_headers::NextBlockHeaders;
 /// or stack overflow errors.  
 ///
 /// This applies only to test environments and does not affect `Mainnet`.
-const TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE: Depth = Depth(1_000);
+pub const TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE: Depth = Depth(1_000);
 
 /// A data structure for maintaining all unstable blocks.
 ///
