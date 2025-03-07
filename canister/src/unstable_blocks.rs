@@ -354,7 +354,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     // Compute the difficulty based depth of all the children.
     let network = blocks.get_network();
 
-    let mut normalized_depths: Vec<_> = blocks
+    let mut difficulty_based_depths: Vec<_> = blocks
         .tree
         .children
         .iter()
@@ -363,12 +363,12 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .collect();
 
     // Sort by depth.
-    normalized_depths.sort_by_key(|(depth, _child_idx)| *depth);
+    difficulty_based_depths.sort_by_key(|(depth, _child_idx)| *depth);
 
     let normalized_stability_threshold = blocks.normalized_stability_threshold();
 
-    match normalized_depths.last() {
-        Some((normalized_deepest_depth, child_idx)) => {
+    match difficulty_based_depths.last() {
+        Some((difficulty_based_deepest_depth, child_idx)) => {
             match network {
                 Network::Testnet | Network::Regtest => {
                     // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
@@ -398,18 +398,19 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                         // If there's another competing chain, verify that it's at least
                         // `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE` blocks behind the longest chain to mark the
                         // current anchor as stable.
-                        let second_deepest_depth = match normalized_depths.len().checked_sub(2) {
-                            None => 0,
-                            Some(idx) => {
-                                let (_, second_child_idx) = normalized_depths[idx];
-                                blocks.tree.children[second_child_idx].depth()
-                            }
-                        };
+                        let second_deepest_depth =
+                            match difficulty_based_depths.len().checked_sub(2) {
+                                None => 0,
+                                Some(idx) => {
+                                    let (_, second_child_idx) = difficulty_based_depths[idx];
+                                    blocks.tree.children[second_child_idx].depth()
+                                }
+                            };
 
                         // NOTE: We use a `saturating_sub` here because `depths` is ordered by
                         // `difficulty_based_depth`, whereas here the chains are compared by their
                         // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
-                        if normalized_deepest_depth.saturating_sub(second_deepest_depth)
+                        if difficulty_based_deepest_depth.saturating_sub(second_deepest_depth)
                             >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE
                         {
                             print(&format!("Detected a chain that's > {TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE} blocks ahead of any other chain. Assuming its root is stable..."));
@@ -424,18 +425,18 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
             }
 
             // The deepest child tree must have a depth >= normalized_stability_threshold.
-            if *normalized_deepest_depth < normalized_stability_threshold {
+            if *difficulty_based_deepest_depth < normalized_stability_threshold {
                 // Need a depth of at least >= normalized_stability_threshold.
                 return None;
             }
 
             // If there is more than one child, the difference in depth
             // between the deepest child and all the others must be >= normalized_stability_threshold.
-            if normalized_depths.len() >= 2 {
+            if difficulty_based_depths.len() >= 2 {
                 if let Some((second_deepest_depth, _)) =
-                    normalized_depths.get(normalized_depths.len() - 2)
+                    difficulty_based_depths.get(difficulty_based_depths.len() - 2)
                 {
-                    if normalized_deepest_depth - second_deepest_depth
+                    if difficulty_based_deepest_depth - second_deepest_depth
                         < normalized_stability_threshold
                     {
                         // Difference must be >= normalized_stability_threshold.
