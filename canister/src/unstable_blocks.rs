@@ -220,22 +220,30 @@ pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
 /// is stable. The child `C` becomes the new `anchor` block, and all its
 /// siblings are discarded.
 pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> {
-    match get_stable_child(blocks) {
-        Some(stable_child_idx) => {
-            let old_anchor = blocks.tree.root.clone();
+    let stable_child_idx = get_stable_child(blocks)?;
 
-            // Replace the unstable block tree with that of the stable child.
-            blocks.tree = blocks.tree.children.swap_remove(stable_child_idx);
+    let old_anchor = blocks.tree.root.clone();
 
-            // Remove the outpoints of the old anchor from the cache.
-            blocks.outpoints_cache.remove(&old_anchor);
-
-            blocks.next_block_headers.remove_until_height(stable_height);
-
-            Some(old_anchor)
-        }
-        None => None,
+    // Remove the outpoints of obsolete blocks from the cache.
+    let obsolete_blocks: Vec<_> = blocks
+        .tree
+        .children
+        .iter()
+        .enumerate()
+        .filter(|(idx, _)| *idx != stable_child_idx)
+        .flat_map(|(_, obsolete_child)| obsolete_child.blocks())
+        .chain(std::iter::once(old_anchor.clone()))
+        .collect();
+    for block in obsolete_blocks {
+        blocks.outpoints_cache.remove(&block);
     }
+
+    // Replace the unstable block tree with that of the stable child.
+    blocks.tree = blocks.tree.children.swap_remove(stable_child_idx);
+
+    blocks.next_block_headers.remove_until_height(stable_height);
+
+    Some(old_anchor)
 }
 
 /// Pushes a new block into the store.
