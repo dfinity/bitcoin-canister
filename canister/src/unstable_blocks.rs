@@ -15,15 +15,18 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
-/// The maximum allowed length difference between the longest and second-longest branch
+/// Max allowed length difference between the two longest branches
 /// in the unstable block tree on `Testnet` and `Regtest`.
 ///
-/// In these networks, difficulty resets to 1 if no block is found for 20 minutes,
-/// which can lead to excessive chain growth before an anchor block is considered stable.
-/// Without this limit, the unstable block tree could grow uncontrollably,
-/// causing stack overflows and excessive memory usage, potentially leading to out-of-memory (OOM) errors.  
+/// In these networks, difficulty resets to 1 if no block is found for
+/// 20 minutes, leading to excessive chain growth before an anchor block
+/// is considered stable.  
 ///
-/// This constraint applies only to test environments and does not affect `Mainnet` behavior.
+/// Without this limit, the unstable block tree could grow uncontrollably,
+/// causing high memory usage and potentially leading to out-of-memory (OOM)
+/// or stack overflow errors.  
+///
+/// This applies only to test environments and does not affect `Mainnet`.
 const TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE: u128 = 1_000;
 
 /// A data structure for maintaining all unstable blocks.
