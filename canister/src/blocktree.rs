@@ -3,6 +3,7 @@ use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
 mod serde;
+use std::ops::{Add, Sub};
 
 /// Represents a non-empty block chain as:
 /// * the first block of the chain
@@ -72,6 +73,64 @@ pub struct EmptyChainError {}
 impl fmt::Display for EmptyChainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "cannot create a `BlockChain` from an empty chain")
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Depth(pub u128);
+
+impl Depth {
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+}
+
+impl Add for Depth {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
+    }
+}
+
+impl Sub for Depth {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self::Output {
+        Self(self.0 - other.0)
+    }
+}
+
+impl fmt::Display for Depth {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DifficultyBasedDepth(pub u128);
+
+impl DifficultyBasedDepth {
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+}
+
+impl Add for DifficultyBasedDepth {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
+    }
+}
+
+impl Sub for DifficultyBasedDepth {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self::Output {
+        Self(self.0 - other.0)
+    }
+}
+
+impl fmt::Display for DifficultyBasedDepth {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -239,21 +298,21 @@ impl BlockTree {
     }
 
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
-    pub fn difficulty_based_depth(&self, network: Network) -> u128 {
-        let mut res: u128 = 0;
+    pub fn difficulty_based_depth(&self, network: Network) -> DifficultyBasedDepth {
+        let mut res = DifficultyBasedDepth(0);
         for child in self.children.iter() {
             res = std::cmp::max(res, child.difficulty_based_depth(network));
         }
-        res += self.root.difficulty(network);
+        res = res + DifficultyBasedDepth(self.root.difficulty(network));
         res
     }
 
-    pub fn depth(&self) -> u128 {
-        let mut res: u128 = 0;
+    pub fn depth(&self) -> Depth {
+        let mut res = Depth(0);
         for child in self.children.iter() {
             res = std::cmp::max(res, child.depth());
         }
-        res += 1;
+        res = res + Depth(1);
         res
     }
 
@@ -496,7 +555,10 @@ mod test {
     fn test_difficulty_based_depth_single_block() {
         let block_tree = BlockTree::new(BlockBuilder::genesis().build_with_mock_difficulty(5));
 
-        assert_eq!(block_tree.difficulty_based_depth(Network::Mainnet), 5);
+        assert_eq!(
+            block_tree.difficulty_based_depth(Network::Mainnet),
+            DifficultyBasedDepth(5)
+        );
     }
 
     #[test]
@@ -516,7 +578,10 @@ mod test {
 
         // The maximum sum of block difficulties from the root to a leaf is the sum
         // of the root and child with the greatest difficulty which is 5 + 10 = 15.
-        assert_eq!(block_tree.difficulty_based_depth(Network::Mainnet), 15);
+        assert_eq!(
+            block_tree.difficulty_based_depth(Network::Mainnet),
+            DifficultyBasedDepth(15)
+        );
     }
 
     #[test]
