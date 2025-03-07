@@ -407,9 +407,10 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                                 }
                             };
 
-                        // NOTE: We use a `saturating_sub` here because `depths` is ordered by
-                        // `difficulty_based_depth`, whereas here the chains are compared by their
-                        // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
+                        // NOTE: We use `saturating_sub` because `depths` is sorted by
+                        // `difficulty_based_depth`, but here we compare chains by `depth`.
+                        // This means `deepest_depth` may be smaller than `second_deepest_depth`,
+                        // so subtraction must not underflow.
                         if deepest_depth.saturating_sub(second_deepest_depth)
                             >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE
                         {
@@ -433,10 +434,10 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
             // If there is more than one child, the difference in depth between
             // the deepest child and all the others must be >= normalized_stability_threshold.
             if difficulty_based_depths.len() >= 2 {
-                if let Some((second_deepest_depth, _)) =
+                if let Some((difficulty_based_second_deepest_depth, _)) =
                     difficulty_based_depths.get(difficulty_based_depths.len() - 2)
                 {
-                    if *difficulty_based_deepest_depth - *second_deepest_depth
+                    if *difficulty_based_deepest_depth - *difficulty_based_second_deepest_depth
                         < normalized_stability_threshold
                     {
                         // Difference must be >= normalized_stability_threshold.
