@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
-/// Max allowed length difference between the two longest branches
+/// Max allowed depth difference between the two longest branches
 /// in the unstable block tree on `Testnet` and `Regtest`.
 ///
 /// In these networks, difficulty resets to 1 if no block is found for
