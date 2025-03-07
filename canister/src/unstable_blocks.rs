@@ -396,8 +396,8 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                         >= TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE
                     {
                         // If there's another competing chain, verify that it's at least
-                        // `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE` blocks behind the longest chain to mark the
-                        // current anchor as stable.
+                        // `TESTNET_UNSTABLE_MAX_LENGTH_DIFFERENCE` blocks behind the longest chain
+                        // to mark the current anchor as stable.
                         let second_deepest_depth =
                             match difficulty_based_depths.len().checked_sub(2) {
                                 None => 0,
@@ -430,8 +430,8 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
                 return None;
             }
 
-            // If there is more than one child, the difference in depth
-            // between the deepest child and all the others must be >= normalized_stability_threshold.
+            // If there is more than one child, the difference in depth between
+            // the deepest child and all the others must be >= normalized_stability_threshold.
             if difficulty_based_depths.len() >= 2 {
                 if let Some((second_deepest_depth, _)) =
                     difficulty_based_depths.get(difficulty_based_depths.len() - 2)
