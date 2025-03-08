@@ -78,14 +78,14 @@ impl fmt::Display for EmptyChainError {
 
 /// Depth of a block chain, measured in the number of blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Depth(u128);
+pub struct Depth(u64);
 
 impl Depth {
-    pub const fn new(value: u128) -> Self {
+    pub const fn new(value: u64) -> Self {
         Self(value)
     }
 
-    pub fn get(self) -> u128 {
+    pub fn get(self) -> u64 {
         self.0
     }
 
