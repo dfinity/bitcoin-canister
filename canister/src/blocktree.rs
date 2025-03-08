@@ -78,9 +78,17 @@ impl fmt::Display for EmptyChainError {
 
 /// Depth of a block chain, measured in the number of blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Depth(pub u128);
+pub struct Depth(u128);
 
 impl Depth {
+    pub const fn new(value: u128) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> u128 {
+        self.0
+    }
+
     pub fn saturating_sub(self, other: Self) -> Self {
         Self(self.0.saturating_sub(other.0))
     }
@@ -93,13 +101,6 @@ impl Add for Depth {
     }
 }
 
-impl Sub for Depth {
-    type Output = Self;
-    fn sub(self, other: Self) -> Self::Output {
-        Self(self.0 - other.0)
-    }
-}
-
 impl fmt::Display for Depth {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -108,11 +109,15 @@ impl fmt::Display for Depth {
 
 /// Depth based on accumulated difficulty, used for block stability checks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DifficultyBasedDepth(pub u128);
+pub struct DifficultyBasedDepth(u128);
 
 impl DifficultyBasedDepth {
-    pub fn saturating_sub(self, other: Self) -> Self {
-        Self(self.0.saturating_sub(other.0))
+    pub const fn new(value: u128) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> u128 {
+        self.0
     }
 }
 
@@ -127,12 +132,6 @@ impl Sub for DifficultyBasedDepth {
     type Output = Self;
     fn sub(self, other: Self) -> Self::Output {
         Self(self.0 - other.0)
-    }
-}
-
-impl fmt::Display for DifficultyBasedDepth {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 

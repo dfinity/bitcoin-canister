@@ -81,7 +81,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "testnet_unstable_max_depth_difference",
-            TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.0 as f64,
+            TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.get() as f64,
             "Max depth difference between the two longest unstable branches in Testnet/Regtest.",
         )?;
         w.encode_gauge(
@@ -97,12 +97,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "unstable_blocks_depth",
-            state.unstable_blocks.blocks_depth().0 as f64,
+            state.unstable_blocks.blocks_depth().get() as f64,
             "The depth of the unstable blocks.",
         )?;
         w.encode_gauge(
             "unstable_blocks_difficulty_based_depth",
-            state.unstable_blocks.blocks_difficulty_based_depth().0 as f64,
+            state.unstable_blocks.blocks_difficulty_based_depth().get() as f64,
             "The difficulty-based depth of the unstable blocks.",
         )?;
 
