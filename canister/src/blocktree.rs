@@ -300,20 +300,20 @@ impl BlockTree {
 
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
     pub fn difficulty_based_depth(&self, network: Network) -> DifficultyBasedDepth {
-        let mut res = DifficultyBasedDepth(0);
+        let mut res = DifficultyBasedDepth::new(0);
         for child in self.children.iter() {
             res = std::cmp::max(res, child.difficulty_based_depth(network));
         }
-        res = res + DifficultyBasedDepth(self.root.difficulty(network));
+        res = res + DifficultyBasedDepth::new(self.root.difficulty(network));
         res
     }
 
     pub fn depth(&self) -> Depth {
-        let mut res = Depth(0);
+        let mut res = Depth::new(0);
         for child in self.children.iter() {
             res = std::cmp::max(res, child.depth());
         }
-        res = res + Depth(1);
+        res = res + Depth::new(1);
         res
     }
 
@@ -558,7 +558,7 @@ mod test {
 
         assert_eq!(
             block_tree.difficulty_based_depth(Network::Mainnet),
-            DifficultyBasedDepth(5)
+            DifficultyBasedDepth::new(5)
         );
     }
 
@@ -581,7 +581,7 @@ mod test {
         // of the root and child with the greatest difficulty which is 5 + 10 = 15.
         assert_eq!(
             block_tree.difficulty_based_depth(Network::Mainnet),
-            DifficultyBasedDepth(15)
+            DifficultyBasedDepth::new(15)
         );
     }
 
