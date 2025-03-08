@@ -363,7 +363,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .collect();
     difficulty_based_depths.sort_by_key(|(depth, _)| *depth);
 
-    let normalized_stability_threshold =
+    let difficulty_based_stability_threshold =
         DifficultyBasedDepth::new(blocks.normalized_stability_threshold());
 
     let (difficulty_based_deepest_depth, child_idx) = difficulty_based_depths.last()?;
@@ -420,7 +420,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
     }
 
     // Ensure the deepest child meets the stability threshold.
-    if *difficulty_based_deepest_depth < normalized_stability_threshold {
+    if *difficulty_based_deepest_depth < difficulty_based_stability_threshold {
         return None;
     }
 
@@ -430,9 +430,9 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
             difficulty_based_depths.get(difficulty_based_depths.len() - 2)
         {
             if *difficulty_based_deepest_depth - *difficulty_based_second_deepest_depth
-                < normalized_stability_threshold
+                < difficulty_based_stability_threshold
             {
-                // Difference must be >= normalized_stability_threshold.
+                // Difference must be >= difficulty_based_stability_threshold.
                 return None;
             }
         }
