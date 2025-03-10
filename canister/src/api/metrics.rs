@@ -114,7 +114,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "heap_size_in_bytes",
-            get_heap_size() as f64,
+            get_heap_size_in_bytes() as f64,
             "The size of the heap memory in bytes.",
         )?;
         if let Some(wasm_memory_limit) = state.metrics.wasm_memory_limit {
@@ -272,7 +272,7 @@ fn encode_labeled_gauge(
 }
 
 // Returns the size of the heap in pages.
-fn get_heap_size() -> u64 {
+fn get_heap_size_in_bytes() -> u64 {
     #[cfg(target_arch = "wasm32")]
     {
         core::arch::wasm32::memory_size(0) as u64 * WASM_PAGE_SIZE
