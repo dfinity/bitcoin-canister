@@ -1,6 +1,6 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
-    runtime::{call_canister_status, call_get_successors, cycles_burn, print, time, time_secs},
+    runtime::{call_get_successors, cycles_burn, get_wasm_memory_limit, print, time, time_secs},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
@@ -333,16 +333,12 @@ async fn maybe_read_wasm_limit() {
         return;
     }
 
-    match call_canister_status().await {
-        Ok((response,)) => with_state_mut(|s| {
-            let wasm_memory_limit = response.settings.wasm_memory_limit;
+    match get_wasm_memory_limit().await {
+        Some(wasm_memory_limit) => with_state_mut(|s| {
             s.metrics.wasm_memory_limit = Some(wasm_memory_limit);
             print(&format!("Read wasm memory limit: {}", wasm_memory_limit));
         }),
-        Err((code, msg)) => print(&format!(
-            "Error reading wasm memory limit: [{:?}] {}",
-            code, msg
-        )),
+        None => print("Failed to read wasm memory limit."),
     }
 }
 

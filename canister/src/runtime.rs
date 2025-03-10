@@ -2,10 +2,7 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use crate::types::{
-    CanisterStatusResponse, GetSuccessorsRequest, GetSuccessorsResponse,
-    SendTransactionInternalRequest,
-};
+use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
 use candid::Principal;
 use ic_cdk::api::call::CallResult;
 #[cfg(not(target_arch = "wasm32"))]
@@ -237,21 +234,18 @@ pub fn cycles_burn() -> u128 {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
-    use ic_cdk::api::management_canister::main::CanisterIdRecord;
-    ic_cdk::api::management_canister::main::canister_status(CanisterIdRecord {
+pub async fn get_wasm_memory_limit() -> Option<u128> {
+    use ic_cdk::api::management_canister::main::{canister_status, CanisterIdRecord};
+
+    canister_status(CanisterIdRecord {
         canister_id: ic_cdk::api::id(),
     })
+    .await
+    .ok()
+    .map(|response| response.0.settings.wasm_memory_limit)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
-    let response = CanisterStatusResponse {
-        settings: crate::types::DefiniteCanisterSettings {
-            wasm_memory_limit: 2_000_000_000_u128,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    std::future::ready(Ok((response,)))
+pub async fn get_wasm_memory_limit() -> Option<u128> {
+    Some(2_000_000_000_u128)
 }
