@@ -1,6 +1,6 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
-    runtime::{call_get_successors, cycles_burn, get_wasm_memory_limit, print, time, time_secs},
+    runtime::{call_get_successors, cycles_burn, print, time},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
@@ -40,8 +40,6 @@ pub async fn heartbeat() {
     maybe_process_response();
 
     maybe_compute_fee_percentiles();
-
-    maybe_read_wasm_memory_limit().await;
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
@@ -324,21 +322,6 @@ fn collect_metrics() {
             .into_iter()
             .for_each(|depth| metric.observe(depth as f64));
     })
-}
-
-async fn maybe_read_wasm_memory_limit() {
-    // Attempts to run periodically but may occasionally be skipped due to
-    // heartbeat timing; it will eventually run, which is acceptable.
-    if time_secs() % 30 != 0 {
-        return;
-    }
-
-    if let Some(wasm_memory_limit) = get_wasm_memory_limit().await {
-        print(&format!("Read wasm memory limit: {}", wasm_memory_limit));
-        with_state_mut(|s| s.metrics.wasm_memory_limit = Some(wasm_memory_limit));
-    } else {
-        print("Failed to read wasm memory limit.");
-    }
 }
 
 #[cfg(test)]

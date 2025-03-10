@@ -117,13 +117,6 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             get_heap_size_in_bytes() as f64,
             "The size of the heap memory in bytes.",
         )?;
-        if let Some(wasm_memory_limit) = state.metrics.wasm_memory_limit {
-            w.encode_gauge(
-                "wasm_memory_limit",
-                wasm_memory_limit as f64,
-                "The Wasm memory limit in bytes.",
-            )?;
-        }
 
         // Errors
         w.encode_counter(
