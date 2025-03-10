@@ -2,7 +2,10 @@
 //!
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
-use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
+use crate::types::{
+    CanisterStatusResponse, DefiniteCanisterSettings, GetSuccessorsRequest, GetSuccessorsResponse,
+    SendTransactionInternalRequest,
+};
 use candid::Principal;
 use ic_cdk::api::call::CallResult;
 #[cfg(not(target_arch = "wasm32"))]
@@ -230,4 +233,21 @@ pub fn cycles_burn() -> u128 {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn cycles_burn() -> u128 {
     1_000_000
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
+    ic_cdk::api::canister_status(ic_cdk::api::id())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn call_canister_settings() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
+    let response = CanisterStatusResponse {
+        settings: DefiniteCanisterSettings {
+            wasm_memory_limit: 2_000_000_000_u128,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    std::future::ready(Ok((response,)))
 }

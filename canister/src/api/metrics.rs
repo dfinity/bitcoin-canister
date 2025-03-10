@@ -110,13 +110,20 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         w.encode_gauge(
             "stable_memory_size_in_bytes",
             (ic_cdk::api::stable::stable_size() * WASM_PAGE_SIZE) as f64,
-            "The size of stable memory in pages.",
+            "The size of stable memory in bytes.",
         )?;
         w.encode_gauge(
             "heap_size_in_bytes",
             get_heap_size() as f64,
-            "The size of the heap memory in pages.",
+            "The size of the heap memory in bytes.",
         )?;
+        if let Some(wasm_memory_limit) = state.metrics.wasm_memory_limit {
+            w.encode_gauge(
+                "wasm_memory_limit",
+                wasm_memory_limit as f64,
+                "The Wasm memory limit in bytes.",
+            )?;
+        }
 
         // Errors
         w.encode_counter(

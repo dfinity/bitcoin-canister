@@ -2,7 +2,7 @@ use bitcoin::{
     block::Header, Address as BitcoinAddress, Network as BitcoinNetwork, Script,
     TxOut as BitcoinTxOut,
 };
-use candid::CandidType;
+use candid::{CandidType, Principal};
 use datasize::DataSize;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
@@ -580,6 +580,56 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
         Network::Testnet => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
     }
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Default, CandidType, Deserialize, Serialize)]
+pub enum CanisterStatusType {
+    #[default]
+    Running,
+    Stopping,
+    Stopped,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Default, CandidType, Deserialize, Serialize)]
+pub enum LogVisibility {
+    #[default]
+    #[serde(rename = "controllers")]
+    Controllers,
+    #[serde(rename = "public")]
+    Public,
+    #[serde(rename = "allowed_viewers")]
+    AllowedViewers(Vec<Principal>),
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Default, CandidType, Deserialize, Serialize)]
+pub struct DefiniteCanisterSettings {
+    pub controllers: Vec<Principal>,
+    pub compute_allocation: u128,
+    pub memory_allocation: u128,
+    pub freezing_threshold: u128,
+    pub reserved_cycles_limit: u128,
+    pub log_visibility: LogVisibility,
+    pub wasm_memory_limit: u128,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Default, CandidType, Deserialize, Serialize)]
+pub struct QueryStats {
+    pub num_calls_total: u128,
+    pub num_instructions_total: u128,
+    pub request_payload_bytes_total: u128,
+    pub response_payload_bytes_total: u128,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Default, CandidType, Deserialize, Serialize)]
+pub struct CanisterStatusResponse {
+    pub status: CanisterStatusType,
+    pub settings: DefiniteCanisterSettings,
+    pub module_hash: Option<Vec<u8>>,
+    pub memory_size: u128,
+    pub cycles: u128,
+    pub idle_cycles_burned_per_day: u128,
+    pub query_stats: QueryStats,
+    pub reserved_cycles: u128,
 }
 
 #[test]

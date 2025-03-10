@@ -44,6 +44,10 @@ pub struct Metrics {
     /// The depth distribution of unstable block branches.
     #[serde(default = "unstable_blocks_tip_depths")]
     pub unstable_blocks_tip_depths: Histogram,
+
+    /// The maximum amount of memory the Wasm module is allowed to use.
+    #[serde(default)]
+    pub wasm_memory_limit: Option<u128>,
 }
 
 impl Default for Metrics {
@@ -94,6 +98,8 @@ impl Default for Metrics {
             get_successors_request_interval: get_successors_request_interval(),
 
             unstable_blocks_tip_depths: unstable_blocks_tip_depths(),
+
+            wasm_memory_limit: None,
         }
     }
 }
