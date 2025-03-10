@@ -238,7 +238,10 @@ pub fn cycles_burn() -> u128 {
 
 #[cfg(target_arch = "wasm32")]
 pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
-    ic_cdk::api::canister_status(ic_cdk::api::id())
+    use ic_cdk::api::management_canister::main::CanisterIdRecord;
+    ic_cdk::api::management_canister::main::canister_status(CanisterIdRecord {
+        canister_id: ic_cdk::api::id(),
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
