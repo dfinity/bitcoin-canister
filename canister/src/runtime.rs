@@ -3,7 +3,7 @@
 //! Alternative implementations are available in non-wasm environments to
 //! facilitate testing.
 use crate::types::{
-    CanisterStatusResponse, DefiniteCanisterSettings, GetSuccessorsRequest, GetSuccessorsResponse,
+    CanisterStatusResponse, GetSuccessorsRequest, GetSuccessorsResponse,
     SendTransactionInternalRequest,
 };
 use candid::Principal;
@@ -247,7 +247,7 @@ pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatus
 #[cfg(not(target_arch = "wasm32"))]
 pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
     let response = CanisterStatusResponse {
-        settings: DefiniteCanisterSettings {
+        settings: crate::types::DefiniteCanisterSettings {
             wasm_memory_limit: 2_000_000_000_u128,
             ..Default::default()
         },
