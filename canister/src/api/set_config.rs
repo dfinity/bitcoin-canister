@@ -70,7 +70,7 @@ pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
 async fn verify_caller() {
     #[cfg(target_arch = "wasm32")]
     {
-        if !ic_cdk::api::is_controller(ic_cdk::caller()) {
+        if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
             panic!("Only controllers can call set_config");
         }
     }
