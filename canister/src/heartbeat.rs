@@ -333,12 +333,11 @@ async fn maybe_read_wasm_memory_limit() {
         return;
     }
 
-    match get_wasm_memory_limit().await {
-        Some(wasm_memory_limit) => with_state_mut(|s| {
-            s.metrics.wasm_memory_limit = Some(wasm_memory_limit);
-            print(&format!("Read wasm memory limit: {}", wasm_memory_limit));
-        }),
-        None => print("Failed to read wasm memory limit."),
+    if let Some(wasm_memory_limit) = get_wasm_memory_limit().await {
+        print(&format!("Read wasm memory limit: {}", wasm_memory_limit));
+        with_state_mut(|s| s.metrics.wasm_memory_limit = Some(wasm_memory_limit));
+    } else {
+        print("Failed to read wasm memory limit.");
     }
 }
 
