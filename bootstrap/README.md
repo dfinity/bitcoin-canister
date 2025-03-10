@@ -168,7 +168,7 @@ $ clear; ict testnet create small_bitcoin --lifetime-mins=10080 --output-dir=./t
 
 # Same but with custom grafana dashboards
 $ clear; ict testnet create small_bitcoin --lifetime-mins=10080 --output-dir=./test_tmpdir \
-  --k8s-branch maksym/bitcoin \
+  --k8s-branch <repo-branch-name> \
   > output.secret
 ```
 
@@ -210,113 +210,6 @@ NETWORK=testnet; \
   TESTNET_WATCHDOG_CANISTER_ID="gjqfs-iaaaa-aaaan-aaada-cai"; \
   MAINNET_BITCOIN_CANISTER_ID="ghsi2-tqaaa-aaaan-aaaca-cai"; \
   MAINNET_WATCHDOG_CANISTER_ID="gatoo-6iaaa-aaaan-aaacq-cai"
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister stop --ic $TESTNET_BITCOIN_CANISTER_ID
-
-# Snapshots: read, delete, create
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister snapshot list --ic $TESTNET_BITCOIN_CANISTER_ID
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister snapshot delete --ic $TESTNET_BITCOIN_CANISTER_ID 00000000000000040000000001a000010101
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister snapshot create --ic $TESTNET_BITCOIN_CANISTER_ID
-Created a new snapshot of canister g4xu7-jiaaa-aaaan-aaaaq-cai. Snapshot ID: 00000000000000050000000001a000010101
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister snapshot load --ic $TESTNET_BITCOIN_CANISTER_ID 00000000000000050000000001a000010101
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister status --ic $TESTNET_BITCOIN_CANISTER_ID
-
-# 3.0 * 1024 * 1024 * 1024 = 3221225472
-# 3.9 * 1024 * 1024 * 1024 = 4187593113
-# 2000000000
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister update-settings --ic $TESTNET_BITCOIN_CANISTER_ID --wasm-memory-limit 1800000000
-
-$ ARG="(record {
-    network = opt variant { $NETWORK };
-    stability_threshold = opt $STABILITY_THRESHOLD;
-    syncing = opt variant { enabled };
-    api_access = opt variant { disabled };
-    watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
-    fees = opt $TESTNET_FEES;
-})"
-
-$ ARG="(record {
-    network = opt variant { $NETWORK };
-})"
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx deploy --ic --yes \
-    --mode upgrade \
-    --argument "$ARG" \
-    bitcoin_t
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister start --ic $TESTNET_BITCOIN_CANISTER_ID
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister call --ic $TESTNET_BITCOIN_CANISTER_ID get_config
-
-$ TESTNET_FEES="record { 
-      get_utxos_base = 20_000_000 : nat;
-      get_utxos_cycles_per_ten_instructions = 4 : nat;
-      get_utxos_maximum = 4_000_000_000 : nat;
-
-      get_balance = 4_000_000 : nat;
-      get_balance_maximum = 40_000_000 : nat;
-
-      get_current_fee_percentiles = 4_000_000 : nat;
-      get_current_fee_percentiles_maximum = 40_000_000 : nat;
-
-      send_transaction_base = 2_000_000_000 : nat;
-      send_transaction_per_byte = 8_000_000 : nat;
-
-      get_block_headers_base = 20_000_000 : nat;
-      get_block_headers_cycles_per_ten_instructions = 4 : nat;
-      get_block_headers_maximum = 4_000_000_000 : nat;
-    }"
-
-$ MAINNET_FEES="record { 
-      get_utxos_base = 50_000_000 : nat;
-      get_utxos_cycles_per_ten_instructions = 10 : nat;
-      get_utxos_maximum = 10_000_000_000 : nat;
-
-      get_balance = 10_000_000 : nat;
-      get_balance_maximum = 100_000_000 : nat;
-
-      get_current_fee_percentiles = 10_000_000 : nat;
-      get_current_fee_percentiles_maximum = 100_000_000 : nat;
-
-      send_transaction_base = 5_000_000_000 : nat;
-      send_transaction_per_byte = 20_000_000 : nat;
-
-      get_block_headers_base = 50_000_000 : nat;
-      get_block_headers_cycles_per_ten_instructions = 10 : nat;
-      get_block_headers_maximum = 10_000_000_000 : nat;
-    }"
-
-$ ARG="(record {
-    stability_threshold = null;
-    syncing = null;
-    fees = opt $TESTNET_FEES;
-    api_access = null;
-    disable_api_if_not_fully_synced = null;
-    watchdog_canister = null;
-    burn_cycles = null;
-    lazily_evaluate_fee_percentiles = null;
-})"
-
-$ ARG="(record {
-    stability_threshold = opt 100;
-})"
-
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister call --ic $TESTNET_BITCOIN_CANISTER_ID set_config "$ARG"
 ```
 
 Create corresponding canister
@@ -337,44 +230,37 @@ $ dfx canister create bitcoin_t --no-wallet \
 Prepare install arguments
 ```shell
 # Get canister state size
-$ wc -c < ./bootstrap/output-71729/canister_state.bin
-3925934080
+$ wc -c < ./bootstrap/output/canister_state.bin
+1149304832
 ```
 
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
-ceil(3925934080 / (64 * 1024)) = 59905
+ceil(1149304832 / (64 * 1024)) = 17537
 ```
 
 Calculate args hash
 ```shell
-$ didc encode -t '(nat64)' "(59905)" | xxd -r -p | sha256sum
+$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
 e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
 ```
 
 Install uploader canister
 ```shell
-$ echo -n pin:; read -s DFX_HSM_PIN; export DFX_HSM_PIN; \
-dfx canister install --yes \
-    --network ic $TESTNET_BITCOIN_CANISTER_ID \
+$ dfx canister install \
+    --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode reinstall \
-    --wasm ./bootstrap/output-testnet-71729/uploader.wasm.gz \
-    --argument "(59905 : nat64)"  # Use calculated number of pages.
+    --wasm ./uploader.wasm.gz \
+    --argument "(17537 : nat64)"  # Use calculated number of pages.
 ```
 
 Upload chunks
 ```shell
-https://grafana.mainnet.dfinity.network/d/bitcoin/bitcoin?var-heatmap_period=$__auto&from=now-6h&to=now&timezone=utc&var-datasource=PE62C54679EC3C073&var-network=testnet&var-ic=mercury&var-ic_subnet=w4rem-dv5e3-widiz-wbpea-kbttk-mnzfm-tzrc7-svcj3-kbxyb-zamch-hqe&var-instance=%5B2001:4c08:2003:b09:6801:e5ff:fe72:cdad%5D:9090&refresh=5s
-
-$ scp -P 22 \
-  maksym@maksym.devenv.dfinity.network:/home/maksym/dfinity/testnet4/bc/bootstrap/output-71729/canister_state.bin \
-  ~/dfinity/testnet4/bc/bootstrap/output-testnet-71729/
-
 # USE IPv6 FROM THE ABOVE
 $ cargo run --example upload -- \
     --canister-id $TESTNET_BITCOIN_CANISTER_ID \
-    --state ./bootstrap/output-71729/canister_state.bin \
-    --ic-network http://\[2001:4c08:2003:b09:6801:e5ff:fe72:cdad\]:8080 \
+    --state ./bootstrap/output/canister_state.bin \
+    --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
     --fetch-root-key
 ```
 
@@ -382,6 +268,22 @@ $ cargo run --example upload -- \
 
 Prepare upgrade arguments
 ```shell
+# https://internetcomputer.org/docs/references/bitcoin-how-it-works#api-fees-and-pricing
+$ CUSTOM_FEES="record { 
+  get_utxos_base = 50_000_000 : nat;
+  get_utxos_cycles_per_ten_instructions = 10 : nat;
+  get_utxos_maximum = 10_000_000_000 : nat;
+  get_current_fee_percentiles = 10_000_000 : nat;
+  get_current_fee_percentiles_maximum = 100_000_000 : nat;
+  get_balance = 10_000_000 : nat;
+  get_balance_maximum = 100_000_000 : nat;
+  send_transaction_base = 5_000_000_000 : nat;
+  send_transaction_per_byte = 20_000_000 : nat;
+  get_block_headers_base = 50_000_000 : nat;
+  get_block_headers_cycles_per_ten_instructions = 10 : nat;
+  get_block_headers_maximum = 10_000_000_000 : nat;
+}"
+
 # Select a subset of init arguments or make sure they copy current prod configuration.
 $ ARG="(record {
     network = opt variant { $NETWORK };
@@ -389,6 +291,7 @@ $ ARG="(record {
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
+    fees = opt $CUSTOM_FEES;
 })"
 ```
 
@@ -400,7 +303,6 @@ e463d2f266f7085036be3e23afc2a1b51f501c7ea677193647785d1a09c723e2  -
 Upgrade bitcoin canister
 ```shell
 $ dfx canister stop --network testnet $TESTNET_BITCOIN_CANISTER_ID
-$ dfx canister stop --network testnet bitcoin_m
 
 $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
@@ -408,33 +310,5 @@ $ dfx canister install \
     --wasm ./ic-btc-canister.wasm.gz \
     --argument "$ARG"
 
-$ ARG="(record {
-    network = opt variant { $NETWORK };
-    stability_threshold = opt $STABILITY_THRESHOLD;
-    syncing = opt variant { enabled };
-    api_access = opt variant { disabled };
-    watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
-})"
-
-$ ARG="(record {
-    network = opt variant { mainnet };
-    stability_threshold = opt 100;
-    syncing = opt variant { enabled };
-    api_access = opt variant { disabled };
-})"
-
-$ dfx deploy --mode upgrade --network testnet bitcoin_t --argument "$ARG"
-$ dfx deploy --mode upgrade --network testnet bitcoin_m --argument "$ARG"
-
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
-
-$ dfx canister update-settings --network testnet --wasm-memory-limit 3500000000 $TESTNET_BITCOIN_CANISTER_ID
-
-$ dfx canister status --network testnet $TESTNET_BITCOIN_CANISTER_ID
-
-$ CFG="(record { stability_threshold = opt 110; })"
-
-$ dfx canister call --network testnet bitcoin_t set_config $CFG
-
-$ dfx canister call --network testnet bitcoin_t get_config
 ```
