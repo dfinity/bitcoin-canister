@@ -271,7 +271,7 @@ fn encode_labeled_gauge(
     Ok(())
 }
 
-// Returns the size of the heap in pages.
+/// Returns the size of the heap in bytes.
 fn get_heap_size_in_bytes() -> u64 {
     #[cfg(target_arch = "wasm32")]
     {
