@@ -1,12 +1,12 @@
 use ic_btc_interface::SetConfigRequest;
 use std::convert::TryInto;
 
-pub async fn set_config(request: SetConfigRequest) {
+pub fn set_config(request: SetConfigRequest) {
     if is_watchdog_caller() {
         // The watchdog canister can only set the API access flag.
         set_api_access(request);
     } else {
-        verify_caller().await;
+        verify_caller();
         set_config_no_verification(request);
     }
 }
@@ -67,7 +67,7 @@ pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
     });
 }
 
-async fn verify_caller() {
+fn verify_caller() {
     #[cfg(target_arch = "wasm32")]
     {
         if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
