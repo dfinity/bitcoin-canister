@@ -236,6 +236,7 @@ pub fn cycles_burn() -> u128 {
 #[cfg(target_arch = "wasm32")]
 pub async fn get_wasm_memory_limit() -> Option<u128> {
     use ic_cdk::api::management_canister::main::{canister_status, CanisterIdRecord};
+    use num_traits::ToPrimitive;
 
     canister_status(CanisterIdRecord {
         canister_id: ic_cdk::api::id(),

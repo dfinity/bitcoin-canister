@@ -21,6 +21,7 @@ ic-cdk-macros = { workspace = true }
 ic-metrics-encoder = { workspace = true }
 ic-stable-structures = { workspace = true }
 lazy_static = "1.4.0"
+num-traits = { workspace = true }
 serde = { workspace = true }
 serde_bytes = { workspace = true }
 
