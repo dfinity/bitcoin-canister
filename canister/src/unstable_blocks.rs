@@ -1054,7 +1054,7 @@ mod test {
         // the root of chain `A` is considered stable.
         assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
 
-        // Add one more block to the second chain, so that it's depth
+        // Add one more block to the second chain, so that its depth
         // is `TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE`.
         push(
             &mut unstable_blocks,
