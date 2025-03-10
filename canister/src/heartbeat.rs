@@ -1,6 +1,6 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
-    runtime::{call_get_successors, cycles_burn, print, time_nanos},
+    runtime::{call_get_successors, cycles_burn, print, time},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
@@ -82,7 +82,7 @@ async fn maybe_fetch_blocks() -> bool {
             }
         }
 
-        let curr_time = time_nanos();
+        let curr_time = time();
         if let Some(prev_time) = stats.last_request_time.replace(curr_time) {
             let interval = Duration::from_nanos(curr_time - prev_time).as_secs_f64();
             s.metrics.get_successors_request_interval.observe(interval);
