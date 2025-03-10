@@ -70,20 +70,7 @@ pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
 async fn verify_caller() {
     #[cfg(target_arch = "wasm32")]
     {
-        use ic_cdk::api::management_canister::main::CanisterIdRecord;
-
-        let caller = ic_cdk::caller();
-        let controllers =
-            ic_cdk::api::management_canister::main::canister_status(CanisterIdRecord {
-                canister_id: ic_cdk::api::id(),
-            })
-            .await
-            .unwrap()
-            .0
-            .settings
-            .controllers;
-
-        if !controllers.contains(&caller) {
+        if !ic_cdk::api::is_controller(ic_cdk::caller()) {
             panic!("Only controllers can call set_config");
         }
     }
