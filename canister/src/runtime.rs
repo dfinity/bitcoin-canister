@@ -242,7 +242,7 @@ pub async fn get_wasm_memory_limit() -> Option<u128> {
     })
     .await
     .ok()
-    .map(|response| response.0.settings.wasm_memory_limit.into())
+    .and_then(|response| response.0.settings.wasm_memory_limit.0.to_u128())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
