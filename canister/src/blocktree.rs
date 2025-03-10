@@ -76,7 +76,7 @@ impl fmt::Display for EmptyChainError {
     }
 }
 
-/// Depth of a block chain, measured in the number of blocks.
+/// Depth of a blockchain, measured in the number of blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Depth(u64);
 
