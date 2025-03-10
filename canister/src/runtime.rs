@@ -242,7 +242,7 @@ pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatus
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn call_canister_settings() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
+pub fn call_canister_status() -> impl Future<Output = CallResult<(CanisterStatusResponse,)>> {
     let response = CanisterStatusResponse {
         settings: DefiniteCanisterSettings {
             wasm_memory_limit: 2_000_000_000_u128,
