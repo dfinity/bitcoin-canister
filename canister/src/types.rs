@@ -2,7 +2,7 @@ use bitcoin::{
     block::Header, Address as BitcoinAddress, Network as BitcoinNetwork, Script,
     TxOut as BitcoinTxOut,
 };
-use candid::{CandidType, Principal};
+use candid::CandidType;
 use datasize::DataSize;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
