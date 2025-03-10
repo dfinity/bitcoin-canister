@@ -41,7 +41,7 @@ pub async fn heartbeat() {
 
     maybe_compute_fee_percentiles();
 
-    maybe_read_wasm_limit().await;
+    maybe_read_wasm_memory_limit().await;
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.
@@ -326,7 +326,7 @@ fn collect_metrics() {
     })
 }
 
-async fn maybe_read_wasm_limit() {
+async fn maybe_read_wasm_memory_limit() {
     // Attempts to run periodically but may occasionally be skipped due to
     // heartbeat timing; it will eventually run, which is acceptable.
     if time_secs() % 30 != 0 {
