@@ -1063,6 +1063,13 @@ mod test {
 
         // Since the depth condition is now met, `chain_a[0]` should be stable.
         assert_eq!(peek(&unstable_blocks), Some(&chain_a[0]));
+
+        // Extend `B` by one block.
+        let new_block = BlockBuilder::with_prev_header(chain_b.last().unwrap().header()).build();
+        push(&mut unstable_blocks, &utxos, new_block.clone()).unwrap();
+
+        // Now `chain_a[0]` should be unstable again.
+        assert_eq!(peek(&unstable_blocks), None);
     }
 
     fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<Header>) {
