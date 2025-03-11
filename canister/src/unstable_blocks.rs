@@ -27,7 +27,7 @@ use self::next_block_headers::NextBlockHeaders;
 /// or stack overflow errors.  
 ///
 /// This applies only to test environments and does not affect `Mainnet`.
-pub const TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE: Depth = Depth::new(1_000);
+pub const TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE: Depth = Depth::new(500);
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -361,7 +361,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .enumerate()
         .map(|(idx, child)| (child.difficulty_based_depth(network), idx))
         .collect();
-    difficulty_based_depths.sort_by_key(|(depth, _)| *depth);
+    difficulty_based_depths.sort_by_key(|(difficulty_based_depth, _)| *difficulty_based_depth);
 
     let difficulty_based_stability_threshold =
         DifficultyBasedDepth::new(blocks.normalized_stability_threshold());
@@ -1002,69 +1002,73 @@ mod test {
     }
 
     #[test]
-    fn long_testnet_chain_along_with_a_fork() {
+    fn long_testnet_chain_with_fork() {
         let stability_threshold = 144;
-        let chain_len = 2000;
-        let anchor_block_difficulty = 4642;
+        let anchor_block_difficulty = 4_642;
         let remaining_blocks_difficulty = 1;
         let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
 
-        // Assert the chain that will be built exceeds the maximum allowed, so that we can test
-        // that case.
-        assert!(Depth::new(chain_len) > TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE);
+        let fork_depth = 100; // An arbitrary number of blocks.
+        let initial_depth_diff = TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.get() as u32 - 1;
+        let main_chain_depth = fork_depth + initial_depth_diff;
 
-        // Build a long chain where the first block has a substantially higher difficulty than the
-        // remaining blocks.
-        let chain = BlockChainBuilder::new(chain_len as u32)
-            // Set the difficulty of the anchor block to be high.
+        // Ensure the anchor block has significantly higher difficulty than the rest.
+        assert!(anchor_block_difficulty > 1_000 * remaining_blocks_difficulty);
+
+        // Main chain A: Includes the anchor block.
+        let chain_a = BlockChainBuilder::new(main_chain_depth)
             .with_difficulty(anchor_block_difficulty, 0..1)
-            // Set the difficulty of the remaining blocks to be low.
             .with_difficulty(remaining_blocks_difficulty, 1..)
             .build();
 
-        // Build a second chain that's a fork of the first.
-        let second_chain = BlockChainBuilder::fork(
-            &chain[0],
-            TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.get() as u32 - 1,
-        )
-        .with_difficulty(remaining_blocks_difficulty, 0..)
-        .build();
+        // Fork B: Starts at anchor, therefore adds `fork_depth - 1` blocks after the anchor.
+        let chain_b = BlockChainBuilder::fork(&chain_a[0], fork_depth - 1)
+            .with_difficulty(remaining_blocks_difficulty, 0..)
+            .build();
 
+        // Insert all blocks from both chains.
         let mut unstable_blocks =
-            UnstableBlocks::new(&utxos, stability_threshold, chain[0].clone(), network);
-
-        // Insert chains into the state.
-        for block in chain.iter().skip(1) {
-            push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
-        }
-        for block in second_chain.iter() {
+            UnstableBlocks::new(&utxos, stability_threshold, chain_a[0].clone(), network);
+        for block in chain_a.iter().skip(1).chain(chain_b.iter()) {
             push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
         }
 
-        // The normalized stability threshold is still not met, which means that, in theory,
-        // there are no stable blocks that can be popped.
+        // Confirm total depth matches main chain depth.
+        assert_eq!(
+            unstable_blocks.blocks_depth().get() as u32,
+            main_chain_depth
+        );
+
+        // Before extending, check that the fork is still within unstable range.
+        let actual_depth_diff = unstable_blocks.blocks_depth().get() as u32 - fork_depth;
+        assert!(actual_depth_diff < TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.get() as u32);
+
+        // Ensure difficulty-based stability is not yet reached.
         assert!(
             unstable_blocks.blocks_difficulty_based_depth()
                 < DifficultyBasedDepth::new(unstable_blocks.normalized_stability_threshold())
         );
 
-        // If there's a very long testnet chain `A`, and there exists another chain `B` s.t.
-        // depth(A) - depth(B) < TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE,
-        // the root of chain `A` is considered stable.
-        assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
+        // At this point, `chain_a[0]` should be unstable.
+        assert_eq!(peek(&unstable_blocks), None);
 
-        // Add one more block to the second chain, so that its depth
-        // is `TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE`.
-        push(
-            &mut unstable_blocks,
-            &utxos,
-            BlockBuilder::with_prev_header(second_chain.last().unwrap().header()).build(),
-        )
-        .unwrap();
+        // Extend `A` by one block.
+        let new_block = BlockBuilder::with_prev_header(chain_a.last().unwrap().header()).build();
+        push(&mut unstable_blocks, &utxos, new_block.clone()).unwrap();
 
-        // Now, depth(A) - depth(B) >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE
-        // and the root of chain `A` is considered unstable.
+        // Now the depth difference should be at least the threshold.
+        let new_depth_difference = unstable_blocks.blocks_depth().get() as u32 - fork_depth;
+        assert!(new_depth_difference >= TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.get() as u32);
+
+        // Since the depth condition is now met, `chain_a[0]` should be stable.
+        assert_eq!(peek(&unstable_blocks), Some(&chain_a[0]));
+
+        // Extend `B` by one block.
+        let new_block = BlockBuilder::with_prev_header(chain_b.last().unwrap().header()).build();
+        push(&mut unstable_blocks, &utxos, new_block.clone()).unwrap();
+
+        // Now `chain_a[0]` should be unstable again.
         assert_eq!(peek(&unstable_blocks), None);
     }
 
