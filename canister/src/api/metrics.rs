@@ -139,6 +139,9 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         encode_instruction_histogram(w, &state.metrics.get_utxos_total)?;
         encode_instruction_histogram(w, &state.metrics.get_utxos_apply_unstable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_utxos_build_utxos_vec)?;
+        encode_instruction_histogram(w, &state.metrics.get_block_headers_total)?;
+        encode_instruction_histogram(w, &state.metrics.get_block_headers_unstable_blocks)?;
+        encode_instruction_histogram(w, &state.metrics.get_block_headers_stable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_balance_total)?;
         encode_instruction_histogram(w, &state.metrics.get_balance_apply_unstable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_current_fee_percentiles_total)?;
