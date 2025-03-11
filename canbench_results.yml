@@ -1,36 +1,36 @@
 benches:
   get_metrics:
     total:
-      instructions: 7628410
+      instructions: 7905719
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   insert_300_blocks:
     total:
-      instructions: 475591227
+      instructions: 475547427
       heap_increase: 10
       stable_memory_increase: 0
     scopes: {}
   insert_block_headers:
     total:
-      instructions: 3107617042
+      instructions: 3107743667
       heap_increase: 1
       stable_memory_increase: 0
     scopes: {}
   insert_block_headers_multiple_times:
     total:
-      instructions: 11402726246
+      instructions: 11402215483
       heap_increase: 7
       stable_memory_increase: 0
     scopes: {}
   pre_upgrade_with_many_unstable_blocks:
     total:
-      instructions: 5996201188
+      instructions: 5993975869
       heap_increase: 4097
       stable_memory_increase: 1792
     scopes:
       serialize_blocktree:
-        instructions: 2404501122
+        instructions: 2402275815
         heap_increase: 2048
         stable_memory_increase: 0
       serialize_blocktree_flatten:
@@ -38,7 +38,7 @@ benches:
         heap_increase: 0
         stable_memory_increase: 0
       serialize_blocktree_serialize_seq:
-        instructions: 2404315094
+        instructions: 2402089787
         heap_increase: 2048
         stable_memory_increase: 0
-version: 0.1.8
+version: 0.1.11
