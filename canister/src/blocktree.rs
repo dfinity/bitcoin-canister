@@ -385,36 +385,33 @@ impl BlockTree {
 
     /// Returns the length of the main chain based on the heaviest cumulative difficulty.
     pub fn get_main_chain_length(&self, network: Network) -> usize {
-        let (_, length, _) = self.find_main_chain(network);
-        length
+        let (_, depth) = self.find_main_chain(network);
+        depth.get() as usize
     }
 
     /// Recursively finds the heaviest chain and its common ancestor height.
-    fn find_main_chain(&self, network: Network) -> (u128, usize, usize) {
-        let mut max_difficulty = self.root.difficulty(network);
-        let mut max_length = 1;
-        let mut depths = vec![1];
+    fn find_main_chain(&self, network: Network) -> (DifficultyBasedDepth, Depth) {
+        let mut max_difficulty_based_depth = DifficultyBasedDepth::new(0);
+        let mut max_depth = Depth::new(0);
 
         for child in &self.children {
-            let (child_difficulty, child_length, child_depth) = child.find_main_chain(network);
-            match child_difficulty.cmp(&max_difficulty) {
-                Ordering::Greater => {
-                    max_difficulty = child_difficulty;
-                    max_length = child_length;
-                    depths = vec![child_depth]; // Reset depths with new maximum
+            let (difficulty_based_depth, depth) = child.find_main_chain(network);
+            match max_difficulty_based_depth.cmp(&difficulty_based_depth) {
+                Ordering::Less => {
+                    max_difficulty_based_depth = difficulty_based_depth;
+                    max_depth = depth;
                 }
                 Ordering::Equal => {
-                    depths.push(child_depth); // Track common depths
+                    max_difficulty_based_depth = difficulty_based_depth;
+                    max_depth = Depth::new(0);
                 }
-                Ordering::Less => {}
+                Ordering::Greater => {}
             }
         }
 
-        let common_depth = *depths.iter().min().unwrap(); // Lowest common ancestor depth
         (
-            max_difficulty + self.root.difficulty(network),
-            max_length + 1,
-            common_depth + 1,
+            max_difficulty_based_depth + DifficultyBasedDepth::new(self.root.difficulty(network)),
+            max_depth + Depth::new(1)
         )
     }
 }
