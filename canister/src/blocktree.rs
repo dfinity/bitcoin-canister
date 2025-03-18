@@ -3,6 +3,7 @@ use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
 mod serde;
+use std::cmp::Ordering;
 use std::ops::{Add, Sub};
 
 /// Represents a non-empty block chain as:
@@ -380,6 +381,41 @@ impl BlockTree {
             blocks.extend(child.blocks());
         }
         blocks
+    }
+
+    /// Returns the length of the main chain based on the heaviest cumulative difficulty.
+    pub fn get_main_chain_length(&self, network: Network) -> usize {
+        let (_, length, _) = self.find_main_chain(network);
+        length
+    }
+
+    /// Recursively finds the heaviest chain and its common ancestor height.
+    fn find_main_chain(&self, network: Network) -> (u128, usize, usize) {
+        let mut max_difficulty = self.root.difficulty(network);
+        let mut max_length = 1;
+        let mut depths = vec![1];
+
+        for child in &self.children {
+            let (child_difficulty, child_length, child_depth) = child.find_main_chain(network);
+            match child_difficulty.cmp(&max_difficulty) {
+                Ordering::Greater => {
+                    max_difficulty = child_difficulty;
+                    max_length = child_length;
+                    depths = vec![child_depth]; // Reset depths with new maximum
+                }
+                Ordering::Equal => {
+                    depths.push(child_depth); // Track common depths
+                }
+                Ordering::Less => {}
+            }
+        }
+
+        let common_depth = *depths.iter().min().unwrap(); // Lowest common ancestor depth
+        (
+            max_difficulty + self.root.difficulty(network),
+            max_length + 1,
+            common_depth + 1,
+        )
     }
 }
 
