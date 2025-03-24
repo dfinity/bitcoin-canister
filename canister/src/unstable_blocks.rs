@@ -1151,14 +1151,17 @@ mod test {
 
     #[test]
     fn test_testnet_unstable_max_depth_difference() {
+        // Empty unstable blocks tree has maximum depth difference limit.
         assert_eq!(
             testnet_unstable_max_depth_difference(0),
             MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
         );
+        // Unstable blocks tree with depth at the limit has minimum depth difference limit.
         assert_eq!(
             testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS),
             MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
         );
+        // Unstable blocks tree with depth exceeding the limit has minimum depth difference limit.
         assert_eq!(
             testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS + 1),
             MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
