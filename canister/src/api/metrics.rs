@@ -72,12 +72,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         let stability_threshold = state.unstable_blocks.stability_threshold();
         w.encode_gauge(
             "stability_threshold",
-            state.unstable_blocks.stability_threshold() as f64,
+            stability_threshold as f64,
             "The stability threshold.",
         )?;
         w.encode_gauge(
             "normalized_stability_threshold",
-            stability_threshold as f64,
+            state.unstable_blocks.normalized_stability_threshold() as f64,
             "The stability threshold normalized by the difficulty of the anchor block.",
         )?;
         let unstable_blocks_total = state::unstable_blocks_total(state);
