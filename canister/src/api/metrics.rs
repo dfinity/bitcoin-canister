@@ -2,7 +2,7 @@ use crate::{
     metrics::{Histogram, InstructionHistogram},
     state,
     types::HttpResponse,
-    unstable_blocks::TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE,
+    unstable_blocks::testnet_unstable_max_depth_difference,
     with_state,
 };
 use ic_btc_interface::Flag;
@@ -79,9 +79,10 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.unstable_blocks.normalized_stability_threshold() as f64,
             "The stability threshold normalized by the difficulty of the anchor block.",
         )?;
+        let unstable_blocks_total = state::unstable_blocks_total(state);
         w.encode_gauge(
             "testnet_unstable_max_depth_difference",
-            TESTNET_UNSTABLE_MAX_DEPTH_DIFFERENCE.get() as f64,
+            testnet_unstable_max_depth_difference(unstable_blocks_total).get() as f64,
             "Max depth difference between the two longest unstable branches in Testnet/Regtest.",
         )?;
         w.encode_gauge(
@@ -92,7 +93,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         encode_histogram(w, &state.metrics.unstable_blocks_tip_depths)?;
         w.encode_gauge(
             "unstable_blocks_total",
-            state::unstable_blocks_total(state) as f64,
+            unstable_blocks_total as f64,
             "The number of unstable blocks.",
         )?;
         w.encode_gauge(
