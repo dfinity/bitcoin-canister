@@ -20,6 +20,9 @@ use self::next_block_headers::NextBlockHeaders;
 const MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE: Depth = Depth::new(500);
 
 /// Max number (soft limit) of unstable blocks in `Testnet` and `Regtest`.
+///
+/// When the number of unstable blocks exceeds this limit, the depth difference
+/// drops to the current `stability_threshold` value.
 const MAX_UNSTABLE_BLOCKS: usize = 1_500;
 
 /// Returns the maximum allowed depth difference between the two longest
