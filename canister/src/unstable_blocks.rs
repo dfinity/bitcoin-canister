@@ -19,10 +19,6 @@ use self::next_block_headers::NextBlockHeaders;
 /// in the unstable block tree on `Testnet` and `Regtest`.
 const MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE: Depth = Depth::new(500);
 
-/// Min allowed depth difference between the two longest branches
-/// in the unstable block tree on `Testnet` and `Regtest`.
-const MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE: Depth = Depth::new(50);
-
 /// Max number (soft limit) of unstable blocks in `Testnet` and `Regtest`.
 const MAX_UNSTABLE_BLOCKS: usize = 1_500;
 
@@ -39,15 +35,20 @@ const MAX_UNSTABLE_BLOCKS: usize = 1_500;
 /// or stack overflow errors.  
 ///
 /// This applies only to test environments and does not affect `Mainnet`.
-pub fn testnet_unstable_max_depth_difference(total_unstable_blocks: usize) -> Depth {
+pub fn testnet_unstable_max_depth_difference(
+    total_unstable_blocks: usize,
+    stability_threshold: u32,
+) -> Depth {
+    let max_depth_diff = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32;
+    let min_depth_diff = stability_threshold.min(max_depth_diff - 1);
+
     if total_unstable_blocks >= MAX_UNSTABLE_BLOCKS {
-        return MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE;
+        return Depth::new(min_depth_diff as u64);
     }
 
-    let range = (MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get()
-        - MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get()) as f64;
+    let range = (max_depth_diff - min_depth_diff) as f64;
     let ratio = total_unstable_blocks as f64 / MAX_UNSTABLE_BLOCKS as f64;
-    let interpolated = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as f64 - ratio * range;
+    let interpolated = max_depth_diff as f64 - ratio * range;
 
     Depth::new(interpolated.round() as u64)
 }
@@ -390,7 +391,8 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         DifficultyBasedDepth::new(blocks.normalized_stability_threshold());
 
     let (difficulty_based_deepest_depth, child_idx) = difficulty_based_depths.last()?;
-    let max_depth_difference = testnet_unstable_max_depth_difference(blocks_count(blocks));
+    let max_depth_difference =
+        testnet_unstable_max_depth_difference(blocks_count(blocks), blocks.stability_threshold());
 
     // Prevent excessive chain growth in testnets where difficulty resets.
     if network == Network::Testnet || network == Network::Regtest {
@@ -1025,14 +1027,18 @@ mod test {
 
     #[test]
     fn long_testnet_chain_with_fork() {
-        let stability_threshold = 144;
+        let total_unstable_blocks = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as usize;
+        let stability_threshold = total_unstable_blocks as u32;
         let anchor_block_difficulty = 4_642;
         let remaining_blocks_difficulty = 1;
         let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
 
         let fork_depth = 100; // An arbitrary number of blocks.
-        let initial_depth_diff = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32 - 1;
+        let initial_depth_diff =
+            testnet_unstable_max_depth_difference(total_unstable_blocks, stability_threshold).get()
+                as u32
+                - 1;
         let main_chain_depth = fork_depth + initial_depth_diff;
 
         // Ensure the anchor block has significantly higher difficulty than the rest.
@@ -1064,7 +1070,7 @@ mod test {
 
         // Before extending, check that the fork is still within unstable range.
         let actual_depth_diff = unstable_blocks.blocks_depth().get() as u32 - fork_depth;
-        assert!(actual_depth_diff < MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32);
+        assert!(actual_depth_diff < initial_depth_diff + 1);
 
         // Ensure difficulty-based stability is not yet reached.
         assert!(
@@ -1081,7 +1087,7 @@ mod test {
 
         // Now the depth difference should be at least the threshold.
         let new_depth_difference = unstable_blocks.blocks_depth().get() as u32 - fork_depth;
-        assert!(new_depth_difference >= MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32);
+        assert!(new_depth_difference >= initial_depth_diff);
 
         // Since the depth condition is now met, `chain_a[0]` should be stable.
         assert_eq!(peek(&unstable_blocks), Some(&chain_a[0]));
@@ -1151,22 +1157,24 @@ mod test {
 
     #[test]
     fn test_testnet_unstable_max_depth_difference() {
+        let stability_threshold = 144;
+
         // When there are no unstable blocks, the max depth difference is at its highest.
         assert_eq!(
-            testnet_unstable_max_depth_difference(0),
+            testnet_unstable_max_depth_difference(0, stability_threshold),
             MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
         );
 
         // At the limit, the depth difference is at its minimum.
         assert_eq!(
-            testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS),
-            MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
+            testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS, stability_threshold),
+            Depth::new(stability_threshold as u64)
         );
 
         // Going over the limit keeps the depth difference at the minimum.
         assert_eq!(
-            testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS + 1),
-            MIN_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
+            testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS + 1, stability_threshold),
+            Depth::new(stability_threshold as u64)
         );
     }
 }

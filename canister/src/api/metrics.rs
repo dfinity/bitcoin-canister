@@ -69,6 +69,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.unstable_blocks.anchor_difficulty() as f64,
             "The difficulty of the anchor block.",
         )?;
+        let stability_threshold = state.unstable_blocks.stability_threshold();
         w.encode_gauge(
             "stability_threshold",
             state.unstable_blocks.stability_threshold() as f64,
@@ -76,13 +77,14 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         )?;
         w.encode_gauge(
             "normalized_stability_threshold",
-            state.unstable_blocks.normalized_stability_threshold() as f64,
+            stability_threshold as f64,
             "The stability threshold normalized by the difficulty of the anchor block.",
         )?;
         let unstable_blocks_total = state::unstable_blocks_total(state);
         w.encode_gauge(
             "testnet_unstable_max_depth_difference",
-            testnet_unstable_max_depth_difference(unstable_blocks_total).get() as f64,
+            testnet_unstable_max_depth_difference(unstable_blocks_total, stability_threshold).get()
+                as f64,
             "Max depth difference between the two longest unstable branches in Testnet/Regtest.",
         )?;
         w.encode_gauge(
