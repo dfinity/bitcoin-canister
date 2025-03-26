@@ -25,20 +25,31 @@ def difficulty_to_color(difficulty, min_difficulty, max_difficulty):
 
 def generate_graph(blocks, output_file="blockchain"):
     dot = Digraph(comment="Blockchain", format="png")
-    dot.attr(rankdir="TB")  # Top to bottom layout
-    dot.attr(dpi="150")     # Higher resolution
 
-    # Precompute min/max difficulty
+    dot.attr(
+        rankdir="TB",
+        dpi="150",
+        nodesep="0.4",
+        ranksep="0.5",
+        bgcolor="white"
+    )
+
+    # Add top and bottom dummy nodes to pad the layout area
+    dot.node("padding_top", "", shape="box", width="4.0", height="0", style="invis")
+    dot.node("padding_bottom", "", shape="box", width="4.0", height="0", style="invis")
+
     difficulties = [b["difficulty"] for b in blocks]
     min_diff = min(difficulties)
     max_diff = max(difficulties)
 
     hash_to_block = {b["block_hash"]: b for b in blocks}
 
+    first_hash = blocks[0]["block_hash"]
+    last_hash = blocks[-1]["block_hash"]
+
     for block in blocks:
         short = short_hash(block["block_hash"])
         label = f"#{short}\\nH:{block['height']}\\nD:{block['difficulty']}"
-
         fillcolor = difficulty_to_color(block["difficulty"], min_diff, max_diff)
 
         dot.node(
@@ -48,7 +59,7 @@ def generate_graph(blocks, output_file="blockchain"):
             style="filled",
             fillcolor=fillcolor,
             fontsize="10",
-            width="1.5",
+            width="2.0",
             height="0.6",
             fontname="Helvetica"
         )
@@ -57,6 +68,10 @@ def generate_graph(blocks, output_file="blockchain"):
         for child in block["children"]:
             if child in hash_to_block:
                 dot.edge(block["block_hash"], child)
+
+    # Add invisible edges to force spacing
+    dot.edge("padding_top", first_hash, style="invis")
+    dot.edge(last_hash, "padding_bottom", style="invis")
 
     dot.render(output_file, cleanup=True)
     print(f"Graph written to {output_file}.png")
