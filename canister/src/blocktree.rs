@@ -5,6 +5,8 @@ use std::fmt;
 mod serde;
 use std::ops::{Add, Sub};
 
+use ic_btc_interface::BlockData;
+
 /// Represents a non-empty block chain as:
 /// * the first block of the chain
 /// * the successors to this block (which can be an empty list)
@@ -314,6 +316,30 @@ impl BlockTree {
             res = std::cmp::max(res, child.depth());
         }
         res = res + Depth::new(1);
+        res
+    }
+
+    pub fn get_block_data(&self, network: Network, height: u128) -> Vec<BlockData> {
+        let mut res = vec![BlockData {
+            prev_block_hash: self.root.block_hash().to_vec(),
+            block_hash: self
+                .root
+                .header()
+                .prev_blockhash
+                .as_raw_hash()
+                .as_byte_array()
+                .to_vec(),
+            children: self
+                .children
+                .iter()
+                .map(|child| child.root.block_hash().to_vec())
+                .collect(),
+            height,
+            difficulty: self.root.difficulty(network),
+        }];
+        for child in self.children.iter() {
+            res.extend(child.get_block_data(network, height + 1));
+        }
         res
     }
 

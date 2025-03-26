@@ -15,6 +15,8 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
+use ic_btc_interface::BlockData;
+
 /// Max allowed depth difference between the two longest branches
 /// in the unstable block tree on `Testnet` and `Regtest`.
 const MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE: Depth = Depth::new(500);
@@ -149,6 +151,10 @@ impl UnstableBlocks {
     /// Returns the difficulty-based depth of the unstable block tree.
     pub fn blocks_difficulty_based_depth(&self) -> DifficultyBasedDepth {
         self.tree.difficulty_based_depth(self.network)
+    }
+
+    pub fn get_block_data(&self) -> Vec<BlockData> {
+        self.tree.get_block_data(self.network, 0)
     }
 
     /// Returns depth in BlockTree of Block with given BlockHash.

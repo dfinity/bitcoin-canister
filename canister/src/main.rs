@@ -105,6 +105,13 @@ pub fn get_config() -> Config {
     ic_btc_canister::get_config()
 }
 
+use ic_btc_interface::UnstableBlocksResult;
+
+#[query]
+pub fn get_unstable_blocks() -> UnstableBlocksResult {
+    ic_btc_canister::get_unstable_blocks()
+}
+
 #[update]
 fn set_config(request: SetConfigRequest) {
     ic_btc_canister::set_config(request)

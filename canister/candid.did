@@ -126,6 +126,18 @@ type get_block_headers_response = record {
   block_headers : vec block_header;
 };
 
+type block_data = record {
+  prev_block_hash: block_hash;
+  block_hash: block_hash;
+  children: vec block_hash;
+  height: nat;
+  difficulty: nat;
+};
+
+type unstable_blocks_result = record {
+  data : vec block_data;
+};
+
 service bitcoin : (init_config) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
@@ -144,4 +156,6 @@ service bitcoin : (init_config) -> {
   get_config : () -> (config) query;
 
   set_config : (set_config_request) -> ();
+
+  get_unstable_blocks : () -> (unstable_blocks_result) query;
 };
