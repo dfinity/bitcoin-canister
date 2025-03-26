@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 import json
+import sys
 from graphviz import Digraph
 
 def short_hash(hash_hex):
@@ -34,8 +34,13 @@ def generate_graph(blocks, output_file="blockchain"):
     print(f"Graph written to {output_file}.png")
 
 def main():
-    blocks = load_blocks("./unstable_blocks/output_0.json")
-    generate_graph(blocks, output_file="blockchain_graph")
+    if len(sys.argv) != 3:
+        print("Usage: visualize_blockchain_graphviz.py <input.json> <output.png>")
+        sys.exit(1)
+
+    blocks = load_blocks(sys.argv[1])
+    output_base = sys.argv[2].rsplit(".", 1)[0]
+    generate_graph(blocks, output_base)
 
 if __name__ == "__main__":
     main()

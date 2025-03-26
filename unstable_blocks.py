@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 import re
+import sys
 import json
 
 def parse_blob(blob_str):
@@ -36,16 +36,19 @@ def parse_vec_block_data(text):
     return {"data": blocks}
 
 def main():
-    # Load input from file or string
-    with open("./unstable_blocks/output.txt", "r") as f:
+    if len(sys.argv) != 3:
+        print("Usage: unstable_blocks.py <input.txt> <output.json>")
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
         candid_text = f.read()
 
     parsed = parse_vec_block_data(candid_text)
 
-    with open("./unstable_blocks/output.json", "w") as f:
+    with open(sys.argv[2], "w") as f:
         json.dump(parsed, f, indent=2)
 
-    print("Parsed data saved to output.json")
+    print(f"Saved parsed output to {sys.argv[2]}")
 
 if __name__ == "__main__":
     main()
