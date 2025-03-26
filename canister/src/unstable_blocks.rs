@@ -41,21 +41,22 @@ const MAX_UNSTABLE_BLOCKS: usize = 1_500;
 ///
 /// This applies only to test environments and does not affect `Mainnet`.
 pub fn testnet_unstable_max_depth_difference(
-    total_unstable_blocks: usize,
-    stability_threshold: u32,
+    _total_unstable_blocks: usize,
+    _stability_threshold: u32,
 ) -> Depth {
-    let max_depth_diff = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32;
-    let min_depth_diff = stability_threshold.min(max_depth_diff - 1);
+    // let max_depth_diff = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32;
+    // let min_depth_diff = stability_threshold.min(max_depth_diff - 1);
 
-    if total_unstable_blocks >= MAX_UNSTABLE_BLOCKS {
-        return Depth::new(min_depth_diff as u64);
-    }
+    // if total_unstable_blocks >= MAX_UNSTABLE_BLOCKS {
+    //     return Depth::new(min_depth_diff as u64);
+    // }
 
-    let range = (max_depth_diff - min_depth_diff) as f64;
-    let ratio = total_unstable_blocks as f64 / MAX_UNSTABLE_BLOCKS as f64;
-    let interpolated = max_depth_diff as f64 - ratio * range;
+    // let range = (max_depth_diff - min_depth_diff) as f64;
+    // let ratio = total_unstable_blocks as f64 / MAX_UNSTABLE_BLOCKS as f64;
+    // let interpolated = max_depth_diff as f64 - ratio * range;
 
-    Depth::new(interpolated.round() as u64)
+    // Depth::new(interpolated.round() as u64)
+    MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
 }
 
 /// A data structure for maintaining all unstable blocks.
