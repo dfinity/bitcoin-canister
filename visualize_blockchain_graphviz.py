@@ -46,11 +46,3 @@ if __name__ == "__main__":
     main()
 
 # sudo pip3 install graphviz
-
-'''
-dfx canister call --network testnet bitcoin_t \
-    get_unstable_blocks > ./unstable_blocks/output.txt \
-    && ./unstable_blocks.py \
-    && ./visualize_blockchain_graphviz.py
-'''
-
