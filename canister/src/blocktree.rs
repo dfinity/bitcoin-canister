@@ -321,15 +321,15 @@ impl BlockTree {
 
     pub fn get_block_data(&self, network: Network, height: u128) -> Vec<BlockData> {
         let mut res = vec![BlockData {
-            prev_block_hash: self.root.block_hash().to_vec(),
-            block_hash: self
+            prev_block_hash: self
                 .root
                 .header()
                 .prev_blockhash
                 .as_raw_hash()
                 .as_byte_array()
                 .to_vec(),
-            children: self
+            block_hash: self.root.block_hash().to_vec(),
+                children: self
                 .children
                 .iter()
                 .map(|child| child.root.block_hash().to_vec())
