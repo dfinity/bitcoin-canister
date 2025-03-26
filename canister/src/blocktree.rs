@@ -329,7 +329,7 @@ impl BlockTree {
                 .as_byte_array()
                 .to_vec(),
             block_hash: self.root.block_hash().to_vec(),
-                children: self
+            children: self
                 .children
                 .iter()
                 .map(|child| child.root.block_hash().to_vec())
