@@ -12,8 +12,19 @@ def load_blocks(file_path):
     return data["data"]
 
 def generate_graph(blocks, output_file="blockchain"):
-    dot = Digraph(comment="Blockchain")
-    dot.attr(rankdir="LR")  # Left to right layout
+    dot = Digraph(comment="Blockchain", format="png")
+    dot.attr(rankdir="TB")  # Top to bottom layout
+    dot.attr(dpi="150")     # Higher resolution
+
+    node_style = {
+        "shape": "box",
+        "style": "filled",
+        "fillcolor": "#e8f0fe",
+        "fontsize": "10",
+        "width": "1.5",
+        "height": "0.6",
+        "fontname": "Helvetica"
+    }
 
     hash_to_block = {b["block_hash"]: b for b in blocks}
 
@@ -21,7 +32,7 @@ def generate_graph(blocks, output_file="blockchain"):
     for block in blocks:
         short = short_hash(block["block_hash"])
         label = f"#{short}\\nH:{block['height']}\\nD:{block['difficulty']}"
-        dot.node(block["block_hash"], label)
+        dot.node(block["block_hash"], label, **node_style)
 
     # Add edges (parent -> child)
     for block in blocks:
@@ -30,7 +41,7 @@ def generate_graph(blocks, output_file="blockchain"):
                 dot.edge(block["block_hash"], child)
 
     # Save to file
-    dot.render(output_file, format="png", cleanup=True)
+    dot.render(output_file, cleanup=True)
     print(f"Graph written to {output_file}.png")
 
 def main():
