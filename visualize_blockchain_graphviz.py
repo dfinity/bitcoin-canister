@@ -34,10 +34,18 @@ def generate_graph(blocks, output_file="blockchain"):
     print(f"Graph written to {output_file}.png")
 
 def main():
-    blocks = load_blocks("./unstable_blocks/output_1.json")
+    blocks = load_blocks("./unstable_blocks/output_0.json")
     generate_graph(blocks, output_file="blockchain_graph")
 
 if __name__ == "__main__":
     main()
 
 # sudo pip3 install graphviz
+
+'''
+dfx canister call --network testnet bitcoin_t \
+    get_unstable_blocks > ./unstable_blocks/output.txt \
+    && ./unstable_blocks.py \
+    && ./visualize_blockchain_graphviz.py
+'''
+

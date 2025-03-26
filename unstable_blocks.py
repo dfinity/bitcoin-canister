@@ -10,17 +10,17 @@ def parse_blob(blob_str):
 
 def parse_vec_block_data(text):
     block_pattern = re.compile(
-        r'record\s*{\s*height\s*=\s*(\d+)\s*:\s*nat;\s*'
+        r'record\s*{\s*height\s*=\s*([\d_]+)\s*:\s*nat;\s*'
         r'block_hash\s*=\s*blob\s*"([^"]+)";\s*'
-        r'difficulty\s*=\s*(\d+)\s*:\s*nat;\s*'
+        r'difficulty\s*=\s*([\d_]+)\s*:\s*nat;\s*'
         r'children\s*=\s*vec\s*{([^}]*)};\s*'
         r'prev_block_hash\s*=\s*blob\s*"([^"]+)";\s*}', re.DOTALL)
 
     blocks = []
     for match in block_pattern.finditer(text):
-        height = int(match.group(1))
+        height = int(match.group(1).replace("_", ""))
         block_hash = parse_blob(match.group(2))
-        difficulty = int(match.group(3))
+        difficulty = int(match.group(3).replace("_", ""))
         children_raw = match.group(4)
         children_blobs = re.findall(r'blob\s*"([^"]+)"', children_raw)
         children = [parse_blob(b) for b in children_blobs]
