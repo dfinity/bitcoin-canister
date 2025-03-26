@@ -2,13 +2,9 @@
 
 set -e
 
-if [ -z "$1" ]; then
-  echo "Usage: $0 <suffix>"
-  exit 1
-fi
-
-SUFFIX="$1"
-BASE="./unstable_blocks/output_${SUFFIX}"
+# Generate date-time prefix: e.g. 20250326_103012
+PREFIX=$(date +"%Y%m%d_%H%M%S")
+BASE="./unstable_blocks/${PREFIX}_output"
 
 echo "Fetching unstable blocks to ${BASE}.txt ..."
 dfx canister call --network testnet bitcoin_t get_unstable_blocks > "${BASE}.txt"

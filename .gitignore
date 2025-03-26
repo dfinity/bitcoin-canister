@@ -17,3 +17,5 @@ chunk_hashes.txt
 
 *.log
 *.csv
+
+unstable_blocks/*

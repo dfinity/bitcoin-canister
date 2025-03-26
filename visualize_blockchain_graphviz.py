@@ -11,36 +11,53 @@ def load_blocks(file_path):
         data = json.load(f)
     return data["data"]
 
+def difficulty_to_color(difficulty, min_difficulty, max_difficulty):
+    if max_difficulty == min_difficulty:
+        ratio = 0.0
+    else:
+        ratio = (difficulty - min_difficulty) / (max_difficulty - min_difficulty)
+
+    # Interpolate between light blue (232, 240, 254) and dark blue (0, 60, 143)
+    r = int(232 + ratio * (0 - 232))
+    g = int(240 + ratio * (60 - 240))
+    b = int(254 + ratio * (143 - 254))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
 def generate_graph(blocks, output_file="blockchain"):
     dot = Digraph(comment="Blockchain", format="png")
     dot.attr(rankdir="TB")  # Top to bottom layout
     dot.attr(dpi="150")     # Higher resolution
 
-    node_style = {
-        "shape": "box",
-        "style": "filled",
-        "fillcolor": "#e8f0fe",
-        "fontsize": "10",
-        "width": "1.5",
-        "height": "0.6",
-        "fontname": "Helvetica"
-    }
+    # Precompute min/max difficulty
+    difficulties = [b["difficulty"] for b in blocks]
+    min_diff = min(difficulties)
+    max_diff = max(difficulties)
 
     hash_to_block = {b["block_hash"]: b for b in blocks}
 
-    # Add nodes with labels
     for block in blocks:
         short = short_hash(block["block_hash"])
         label = f"#{short}\\nH:{block['height']}\\nD:{block['difficulty']}"
-        dot.node(block["block_hash"], label, **node_style)
 
-    # Add edges (parent -> child)
+        fillcolor = difficulty_to_color(block["difficulty"], min_diff, max_diff)
+
+        dot.node(
+            block["block_hash"],
+            label=label,
+            shape="box",
+            style="filled",
+            fillcolor=fillcolor,
+            fontsize="10",
+            width="1.5",
+            height="0.6",
+            fontname="Helvetica"
+        )
+
     for block in blocks:
         for child in block["children"]:
             if child in hash_to_block:
                 dot.edge(block["block_hash"], child)
 
-    # Save to file
     dot.render(output_file, cleanup=True)
     print(f"Graph written to {output_file}.png")
 
