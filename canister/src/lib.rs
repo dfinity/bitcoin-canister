@@ -42,7 +42,7 @@ use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
-use ic_btc_interface::{BlockData, UnstableBlocksResult};
+use ic_btc_interface::UnstableBlocksResult;
 
 /// The maximum number of blocks the canister can be behind the tip to be considered synced.
 const SYNCED_THRESHOLD: u32 = 2;
