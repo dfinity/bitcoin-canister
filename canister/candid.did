@@ -132,6 +132,7 @@ type block_data = record {
   children: vec block_hash;
   height: nat;
   difficulty: nat;
+  no_difficulty_counter: nat;
 };
 
 type unstable_blocks_result = record {

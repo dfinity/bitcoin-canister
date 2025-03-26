@@ -14,6 +14,7 @@ def parse_vec_block_data(text):
         r'block_hash\s*=\s*blob\s*"([^"]+)";\s*'
         r'difficulty\s*=\s*([\d_]+)\s*:\s*nat;\s*'
         r'children\s*=\s*vec\s*{([^}]*)};\s*'
+        r'no_difficulty_counter\s*=\s*([\d_]+)\s*:\s*nat;\s*'
         r'prev_block_hash\s*=\s*blob\s*"([^"]+)";\s*}', re.DOTALL)
 
     blocks = []
@@ -24,14 +25,16 @@ def parse_vec_block_data(text):
         children_raw = match.group(4)
         children_blobs = re.findall(r'blob\s*"([^"]+)"', children_raw)
         children = [parse_blob(b) for b in children_blobs]
-        prev_block_hash = parse_blob(match.group(5))
+        no_difficulty_counter = int(match.group(5).replace("_", ""))
+        prev_block_hash = parse_blob(match.group(6))
 
         blocks.append({
             "height": height,
-            "block_hash": block_hash,
             "difficulty": difficulty,
-            "children": children,
+            "no_difficulty_counter": no_difficulty_counter,
             "prev_block_hash": prev_block_hash,
+            "block_hash": block_hash,
+            "children": children,
         })
     return {"data": blocks}
 

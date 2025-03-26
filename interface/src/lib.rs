@@ -696,6 +696,7 @@ pub struct BlockData {
     pub children: Vec<BlockHash>,
     pub height: u128,
     pub difficulty: u128,
+    pub no_difficulty_counter: u128,
 }
 
 #[derive(CandidType, Deserialize, Debug)]

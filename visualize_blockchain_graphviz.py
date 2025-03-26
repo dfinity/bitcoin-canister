@@ -49,7 +49,7 @@ def generate_graph(blocks, output_file="blockchain"):
 
     for block in blocks:
         short = short_hash(block["block_hash"])
-        label = f"#{short}\\nH:{block['height']}\\nD:{block['difficulty']}"
+        label = f"#{short}\\nH:{block['height']}\\nD:{block['difficulty']}\\nC:{block['no_difficulty_counter']}"
         fillcolor = difficulty_to_color(block["difficulty"], min_diff, max_diff)
 
         dot.node(

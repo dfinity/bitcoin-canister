@@ -155,7 +155,7 @@ impl UnstableBlocks {
     }
 
     pub fn get_block_data(&self) -> Vec<BlockData> {
-        self.tree.get_block_data(self.network, 0)
+        self.tree.get_block_data(self.network, 0, 0)
     }
 
     /// Returns depth in BlockTree of Block with given BlockHash.

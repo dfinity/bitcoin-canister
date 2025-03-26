@@ -319,7 +319,13 @@ impl BlockTree {
         res
     }
 
-    pub fn get_block_data(&self, network: Network, height: u128) -> Vec<BlockData> {
+    pub fn get_block_data(&self, network: Network, height: u128, mut no_difficulty_counter: u128) -> Vec<BlockData> {
+        let difficulty = self.root.difficulty(network);
+        if difficulty <= 1 {
+            no_difficulty_counter += 1; // Increment if block has no difficulty.
+        } else {
+            no_difficulty_counter = 0; // Reset if block has difficulty.
+        }
         let mut res = vec![BlockData {
             prev_block_hash: self
                 .root
@@ -335,10 +341,11 @@ impl BlockTree {
                 .map(|child| child.root.block_hash().to_vec())
                 .collect(),
             height,
-            difficulty: self.root.difficulty(network),
+            difficulty,
+            no_difficulty_counter,
         }];
         for child in self.children.iter() {
-            res.extend(child.get_block_data(network, height + 1));
+            res.extend(child.get_block_data(network, height + 1, no_difficulty_counter));
         }
         res
     }
