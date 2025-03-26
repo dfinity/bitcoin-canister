@@ -28,7 +28,7 @@ def generate_graph(blocks, output_file="blockchain"):
 
     dot.attr(
         rankdir="TB",
-        dpi="150",
+        dpi="300",
         nodesep="0.4",
         ranksep="0.5",
         bgcolor="white"
