@@ -23,7 +23,7 @@ const MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE: Depth = Depth::new(500);
 ///
 /// When the number of unstable blocks exceeds this limit, the depth difference
 /// drops to the current `stability_threshold` value.
-const MAX_UNSTABLE_BLOCKS: usize = 1_500;
+const MAX_UNSTABLE_BLOCKS: usize = 2_000;
 
 /// Returns the maximum allowed depth difference between the two longest
 /// branches in the unstable block tree on `Testnet` and `Regtest`
