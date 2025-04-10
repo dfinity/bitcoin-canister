@@ -3,7 +3,7 @@
 The canister IDs of the Bitcoin canisters for Bitcoin mainnet and testnet:
 
 * `mainnet`:  [`ghsi2-tqaaa-aaaan-aaaca-cai`](https://dashboard.internetcomputer.org/canister/ghsi2-tqaaa-aaaan-aaaca-cai)
-* `testnet` (v4):  [`g4xu7-jiaaa-aaaan-aaaaq-cai`](https://dashboard.internetcomputer.org/canister/g4xu7-jiaaa-aaaan-aaaaq-cai)
+* `testnet` (specifically `testnet4`):  [`g4xu7-jiaaa-aaaan-aaaaq-cai`](https://dashboard.internetcomputer.org/canister/g4xu7-jiaaa-aaaan-aaaaq-cai)
 
 Information about Bitcoin and the IC Bitcoin integration can be found in the [Bitcoin developer guides](https://developer.bitcoin.org/devguide/) and the [Bitcoin integration documentation](https://internetcomputer.org/docs/current/references/bitcoin-how-it-works).
 
@@ -270,3 +270,23 @@ set_config : (set_config_request) -> ();
 ```
 
 This endpoint is used to update the configuration. The watchdog canister can only set the API access flag. All other configuration can only be updated by the controller of the canister. For the main Bitcoin canister (connected to Bitcoin mainnet), the only controller is the NNS root canister.
+
+### Byte Order
+
+Since the Bitcoin canister provides a low-level interface, it uses the [same byte order as Bitcoin uses internally](https://learnmeabitcoin.com/technical/general/byte-order).
+
+A fun quirk of Bitcoin is that transaction hashes and block hashes have their byte orders reversed when you're displaying and searching for them.
+
+For example, the actual block hash for the block comes out of the hash function like this:
+
+```
+5e6ed4fdff39104b0a2fea7ffc606d9644d3144a2fc2aca60fd137c66914901e
+```
+
+It is displayed the same way on [BTC canister public dashboard](https://dashboard.internetcomputer.org/canister/g4xu7-jiaaa-aaaan-aaaaq-cai) if you call `bitcoin_get_utxos_query` for `testnet` and address `tb1q6cvfmeqhl3ckgsv3d9tzxpjlgec7smd32a9a3d`.
+
+But when you're searching for [this address](https://mempool.space/testnet4/address/tb1q6cvfmeqhl3ckgsv3d9tzxpjlgec7smd32a9a3d) or [this transaction](https://mempool.space/testnet4/tx/1e901469c637d10fa6acc22f4a14d344966d60fc7fea2f0a4b1039fffdd46e5e) in mempool or on a block explorer, you'll see this byte order:
+
+```
+1e901469c637d10fa6acc22f4a14d344966d60fc7fea2f0a4b1039fffdd46e5e
+```
