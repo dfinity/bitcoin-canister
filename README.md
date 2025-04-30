@@ -1,5 +1,7 @@
 # Bitcoin Canister
 
+TODO: remove this line after testing slack notifications
+
 <div>
   <p>
     <a href="https://github.com/dfinity/bitcoin-canister/blob/master/LICENSE"><img alt="Apache-2.0" src="https://img.shields.io/github/license/dfinity/bitcoin-canister"/></a>
