@@ -412,7 +412,7 @@ version = "0.1.0"
 dependencies = [
  "bitcoin",
  "canbench-rs",
- "candid 0.10.10",
+ "candid 0.10.14",
  "hex",
  "ic-btc-canister",
  "ic-btc-interface",
@@ -610,21 +610,21 @@ dependencies = [
 
 [[package]]
 name = "canbench-rs"
-version = "0.1.11"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a43b28f9982ece540df60672d7aff1ba5ba72640ea973b7e2f03cd34cc432cde"
+checksum = "c1c560e37bb75c6900e18e7d37174efaff09e266d138d9926e34f489d9d2f6a0"
 dependencies = [
  "canbench-rs-macros",
- "candid 0.10.10",
- "ic-cdk 0.12.2",
+ "candid 0.10.14",
+ "ic-cdk 0.17.2",
  "serde",
 ]
 
 [[package]]
 name = "canbench-rs-macros"
-version = "0.1.11"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d39f683bcc2d01b198dc12f38e59832053d372c910e6e6ac94c9dfc66a558d95"
+checksum = "866a310ae95dfd273c2f1d17c8382d0d893c35851e9252cca98bd3a80a7e5635"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -662,9 +662,9 @@ dependencies = [
 
 [[package]]
 name = "candid"
-version = "0.10.10"
+version = "0.10.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c30ee7f886f296b6422c0ff017e89dd4f831521dfdcc76f3f71aae1ce817222"
+checksum = "f9d90f5a1426d0489283a0bd5da9ed406fb3e69597e0d823dcb88a1965bb58d2"
 dependencies = [
  "anyhow",
  "binread",
@@ -714,7 +714,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48a3da76f989cd350b7342c64c6c6008341bb6186f6832ef04e56dc50ba0fd76"
 dependencies = [
  "anyhow",
- "candid 0.10.10",
+ "candid 0.10.14",
  "codespan-reporting",
  "convert_case",
  "hex",
@@ -730,7 +730,7 @@ dependencies = [
 name = "canister_backend"
 version = "0.1.0"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.14",
  "futures",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
@@ -1100,7 +1100,7 @@ name = "disable-api-if-not-fully-synced-flag"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.10.10",
+ "candid 0.10.14",
  "ic-btc-test-utils",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
@@ -1716,7 +1716,7 @@ dependencies = [
  "async-lock 3.4.0",
  "backoff",
  "cached",
- "candid 0.10.10",
+ "candid 0.10.14",
  "ed25519-consensus",
  "futures-util",
  "hex",
@@ -1757,7 +1757,7 @@ dependencies = [
  "bitcoin",
  "byteorder",
  "canbench-rs",
- "candid 0.10.10",
+ "candid 0.10.14",
  "candid_parser",
  "ciborium",
  "datasize",
@@ -1784,7 +1784,7 @@ dependencies = [
 name = "ic-btc-interface"
 version = "0.2.2"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.14",
  "ciborium",
  "datasize",
  "proptest 1.5.0",
@@ -1805,7 +1805,7 @@ name = "ic-btc-types"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.10.10",
+ "candid 0.10.14",
  "datasize",
  "hex",
  "ic-btc-interface",
@@ -1840,29 +1840,36 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk"
-version = "0.12.2"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e908da565d9e304e83732500069ebb959e3d2cad80f894889ea37207112c7a0"
+checksum = "038ff230bf0fc8630943e3c52e989d248a7c89834ccb65da408fabc5817a475b"
 dependencies = [
- "candid 0.10.10",
- "ic-cdk-macros 0.8.4",
- "ic0 0.21.1",
+ "candid 0.10.14",
+ "ic-cdk-macros 0.15.0",
+ "ic0 0.23.0",
  "serde",
  "serde_bytes",
 ]
 
 [[package]]
 name = "ic-cdk"
-version = "0.15.1"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "038ff230bf0fc8630943e3c52e989d248a7c89834ccb65da408fabc5817a475b"
+checksum = "95a7344f41493cbf591f13ae9f90181076f808a83af799815c3074b19c693d2e"
 dependencies = [
- "candid 0.10.10",
- "ic-cdk-macros 0.15.0",
+ "candid 0.10.14",
+ "ic-cdk-executor",
+ "ic-cdk-macros 0.17.2",
  "ic0 0.23.0",
  "serde",
  "serde_bytes",
 ]
+
+[[package]]
+name = "ic-cdk-executor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "903057edd3d4ff4b3fe44a64eaee1ceb73f579ba29e3ded372b63d291d7c16c2"
 
 [[package]]
 name = "ic-cdk-macros"
@@ -1880,25 +1887,25 @@ dependencies = [
 
 [[package]]
 name = "ic-cdk-macros"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5a618e4020cea88e933d8d2f8c7f86d570ec06213506a80d4f2c520a9bba512"
-dependencies = [
- "candid 0.10.10",
- "proc-macro2",
- "quote",
- "serde",
- "serde_tokenstream 0.1.7",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "ic-cdk-macros"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3af44fb4ec3a4b18831c9d3303ca8fa2ace846c4022d50cb8df4122635d3782e"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.14",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_tokenstream 0.2.2",
+ "syn 2.0.75",
+]
+
+[[package]]
+name = "ic-cdk-macros"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84cbaa50fa36d3e0616114becf81faa95a099e0d60948ed6978f30f1c77399fd"
+dependencies = [
+ "candid 0.10.14",
  "proc-macro2",
  "quote",
  "serde",
@@ -1936,7 +1943,7 @@ dependencies = [
 name = "ic-http"
 version = "0.1.0"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.14",
  "futures",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
@@ -1965,7 +1972,7 @@ version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce14c068bd053c0f5ab525326f3f358f265cdfcae279fbf6461fb529e9682acd"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.14",
  "hex",
  "ic-certification",
  "leb128",
@@ -1982,7 +1989,7 @@ version = "0.37.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "875dc4704780383112e8e8b5063a1b98de114321d0c7d3e7f635dcf360a57fba"
 dependencies = [
- "candid 0.10.10",
+ "candid 0.10.14",
  "hex",
  "ic-certification",
  "leb128",
@@ -2010,12 +2017,6 @@ name = "ic0"
 version = "0.18.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "576c539151d4769fb4d1a0c25c4108dd18facd04c5695b02cf2d226ab4e43aa5"
-
-[[package]]
-name = "ic0"
-version = "0.21.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a54b5297861c651551676e8c43df805dad175cc33bc97dbd992edbbb85dcbcdf"
 
 [[package]]
 name = "ic0"
@@ -2674,7 +2675,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "124a2380ca6f557adf8b02517cbfd2f564113230e14cda6f6aadd3dfe156293c"
 dependencies = [
  "base64 0.13.1",
- "candid 0.10.10",
+ "candid 0.10.14",
  "hex",
  "ic-certification",
  "ic-transport-types 0.37.1",
@@ -3426,7 +3427,7 @@ name = "scenario-1"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.10.10",
+ "candid 0.10.14",
  "ic-btc-test-utils",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
@@ -3438,7 +3439,7 @@ name = "scenario-2"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.10.10",
+ "candid 0.10.14",
  "ic-btc-test-utils",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
@@ -3450,7 +3451,7 @@ name = "scenario-3"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
- "candid 0.10.10",
+ "candid 0.10.14",
  "ic-btc-test-utils",
  "ic-cdk 0.15.1",
  "ic-cdk-macros 0.15.0",
@@ -4365,7 +4366,7 @@ name = "uploader"
 version = "0.1.0"
 dependencies = [
  "async-std",
- "candid 0.10.10",
+ "candid 0.10.14",
  "clap",
  "hex",
  "ic-agent",
@@ -4543,7 +4544,7 @@ version = "0.1.0"
 dependencies = [
  "assert-json-diff",
  "async-trait",
- "candid 0.10.10",
+ "candid 0.10.14",
  "candid_parser",
  "futures",
  "hex",
