@@ -297,7 +297,7 @@ $ ARG="(record {
 ```
 
 ```shell
-$ didc encode -d ./canister/candid.did -t '(opt init_config)' "$ARG" | xxd -r -p | sha256sum
+$ didc encode -d ./canister/candid.did -t '(init_config)' "$ARG" | xxd -r -p | sha256sum
 e463d2f266f7085036be3e23afc2a1b51f501c7ea677193647785d1a09c723e2  -
 ```
 
