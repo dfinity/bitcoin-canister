@@ -285,6 +285,7 @@ $ CUSTOM_FEES="record {
 }"
 
 # Select a subset of init arguments or make sure they copy current prod configuration.
+# Specify nat for stability_threshold as described in https://internetcomputer.org/docs/references/candid-ref#textual-syntax-4
 $ ARG="(record {
     network = opt variant { $NETWORK };
     stability_threshold = $STABILITY_THRESHOLD : nat;
