@@ -284,10 +284,13 @@ $ CUSTOM_FEES="record {
   get_block_headers_maximum = 10_000_000_000 : nat;
 }"
 
-# Select a subset of init arguments or make sure they copy current prod configuration.
-$ ARG="(record {
+# Prepare the argument for the `post_upgrade` call (make sure to match current prod configuration).
+# This config optionally updates settings after canister upgrade.
+# Fields not set will keep their current values (which is default after uploader canister).
+# Make sure to use correct Candid syntax for `nat` values: https://internetcomputer.org/docs/references/candid-ref#textual-syntax-4
+$ POST_UPGRADE_ARG="(opt record {
     network = opt variant { $NETWORK };
-    stability_threshold = opt $STABILITY_THRESHOLD;
+    stability_threshold = opt ($STABILITY_THRESHOLD : nat);
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
@@ -296,8 +299,8 @@ $ ARG="(record {
 ```
 
 ```shell
-$ didc encode -d ./canister/candid.did -t '(opt init_config)' "$ARG" | xxd -r -p | sha256sum
-e463d2f266f7085036be3e23afc2a1b51f501c7ea677193647785d1a09c723e2  -
+$ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$POST_UPGRADE_ARG" | xxd -r -p | sha256sum
+6d3bcdfdefaf3dd444a218735277f6d1cba15196d09b9544b7a04dbc3c36642f  -
 ```
 
 Upgrade bitcoin canister
@@ -308,7 +311,7 @@ $ dfx canister install \
     --network testnet $TESTNET_BITCOIN_CANISTER_ID \
     --mode upgrade \
     --wasm ./ic-btc-canister.wasm.gz \
-    --argument "$ARG"
+    --argument "$POST_UPGRADE_ARG"
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
