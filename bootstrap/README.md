@@ -285,7 +285,7 @@ $ CUSTOM_FEES="record {
 }"
 
 # Select a subset of post_upgrade arguments or make sure they copy current prod configuration.
-# These arguments are of type SetConfigRequest. 
+# The post_upgrade method of the canister takes an Option<SetConfigRequest> as argument (opt set_config_request candid type). 
 # Specify nat for stability_threshold as described in https://internetcomputer.org/docs/references/candid-ref#textual-syntax-4
 $ POST_UPGRADE_ARG="(opt record {
     network = opt variant { $NETWORK };
