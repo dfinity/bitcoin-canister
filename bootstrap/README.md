@@ -287,7 +287,7 @@ $ CUSTOM_FEES="record {
 # Select a subset of init arguments or make sure they copy current prod configuration.
 $ ARG="(record {
     network = opt variant { $NETWORK };
-    stability_threshold = opt $STABILITY_THRESHOLD;
+    stability_threshold = $STABILITY_THRESHOLD : nat;
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
