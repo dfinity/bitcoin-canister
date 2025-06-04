@@ -288,7 +288,7 @@ $ CUSTOM_FEES="record {
 # Specify nat for stability_threshold as described in https://internetcomputer.org/docs/references/candid-ref#textual-syntax-4
 $ ARG="(record {
     network = opt variant { $NETWORK };
-    stability_threshold = $STABILITY_THRESHOLD : nat;
+    stability_threshold = opt ($STABILITY_THRESHOLD : nat);
     syncing = opt variant { enabled };
     api_access = opt variant { disabled };
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
