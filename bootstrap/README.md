@@ -284,9 +284,10 @@ $ CUSTOM_FEES="record {
   get_block_headers_maximum = 10_000_000_000 : nat;
 }"
 
-# Select a subset of post_upgrade arguments or make sure they copy current prod configuration.
-# The post_upgrade method of the canister takes an Option<SetConfigRequest> as argument (opt set_config_request candid type). 
-# Specify nat for stability_threshold as described in https://internetcomputer.org/docs/references/candid-ref#textual-syntax-4
+# Prepare the argument for the `post_upgrade` call (make sure to match current prod configuration).
+# This config optionally updates settings after canister upgrade.
+# Fields not set will keep their current values (which is default after uploader canister).
+# Make sure to use correct Candid syntax for `nat` values: https://internetcomputer.org/docs/references/candid-ref#textual-syntax-4
 $ POST_UPGRADE_ARG="(opt record {
     network = opt variant { $NETWORK };
     stability_threshold = opt ($STABILITY_THRESHOLD : nat);
