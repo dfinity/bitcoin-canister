@@ -15,6 +15,9 @@ pub type Height = u32;
 pub type Page = ByteBuf;
 pub type BlockHeader = Vec<u8>;
 
+/// The default stability threshold for the Bitcoin canister.
+const DEFAULT_STABILITY_THRESHOLD: u128 = 24 * 6; // 24 hours at 10 minutes per block
+
 #[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash, DataSize)]
 pub enum Network {
     /// Bitcoin Mainnet.
@@ -675,7 +678,7 @@ impl From<InitConfig> for Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            stability_threshold: 0,
+            stability_threshold: DEFAULT_STABILITY_THRESHOLD,
             network: Network::Regtest,
             blocks_source: Principal::management_canister(),
             syncing: Flag::Enabled,
