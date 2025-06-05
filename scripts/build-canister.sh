@@ -23,10 +23,10 @@ fi
 # that aren't needed in production.
 if [[ -z "$FEATURES" ]]; then
   # No features provided
-  cargo build -p "$CANISTER" --target "$TARGET" --profile="${PROFILE}"
+  cargo build -p "$CANISTER" --target "$TARGET" --profile="${PROFILE}" --locked
 else
   # Features provided
-  cargo build -p "$CANISTER" --target "$TARGET" --profile="${PROFILE}" --features "$FEATURES"
+  cargo build -p "$CANISTER" --target "$TARGET" --profile="${PROFILE}" --locked --features "$FEATURES"
 fi
 
 # Navigate to root directory.
