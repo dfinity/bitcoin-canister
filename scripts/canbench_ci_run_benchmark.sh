@@ -24,7 +24,7 @@ MAIN_BRANCH_RESULTS_FILE="$MAIN_BRANCH_DIR/$CANBENCH_RESULTS_FILE"
 CANBENCH_RESULTS_CSV_FILE="/tmp/canbench_results_${CANBENCH_JOB_NAME}.csv"
 
 # Install canbench.
-cargo install --version 0.1.15 --locked canbench
+cargo install --version 0.1.16 --locked canbench
 
 # Verify that the canbench results file exists.
 if [ ! -f "$CANBENCH_RESULTS_FILE" ]; then
@@ -34,7 +34,7 @@ fi
 
 # Check if the canbench results file is up to date.
 pushd "$CANISTER_PATH"
-canbench --less-verbose --hide-results --show-summary --csv > "$CANBENCH_OUTPUT"
+canbench --less-verbose --show-summary --csv > "$CANBENCH_OUTPUT"
 cp "./canbench_results.csv" "$CANBENCH_RESULTS_CSV_FILE"
 if grep -q "(regress\|(improved by \|(new)" "$CANBENCH_OUTPUT"; then
   UPDATED_MSG="**❌ \`$CANBENCH_RESULTS_FILE\` is not up to date**
@@ -64,7 +64,7 @@ if [ -f "$MAIN_BRANCH_RESULTS_FILE" ]; then
 
   # Run canbench to compare results with the main branch.
   pushd "$CANISTER_PATH"
-  canbench --less-verbose --hide-results --show-summary --csv > "$CANBENCH_OUTPUT"
+  canbench --less-verbose --show-summary --csv > "$CANBENCH_OUTPUT"
   cp "./canbench_results.csv" "$CANBENCH_RESULTS_CSV_FILE"
   popd
 fi
