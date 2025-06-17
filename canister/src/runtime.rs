@@ -9,6 +9,8 @@ use ic_cdk::api::call::CallResult;
 use ic_cdk::api::call::RejectionCode;
 #[cfg(not(target_arch = "wasm32"))]
 use serde::Deserialize;
+#[cfg(not(target_arch = "wasm32"))]
+use std::cell::RefCell;
 use std::future::Future;
 
 // The instruction limit in system subnets is 50B.
