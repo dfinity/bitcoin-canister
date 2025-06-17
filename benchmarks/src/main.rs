@@ -27,6 +27,11 @@ fn init() {
                 .collect(),
         );
     });
+
+    // Set mock time to avoid timestamp validation failure due to blocks appearing to be > 2 hours
+    // in the future.
+    let june_2025 = (55.5 * 365.25 * 24.0 * 60.0 * 60.0) as u64;
+    ic_btc_canister::runtime::mock_time::set_mock_time_secs(june_2025);
 }
 
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
