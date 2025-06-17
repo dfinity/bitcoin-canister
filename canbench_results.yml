@@ -2,35 +2,35 @@ benches:
   get_metrics:
     total:
       calls: 1
-      instructions: 7900684
+      instructions: 7900728
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   insert_300_blocks:
     total:
       calls: 1
-      instructions: 475548175
+      instructions: 512666356
       heap_increase: 10
       stable_memory_increase: 0
     scopes: {}
   insert_block_headers:
     total:
       calls: 1
-      instructions: 3107743665
+      instructions: 3168827538
       heap_increase: 1
       stable_memory_increase: 0
     scopes: {}
   insert_block_headers_multiple_times:
     total:
       calls: 1
-      instructions: 11402215748
+      instructions: 11692459237
       heap_increase: 7
       stable_memory_increase: 0
     scopes: {}
   pre_upgrade_with_many_unstable_blocks:
     total:
       calls: 1
-      instructions: 5993995209
+      instructions: 5993995207
       heap_increase: 4097
       stable_memory_increase: 1792
     scopes:
