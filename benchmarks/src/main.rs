@@ -29,7 +29,7 @@ fn init() {
     });
 
     // Set a current time to avoid header validation failures due to blocks appearing to be in the future
-    ic_btc_canister::runtime::set_mock_time_secs(1750077112); // June 2025
+    ic_btc_canister::runtime::mock_time::set_mock_time_secs(1750077112); // June 2025
 }
 
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
