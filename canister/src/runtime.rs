@@ -9,7 +9,7 @@ use ic_cdk::api::call::CallResult;
 use ic_cdk::api::call::RejectionCode;
 #[cfg(not(target_arch = "wasm32"))]
 use serde::Deserialize;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "mock_time"))]
 use std::cell::RefCell;
 use std::future::Future;
 
@@ -216,11 +216,9 @@ pub fn time_secs() -> u64 {
 pub fn time() -> u64 {
     #[cfg(feature = "mock_time")]
     {
-        MOCK_TIME.with(|t| {
-            if let Some(mock_time) = *t.borrow() {
-                return mock_time;
-            }
-        });
+        if let Some(mock_time) = MOCK_TIME.with(|t| *t.borrow()) {
+            return mock_time;
+        }
     }
 
     ic_cdk::api::time()
@@ -231,11 +229,9 @@ pub fn time() -> u64 {
 pub fn time() -> u64 {
     #[cfg(feature = "mock_time")]
     {
-        MOCK_TIME.with(|t| {
-            if let Some(mock_time) = *t.borrow() {
-                return mock_time;
-            }
-        });
+        if let Some(mock_time) = MOCK_TIME.with(|t| *t.borrow()) {
+            return mock_time;
+        }
     }
 
     use std::time::SystemTime;
