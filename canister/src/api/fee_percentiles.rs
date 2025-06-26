@@ -67,13 +67,13 @@ fn get_current_fee_percentiles_with_number_of_transactions(
 
     if fees_per_byte.len() != number_of_transactions as usize {
         print(&format!(
-            "[DEBUG] fees_per_byte.len != number_of_transactions: {} != {}",
+            "[DEBUG FEES] fees_per_byte.len != number_of_transactions: {} != {}",
             fees_per_byte.len(),
             number_of_transactions
         ));
     } else {
         print(&format!(
-            "[DEBUG] fees_per_byte.len == number_of_transactions: {} == {}",
+            "[DEBUG FEES] fees_per_byte.len == number_of_transactions: {} == {}",
             fees_per_byte.len(),
             number_of_transactions
         ));
@@ -91,7 +91,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     let fee_percentiles = percentiles(fees_per_byte);
     for p in [0, 25, 50, 75, 100] {
         print(&format!(
-            "[DEBUG] fee percentiles p{}: {}",
+            "[DEBUG FEES] fee percentiles p{}: {}",
             p, fee_percentiles[p as usize]
         ));
     }
@@ -112,7 +112,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     };
     if diff_percent.abs() > 20 {
         print(&format!(
-            "[DEBUG] fee percentiles p50 changed from {} to {} ({}%)",
+            "[DEBUG FEES] fee percentiles p50 changed from {} to {} ({}%)",
             p50_prev, p50_curr, diff_percent
         ));
     }
