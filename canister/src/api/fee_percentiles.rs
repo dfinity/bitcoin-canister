@@ -104,7 +104,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
             p50_curr
         }
     });
-    let diff = (p50_prev as i64 - p50_curr as i64);
+    let diff = p50_prev as i64 - p50_curr as i64;
     let diff_percent = if p50_prev != 0 {
         (diff * 100) / p50_prev as i64
     } else {
