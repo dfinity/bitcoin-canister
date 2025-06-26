@@ -19,8 +19,8 @@ const NUM_TRANSACTIONS: u32 = 10_000;
 
 /// Returns the 100 fee percentiles of the chain's 10,000 most recent transactions.
 pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
-    verify_has_enough_cycles(with_state(|s| s.fees.get_current_fee_percentiles_maximum));
-    charge_cycles(with_state(|s| s.fees.get_current_fee_percentiles));
+    // verify_has_enough_cycles(with_state(|s| s.fees.get_current_fee_percentiles_maximum));
+    // charge_cycles(with_state(|s| s.fees.get_current_fee_percentiles));
 
     let res = with_state_mut(|s| {
         get_current_fee_percentiles_with_number_of_transactions(s, NUM_TRANSACTIONS)
