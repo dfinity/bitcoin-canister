@@ -8,6 +8,12 @@ use crate::{
 use ic_btc_interface::MillisatoshiPerByte;
 use ic_btc_types::{Block, Transaction};
 
+use std::cell::RefCell;
+
+thread_local! {
+    static PREV_MEDIAN_FEE: RefCell<Option<u64>> = const { RefCell::new(None) };
+}
+
 /// The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
 
@@ -59,6 +65,20 @@ fn get_current_fee_percentiles_with_number_of_transactions(
         number_of_transactions,
     );
 
+    if fees_per_byte.len() != number_of_transactions as usize {
+        print(&format!(
+            "[DEBUG] fees_per_byte.len != number_of_transactions: {} != {}",
+            fees_per_byte.len(),
+            number_of_transactions
+        ));
+    } else {
+        print(&format!(
+            "[DEBUG] fees_per_byte.len == number_of_transactions: {} == {}",
+            fees_per_byte.len(),
+            number_of_transactions
+        ));
+    }
+
     // There are no fees to report when there are no transactions in unstable blocks.
     // This doesn't realistically happen on mainnet, but may happen in local development
     // with regtest. In which case, the last cached result of fees is returned.
@@ -69,6 +89,33 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     }
 
     let fee_percentiles = percentiles(fees_per_byte);
+    for p in [0, 25, 50, 75, 100] {
+        print(&format!(
+            "[DEBUG] fee percentiles p{}: {}",
+            p, fee_percentiles[p as usize]
+        ));
+    }
+    let p50_curr = fee_percentiles[50];
+    let p50_prev = PREV_MEDIAN_FEE.with(|c| {
+        let prev = c.borrow();
+        if let Some(prev) = *prev {
+            prev
+        } else {
+            p50_curr
+        }
+    });
+    let diff = (p50_prev as i64 - p50_curr as i64);
+    let diff_percent = if p50_prev != 0 {
+        (diff * 100) / p50_prev as i64
+    } else {
+        0
+    };
+    if diff_percent.abs() > 20 {
+        print(&format!(
+            "[DEBUG] fee percentiles p50 changed from {} to {} ({}%)",
+            p50_prev, p50_curr, diff_percent
+        ));
+    }
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
         tip_block_hash,

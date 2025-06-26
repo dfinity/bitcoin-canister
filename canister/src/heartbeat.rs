@@ -20,6 +20,9 @@ use std::time::Duration;
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
+    // TODO: remove debug code.
+    let _ = crate::api::get_current_fee_percentiles();
+
     collect_metrics();
     maybe_burn_cycles();
 
