@@ -193,6 +193,12 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
 
     set_state(state);
 
+    // Drop unfinished syncing state, if any.
+    with_state_mut(|state| {
+        state.syncing_state.is_fetching_blocks = false;
+        state.syncing_state.response_to_process = None;
+    });
+
     // Update the state based on the provided configuration.
     if let Some(config_update) = config_update {
         set_config_no_verification(config_update);
