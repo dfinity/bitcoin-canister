@@ -223,6 +223,31 @@ $ dfx canister create bitcoin_t --no-wallet \
     --specified-id $TESTNET_BITCOIN_CANISTER_ID \
     --provisional-create-canister-effective-canister-id "5v3p4-iyaaa-aaaaa-qaaaa-cai" \
     --with-cycles 1000000000000000000
+
+$ dfx canister create bitcoin_m --no-wallet \
+    --network testnet \
+    --subnet-type system \
+    --specified-id $MAINNET_BITCOIN_CANISTER_ID \
+    --provisional-create-canister-effective-canister-id "5v3p4-iyaaa-aaaaa-qaaaa-cai" \
+    --with-cycles 1000000000000000000
+
+$ dfx deploy --network testnet bitcoin_m
+
+$ dfx canister install \
+    --network testnet bitcoin_m \
+    --mode reinstall \
+    --argument "(record {
+      api_access = null;
+      lazily_evaluate_fee_percentiles = opt variant { disabled };
+      blocks_source = null;
+      fees = null;
+      watchdog_canister = null;
+      network = opt variant { mainnet };
+      stability_threshold = opt (144 : nat);
+      syncing = opt variant { enabled };
+      burn_cycles = null;
+      disable_api_if_not_fully_synced = null;
+    })"
 ```
 
 ## 8. Install Uploader Canister & Upload Chunks
