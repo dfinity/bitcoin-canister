@@ -35,9 +35,6 @@ fn set_api_access(request: SetConfigRequest) {
 pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
     crate::with_state_mut(|s| {
         if let Some(syncing) = request.syncing {
-            if syncing == Flag::Disabled {
-                reset_syncing_state(s);
-            }
             s.syncing_state.syncing = syncing;
         }
 
