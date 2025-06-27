@@ -54,7 +54,7 @@ async fn maybe_fetch_blocks() -> bool {
     let _guard = match crate::guard::FetchBlocksGuard::new() {
         Some(guard) => guard,
         None => {
-            print("Already fetching blocks, skipping sending request.");
+            // Already fetching blocks, skipping sending request.
             return false;
         }
     };
@@ -64,7 +64,7 @@ async fn maybe_fetch_blocks() -> bool {
     let request = match maybe_request {
         Some(request) => request,
         None => {
-            print("No request to send at this time.");
+            // No request to send at this time.
             return false;
         }
     };

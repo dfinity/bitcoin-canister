@@ -168,13 +168,11 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     // Finish ingesting the stable block that's partially ingested, if that exists.
     print("Running ingest_block_continue...");
     match state.utxos.ingest_block_continue() {
-        None => print("No block to continue ingesting."),
+        None => {} // No block to continue ingesting.
         Some(Slicing::Paused(())) => {
-            print("Ingesting stable block is paused.");
             return has_state_changed(state);
         }
         Some(Slicing::Done((ingested_block_hash, stats))) => {
-            print(&format!("Ingested stable block {}", ingested_block_hash));
             state.metrics.block_ingestion_stats = stats;
             pop_block(state, ingested_block_hash)
         }
@@ -182,9 +180,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
 
     // Check if there are any stable blocks and ingest those into the UTXO set.
     print("Looking for new stable blocks to ingest...");
-    let mut found_block = false;
     while let Some(new_stable_block) = unstable_blocks::peek(&state.unstable_blocks) {
-        found_block = true;
         print(&format!(
             "Ingesting new stable block {:?}...",
             new_stable_block.block_hash()
@@ -202,9 +198,6 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
                 pop_block(state, ingested_block_hash)
             }
         }
-    }
-    if !found_block {
-        print("No new stable blocks to ingest.");
     }
 
     has_state_changed(state)
