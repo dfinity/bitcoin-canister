@@ -37,7 +37,7 @@ use ic_btc_types::Block;
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
 use serde_bytes::ByteBuf;
-use state::{main_chain_height, ResponseToProcess};
+use state::main_chain_height;
 use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
@@ -315,6 +315,7 @@ mod test {
     use ic_btc_interface::{Fees, Network, NetworkInRequest};
     use ic_btc_test_utils::build_regtest_chain;
     use proptest::prelude::*;
+    use state::ResponseToProcess;
 
     proptest! {
         #[test]
