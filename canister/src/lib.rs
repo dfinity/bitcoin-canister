@@ -79,6 +79,17 @@ fn set_state(state: State) {
     });
 }
 
+/// Resets the syncing state of the canister.
+/// This is useful to ensure that the canister is not in a
+/// fetching blocks state after an upgrade.
+fn reset_syncing_state() {
+    print("Resetting syncing state...");
+    with_state_mut(|state| {
+        state.syncing_state.is_fetching_blocks = false;
+        state.syncing_state.response_to_process = None;
+    });
+}
+
 /// Initializes the state of the Bitcoin canister.
 pub fn init(init_config: InitConfig) {
     print("Running init...");
@@ -199,11 +210,9 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
 
     set_state(state);
 
-    // Drop unfinished syncing state, if any.
-    with_state_mut(|state| {
-        state.syncing_state.is_fetching_blocks = false;
-        state.syncing_state.response_to_process = None;
-    });
+    // Reset the syncing state to ensure that the canister is not in a
+    // fetching blocks state after the upgrade.
+    reset_syncing_state();
 
     // Update the state based on the provided configuration.
     if let Some(config_update) = config_update {
