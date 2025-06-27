@@ -410,27 +410,26 @@ mod test {
             ..Default::default()
         });
 
+        // Simulate a state where the canister is fetching blocks.
         with_state_mut(|state| {
             let fake_response =
                 state::ResponseToProcess::Complete(crate::types::GetSuccessorsCompleteResponse {
                     blocks: vec![],
                     next: vec![],
                 });
-            // Simulate a state where the canister is fetching blocks.
             state.syncing_state.is_fetching_blocks = true;
             state.syncing_state.response_to_process = Some(fake_response);
         });
 
-        // Run the preupgrade hook.
+        // Upgrade the canister.
         pre_upgrade();
-        // Run the postupgrade hook.
         post_upgrade(None);
 
-        // The new and old states should be equivalent.
+        // The syncing state should be reset.
         with_state(|new_state| {
             let s = &new_state.syncing_state;
-            assert!(!s.is_fetching_blocks);
-            assert!(s.response_to_process.is_none());
+            assert!(!s.is_fetching_blocks); // No longer fetching blocks.
+            assert!(s.response_to_process.is_none()); // No response to process.
         });
     }
 
