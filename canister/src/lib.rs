@@ -402,6 +402,39 @@ mod test {
     }
 
     #[test]
+    fn test_upgrade_resets_sync_state() {
+        let network = Network::Regtest;
+        init(InitConfig {
+            stability_threshold: Some(144),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        with_state_mut(|state| {
+            let fake_response =
+                state::ResponseToProcess::Complete(crate::types::GetSuccessorsCompleteResponse {
+                    blocks: vec![],
+                    next: vec![],
+                });
+            // Simulate a state where the canister is fetching blocks.
+            state.syncing_state.is_fetching_blocks = true;
+            state.syncing_state.response_to_process = Some(fake_response);
+        });
+
+        // Run the preupgrade hook.
+        pre_upgrade();
+        // Run the postupgrade hook.
+        post_upgrade(None);
+
+        // The new and old states should be equivalent.
+        with_state(|new_state| {
+            let s = &new_state.syncing_state;
+            assert!(!s.is_fetching_blocks);
+            assert!(s.response_to_process.is_none());
+        });
+    }
+
+    #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_balance_incorrect_network() {
         init(InitConfig {
