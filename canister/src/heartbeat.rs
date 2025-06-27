@@ -20,6 +20,9 @@ use std::time::Duration;
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
+    // TODO: remove debug code.
+    let _ = crate::api::get_current_fee_percentiles();
+
     collect_metrics();
     maybe_burn_cycles();
 
@@ -40,9 +43,6 @@ pub async fn heartbeat() {
     maybe_process_response();
 
     maybe_compute_fee_percentiles();
-
-    // TODO: remove debug code.
-    //let _ = crate::api::get_current_fee_percentiles();
 }
 
 // Fetches new blocks if there isn't a request in progress and no complete response to process.

@@ -245,21 +245,21 @@ $ dfx deploy --network testnet bitcoin_m \
       disable_api_if_not_fully_synced = null;
     })"
 
-$ dfx canister install \
-    --network testnet bitcoin_m \
-    --mode reinstall \
-    --argument "(record {
-      api_access = null;
-      lazily_evaluate_fee_percentiles = opt variant { disabled };
-      blocks_source = null;
-      fees = null;
-      watchdog_canister = null;
-      network = opt variant { mainnet };
-      stability_threshold = opt (144 : nat);
-      syncing = opt variant { enabled };
-      burn_cycles = null;
-      disable_api_if_not_fully_synced = null;
-    })"
+# $ dfx canister install \
+#     --network testnet bitcoin_m \
+#     --mode reinstall \
+#     --argument "(record {
+#       api_access = null;
+#       lazily_evaluate_fee_percentiles = opt variant { disabled };
+#       blocks_source = null;
+#       fees = null;
+#       watchdog_canister = null;
+#       network = opt variant { mainnet };
+#       stability_threshold = opt (144 : nat);
+#       syncing = opt variant { enabled };
+#       burn_cycles = null;
+#       disable_api_if_not_fully_synced = null;
+#     })"
 
 $ dfx canister call --network testnet bitcoin_m get_config
 ```
