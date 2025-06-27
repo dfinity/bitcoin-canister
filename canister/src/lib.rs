@@ -212,6 +212,12 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
 
     set_state(state);
 
+    with_state_mut(|state| {
+        // Reset syncing state to ensure the next upgrade works reliably,
+        // even if the upgrade event interrupted the canister fetching state.
+        reset_syncing_state(state);
+    });
+
     // Update the state based on the provided configuration.
     if let Some(config_update) = config_update {
         set_config_no_verification(config_update);
