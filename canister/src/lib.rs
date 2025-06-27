@@ -20,7 +20,7 @@ mod validation;
 
 use crate::{
     api::set_config::set_config_no_verification,
-    runtime::{msg_cycles_accept, msg_cycles_available},
+    runtime::{msg_cycles_accept, msg_cycles_available, print},
     state::State,
     types::{into_bitcoin_network, HttpRequest, HttpResponse},
 };
@@ -81,6 +81,8 @@ fn set_state(state: State) {
 
 /// Initializes the state of the Bitcoin canister.
 pub fn init(init_config: InitConfig) {
+    print("Running init...");
+
     let config = Config::from(init_config);
     set_state(State::new(
         config
@@ -163,6 +165,8 @@ pub fn get_config() -> Config {
 }
 
 pub fn pre_upgrade() {
+    print("Running pre_upgrade...");
+
     // Serialize the state.
     let mut state_bytes = vec![];
     with_state(|state| ciborium::ser::into_writer(state, &mut state_bytes))
@@ -177,6 +181,8 @@ pub fn pre_upgrade() {
 }
 
 pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
+    print("Running post_upgrade...");
+
     let memory = memory::get_upgrades_memory();
 
     // Read the length of the state bytes.
@@ -192,6 +198,12 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
 
     set_state(state);
+
+    // Drop unfinished syncing state, if any.
+    with_state_mut(|state| {
+        state.syncing_state.is_fetching_blocks = false;
+        state.syncing_state.response_to_process = None;
+    });
 
     // Update the state based on the provided configuration.
     if let Some(config_update) = config_update {
