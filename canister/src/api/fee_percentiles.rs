@@ -51,6 +51,12 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
     let tip_block_hash = main_chain.tip().block_hash();
 
+    let main_chain_height = crate::state::main_chain_height(state);
+    print(&format!(
+        "[DEBUG FEES] main chain height: {}, tip hash: {}",
+        main_chain_height, tip_block_hash
+    ));
+
     // If fee percentiles were already cached, then return the cached results.
     if let Some(cache) = &state.fee_percentiles_cache {
         if cache.tip_block_hash == tip_block_hash {
