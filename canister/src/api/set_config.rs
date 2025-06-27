@@ -1,5 +1,4 @@
-use crate::reset_syncing_state;
-use ic_btc_interface::{Flag, SetConfigRequest};
+use ic_btc_interface::SetConfigRequest;
 use std::convert::TryInto;
 
 pub fn set_config(request: SetConfigRequest) {
