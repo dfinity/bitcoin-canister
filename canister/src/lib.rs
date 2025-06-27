@@ -212,9 +212,9 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
 
     set_state(state);
 
+    // Reset syncing state to ensure the next upgrade works reliably,
+    // even if the upgrade event interrupted the canister fetching state.
     with_state_mut(|state| {
-        // Reset syncing state to ensure the next upgrade works reliably,
-        // even if the upgrade event interrupted the canister fetching state.
         reset_syncing_state(state);
     });
 
