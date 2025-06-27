@@ -426,10 +426,9 @@ mod test {
         post_upgrade(None);
 
         // The syncing state should be reset.
-        with_state(|new_state| {
-            let s = &new_state.syncing_state;
-            assert!(!s.is_fetching_blocks); // No longer fetching blocks.
-            assert!(s.response_to_process.is_none()); // No response to process.
+        with_state(|s| {
+            assert!(!s.syncing_state.is_fetching_blocks); // No longer fetching blocks.
+            assert!(s.syncing_state.response_to_process.is_none()); // No response to process.
         });
     }
 
