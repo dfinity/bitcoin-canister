@@ -1,7 +1,6 @@
+use crate::reset_syncing_state;
 use ic_btc_interface::{Flag, SetConfigRequest};
 use std::convert::TryInto;
-
-use crate::reset_syncing_state;
 
 pub fn set_config(request: SetConfigRequest) {
     if is_watchdog_caller() {
