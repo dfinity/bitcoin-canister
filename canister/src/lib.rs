@@ -79,7 +79,6 @@ fn set_state(state: State) {
     });
 }
 
-/// Clears syncing flags to ensure the canister can resume syncing after upgrade.
 /// Resets the fetch mutex and discards any in-progress response.
 fn reset_syncing_state() {
     print("Resetting syncing state...");
@@ -177,6 +176,10 @@ pub fn get_config() -> Config {
 pub fn pre_upgrade() {
     print("Running pre_upgrade...");
 
+    // Reset syncing state to ensure the canister
+    // is not locked in a fetching blocks state after the upgrade.
+    reset_syncing_state();
+
     // Serialize the state.
     let mut state_bytes = vec![];
     with_state(|state| ciborium::ser::into_writer(state, &mut state_bytes))
@@ -208,10 +211,6 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
 
     set_state(state);
-
-    // Reset the syncing state to ensure that the canister is not in a
-    // fetching blocks state after the upgrade.
-    reset_syncing_state();
 
     // Update the state based on the provided configuration.
     if let Some(config_update) = config_update {
