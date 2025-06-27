@@ -139,6 +139,10 @@ fn get_fees_per_byte(
 ) -> Vec<MillisatoshiPerByte> {
     let mut fees = Vec::new();
     let mut tx_i = 0;
+
+    let mut is_coinbase = 0;
+    let mut vsize_zero = 0;
+
     for block in main_chain.iter().rev() {
         if tx_i >= number_of_transactions {
             break;
@@ -146,6 +150,12 @@ fn get_fees_per_byte(
         for tx in block.txdata() {
             if tx_i >= number_of_transactions {
                 break;
+            }
+            if tx.is_coinbase() {
+                is_coinbase += 1;
+            }
+            if tx.vsize() == 0 {
+                vsize_zero += 1;
             }
             if !tx.is_coinbase() {
                 tx_i += 1;
@@ -155,6 +165,17 @@ fn get_fees_per_byte(
             }
         }
     }
+
+    {
+        print(&format!(
+            "[DEBUG FEES] tx num: {}, coinbase: {}, vsize_zero: {}, fees: {}",
+            tx_i,
+            is_coinbase,
+            vsize_zero,
+            fees.len()
+        ));
+    }
+
     fees
 }
 
