@@ -89,32 +89,34 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     }
 
     let fee_percentiles = percentiles(fees_per_byte);
-    for p in [0, 25, 50, 75, 100] {
-        print(&format!(
-            "[DEBUG FEES] fee percentiles p{}: {}",
-            p, fee_percentiles[p as usize]
-        ));
-    }
-    let p50_curr = fee_percentiles[50];
-    let p50_prev = PREV_MEDIAN_FEE.with(|c| {
-        let prev = c.borrow();
-        if let Some(prev) = *prev {
-            prev
-        } else {
-            p50_curr
+    if !fee_percentiles.is_empty() {
+        for p in [0, 25, 50, 75, 100] {
+            print(&format!(
+                "[DEBUG FEES] fee percentiles p{}: {}",
+                p, fee_percentiles[p as usize]
+            ));
         }
-    });
-    let diff = p50_prev as i64 - p50_curr as i64;
-    let diff_percent = if p50_prev != 0 {
-        (diff * 100) / p50_prev as i64
-    } else {
-        0
-    };
-    if diff_percent.abs() > 20 {
-        print(&format!(
-            "[DEBUG FEES] fee percentiles p50 changed from {} to {} ({}%)",
-            p50_prev, p50_curr, diff_percent
-        ));
+        let p50_curr = fee_percentiles[50];
+        let p50_prev = PREV_MEDIAN_FEE.with(|c| {
+            let prev = c.borrow();
+            if let Some(prev) = *prev {
+                prev
+            } else {
+                p50_curr
+            }
+        });
+        let diff = p50_prev as i64 - p50_curr as i64;
+        let diff_percent = if p50_prev != 0 {
+            (diff * 100) / p50_prev as i64
+        } else {
+            0
+        };
+        if diff_percent.abs() > 20 {
+            print(&format!(
+                "[DEBUG FEES] fee percentiles p50 changed from {} to {} ({}%)",
+                p50_prev, p50_curr, diff_percent
+            ));
+        }
     }
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
