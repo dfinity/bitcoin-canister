@@ -79,9 +79,8 @@ fn set_state(state: State) {
     });
 }
 
-/// Resets the syncing state of the canister.
-/// This is useful to ensure that the canister is not in a
-/// fetching blocks state after an upgrade.
+/// Clears syncing flags to ensure the canister can resume syncing after upgrade.
+/// Resets the fetch mutex and discards any in-progress response.
 fn reset_syncing_state() {
     print("Resetting syncing state...");
     with_state_mut(|state| {
