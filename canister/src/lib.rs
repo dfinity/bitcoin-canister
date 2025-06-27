@@ -80,12 +80,10 @@ fn set_state(state: State) {
 }
 
 /// Resets the fetch mutex and discards any in-progress response.
-fn reset_syncing_state() {
+fn reset_syncing_state(state: &mut State) {
     print("Resetting syncing state...");
-    with_state_mut(|state| {
-        state.syncing_state.is_fetching_blocks = false;
-        state.syncing_state.response_to_process = None;
-    });
+    state.syncing_state.is_fetching_blocks = false;
+    state.syncing_state.response_to_process = None;
 }
 
 /// Initializes the state of the Bitcoin canister.
@@ -176,14 +174,16 @@ pub fn get_config() -> Config {
 pub fn pre_upgrade() {
     print("Running pre_upgrade...");
 
-    // Reset syncing state to ensure the canister
-    // is not locked in a fetching blocks state after the upgrade.
-    reset_syncing_state();
-
     // Serialize the state.
     let mut state_bytes = vec![];
-    with_state(|state| ciborium::ser::into_writer(state, &mut state_bytes))
-        .expect("failed to encode state");
+    with_state_mut(|state| {
+        // Reset syncing state to ensure the canister
+        // is not locked in a fetching blocks state after the upgrade.
+        reset_syncing_state(state);
+
+        ciborium::ser::into_writer(state, &mut state_bytes)
+    })
+    .expect("failed to encode state");
 
     // Write the length of the serialized bytes to memory, followed by the
     // by the bytes themselves.
