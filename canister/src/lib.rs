@@ -37,7 +37,7 @@ use ic_btc_types::Block;
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
 use serde_bytes::ByteBuf;
-use state::main_chain_height;
+use state::{main_chain_height, ResponseToProcess};
 use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
@@ -412,13 +412,9 @@ mod test {
 
         // Simulate a state where the canister is fetching blocks.
         with_state_mut(|state| {
-            let fake_response =
-                state::ResponseToProcess::Complete(crate::types::GetSuccessorsCompleteResponse {
-                    blocks: vec![],
-                    next: vec![],
-                });
             state.syncing_state.is_fetching_blocks = true;
-            state.syncing_state.response_to_process = Some(fake_response);
+            state.syncing_state.response_to_process =
+                Some(ResponseToProcess::Complete(Default::default()));
         });
 
         // Upgrade the canister.
