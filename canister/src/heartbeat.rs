@@ -53,10 +53,7 @@ async fn maybe_fetch_blocks() -> bool {
     // A guard to verify we aren't already fetching blocks.
     let _guard = match crate::guard::FetchBlocksGuard::new() {
         Some(guard) => guard,
-        None => {
-            // Already fetching blocks, skipping sending request.
-            return false;
-        }
+        None => return false, // Already fetching blocks, skipping sending request.
     };
 
     // Request additional blocks.
