@@ -414,7 +414,7 @@ mod test {
         with_state_mut(|state| {
             state.syncing_state.is_fetching_blocks = true;
             state.syncing_state.response_to_process =
-                Some(ResponseToProcess::Complete(Default::default()));
+                Some(ResponseToProcess::Complete(Default::default())); // Some fake response.
         });
 
         // Upgrade the canister.
