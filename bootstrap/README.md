@@ -141,8 +141,8 @@ $ docker run --rm canisters cat /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.
 
 # Verify SHA-256 of the canister's WASM.
 $ sha256sum *.wasm.gz
-c6abf3605cd33d0d640a648ecc1aaf33999032775436481485468a75024f38bc  ic-btc-canister.wasm.gz
-2f9a1f7ee91ce2e2c29cc78040197b2687c25ac7fd76a609c79a72c67e3ca1d8  uploader.wasm.gz
+644d8ac2b32fcdecba743af4653eec68a7347df34e10c7dab44998cd1be8bb71  ic-btc-canister.wasm.gz
+1f0e900c6327d610a47188b705f3f91242e224aea8905dcb4b147fdc01269112  uploader.wasm.gz
 ```
 
 ## 7. (Optional) Setup Testing Subnet & Create Canisters
@@ -217,10 +217,10 @@ Create corresponding canister
 # (Optional) remove current canister ids. 
 $ rm canister_ids.json
 
-$ dfx canister create bitcoin_t --no-wallet \
+$ dfx canister create bitcoin_m --no-wallet \
     --network testnet \
     --subnet-type system \
-    --specified-id $TESTNET_BITCOIN_CANISTER_ID \
+    --specified-id $MAINNET_BITCOIN_CANISTER_ID \
     --provisional-create-canister-effective-canister-id "5v3p4-iyaaa-aaaaa-qaaaa-cai" \
     --with-cycles 1000000000000000000
 
@@ -265,6 +265,20 @@ $ dfx canister call --network testnet bitcoin_m get_config
 #       disable_api_if_not_fully_synced = null;
 #     })"
 
+# TODO: remove, just for test
+$ dfx deploy --network testnet bitcoin_m \
+    --argument "(record {
+        api_access = opt variant { disabled };
+        lazily_evaluate_fee_percentiles = opt variant { disabled };
+        blocks_source = null;
+        fees = null;
+        watchdog_canister = null;
+        network = opt variant { mainnet };
+        stability_threshold = opt (144 : nat);
+        syncing = opt variant { enabled };
+        burn_cycles = null;
+        disable_api_if_not_fully_synced = null;
+    })"
 ```
 
 ## 8. Install Uploader Canister & Upload Chunks
@@ -272,37 +286,37 @@ $ dfx canister call --network testnet bitcoin_m get_config
 Prepare install arguments
 ```shell
 # Get canister state size
-$ wc -c < ./bootstrap/output/canister_state.bin
-1149304832
+$ wc -c < ./bootstrap/output-902k/canister_state.bin
+67041820672
 ```
 
 Calculate required number of pages, page is `64 * 1024` bytes
 ```txt
-ceil(1149304832 / (64 * 1024)) = 17537
+ceil(67041820672 / (64 * 1024)) = 1022977
 ```
 
 Calculate args hash
 ```shell
-$ didc encode -t '(nat64)' "(17537)" | xxd -r -p | sha256sum
-e299fbe18558a3646ab33e5d28eec04e474339f235cf4f22dd452c98f831a249  -
+$ didc encode -t '(nat64)' "(1022977)" | xxd -r -p | sha256sum
+6cde6566f57a71ed9f6ceca9f8be1b7d312b1b55cf458f6cdcd8e86c312da337  -
 ```
 
 Install uploader canister
 ```shell
 $ dfx canister install \
-    --network testnet $TESTNET_BITCOIN_CANISTER_ID \
+    --network testnet bitcoin_m \
     --mode reinstall \
     --wasm ./uploader.wasm.gz \
-    --argument "(17537 : nat64)"  # Use calculated number of pages.
+    --argument "(1022977 : nat64)"  # Use calculated number of pages.
 ```
 
 Upload chunks
 ```shell
 # USE IPv6 FROM THE ABOVE
 $ cargo run --example upload -- \
-    --canister-id $TESTNET_BITCOIN_CANISTER_ID \
-    --state ./bootstrap/output/canister_state.bin \
-    --ic-network http://\[2602:xx:xx:xx:xx:xx:xx:df47\]:8080 \
+    --canister-id $MAINNET_BITCOIN_CANISTER_ID \
+    --state ./bootstrap/output-902k/canister_state.bin \
+    --ic-network http://\[2602:fb2b:110:10:5076:2aff:fe53:2719\]:8080 \
     --fetch-root-key
 ```
 
@@ -310,20 +324,25 @@ $ cargo run --example upload -- \
 
 Prepare upgrade arguments
 ```shell
+$ dfx canister snapshot --network testnet list bitcoin_m
+$ dfx canister stop --network testnet bitcoin_m
+$ dfx canister snapshot --network testnet create bitcoin_m
+Created a new snapshot of canister bitcoin_m. Snapshot ID: 00000000000000000000000001a000040101
+
 # https://internetcomputer.org/docs/references/bitcoin-how-it-works#api-fees-and-pricing
 $ CUSTOM_FEES="record { 
-  get_utxos_base = 50_000_000 : nat;
-  get_utxos_cycles_per_ten_instructions = 10 : nat;
-  get_utxos_maximum = 10_000_000_000 : nat;
-  get_current_fee_percentiles = 10_000_000 : nat;
-  get_current_fee_percentiles_maximum = 100_000_000 : nat;
-  get_balance = 10_000_000 : nat;
-  get_balance_maximum = 100_000_000 : nat;
-  send_transaction_base = 5_000_000_000 : nat;
-  send_transaction_per_byte = 20_000_000 : nat;
-  get_block_headers_base = 50_000_000 : nat;
-  get_block_headers_cycles_per_ten_instructions = 10 : nat;
-  get_block_headers_maximum = 10_000_000_000 : nat;
+    get_utxos_base = 50_000_000 : nat;
+    get_utxos_cycles_per_ten_instructions = 10 : nat;
+    get_utxos_maximum = 10_000_000_000 : nat;
+    get_current_fee_percentiles = 10_000_000 : nat;
+    get_current_fee_percentiles_maximum = 100_000_000 : nat;
+    get_balance = 10_000_000 : nat;
+    get_balance_maximum = 100_000_000 : nat;
+    send_transaction_base = 5_000_000_000 : nat;
+    send_transaction_per_byte = 20_000_000 : nat;
+    get_block_headers_base = 50_000_000 : nat;
+    get_block_headers_cycles_per_ten_instructions = 10 : nat;
+    get_block_headers_maximum = 10_000_000_000 : nat;
 }"
 
 # Prepare the argument for the `post_upgrade` call (make sure to match current prod configuration).
@@ -338,11 +357,20 @@ $ POST_UPGRADE_ARG="(opt record {
     watchdog_canister = opt opt principal \"$TESTNET_WATCHDOG_CANISTER_ID\";
     fees = opt $CUSTOM_FEES;
 })"
+
+$ POST_UPGRADE_ARG="(opt record {
+    network = opt variant { $NETWORK };
+    stability_threshold = opt ($STABILITY_THRESHOLD : nat);
+    syncing = opt variant { enabled };
+    api_access = opt variant { disabled };
+    watchdog_canister = null;
+    fees = null;
+})"
 ```
 
 ```shell
 $ didc encode -d ./canister/candid.did -t '(opt set_config_request)' "$POST_UPGRADE_ARG" | xxd -r -p | sha256sum
-6d3bcdfdefaf3dd444a218735277f6d1cba15196d09b9544b7a04dbc3c36642f  -
+3c7128916bc7ec579f48de63ab0a50ccdb641c5d85c472d8754cf216de9bf698  -
 ```
 
 Upgrade bitcoin canister
@@ -354,6 +382,15 @@ $ dfx canister install \
     --mode upgrade \
     --wasm ./ic-btc-canister.wasm.gz \
     --argument "$POST_UPGRADE_ARG"
+
+$ dfx canister install \
+    --network testnet bitcoin_m \
+    --mode upgrade \
+    --wasm ./ic-btc-canister.wasm.gz \
+    --argument "$POST_UPGRADE_ARG"
+
+$ dfx canister snapshot --network testnet create bitcoin_m
+Created a new snapshot of canister bitcoin_m. Snapshot ID: 00000000000000010000000001a000040101
 
 $ dfx canister start --network testnet $TESTNET_BITCOIN_CANISTER_ID
 ```
