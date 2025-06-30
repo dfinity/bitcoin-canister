@@ -79,6 +79,13 @@ fn set_state(state: State) {
     });
 }
 
+/// Resets the fetch mutex and discards any in-progress response.
+fn reset_syncing_state(state: &mut State) {
+    print("Resetting syncing state...");
+    state.syncing_state.is_fetching_blocks = false;
+    state.syncing_state.response_to_process = None;
+}
+
 /// Initializes the state of the Bitcoin canister.
 pub fn init(init_config: InitConfig) {
     print("Running init...");
@@ -169,8 +176,14 @@ pub fn pre_upgrade() {
 
     // Serialize the state.
     let mut state_bytes = vec![];
-    with_state(|state| ciborium::ser::into_writer(state, &mut state_bytes))
-        .expect("failed to encode state");
+    with_state_mut(|state| {
+        // Reset syncing state to ensure the canister
+        // is not locked in a fetching blocks state after the upgrade.
+        reset_syncing_state(state);
+
+        ciborium::ser::into_writer(state, &mut state_bytes)
+    })
+    .expect("failed to encode state");
 
     // Write the length of the serialized bytes to memory, followed by the
     // by the bytes themselves.
@@ -199,10 +212,10 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
 
     set_state(state);
 
-    // Drop unfinished syncing state, if any.
+    // Reset syncing state to ensure the next upgrade works reliably,
+    // even if the upgrade event interrupted the canister fetching state.
     with_state_mut(|state| {
-        state.syncing_state.is_fetching_blocks = false;
-        state.syncing_state.response_to_process = None;
+        reset_syncing_state(state);
     });
 
     // Update the state based on the provided configuration.
@@ -308,6 +321,7 @@ mod test {
     use ic_btc_interface::{Fees, Network, NetworkInRequest};
     use ic_btc_test_utils::build_regtest_chain;
     use proptest::prelude::*;
+    use state::ResponseToProcess;
 
     proptest! {
         #[test]
@@ -392,6 +406,33 @@ mod test {
 
         // The config has been updated with the new stability threshold.
         assert_eq!(get_config().stability_threshold, stability_threshold);
+    }
+
+    #[test]
+    fn test_upgrade_resets_sync_state() {
+        let network = Network::Regtest;
+        init(InitConfig {
+            stability_threshold: Some(144),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        // Simulate a state where the canister is fetching blocks.
+        with_state_mut(|state| {
+            state.syncing_state.is_fetching_blocks = true;
+            state.syncing_state.response_to_process =
+                Some(ResponseToProcess::Complete(Default::default())); // Some fake response.
+        });
+
+        // Upgrade the canister.
+        pre_upgrade();
+        post_upgrade(None);
+
+        // The syncing state should be reset.
+        with_state(|s| {
+            assert!(!s.syncing_state.is_fetching_blocks); // No longer fetching blocks.
+            assert!(s.syncing_state.response_to_process.is_none()); // No response to process.
+        });
     }
 
     #[test]
