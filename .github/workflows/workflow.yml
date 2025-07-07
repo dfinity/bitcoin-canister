@@ -449,11 +449,11 @@ jobs:
       - name: Checkout current PR
         uses: actions/checkout@v4
 
-      - name: Checkout master branch
+      - name: Checkout baseline branch
         uses: actions/checkout@v4
         with:
           ref: master
-          path: _canbench_main_branch
+          path: _canbench_baseline_branch
 
       - uses: actions/cache@v4
         with:
