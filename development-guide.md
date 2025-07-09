@@ -25,17 +25,13 @@ Only after all the expected canisters were deployed the `pre-release` can be tur
         cd bitcoin-canister &&\
         git checkout aff3eef  # <- make sure the right commit is provided.
 
-    # Use docker to reproducibly build canister WASMs.
-    $ docker build -t canisters .
-
-    # Extract WASM files.
-    $ docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
-    $ docker run --rm --entrypoint cat canisters /watchdog-canister.wasm.gz > watchdog-canister.wasm.gz
+    # Use docker to reproducibly build ic-btc-canister and watchdog canister WASMs.
+    $ ./scripts/docker-build
 
     # Compute checksums.
     $ sha256sum *.wasm.gz
     09f5647a45ff6d5d05b2b0ed48613fb2365b5fe6573ba0e901509c39fb9564ac  ic-btc-canister.wasm.gz
-    cc58b2a32517f9907f0d3c77bc8c099d0a65d8194a8d9bc0ad7df357ee867a07  watchdog-canister.wasm.gz
+    cc58b2a32517f9907f0d3c77bc8c099d0a65d8194a8d9bc0ad7df357ee867a07  watchdog.wasm.gz
     ```
 4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes.
     - Add calculated checksums into release notes

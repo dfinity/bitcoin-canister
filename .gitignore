@@ -5,7 +5,6 @@
 
 target
 .dfx
-canister_ids*.json
 .canbench
 pocket-ic
 

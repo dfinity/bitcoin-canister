@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# vim: ft=bash
+# Build the canisters inside docker. This outputs the requested ".wasm.gz" files.
+
+set -euo pipefail
+
+# Make sure we always run from the root
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPTS_DIR/.."
+
+function title() {
+    echo "Build all canisters inside Docker and extract the requested \".wasm.gz\" files"
+}
+
+function usage() {
+    cat << EOF
+
+Usage:
+  $0 [canister1] [canister2] ...
+
+EOF
+}
+
+function help() {
+    cat << EOF
+
+Arguments:
+  canister1 canister2 ... : Optional list of canister names to extract (e.g., ic-btc-canister, watchdog, uploader)
+                           If no arguments are provided, ic-btc-canister and watchdog are extracted by default
+
+This will create (and override) the corresponding ".wasm.gz" files in the current directory.
+EOF
+}
+
+## Building
+
+function build() {
+    # image name and build args, made global because they're used in
+    # check_feature()
+    image_name="bitcoin-docker-build"
+
+    docker_build_args=(--tag "$image_name" .)
+
+    echo "The following image name will be used: $image_name"
+
+    set -x
+    DOCKER_BUILDKIT=1 docker build "${docker_build_args[@]}"
+    set +x
+}
+
+# ARGUMENT PARSING
+
+CANISTERS=()
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+        -h|--help)
+            title
+            usage
+            help
+            exit 0
+            ;;
+        *)
+            case "$1" in
+                uploader|ic-btc-canister|watchdog)
+                    CANISTERS+=("$1")
+                    ;;
+                *)
+                    echo "ERROR: unknown canister '$1'"
+                    echo "Valid canisters are: uploader, ic-btc-canister, watchdog"
+                    usage
+                    echo
+                    echo "Use '$0 --help' for more information"
+                    exit 1
+                    ;;
+            esac
+            ;;
+    esac
+    shift
+done
+
+if [ ${#CANISTERS[@]} -eq 0 ]; then
+    CANISTERS=("ic-btc-canister" "watchdog")
+fi
+
+build
+
+for canister in "${CANISTERS[@]}"
+do
+    echo "Extracting $canister.wasm.gz from container to $PWD"
+    docker run --rm --entrypoint cat "$image_name" "/$canister.wasm.gz" > "$canister.wasm.gz"
+done
