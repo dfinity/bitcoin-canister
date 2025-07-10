@@ -180,7 +180,8 @@ jobs:
 
       - name: Run scenario 1
         run: |
-          bash e2e-tests/scenario-1.sh
+          cd e2e-tests
+          bash scenario-1.sh
 
   e2e-scenario-2:
     runs-on: ubuntu-latest
@@ -209,7 +210,8 @@ jobs:
 
       - name: Run scenario 2
         run: |
-          bash e2e-tests/scenario-2.sh
+          cd e2e-tests
+          bash scenario-2.sh
 
   e2e-scenario-3:
     runs-on: ubuntu-latest
@@ -238,7 +240,8 @@ jobs:
 
       - name: Run scenario 3
         run: |
-          bash e2e-tests/scenario-3.sh
+          cd e2e-tests
+          bash scenario-3.sh
 
   e2e-disable-api-if-not-fully-synced-flag:
     runs-on: ubuntu-latest
@@ -267,7 +270,8 @@ jobs:
 
       - name: Run disable api if not fully synced flag
         run: |
-          bash e2e-tests/disable-api-if-not-fully-synced-flag.sh
+          cd e2e-tests
+          bash disable-api-if-not-fully-synced-flag.sh
 
   charge-cycles-on-reject:
     runs-on: ubuntu-latest
@@ -296,7 +300,8 @@ jobs:
 
       - name: Run charge cycles on reject
         run: |
-          bash e2e-tests/charge-cycles-on-reject.sh
+          cd e2e-tests
+          bash charge-cycles-on-reject.sh
 
   upgradability:
     runs-on: ubuntu-latest
@@ -325,7 +330,8 @@ jobs:
 
       - name: Run upgradability test
         run: |
-          bash e2e-tests/upgradability.sh
+          cd e2e-tests
+          bash upgradability.sh
 
   set_config:
     runs-on: ubuntu-latest
@@ -354,7 +360,8 @@ jobs:
 
       - name: Run set_config test
         run: |
-          bash e2e-tests/set_config.sh
+          cd e2e-tests
+          bash set_config.sh
 
   post_upgrade_config:
     runs-on: ubuntu-latest
@@ -383,7 +390,8 @@ jobs:
 
       - name: Run post_upgrade_config test
         run: |
-          bash e2e-tests/post_upgrade_config.sh
+          cd e2e-tests
+          bash post_upgrade_config.sh
 
   cycles_burn:
     runs-on: ubuntu-latest
@@ -411,7 +419,9 @@ jobs:
           dfx-version: $DFX_VERSION
 
       - name: Run cycles_burn test
-        run: bash e2e-tests/cycles_burn.sh
+        run: |
+          cd e2e-tests
+          bash cycles_burn.sh
 
   bitcoin_canister_metadata:
     runs-on: ubuntu-latest
@@ -439,7 +449,9 @@ jobs:
           dfx-version: $DFX_VERSION
 
       - name: Run bitcoin_canister_metadata test
-        run: bash e2e-tests/bitcoin-canister-metadata.sh
+        run: |
+          cd e2e-tests
+          bash bitcoin-canister-metadata.sh
 
   benchmark:
     runs-on: ubuntu-latest
@@ -523,7 +535,8 @@ jobs:
 
       - name: Run health_status test
         run: |
-          bash watchdog/e2e-tests/health_status.sh
+          cd watchdog/e2e-tests
+          bash health_status.sh
 
   watchdog_get_config:
     runs-on: ubuntu-latest
@@ -552,7 +565,8 @@ jobs:
 
       - name: Run get_config test
         run: |
-          bash watchdog/e2e-tests/get_config.sh
+          cd watchdog/e2e-tests
+          bash get_config.sh
 
   watchdog_metrics:
     runs-on: ubuntu-latest
@@ -581,7 +595,8 @@ jobs:
 
       - name: Run metrics test
         run: |
-          bash watchdog/e2e-tests/metrics.sh
+          cd watchdog/e2e-tests
+          bash metrics.sh
 
   watchdog_upgradability:
     runs-on: ubuntu-latest
@@ -610,7 +625,8 @@ jobs:
 
       - name: Run upgradability test
         run: |
-          bash watchdog/e2e-tests/upgradability.sh
+          cd watchdog/e2e-tests
+          bash upgradability.sh
 
   watchdog_canister_metadata:
     runs-on: ubuntu-latest
@@ -638,7 +654,9 @@ jobs:
           dfx-version: $DFX_VERSION
 
       - name: Run watchdog_canister_metadata test
-        run: bash watchdog/e2e-tests/watchdog-canister-metadata.sh
+        run: |
+          cd watchdog/e2e-tests
+          bash watchdog-canister-metadata.sh
 
   canister-build-reproducibility:
     runs-on: ubuntu-latest

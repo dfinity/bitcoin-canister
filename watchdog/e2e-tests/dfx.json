@@ -1,0 +1,22 @@
+{
+  "dfx": "0.23.0",
+  "canisters": {
+    "watchdog": {
+      "type": "custom",
+      "candid": "../candid.did",
+      "build": "../../scripts/build-canister.sh watchdog",
+      "wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+    },
+    "watchdog-upgradability-test": {
+      "type": "custom",
+      "candid": "../candid.did",
+      "wasm": "watchdog-upgradability-test.wasm.gz"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "version": 1
+}
