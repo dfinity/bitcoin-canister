@@ -16,13 +16,17 @@ function usage() {
     cat << EOF
 
 Usage:
-  $0 [canister1] [canister2] ...
+  $0 [OPTIONS] [canister1] [canister2] ...
 
 EOF
 }
 
 function help() {
     cat << EOF
+
+Options:
+  --chunk-hashes PATH : Path to chunk_hashes.txt file (required when building uploader canister)
+  -h, --help          : Show this help message
 
 Arguments:
   canister1 canister2 ... : Optional list of canister names to extract (e.g., ic-btc-canister, watchdog, uploader)
@@ -39,7 +43,18 @@ function build() {
     # check_feature()
     image_name="bitcoin-docker-build"
 
-    docker_build_args=(--tag "$image_name" .)
+    docker_build_args=(--tag "$image_name")
+    
+    # Check if uploader canister is requested and add the required build arg
+    for canister in "${CANISTERS[@]}"
+    do
+        if [ "$canister" = "uploader" ]; then
+            docker_build_args+=(--build-arg "CHUNK_HASHES_PATH=$CHUNK_HASHES_PATH")
+            break
+        fi
+    done
+    
+    docker_build_args+=(.)
 
     echo "The following image name will be used: $image_name"
 
@@ -51,6 +66,8 @@ function build() {
 # ARGUMENT PARSING
 
 CANISTERS=()
+CHUNK_HASHES_PATH=""
+
 while [[ $# -gt 0 ]]
 do
     case $1 in
@@ -60,28 +77,52 @@ do
             help
             exit 0
             ;;
+        --chunk-hashes)
+            if [[ -n "${2:-}" ]]; then
+                CHUNK_HASHES_PATH="$2"
+                shift
+                shift
+            else
+                echo "ERROR: --chunk-hashes requires a path argument"
+                usage
+                exit 1
+            fi
+            ;;
+        uploader|ic-btc-canister|watchdog)
+            CANISTERS+=("$1")
+            shift
+            ;;
         *)
-            case "$1" in
-                uploader|ic-btc-canister|watchdog)
-                    CANISTERS+=("$1")
-                    ;;
-                *)
-                    echo "ERROR: unknown canister '$1'"
-                    echo "Valid canisters are: uploader, ic-btc-canister, watchdog"
-                    usage
-                    echo
-                    echo "Use '$0 --help' for more information"
-                    exit 1
-                    ;;
-            esac
+            echo "ERROR: unknown argument '$1'"
+            echo "Valid canisters are: uploader, ic-btc-canister, watchdog"
+            usage
+            echo
+            echo "Use '$0 --help' for more information"
+            exit 1
             ;;
     esac
-    shift
 done
+
+if [ -n "$CHUNK_HASHES_PATH" ] && [ ! -f "$CHUNK_HASHES_PATH" ]; then
+    echo "ERROR: chunk-hashes file not found: $CHUNK_HASHES_PATH"
+    exit 1
+fi
 
 if [ ${#CANISTERS[@]} -eq 0 ]; then
     CANISTERS=("ic-btc-canister" "watchdog")
 fi
+
+# Validate that chunk-hashes is provided if uploader is requested
+for canister in "${CANISTERS[@]}"
+do
+    if [ "$canister" = "uploader" ] && [ -z "$CHUNK_HASHES_PATH" ]; then
+        echo "ERROR: --chunk-hashes is required when building uploader canister"
+        usage
+        echo
+        echo "Use '$0 --help' for more information"
+        exit 1
+    fi
+done
 
 build
 
