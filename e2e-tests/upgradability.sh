@@ -18,9 +18,7 @@ REFERENCE_CANISTER_NAME="upgradability-test"
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PARENT_DIR="$(dirname "$SCRIPT_DIR")"
-
-pushd "$PARENT_DIR"
+cd "$SCRIPT_DIR"
 
 # Get the URL of the latest release.
 get_latest_release_url() {

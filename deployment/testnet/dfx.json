@@ -12,12 +12,6 @@
       "candid": "../../watchdog/candid.did",
       "build": "../../scripts/build-canister.sh watchdog",
       "wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
-    },
-    "uploader": {
-      "type": "custom",
-      "candid": "../../bootstrap/uploader/candid.did",
-      "build": "../../scripts/build-canister.sh uploader-canister",
-      "wasm": "../../target/wasm32-unknown-unknown/release/uploader-canister.wasm.gz"
     }
   },
   "defaults": {
