@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # A test that verifies that calling post_upgrade with a set_config_request works.
+set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 pushd "$SCRIPT_DIR"
