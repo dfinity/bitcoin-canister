@@ -3,7 +3,7 @@
 # A test that verifies that calling post_upgrade with a set_config_request works.
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-cd "$SCRIPT_DIR"
+pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT
@@ -26,7 +26,7 @@ fi
 # Modify the candid file such that post_upgrade can accept a `opt set_config_request`.
 # This is necessary because post_upgrade takes a different argument from `init`, but candid
 # doesn't provide a way of specifying that and dfx doesn't provide a way to bypass type checks.
-sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ./canister/candid.did
+sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ../canister/candid.did
 
 # Upgrade and update the fees.
 FEES="record {
@@ -49,7 +49,7 @@ dfx deploy --upgrade-unchanged bitcoin --argument "opt (record {
 })"
 
 # Revert the modification to the candid file.
-sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ./canister/candid.did
+sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ../canister/candid.did
 
 # Verify the fees have been updated.
 CONFIG=$(dfx canister call bitcoin get_config --query)

@@ -18,7 +18,7 @@ REFERENCE_CANISTER_NAME="upgradability-test"
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-cd "$SCRIPT_DIR"
+pushd "$SCRIPT_DIR"
 
 # Get the URL of the latest release.
 get_latest_release_url() {
@@ -53,7 +53,7 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
 fi
 
 # Update candid to make the post_upgrade accept a set_config_request.
-sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ./canister/candid.did
+sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ../canister/candid.did
 
 echo "Deploy new version of canister..."
 dfx deploy --no-wallet bitcoin --argument "(null)"
@@ -68,6 +68,6 @@ dfx deploy --upgrade-unchanged bitcoin --argument "(null)"
 dfx canister start bitcoin
 
 # Reset candid init args
-sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ./canister/candid.did
+sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ../canister/candid.did
 
 echo "SUCCESS"

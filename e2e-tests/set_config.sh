@@ -3,7 +3,7 @@
 # A test that verifies that the `set_config` endpoint works as expected.
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-cd "$SCRIPT_DIR"
+pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT

@@ -17,7 +17,7 @@ ARGUMENT="(variant { mainnet })"
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source "${SCRIPT_DIR}/utils.sh"
-cd "$SCRIPT_DIR"
+pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors and remove the downloaded wasm.
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
