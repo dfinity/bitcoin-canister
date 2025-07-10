@@ -28,26 +28,34 @@ docker build -t canisters "$dockerfile_dir"
 tmpdir=$(mktemp -d)
 
 # Extract the wasm files from the first build
-docker run --rm -v "$tmpdir:/output" canisters cp /watchdog-canister.wasm.gz /output/watchdog-canister.wasm.gz
-docker run --rm -v "$tmpdir:/output" canisters cp /uploader-canister.wasm.gz /output/uploader-canister.wasm.gz
+docker run --rm -v "$tmpdir:/output" canisters cp /watchdog.wasm.gz /output/watchdog.wasm.gz
+docker run --rm -v "$tmpdir:/output" canisters cp /uploader.wasm.gz /output/uploader.wasm.gz
 docker run --rm -v "$tmpdir:/output" canisters cp /ic-btc-canister.wasm.gz /output/ic-btc-canister.wasm.gz
 
 # Calculate the SHA256 sums for the first build
 echo "Calculating SHA256 sums (1st build)..."
-sha256sum1=$(sha256sum "$tmpdir/watchdog-canister.wasm.gz" "$tmpdir/uploader-canister.wasm.gz" "$tmpdir/ic-btc-canister.wasm.gz")
+if ! sha256sum1=$(sha256sum "$tmpdir/watchdog.wasm.gz" "$tmpdir/uploader.wasm.gz" "$tmpdir/ic-btc-canister.wasm.gz" 2>&1); then
+  echo "ERROR: Failed to calculate SHA256 sums for 1st build"
+  echo "$sha256sum1"
+  exit 1
+fi
 
 # Build the Docker image for the second time
 echo "Building Docker image (2nd build)..."
 docker build -t canisters "$dockerfile_dir"
 
 # Extract the wasm files from the second build
-docker run --rm -v "$tmpdir:/output" canisters cp /watchdog-canister.wasm.gz /output/watchdog-canister.wasm.gz
-docker run --rm -v "$tmpdir:/output" canisters cp /uploader-canister.wasm.gz /output/uploader-canister.wasm.gz
+docker run --rm -v "$tmpdir:/output" canisters cp /watchdog.wasm.gz /output/watchdog.wasm.gz
+docker run --rm -v "$tmpdir:/output" canisters cp /uploader.wasm.gz /output/uploader.wasm.gz
 docker run --rm -v "$tmpdir:/output" canisters cp /ic-btc-canister.wasm.gz /output/ic-btc-canister.wasm.gz
 
 # Calculate the SHA256 sums for the second build
 echo "Calculating SHA256 sums (2nd build)..."
-sha256sum2=$(sha256sum "$tmpdir/watchdog-canister.wasm.gz" "$tmpdir/uploader-canister.wasm.gz" "$tmpdir/ic-btc-canister.wasm.gz")
+if ! sha256sum2=$(sha256sum "$tmpdir/watchdog.wasm.gz" "$tmpdir/uploader.wasm.gz" "$tmpdir/ic-btc-canister.wasm.gz" 2>&1); then
+  echo "ERROR: Failed to calculate SHA256 sums for 2nd build"
+  echo "$sha256sum2"
+  exit 1
+fi
 
 # Compare the SHA256 sums
 if [ "$sha256sum1" = "$sha256sum2" ]; then
