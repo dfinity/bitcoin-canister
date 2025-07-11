@@ -4,11 +4,7 @@
 
 set -euo pipefail
 
-#ORIGINAL_PWD="$PWD"
-
-# Make sure we always run from the root
 SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPTS_DIR/.."
 
 function title() {
     echo "Build all canisters inside Docker and extract the requested \".wasm.gz\" files"
@@ -41,42 +37,14 @@ EOF
 ## Building
 
 function build() {
-    # image name and build args, made global because they're used in
-    # check_feature()
-    image_name="bitcoin-docker-build"
-
-    docker_build_args=(--tag "$image_name")
-    
-    local temp_chunk_file=""
-    
-    for canister in "${CANISTERS[@]}"
-    do
-        if [ "$canister" = "uploader" ]; then
-            mkdir -p tmp
-            temp_chunk_file="tmp/chunk_hashes.txt"
-            echo "Copying chunk hashes file to build context..."
-            cp "$CHUNK_HASHES_PATH" "$temp_chunk_file"
-            docker_build_args+=(--build-arg "CHUNK_HASHES_PATH=/tmp/chunk_hashes.txt")
-            break
-        fi
-    done
-    
-    docker_build_args+=(.)
-
     echo "The following image name will be used: $image_name"
     
-    # Enable BuildKit for advanced mount features
     export DOCKER_BUILDKIT=1
 
     set -x
     docker build "${docker_build_args[@]}"
     local build_exit_code=$?
     set +x
-    
-    if [ -n "$temp_chunk_file" ] && [ -f "$temp_chunk_file" ]; then
-        echo "Cleaning up temporary chunk file..."
-        rm "$temp_chunk_file"
-    fi
     
     return $build_exit_code
 }
@@ -142,7 +110,35 @@ do
     fi
 done
 
+image_name="bitcoin-docker-build"
+docker_build_args=(--tag "$image_name")
+temp_chunk_file=""
+
+# Handle chunk hashes file for uploader canister
+for canister in "${CANISTERS[@]}"
+do
+    if [ "$canister" = "uploader" ]; then
+        # Determine target directory relative to where we'll run docker (root)
+        target_dir="$SCRIPTS_DIR/../tmp"
+        mkdir -p "$target_dir"
+        temp_chunk_file="$target_dir/chunk_hashes.txt"
+        echo "Copying chunk hashes file to build context..."
+        cp "$CHUNK_HASHES_PATH" "$temp_chunk_file"
+        docker_build_args+=(--build-arg "CHUNK_HASHES_PATH=/tmp/chunk_hashes.txt")
+        break
+    fi
+done
+
+docker_build_args+=(.)
+
+cd "$SCRIPTS_DIR/.."
 build
+
+# Clean up temporary file
+if [ -n "$temp_chunk_file" ] && [ -f "$temp_chunk_file" ]; then
+    echo "Cleaning up temporary chunk file..."
+    rm "$temp_chunk_file"
+fi
 
 for canister in "${CANISTERS[@]}"
 do
