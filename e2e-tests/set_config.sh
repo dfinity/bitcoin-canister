@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
 # A test that verifies that the `set_config` endpoint works as expected.
+set -Eexuo pipefail
+
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT

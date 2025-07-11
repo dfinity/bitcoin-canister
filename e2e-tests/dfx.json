@@ -1,0 +1,58 @@
+{
+  "dfx": "0.23.0",
+  "canisters": {
+    "bitcoin": {
+      "type": "custom",
+      "candid": "../canister/candid.did",
+      "wasm": "../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz",
+      "build": "../scripts/build-canister.sh ic-btc-canister"
+    },
+    "upgradability-test": {
+      "type": "custom",
+      "candid": "../canister/candid.did",
+      "wasm": "upgradability-test.wasm.gz"
+    },
+    "e2e-scenario-1": {
+      "type": "custom",
+      "candid": "../e2e-tests/scenario-1/candid.did",
+      "build": "../scripts/build-canister.sh scenario-1",
+      "wasm": "../target/wasm32-unknown-unknown/release/scenario-1.wasm.gz"
+    },
+    "e2e-scenario-2": {
+      "type": "custom",
+      "candid": "../e2e-tests/scenario-2/candid.did",
+      "build": "../scripts/build-canister.sh scenario-2",
+      "package": "scenario-2",
+      "wasm": "../target/wasm32-unknown-unknown/release/scenario-2.wasm.gz"
+    },
+    "e2e-scenario-3": {
+      "type": "custom",
+      "candid": "../e2e-tests/scenario-3/candid.did",
+      "build": "../scripts/build-canister.sh scenario-3",
+      "package": "scenario-3",
+      "wasm": "../target/wasm32-unknown-unknown/release/scenario-3.wasm.gz"
+    },
+    "e2e-disable-api-if-not-fully-synced-flag": {
+      "type": "custom",
+      "candid": "../e2e-tests/disable-api-if-not-fully-synced-flag/candid.did",
+      "build": "../scripts/build-canister.sh disable-api-if-not-fully-synced-flag",
+      "package": "disable-api-if-not-fully-synced-flag",
+      "wasm": "../target/wasm32-unknown-unknown/release/disable-api-if-not-fully-synced-flag.wasm.gz"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral",
+      "replica": {
+        "subnet_type": "system"
+      }
+    }
+  },
+  "version": 1
+}

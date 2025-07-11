@@ -1,0 +1,31 @@
+{
+  "dfx": "0.23.0",
+  "canisters": {
+    "watchdog": {
+      "type": "custom",
+      "candid": "../candid.did",
+      "build": "../../scripts/build-canister.sh watchdog",
+      "wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+    },
+    "watchdog-upgradability-test": {
+      "type": "custom",
+      "candid": "../candid.did",
+      "wasm": "watchdog-upgradability-test.wasm.gz"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral",
+      "replica": {
+        "subnet_type": "system"
+      }
+    }
+  },
+  "version": 1
+}

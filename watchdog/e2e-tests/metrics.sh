@@ -6,6 +6,7 @@ set -Eexuo pipefail
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source "${SCRIPT_DIR}/utils.sh"
+pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT
