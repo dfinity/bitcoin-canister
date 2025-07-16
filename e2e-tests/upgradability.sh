@@ -31,7 +31,16 @@ get_latest_release_url() {
 download_latest_release() {
   local url
   url=$(get_latest_release_url)
+  if [[ -z "$url" ]]; then
+    echo "ERROR: Failed to retrieve latest release URL"
+    exit 1
+  fi
+  echo "Downloading from: $url"
   wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "${url}"
+  if [[ ! -f "${REFERENCE_CANISTER_NAME}.wasm.gz" ]]; then
+    echo "ERROR: wasm file was not downloaded"
+    exit 1
+  fi
 }
 download_latest_release
 
