@@ -6,11 +6,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitcoin = { workspace = true, features = ["use-serde"] }
+bitcoin = { workspace = true, features = ["serde"] }
 # An optional dependency to benchmark parts of the code.
 canbench-rs = { workspace = true, optional = true }
 candid = { workspace = true }
 ciborium = { workspace = true }
+datasize = { workspace = true }
 hex = { workspace = true }
 ic-btc-interface = { workspace = true }
 ic-btc-types = { workspace = true }
@@ -35,7 +36,6 @@ bench = false
 [dev-dependencies]
 assert_matches = { workspace = true }
 async-std = { version = "1.12.0", features = ["attributes"] }
-bitcoin = { workspace = true, features = ["rand"] } # needed for generating secp256k1 keys.
 byteorder = { workspace = true }
 candid_parser = { workspace = true }
 ic-btc-test-utils = { workspace = true }
@@ -48,3 +48,5 @@ test-strategy = "0.3.1"
 
 [features]
 file_memory = []
+save_chain_as_hex = []
+mock_time = []

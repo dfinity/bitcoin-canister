@@ -63,9 +63,9 @@ struct GetSuccessorsPartialResponse {
 }
 
 thread_local! {
-    static BLOCKS: RefCell<Vec<BlockBlob>> = RefCell::new(Vec::new());
+    static BLOCKS: RefCell<Vec<BlockBlob>> = const { RefCell::new(Vec::new())};
 
-    static COUNT: Cell<u64> = Cell::new(0);
+    static COUNT: Cell<u64> = const { Cell::new(0)};
 }
 
 // The number of blocks to generate (on top of genesis)
@@ -89,7 +89,7 @@ fn init() {
             block = block.with_transaction(
                 TransactionBuilder::new()
                     .with_lock_time(i)
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             );
         }

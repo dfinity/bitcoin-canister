@@ -1,4 +1,4 @@
-use bitcoin::BlockHeader;
+use bitcoin::block::Header;
 use ic_btc_interface::Height;
 use ic_btc_types::BlockHash;
 use serde::{Deserialize, Serialize};
@@ -6,12 +6,12 @@ use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone, PartialEq)]
 pub struct NextBlockHeaders {
-    hash_to_height_and_header: BTreeMap<BlockHash, (Height, BlockHeader)>,
+    hash_to_height_and_header: BTreeMap<BlockHash, (Height, Header)>,
     height_to_hash: BTreeMap<Height, Vec<BlockHash>>,
 }
 
 impl NextBlockHeaders {
-    pub fn insert(&mut self, block_header: BlockHeader, height: Height) {
+    pub fn insert(&mut self, block_header: Header, height: Height) {
         let block_hash = BlockHash::from(block_header.block_hash());
         let hash_vec = self.height_to_hash.entry(height).or_default();
 
@@ -57,7 +57,7 @@ impl NextBlockHeaders {
             .map(|(height, _)| height)
     }
 
-    pub fn get_header(&self, hash: &BlockHash) -> Option<&BlockHeader> {
+    pub fn get_header(&self, hash: &BlockHash) -> Option<&Header> {
         self.hash_to_height_and_header.get(hash).map(|res| &res.1)
     }
 }

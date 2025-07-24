@@ -1,60 +1,16 @@
-use crate::{
-    genesis_block,
-    types::{into_bitcoin_network, Address},
-};
-use bitcoin::{
-    hashes::Hash, secp256k1::rand::rngs::OsRng, secp256k1::Secp256k1, Address as BitcoinAddress,
-    BlockHeader, PublicKey, Script, WScriptHash, Witness,
-};
+use crate::{genesis_block, types::Address};
+use bitcoin::{block::Header, Address as BitcoinAddress, Witness};
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
-    BlockBuilder as ExternalBlockBuilder, TransactionBuilder as ExternalTransactionBuilder,
+    random_p2pkh_address, BlockBuilder as ExternalBlockBuilder,
+    TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_btc_types::{Block, OutPoint, Transaction};
-use ic_stable_structures::{BoundedStorable, Memory, StableBTreeMap};
-use proptest::prelude::RngCore;
+use ic_btc_types::{into_bitcoin_network, Block, OutPoint, Transaction};
+use ic_stable_structures::{Memory, StableBTreeMap, Storable};
 use std::{
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
-
-/// Generates a random P2PKH address.
-pub fn random_p2pkh_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
-
-    BitcoinAddress::p2pkh(
-        &PublicKey::new(secp.generate_keypair(&mut rng).1),
-        into_bitcoin_network(network),
-    )
-    .into()
-}
-
-pub fn random_p2tr_address(network: Network) -> Address {
-    ic_btc_test_utils::random_p2tr_address(into_bitcoin_network(network)).into()
-}
-
-pub fn random_p2wpkh_address(network: Network) -> Address {
-    let secp = Secp256k1::new();
-    let mut rng = OsRng::new().unwrap();
-    BitcoinAddress::p2wpkh(
-        &PublicKey::new(secp.generate_keypair(&mut rng).1),
-        into_bitcoin_network(network),
-    )
-    .expect("failed to create p2wpkh address")
-    .into()
-}
-
-pub fn random_p2wsh_address(network: Network) -> Address {
-    let mut rng = OsRng::new().unwrap();
-    let mut hash = [0u8; 32];
-    rng.fill_bytes(&mut hash);
-    BitcoinAddress::p2wsh(
-        &Script::new_v0_p2wsh(&WScriptHash::from_hash(Hash::from_slice(&hash).unwrap())),
-        into_bitcoin_network(network),
-    )
-    .into()
-}
 
 /// Builds a random chain with the given number of block and transactions.
 /// The genesis block used in the chain is also random.
@@ -77,7 +33,8 @@ fn build_chain_with_genesis_block(
     num_blocks: u32,
     num_transactions_per_block: u32,
 ) -> Vec<Block> {
-    let address = random_p2pkh_address(network);
+    let btc_network = into_bitcoin_network(network);
+    let address = random_p2pkh_address(btc_network).into();
     let mut blocks = vec![genesis_block.clone()];
     let mut prev_block: Block = genesis_block;
     let mut value = 1;
@@ -110,11 +67,7 @@ fn build_chain_with_genesis_block(
 }
 
 /// Returns true if the instances of `StableBTreeMap` provided are equal.
-pub fn is_stable_btreemap_equal<
-    M: Memory,
-    K: BoundedStorable + Ord + Eq + Clone,
-    V: BoundedStorable + Eq,
->(
+pub fn is_stable_btreemap_equal<M: Memory, K: Storable + Ord + Eq + Clone, V: Storable + Eq>(
     a: &StableBTreeMap<K, V, M>,
     b: &StableBTreeMap<K, V, M>,
 ) -> bool {
@@ -135,7 +88,7 @@ pub fn is_stable_btreemap_equal<
 /// as opposed to `bitcoin::Block`.
 pub struct BlockBuilder {
     builder: ExternalBlockBuilder,
-    mock_difficulty: Option<u64>,
+    mock_difficulty: Option<u128>,
 }
 
 impl BlockBuilder {
@@ -146,7 +99,7 @@ impl BlockBuilder {
         }
     }
 
-    pub fn with_prev_header(prev_header: &BlockHeader) -> Self {
+    pub fn with_prev_header(prev_header: &Header) -> Self {
         Self {
             builder: ExternalBlockBuilder::with_prev_header(*prev_header),
             mock_difficulty: None,
@@ -160,7 +113,7 @@ impl BlockBuilder {
         }
     }
 
-    pub fn with_difficulty(self, difficulty: u64) -> Self {
+    pub fn with_difficulty(self, difficulty: u128) -> Self {
         Self {
             mock_difficulty: Some(difficulty),
             ..self
@@ -173,7 +126,7 @@ impl BlockBuilder {
         block
     }
 
-    pub fn build_with_mock_difficulty(self, mock_difficulty: u64) -> Block {
+    pub fn build_with_mock_difficulty(self, mock_difficulty: u128) -> Block {
         let mut block = self.build();
         block.mock_difficulty = Some(mock_difficulty);
         block
@@ -222,7 +175,9 @@ impl TransactionBuilder {
     pub fn with_output(self, address: &Address, value: u64) -> Self {
         Self {
             builder: self.builder.with_output(
-                &BitcoinAddress::from_str(&address.to_string()).unwrap(),
+                &BitcoinAddress::from_str(&address.to_string())
+                    .map(|a| a.assume_checked())
+                    .unwrap(),
                 value,
             ),
         }
@@ -235,9 +190,9 @@ impl TransactionBuilder {
 
 pub struct BlockChainBuilder {
     num_blocks: u32,
-    prev_block_header: Option<BlockHeader>,
+    prev_block_header: Option<Header>,
     #[allow(clippy::type_complexity)]
-    difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u64)>,
+    difficulty_ranges: Vec<((Bound<usize>, Bound<usize>), u128)>,
 }
 
 impl BlockChainBuilder {
@@ -258,7 +213,7 @@ impl BlockChainBuilder {
     }
 
     /// Sets the difficulty of blocks at the given range of heights.
-    pub fn with_difficulty<R: RangeBounds<usize>>(mut self, difficulty: u64, range: R) -> Self {
+    pub fn with_difficulty<R: RangeBounds<usize>>(mut self, difficulty: u128, range: R) -> Self {
         self.difficulty_ranges.push((
             (range.start_bound().cloned(), range.end_bound().cloned()),
             difficulty,
@@ -290,7 +245,7 @@ impl BlockChainBuilder {
         blocks
     }
 
-    fn get_difficulty(&self, i: usize) -> Option<u64> {
+    fn get_difficulty(&self, i: usize) -> Option<u128> {
         for (range, difficulty) in &self.difficulty_ranges {
             if range.contains(&i) {
                 return Some(*difficulty);

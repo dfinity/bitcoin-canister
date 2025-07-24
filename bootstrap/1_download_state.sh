@@ -1,52 +1,41 @@
 #!/usr/bin/env bash
 #
-# Script for downloading the bitcoin state.
+# Script for downloading the Bitcoin state up to a specified block height.
 set -euo pipefail
 
-BITCOIN_D=$1/bin/bitcoind
-HEIGHT=$2
-NETWORK=$3
+source "./utils.sh"
 
-if ! [[ "$NETWORK" == "mainnet" || "$NETWORK" == "testnet" ]]; then
-    echo "NETWORK must be set to either 'mainnet' or 'testnet'"
-    false
-fi
+BITCOIN_D="$1/bin/bitcoind"
+NETWORK="$2"
+HEIGHT="$3"
 
-if [ -d "data" ];
-then
-    echo "data directory already exists."
+validate_file_exists "$BITCOIN_D"
+validate_network "$NETWORK"
+
+# Check if the data directory already exists.
+if [[ -d "$DATA_DIR" ]]; then
+    echo "Error: The '$DATA_DIR' directory already exists. Please remove it or choose another directory."
     exit 1
 fi
+# Create the data directory (including parent directories if needed).
+mkdir -p "$DATA_DIR"
 
-# Create a directory to store the blocks.
-mkdir data
-
-# Create a bitcoin.conf file that downloads blocks up to the given height.
+# Generate a temporary bitcoin.conf file with required settings.
 CONF_FILE=$(mktemp)
-cat << EOF > "$CONF_FILE"
-# Stop running after reaching the given height in the main chain.
-stopatheight=$HEIGHT
+generate_config "$NETWORK" "$CONF_FILE" \
+    "# Stop running after reaching the given height in the main chain." \
+    "stopatheight=$HEIGHT"
 
-# Reduce storage requirements by only storing most recent N MiB of block.
-prune=5000
-
-# Dummy credentials that are required by bitcoin-cli.
-rpcuser=ic-btc-integration
-rpcpassword=QPQiNaph19FqUsCrBRN0FII7lyM26B51fAMeBQzCb-E=
-rpcauth=ic-btc-integration:cdf2741387f3a12438f69092f0fdad8e\$62081498c98bee09a0dce2b30671123fa561932992ce377585e8e08bb0c11dfa
-EOF
-
-# Configure bitcoin.conf to connect to the testnet network if needed.
-if [[ "$NETWORK" == "testnet" ]]; then
-    echo "chain=test" >> "$CONF_FILE"
-fi
-
+# Log file for monitoring progress.
 LOG_FILE=$(mktemp)
-echo "Downloading the bitcoin blocks up to height $HEIGHT (output streamed to $LOG_FILE)
-This can take several hours..."
-$BITCOIN_D -conf="$CONF_FILE" -datadir="$(pwd)/data" > "$LOG_FILE"
-echo "Done."
+echo "Downloading Bitcoin blocks up to height $HEIGHT. Logs can be found in: $LOG_FILE"
+echo "This may take several hours. Please wait..."
 
-echo "Making a backup of the downloaded state in ./data_bk"
-cp -r ./data ./data_bk
-echo "Done."
+# Start the Bitcoin daemon.
+"$BITCOIN_D" -conf="$CONF_FILE" -datadir="$DATA_DIR" > "$LOG_FILE" 2>&1
+echo "Download complete."
+
+# Create a backup of the downloaded data.
+echo "Creating a backup of the downloaded state in: $BACKUP_DIR"
+cp -r "$DATA_DIR" "$BACKUP_DIR"
+echo "Backup complete."

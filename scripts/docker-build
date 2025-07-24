@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# vim: ft=bash
+# Build the canisters inside docker. This outputs the requested ".wasm.gz" files.
+
+set -euo pipefail
+
+SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+function title() {
+    echo "Build all canisters inside Docker and extract the requested \".wasm.gz\" files"
+}
+
+function usage() {
+    cat << EOF
+
+Usage:
+  $0 [OPTIONS] [canister1] [canister2] ...
+
+EOF
+}
+
+function help() {
+    cat << EOF
+
+Options:
+  --chunk-hashes PATH : Path to chunk_hashes.txt file (required when building uploader canister)
+  -h, --help          : Show this help message
+
+Arguments:
+  canister1 canister2 ... : Optional list of canister names to extract (e.g., ic-btc-canister, watchdog, uploader)
+                           If no arguments are provided, ic-btc-canister and watchdog are extracted by default
+
+This will create (and override) the corresponding ".wasm.gz" files in the current directory.
+EOF
+}
+
+## Building
+
+function build() {
+    echo "The following image name will be used: $image_name"
+    
+    export DOCKER_BUILDKIT=1
+
+    set -x
+    docker build "${docker_build_args[@]}"
+    local build_exit_code=$?
+    set +x
+    
+    return $build_exit_code
+}
+
+# ARGUMENT PARSING
+
+CANISTERS=()
+CHUNK_HASHES_PATH=""
+
+while [[ $# -gt 0 ]]
+do
+    case $1 in
+        -h|--help)
+            title
+            usage
+            help
+            exit 0
+            ;;
+        --chunk-hashes)
+            if [[ -n "${2:-}" ]]; then
+                CHUNK_HASHES_PATH="$2"
+                shift
+                shift
+            else
+                echo "ERROR: --chunk-hashes requires a path argument"
+                usage
+                exit 1
+            fi
+            ;;
+        uploader|ic-btc-canister|watchdog)
+            CANISTERS+=("$1")
+            shift
+            ;;
+        *)
+            echo "ERROR: unknown argument '$1'"
+            echo "Valid canisters are: uploader, ic-btc-canister, watchdog"
+            usage
+            echo
+            echo "Use '$0 --help' for more information"
+            exit 1
+            ;;
+    esac
+done
+
+if [ -n "$CHUNK_HASHES_PATH" ] && [ ! -f "$CHUNK_HASHES_PATH" ]; then
+    echo "ERROR: chunk-hashes file not found: $CHUNK_HASHES_PATH"
+    exit 1
+fi
+
+if [ ${#CANISTERS[@]} -eq 0 ]; then
+    CANISTERS=("ic-btc-canister" "watchdog")
+fi
+
+# Validate that chunk-hashes is provided if uploader is requested
+for canister in "${CANISTERS[@]}"
+do
+    if [ "$canister" = "uploader" ] && [ -z "$CHUNK_HASHES_PATH" ]; then
+        echo "ERROR: --chunk-hashes is required when building uploader canister"
+        usage
+        echo
+        echo "Use '$0 --help' for more information"
+        exit 1
+    fi
+done
+
+image_name="bitcoin-docker-build"
+docker_build_args=(--tag "$image_name")
+temp_chunk_file=""
+
+# Handle chunk hashes file for uploader canister
+for canister in "${CANISTERS[@]}"
+do
+    if [ "$canister" = "uploader" ]; then
+        # Determine target directory relative to where we'll run docker (root)
+        target_dir="$SCRIPTS_DIR/../tmp"
+        mkdir -p "$target_dir"
+        temp_chunk_file="$target_dir/chunk_hashes.txt"
+        echo "Copying chunk hashes file to build context..."
+        cp "$CHUNK_HASHES_PATH" "$temp_chunk_file"
+        docker_build_args+=(--build-arg "CHUNK_HASHES_PATH=/tmp/chunk_hashes.txt")
+        break
+    fi
+done
+
+docker_build_args+=(.)
+
+cd "$SCRIPTS_DIR/.."
+build
+
+# Clean up temporary file
+if [ -n "$temp_chunk_file" ] && [ -f "$temp_chunk_file" ]; then
+    echo "Cleaning up temporary chunk file..."
+    rm "$temp_chunk_file"
+fi
+
+for canister in "${CANISTERS[@]}"
+do
+    echo "Extracting $canister.wasm.gz from container to $PWD"
+    docker run --rm --entrypoint cat "$image_name" "/$canister.wasm.gz" > "$canister.wasm.gz"
+done

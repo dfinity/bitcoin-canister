@@ -27,13 +27,14 @@ resolver = "2"
 
 [workspace.dependencies]
 assert_matches = "1.5.0"
-bitcoin = "0.28.1"
+bitcoin = "0.32.5"
 byteorder = "1.4.3"
-canbench-rs = { version = "0.1.1" }
+canbench-rs = "0.2.0"
 candid = "0.10.6"
-candid_parser = { version = "0.1.4" }
+candid_parser = "0.1.4"
 ciborium = "0.2.1"
 clap = { version = "4.0.11", features = ["derive"] }
+datasize = "0.2.15"
 futures = "0.3.28"
 hex = "0.4.3"
 ic-btc-canister = { path = "./canister" }
@@ -45,14 +46,14 @@ ic-cdk = "0.15.1"
 ic-cdk-macros = "0.15"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
-ic-stable-structures = "0.5.2"
+ic-stable-structures = "0.6.7"
 lazy_static = "1.4.0"
-pocket-ic = "4.0.0"
+pocket-ic = "6.0.0"
 serde = "1.0.171"
 serde_bytes = "0.11"
 serde_json = "1.0.94"
 tempfile = "3.10.1"
-tokio = { version = "1.29.1", features = ["full"] }
+tokio = { version = "1.44.2", features = ["full"] }
 
 [profile.release-lto]
 inherits = "release"

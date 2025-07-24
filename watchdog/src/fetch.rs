@@ -1,5 +1,4 @@
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::BitcoinNetwork;
+use crate::{bitcoin_block_apis::BitcoinBlockApi, config::BitcoinNetwork};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
@@ -88,6 +87,10 @@ mod test {
                     height: Some(700006),
                 },
                 BlockInfo {
+                    provider: BitcoinBlockApi::MempoolMainnet,
+                    height: Some(700008),
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::BitcoinCanister,
                     height: Some(700007),
                 },
@@ -105,24 +108,12 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsComTestnet,
-                    height: Some(2000001),
-                },
-                BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairComTestnet,
-                    height: Some(2000002),
-                },
-                BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherComTestnet,
-                    height: Some(2000003),
-                },
-                BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfoTestnet,
-                    height: Some(2000004),
+                    provider: BitcoinBlockApi::MempoolTestnet,
+                    height: Some(55002),
                 },
                 BlockInfo {
                     provider: BitcoinBlockApi::BitcoinCanister,
-                    height: Some(2000007),
+                    height: Some(55001),
                 },
             ]
         );
@@ -166,6 +157,10 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
+                    provider: BitcoinBlockApi::MempoolMainnet,
+                    height: None,
+                },
+                BlockInfo {
                     provider: BitcoinBlockApi::BitcoinCanister,
                     height: None,
                 },
@@ -183,19 +178,7 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsComTestnet,
-                    height: None,
-                },
-                BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairComTestnet,
-                    height: None,
-                },
-                BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherComTestnet,
-                    height: None,
-                },
-                BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfoTestnet,
+                    provider: BitcoinBlockApi::MempoolTestnet,
                     height: None,
                 },
                 BlockInfo {

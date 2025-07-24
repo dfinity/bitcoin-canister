@@ -1,7 +1,9 @@
+use bitcoin::hashes::Hash;
 use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
 mod serde;
+use std::ops::{Add, Sub};
 
 /// Represents a non-empty block chain as:
 /// * the first block of the chain
@@ -74,6 +76,65 @@ impl fmt::Display for EmptyChainError {
     }
 }
 
+/// Depth of a blockchain, measured in the number of blocks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Depth(u64);
+
+impl Depth {
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> u64 {
+        self.0
+    }
+
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+}
+
+impl Add for Depth {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
+    }
+}
+
+impl fmt::Display for Depth {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// Depth based on accumulated difficulty, used for block stability checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DifficultyBasedDepth(u128);
+
+impl DifficultyBasedDepth {
+    pub const fn new(value: u128) -> Self {
+        Self(value)
+    }
+
+    pub fn get(self) -> u128 {
+        self.0
+    }
+}
+
+impl Add for DifficultyBasedDepth {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 + other.0)
+    }
+}
+
+impl Sub for DifficultyBasedDepth {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self::Output {
+        Self(self.0 - other.0)
+    }
+}
+
 /// Maintains a tree of connected blocks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockTree {
@@ -122,12 +183,24 @@ impl BlockTree {
     }
 
     /// Returns the number of tips in the tree.
-    pub fn num_tips(&self) -> u32 {
+    pub fn tip_count(&self) -> u32 {
         if self.children.is_empty() {
             1
         } else {
-            self.children.iter().map(|c| c.num_tips()).sum()
+            self.children.iter().map(|c| c.tip_count()).sum()
         }
+    }
+
+    /// Returns the depths of all tips in the tree.
+    pub fn tip_depths(&self) -> Vec<usize> {
+        if self.children.is_empty() {
+            return vec![1]; // Leaf node, depth is 1
+        }
+
+        self.children
+            .iter()
+            .flat_map(|child| child.tip_depths().into_iter().map(|d| d + 1))
+            .collect()
     }
 
     /// Extends the tree with the given block.
@@ -146,7 +219,12 @@ impl BlockTree {
             Some((block_subtree, _)) => {
                 assert_eq!(
                     block_subtree.root.block_hash().to_vec(),
-                    block.header().prev_blockhash.to_vec()
+                    block
+                        .header()
+                        .prev_blockhash
+                        .as_raw_hash()
+                        .as_byte_array()
+                        .to_vec()
                 );
                 // Add the block as a successor.
                 block_subtree.children.push(BlockTree::new(block));
@@ -221,21 +299,21 @@ impl BlockTree {
     }
 
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
-    pub fn difficulty_based_depth(&self, network: Network) -> u128 {
-        let mut res: u128 = 0;
+    pub fn difficulty_based_depth(&self, network: Network) -> DifficultyBasedDepth {
+        let mut res = DifficultyBasedDepth::new(0);
         for child in self.children.iter() {
             res = std::cmp::max(res, child.difficulty_based_depth(network));
         }
-        res += self.root.difficulty(network) as u128;
+        res = res + DifficultyBasedDepth::new(self.root.difficulty(network));
         res
     }
 
-    pub fn depth(&self) -> u128 {
-        let mut res: u128 = 0;
+    pub fn depth(&self) -> Depth {
+        let mut res = Depth::new(0);
         for child in self.children.iter() {
             res = std::cmp::max(res, child.depth());
         }
-        res += 1;
+        res = res + Depth::new(1);
         res
     }
 
@@ -263,7 +341,7 @@ impl BlockTree {
         find_mut_helper(self, blockhash, 0)
     }
 
-    // Returns true if a block exists in the tree, false otherwise.
+    /// Returns true if a block exists in the tree, false otherwise.
     fn contains(&self, block: &Block) -> bool {
         if self.root.block_hash() == block.block_hash() {
             return true;
@@ -276,6 +354,32 @@ impl BlockTree {
         }
 
         false
+    }
+
+    /// Returns the hashes of all blocks in the tree.
+    pub fn get_hashes(&self) -> Vec<BlockHash> {
+        let mut hashes = Vec::with_capacity(self.children.len() + 1);
+        hashes.push(self.root.block_hash());
+        hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
+        hashes
+    }
+
+    /// Returns the number of blocks in the tree.
+    pub fn blocks_count(&self) -> usize {
+        1 + self
+            .children
+            .iter()
+            .map(|child| child.blocks_count())
+            .sum::<usize>()
+    }
+
+    /// Returns all blocks in the tree.
+    pub fn blocks(&self) -> Vec<Block> {
+        let mut blocks = vec![self.root.clone()];
+        for child in self.children.iter() {
+            blocks.extend(child.blocks());
+        }
+        blocks
     }
 }
 
@@ -388,7 +492,12 @@ mod test {
             for i in 1..chain.len() {
                 assert_eq!(
                     chain[i - 1].block_hash().to_vec(),
-                    chain[i].header().prev_blockhash.to_vec()
+                    chain[i]
+                        .header()
+                        .prev_blockhash
+                        .as_raw_hash()
+                        .as_byte_array()
+                        .to_vec()
                 )
             }
         }
@@ -429,7 +538,12 @@ mod test {
                 for i in 1..chain.len() {
                     assert_eq!(
                         chain[i - 1].block_hash().to_vec(),
-                        chain[i].header().prev_blockhash.to_vec()
+                        chain[i]
+                            .header()
+                            .prev_blockhash
+                            .as_raw_hash()
+                            .as_byte_array()
+                            .to_vec()
                     )
                 }
             }
@@ -442,7 +556,10 @@ mod test {
     fn test_difficulty_based_depth_single_block() {
         let block_tree = BlockTree::new(BlockBuilder::genesis().build_with_mock_difficulty(5));
 
-        assert_eq!(block_tree.difficulty_based_depth(Network::Mainnet), 5);
+        assert_eq!(
+            block_tree.difficulty_based_depth(Network::Mainnet),
+            DifficultyBasedDepth::new(5)
+        );
     }
 
     #[test]
@@ -462,7 +579,10 @@ mod test {
 
         // The maximum sum of block difficulties from the root to a leaf is the sum
         // of the root and child with the greatest difficulty which is 5 + 10 = 15.
-        assert_eq!(block_tree.difficulty_based_depth(Network::Mainnet), 15);
+        assert_eq!(
+            block_tree.difficulty_based_depth(Network::Mainnet),
+            DifficultyBasedDepth::new(15)
+        );
     }
 
     #[test]

@@ -6,14 +6,12 @@
 //!   --network testnet \
 //!   --output balances.bin \
 //!   --utxos-dump-path utxos-dump.csv
-use bitcoin::{Address as BitcoinAddress, Script, Txid as BitcoinTxid};
+use bitcoin::{hashes::Hash, Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
 use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo};
 use ic_btc_interface::Network;
 use ic_btc_types::{OutPoint, Txid};
-use ic_stable_structures::{
-    storable::Blob, BoundedStorable, DefaultMemoryImpl, StableBTreeMap, Storable,
-};
+use ic_stable_structures::{storable::Blob, DefaultMemoryImpl, StableBTreeMap, Storable};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -44,14 +42,20 @@ fn main() {
     let reader = BufReader::new(utxos_file);
 
     let memory = DefaultMemoryImpl::default();
-    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::MAX_SIZE as usize }>, (), _> =
+    let mut address_utxos: StableBTreeMap<Blob<{ AddressUtxo::BOUND.max_size() as usize }>, (), _> =
         StableBTreeMap::init(memory.clone());
 
     for (i, line) in reader.lines().enumerate() {
         let line = line.unwrap();
         let parts: Vec<_> = line.split(',').collect();
 
-        let txid = Txid::from(BitcoinTxid::from_str(parts[1]).unwrap().to_vec());
+        let txid = Txid::from(
+            BitcoinTxid::from_str(parts[1])
+                .unwrap()
+                .as_raw_hash()
+                .as_byte_array()
+                .to_vec(),
+        );
         let vout: u32 = parts[2].parse().unwrap();
         let address_str = parts[5];
         let height: u32 = parts[0].parse().unwrap();
@@ -63,13 +67,15 @@ fn main() {
 
         // Load the address. The UTXO dump tool we use doesn't output all the addresses
         // we support, so if parsing the address itself fails, we try parsing the script directly.
+        let bitcoin_network = into_bitcoin_network(args.network);
         let address = if let Ok(address) = BitcoinAddress::from_str(address_str) {
-            Some(address)
+            let checked_address = address
+                .require_network(bitcoin_network)
+                .expect("Address must be valid for network");
+            Some(checked_address)
         } else {
-            BitcoinAddress::from_script(
-                &Script::from(hex::decode(script).expect("script must be valid hex")),
-                into_bitcoin_network(args.network),
-            )
+            let bytes = hex::decode(script).expect("script must be valid hex");
+            BitcoinAddress::from_script(Script::from_bytes(&bytes), bitcoin_network).ok()
         };
 
         if let Some(address) = address {

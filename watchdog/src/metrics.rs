@@ -1,7 +1,7 @@
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::BitcoinNetwork;
-use crate::health::HeightStatus;
-use crate::types::CandidHttpResponse;
+use crate::{
+    bitcoin_block_apis::BitcoinBlockApi, config::BitcoinNetwork, health::HeightStatus,
+    types::CandidHttpResponse,
+};
 use ic_btc_interface::Flag;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;

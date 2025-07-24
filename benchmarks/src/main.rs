@@ -1,5 +1,5 @@
 use bitcoin::consensus::Decodable;
-use bitcoin::{consensus::Encodable, Block as BitcoinBlock, BlockHeader};
+use bitcoin::{block::Header, consensus::Encodable, Block as BitcoinBlock};
 use canbench_rs::{bench, bench_fn, BenchResult};
 use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{InitConfig, Network};
@@ -9,7 +9,7 @@ use ic_cdk_macros::init;
 use std::cell::RefCell;
 
 thread_local! {
-    static TESTNET_BLOCKS: RefCell<Vec<Block>> =  RefCell::new(vec![]);
+    static TESTNET_BLOCKS: RefCell<Vec<Block>> =  const { RefCell::new(vec![])};
 }
 
 #[init]
@@ -22,11 +22,16 @@ fn init() {
                 .split('\n')
                 .map(|block_hex| {
                     let block_bytes = hex::decode(block_hex).unwrap();
-                    Block::new(BitcoinBlock::consensus_decode(block_bytes.as_slice()).unwrap())
+                    Block::new(BitcoinBlock::consensus_decode(&mut block_bytes.as_slice()).unwrap())
                 })
                 .collect(),
         );
     });
+
+    // Set mock time to avoid timestamp validation failure due to blocks appearing to be > 2 hours
+    // in the future.
+    let june_2025 = (55.5 * 365.25 * 24.0 * 60.0 * 60.0) as u64;
+    ic_btc_canister::runtime::mock_time::set_mock_time_secs(june_2025);
 }
 
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
@@ -103,8 +108,7 @@ fn insert_block_headers() -> BenchResult {
         let mut next_block_headers = vec![];
         for i in blocks_to_insert..blocks_to_insert + block_headers_to_insert {
             let mut block_header_blob = vec![];
-            BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
-                .unwrap();
+            Header::consensus_encode(blocks[i as usize].header(), &mut block_header_blob).unwrap();
             next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 
@@ -133,8 +137,7 @@ fn insert_block_headers_multiple_times() -> BenchResult {
         let mut next_block_headers = vec![];
         for i in 0..1000 {
             let mut block_header_blob = vec![];
-            BlockHeader::consensus_encode(blocks[i as usize].header(), &mut block_header_blob)
-                .unwrap();
+            Header::consensus_encode(blocks[i as usize].header(), &mut block_header_blob).unwrap();
             next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 

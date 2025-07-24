@@ -1,5 +1,5 @@
 use bitcoin::{
-    blockdata::constants::genesis_block, consensus::Encodable, Address, Block, BlockHeader,
+    block::Header, blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
     Network as BitcoinNetwork,
 };
 use candid::CandidType;
@@ -69,11 +69,11 @@ struct GetSuccessorsPartialResponse {
 }
 
 thread_local! {
-    static BLOCKS: RefCell<Vec<BlockBlob>> = RefCell::new(Vec::new());
+    static BLOCKS: RefCell<Vec<BlockBlob>> = const { RefCell::new(Vec::new())};
 
-    static COUNT: Cell<usize> = Cell::new(0);
+    static COUNT: Cell<usize> = const { Cell::new(0) };
 
-    static BLOCK_HEADERS: RefCell<Vec<BlockHeaderBlob>> = RefCell::new(Vec::new());
+    static BLOCK_HEADERS: RefCell<Vec<BlockHeaderBlob>> = const { RefCell::new(Vec::new())};
 }
 
 // Initialize the blocks.
@@ -87,7 +87,7 @@ fn init() {
         let block = BlockBuilder::with_prev_header(prev_header)
             .with_transaction(
                 TransactionBuilder::new()
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             )
             .build();
@@ -99,7 +99,7 @@ fn init() {
         let next_block = BlockBuilder::with_prev_header(prev_header)
             .with_transaction(
                 TransactionBuilder::new()
-                    .with_output(&Address::from_str(ADDRESS).unwrap(), 1)
+                    .with_output(&Address::from_str(ADDRESS).unwrap().assume_checked(), 1)
                     .build(),
             )
             .build();
@@ -153,7 +153,7 @@ fn append_block(block: &Block) {
     BLOCKS.with(|b| b.borrow_mut().push(block_bytes));
 }
 
-fn append_block_header(block_header: &BlockHeader) {
+fn append_block_header(block_header: &Header) {
     let mut block_bytes = vec![];
     block_header.consensus_encode(&mut block_bytes).unwrap();
     BLOCK_HEADERS.with(|b| b.borrow_mut().push(block_bytes));

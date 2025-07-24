@@ -2,14 +2,15 @@
 //! NOTE: These types are _not_ part of the interface.
 
 use bitcoin::{
-    util::uint::Uint256, Block as BitcoinBlock, Network as BitcoinNetwork,
-    OutPoint as BitcoinOutPoint,
+    block::Header, hashes::Hash, params::Params, Block as BitcoinBlock, Network as BitcoinNetwork,
+    OutPoint as BitcoinOutPoint, Target,
 };
 use candid::CandidType;
+use datasize::DataSize;
 use ic_btc_interface::{Network, Txid as PublicTxid};
-use ic_stable_structures::{BoundedStorable, Storable};
+use ic_stable_structures::{storable::Bound, Storable};
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, cell::RefCell, str::FromStr};
+use std::{borrow::Cow, cell::RefCell, fmt, str::FromStr};
 
 // NOTE: If new fields are added, then the implementation of `PartialEq` should be updated.
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
@@ -19,7 +20,7 @@ pub struct Block {
     block_hash: RefCell<Option<BlockHash>>,
 
     #[cfg(feature = "mock_difficulty")]
-    pub mock_difficulty: Option<u64>,
+    pub mock_difficulty: Option<u128>,
 }
 
 impl Block {
@@ -37,7 +38,7 @@ impl Block {
         }
     }
 
-    pub fn header(&self) -> &bitcoin::BlockHeader {
+    pub fn header(&self) -> &Header {
         &self.block.header
     }
 
@@ -52,7 +53,7 @@ impl Block {
         &self.transactions
     }
 
-    pub fn difficulty(&self, network: Network) -> u64 {
+    pub fn difficulty(&self, network: Network) -> u128 {
         #[cfg(feature = "mock_difficulty")]
         if let Some(difficulty) = self.mock_difficulty {
             return difficulty;
@@ -63,14 +64,16 @@ impl Block {
 
     pub fn consensus_encode(&self, buffer: &mut Vec<u8>) -> Result<usize, std::io::Error> {
         use bitcoin::consensus::Encodable;
-        self.block.consensus_encode(buffer)
+        self.block
+            .consensus_encode(buffer)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 
     // Computes the difficulty given a block's target.
     // The definition here corresponds to what is referred as "bdiff" in
     // https://en.bitcoin.it/wiki/Difficulty
-    pub fn target_difficulty(network: Network, target: Uint256) -> u64 {
-        (ic_btc_validation::max_target(&into_bitcoin_network(network)) / target).low_u64()
+    pub fn target_difficulty(network: Network, target: Target) -> u128 {
+        target.difficulty(Params::new(into_bitcoin_network(network)))
     }
 
     pub fn internal_bitcoin_block(&self) -> &BitcoinBlock {
@@ -98,8 +101,8 @@ impl Transaction {
         }
     }
 
-    pub fn is_coin_base(&self) -> bool {
-        self.tx.is_coin_base()
+    pub fn is_coinbase(&self) -> bool {
+        self.tx.is_coinbase()
     }
 
     pub fn input(&self) -> &[bitcoin::TxIn] {
@@ -110,19 +113,38 @@ impl Transaction {
         &self.tx.output
     }
 
+    /// Returns the “virtual size” (vsize) of this transaction.
+    ///
+    /// Virtual transaction size is defined as Transaction weight / 4 (rounded up to the next integer).
     pub fn vsize(&self) -> usize {
         self.tx.vsize()
     }
 
-    pub fn size(&self) -> usize {
-        self.tx.size()
+    /// Returns the total size of this transaction in bytes.
+    ///
+    /// Total transaction size is the transaction size in bytes serialized as described in BIP144, including base data and witness data.
+    pub fn total_size(&self) -> usize {
+        self.tx.total_size()
+    }
+
+    /// Returns the base size of this transaction in bytes.
+    ///
+    /// Base transaction size is the size of the transaction serialised with the witness data stripped.
+    pub fn base_size(&self) -> usize {
+        self.tx.base_size()
     }
 
     pub fn txid(&self) -> Txid {
         if self.txid.borrow().is_none() {
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
-            let txid = Txid::from(self.tx.txid().to_vec());
+            let txid = Txid::from(
+                self.tx
+                    .compute_txid()
+                    .as_raw_hash()
+                    .as_byte_array()
+                    .to_vec(),
+            );
             self.txid.borrow_mut().replace(txid);
         }
 
@@ -160,7 +182,11 @@ impl FromStr for Txid {
 
     fn from_str(txid: &str) -> Result<Self, Self::Err> {
         use bitcoin::Txid as BitcoinTxid;
-        let bytes = BitcoinTxid::from_str(txid).unwrap().to_vec();
+        let bytes = BitcoinTxid::from_str(txid)
+            .unwrap()
+            .as_raw_hash()
+            .as_byte_array()
+            .to_vec();
         Ok(Self::from(bytes))
     }
 }
@@ -208,7 +234,9 @@ impl std::fmt::Display for Txid {
 }
 
 // A blob representing a block hash.
-#[derive(CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash)]
+#[derive(
+    CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash, DataSize,
+)]
 pub struct BlockHash(Vec<u8>);
 
 impl Storable for BlockHash {
@@ -219,11 +247,11 @@ impl Storable for BlockHash {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self::from(bytes.to_vec())
     }
-}
 
-impl BoundedStorable for BlockHash {
-    const MAX_SIZE: u32 = 32;
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: 32,
+        is_fixed_size: true,
+    };
 }
 
 impl BlockHash {
@@ -236,9 +264,9 @@ impl From<Vec<u8>> for BlockHash {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
             bytes.len() as u32,
-            Self::MAX_SIZE,
+            Self::BOUND.max_size(),
             "BlockHash must {} bytes",
-            Self::MAX_SIZE
+            Self::BOUND.max_size()
         );
         Self(bytes)
     }
@@ -246,7 +274,7 @@ impl From<Vec<u8>> for BlockHash {
 
 impl From<bitcoin::BlockHash> for BlockHash {
     fn from(block_hash: bitcoin::BlockHash) -> Self {
-        Self(block_hash.to_vec())
+        Self(block_hash.as_raw_hash().as_byte_array().to_vec())
     }
 }
 
@@ -257,16 +285,18 @@ impl FromStr for BlockHash {
         Ok(Self(
             bitcoin::BlockHash::from_str(s)
                 .map_err(|e| e.to_string())?
+                .as_raw_hash()
+                .as_byte_array()
                 .to_vec(),
         ))
     }
 }
 
-impl ToString for BlockHash {
-    fn to_string(&self) -> String {
+impl fmt::Display for BlockHash {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut b = self.0.clone();
         b.reverse();
-        hex::encode(b)
+        write!(f, "{}", hex::encode(b))
     }
 }
 
@@ -278,14 +308,14 @@ impl Default for BlockHash {
 
 impl std::fmt::Debug for BlockHash {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "BlockHash({})", self.to_string())
+        write!(f, "BlockHash({})", self)
     }
 }
 
-fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
+pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     match network {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
-        Network::Testnet => BitcoinNetwork::Testnet,
+        Network::Testnet => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
     }
 }
@@ -315,7 +345,7 @@ impl OutPoint {
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self {
-            txid: Txid::from(bitcoin_outpoint.txid.to_vec()),
+            txid: Txid::from(bitcoin_outpoint.txid.as_raw_hash().as_byte_array().to_vec()),
             vout: bitcoin_outpoint.vout,
         }
     }
@@ -323,10 +353,8 @@ impl From<&BitcoinOutPoint> for OutPoint {
 
 impl From<OutPoint> for bitcoin::OutPoint {
     fn from(outpoint: OutPoint) -> Self {
-        use bitcoin::hashes::Hash;
-
         Self {
-            txid: bitcoin::Txid::from_hash(
+            txid: bitcoin::Txid::from_raw_hash(
                 Hash::from_slice(outpoint.txid.as_bytes()).expect("txid must be valid"),
             ),
             vout: outpoint.vout,
@@ -352,20 +380,21 @@ impl Storable for OutPoint {
             vout: u32::from_le_bytes(bytes[32..36].try_into().unwrap()),
         }
     }
-}
 
-impl BoundedStorable for OutPoint {
-    const MAX_SIZE: u32 = OutPoint::size();
-    const IS_FIXED_SIZE: bool = true;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: OutPoint::size(),
+        is_fixed_size: true,
+    };
 }
 
 #[test]
 fn target_difficulty() {
+    use bitcoin::CompactTarget;
     // Example found in https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(0x1b0404cb)
+            Target::from_compact(CompactTarget::from_consensus(0x1b0404cb))
         ),
         16_307
     );
@@ -375,7 +404,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386397584)
+            Target::from_compact(CompactTarget::from_consensus(386397584))
         ),
         35_364_065_900_457
     );
@@ -385,7 +414,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Mainnet,
-            bitcoin::BlockHeader::u256_from_compact_target(386877668)
+            Target::from_compact(CompactTarget::from_consensus(386877668))
         ),
         18_415_156_832_118
     );
@@ -395,7 +424,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(422681968)
+            Target::from_compact(CompactTarget::from_consensus(422681968))
         ),
         86_564_599
     );
@@ -405,7 +434,7 @@ fn target_difficulty() {
     assert_eq!(
         Block::target_difficulty(
             Network::Testnet,
-            bitcoin::BlockHeader::u256_from_compact_target(457142912)
+            Target::from_compact(CompactTarget::from_consensus(457142912))
         ),
         1_032
     );

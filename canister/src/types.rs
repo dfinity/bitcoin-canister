@@ -1,14 +1,19 @@
 use bitcoin::{
-    Address as BitcoinAddress, Network as BitcoinNetwork, Script, TxOut as BitcoinTxOut,
+    block::Header, Address as BitcoinAddress, Network as BitcoinNetwork, Script,
+    TxOut as BitcoinTxOut,
 };
 use candid::CandidType;
+use datasize::DataSize;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
     GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, UtxosFilter,
     UtxosFilterInRequest,
 };
 use ic_btc_types::{BlockHash, OutPoint, Txid};
-use ic_stable_structures::{storable::Blob, BoundedStorable, Storable as StableStructuresStorable};
+use ic_stable_structures::{
+    storable::{Blob, Bound as StableStructuresBound},
+    Storable as StableStructuresStorable,
+};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::{
@@ -32,7 +37,7 @@ pub struct TxOut {
 impl From<&BitcoinTxOut> for TxOut {
     fn from(bitcoin_txout: &BitcoinTxOut) -> Self {
         Self {
-            value: bitcoin_txout.value,
+            value: bitcoin_txout.value.to_sat(),
             script_pubkey: bitcoin_txout.script_pubkey.to_bytes(),
         }
     }
@@ -135,13 +140,11 @@ impl StableStructuresStorable for Address {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(String::from_utf8(bytes.to_vec()).expect("Loading address cannot fail."))
     }
-}
 
-impl BoundedStorable for Address {
-    // The longest addresses are bech32 addresses, and a bech32 string can be at most 90 chars.
-    // See https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
-    const MAX_SIZE: u32 = 90;
-    const IS_FIXED_SIZE: bool = false;
+    const BOUND: StableStructuresBound = StableStructuresBound::Bounded {
+        max_size: 90,
+        is_fixed_size: false,
+    };
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -180,16 +183,16 @@ impl StableStructuresStorable for AddressUtxo {
             )),
         }
     }
-}
 
-impl BoundedStorable for AddressUtxo {
-    const MAX_SIZE: u32 = Address::MAX_SIZE + 4 /* height bytes */ + OutPoint::MAX_SIZE;
-    const IS_FIXED_SIZE: bool = false;
+    const BOUND: StableStructuresBound = StableStructuresBound::Bounded {
+        max_size: Address::BOUND.max_size() + 4 /* height bytes */ + OutPoint::BOUND.max_size(),
+        is_fixed_size: false,
+    };
 }
 
 pub struct AddressUtxoRange {
-    start_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
-    end_bound: Blob<{ AddressUtxo::MAX_SIZE as usize }>,
+    start_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
+    end_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
 }
 
 impl AddressUtxoRange {
@@ -240,12 +243,12 @@ impl AddressUtxoRange {
     }
 }
 
-impl RangeBounds<Blob<{ AddressUtxo::MAX_SIZE as usize }>> for AddressUtxoRange {
-    fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
+impl RangeBounds<Blob<{ AddressUtxo::BOUND.max_size() as usize }>> for AddressUtxoRange {
+    fn start_bound(&self) -> Bound<&Blob<{ AddressUtxo::BOUND.max_size() as usize }>> {
         Bound::Included(&self.start_bound)
     }
 
-    fn end_bound(&self) -> Bound<&Blob<{ AddressUtxo::MAX_SIZE as usize }>> {
+    fn end_bound(&self) -> Bound<&Blob<{ AddressUtxo::BOUND.max_size() as usize }>> {
         Bound::Included(&self.end_bound)
     }
 }
@@ -295,7 +298,7 @@ impl Storable for (Height, OutPoint) {
 pub type BlockBlob = Vec<u8>;
 
 // A blob representing a block header in the standard bitcoin format.
-#[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash)]
+#[derive(CandidType, PartialEq, Clone, Debug, Eq, Serialize, Deserialize, Hash, DataSize)]
 pub struct BlockHeaderBlob(Vec<u8>);
 
 impl StableStructuresStorable for BlockHeaderBlob {
@@ -306,20 +309,18 @@ impl StableStructuresStorable for BlockHeaderBlob {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self::from(bytes.to_vec())
     }
+
+    const BOUND: StableStructuresBound = StableStructuresBound::Bounded {
+        max_size: 80,
+        is_fixed_size: true,
+    };
 }
 
-impl BoundedStorable for BlockHeaderBlob {
-    // A Bitcoin block header is always 80 bytes. See:
-    // https://developer.bitcoin.org/reference/block_chain.html#block-headers
-    const MAX_SIZE: u32 = 80;
-    const IS_FIXED_SIZE: bool = true;
-}
-
-impl From<&bitcoin::BlockHeader> for BlockHeaderBlob {
-    fn from(header: &bitcoin::BlockHeader) -> Self {
+impl From<&Header> for BlockHeaderBlob {
+    fn from(header: &Header) -> Self {
         use bitcoin::consensus::Encodable;
         let mut block_header_blob = vec![];
-        bitcoin::BlockHeader::consensus_encode(header, &mut block_header_blob).unwrap();
+        Header::consensus_encode(header, &mut block_header_blob).unwrap();
         Self(block_header_blob)
     }
 }
@@ -333,10 +334,10 @@ impl BlockHeaderBlob {
 impl From<Vec<u8>> for BlockHeaderBlob {
     fn from(bytes: Vec<u8>) -> Self {
         assert_eq!(
-            bytes.len() as u32,
-            Self::MAX_SIZE,
-            "BlockHeader must {} bytes",
-            Self::MAX_SIZE,
+            bytes.len(),
+            Self::BOUND.max_size() as usize,
+            "Header must be exactly {} bytes",
+            Self::BOUND.max_size()
         );
         Self(bytes)
     }
@@ -358,7 +359,7 @@ pub struct SendTransactionInternalRequest {
 }
 
 /// A request to retrieve more blocks from the Bitcoin network.
-#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(CandidType, Clone, Debug, PartialEq, Eq, Serialize, Deserialize, DataSize)]
 pub enum GetSuccessorsRequest {
     /// A request containing the hashes of blocks we'd like to retrieve succeessors for.
     #[serde(rename = "initial")]
@@ -369,7 +370,7 @@ pub enum GetSuccessorsRequest {
     FollowUp(PageNumber),
 }
 
-#[derive(CandidType, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(CandidType, Clone, PartialEq, Eq, Serialize, Deserialize, DataSize)]
 pub struct GetSuccessorsRequestInitial {
     pub network: Network,
     pub anchor: BlockHash,
@@ -391,7 +392,7 @@ impl std::fmt::Debug for GetSuccessorsRequestInitial {
 }
 
 /// A response containing new successor blocks from the Bitcoin network.
-#[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
+#[derive(CandidType, Clone, Debug, Deserialize, Hash, PartialEq, Eq, Serialize, DataSize)]
 pub enum GetSuccessorsResponse {
     /// A complete response that doesn't require pagination.
     #[serde(rename = "complete")]
@@ -406,13 +407,17 @@ pub enum GetSuccessorsResponse {
     FollowUp(BlockBlob),
 }
 
-#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+#[derive(
+    CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize, DataSize,
+)]
 pub struct GetSuccessorsCompleteResponse {
     pub blocks: Vec<BlockBlob>,
     pub next: Vec<BlockHeaderBlob>,
 }
 
-#[derive(CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize)]
+#[derive(
+    CandidType, Clone, Debug, Default, Deserialize, Hash, PartialEq, Eq, Serialize, DataSize,
+)]
 pub struct GetSuccessorsPartialResponse {
     /// A block that is partial (i.e. the full blob has not been sent).
     pub partial_block: BlockBlob,
@@ -434,22 +439,9 @@ pub struct Address(String);
 impl Address {
     /// Creates a new address from a bitcoin script.
     pub fn from_script(script: &Script, network: Network) -> Result<Self, InvalidAddress> {
-        let address = BitcoinAddress::from_script(script, into_bitcoin_network(network))
-            .ok_or(InvalidAddress)?;
-
-        // Due to a bug in the bitcoin crate, it is possible in some extremely rare cases
-        // that `Address:from_script` succeeds even if the address is invalid.
-        //
-        // To get around this bug, we convert the address to a string, and verify that this
-        // string is a valid address.
-        //
-        // See https://github.com/rust-bitcoin/rust-bitcoin/issues/995 for more information.
-        let address_str = address.to_string();
-        if BitcoinAddress::from_str(&address_str).is_ok() {
-            Ok(Self(address_str))
-        } else {
-            Err(InvalidAddress)
-        }
+        BitcoinAddress::from_script(script, into_bitcoin_network(network))
+            .map(|address| Self(address.to_string()))
+            .map_err(|_| InvalidAddress)
     }
 }
 
@@ -464,7 +456,7 @@ impl FromStr for Address {
 
     fn from_str(s: &str) -> Result<Self, InvalidAddress> {
         BitcoinAddress::from_str(s)
-            .map(|address| Address(address.to_string()))
+            .map(|address| Address(address.assume_checked().to_string()))
             .map_err(|_| InvalidAddress)
     }
 }
@@ -572,7 +564,7 @@ impl PartialOrd for Utxo {
 pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     match network {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
-        Network::Testnet => BitcoinNetwork::Testnet,
+        Network::Testnet => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
     }
 }
@@ -649,18 +641,13 @@ fn test_txid_to_string() {
 }
 
 #[test]
-fn address_handles_script_edge_case() {
-    // A script that isn't valid, but can be successfully converted into an address
-    // due to a bug in the bitcoin crate. See:
-    // (https://github.com/rust-bitcoin/rust-bitcoin/issues/995)
-    //
-    // This test verifies that we're protecting ourselves from that case.
-    let script = Script::from(vec![
+fn test_address_from_invalid_script() {
+    let script = Script::from_bytes(&[
         0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
-    ]);
+    ]); // Invalid script
 
     assert_eq!(
-        Address::from_script(&script, Network::Testnet),
+        Address::from_script(script, Network::Testnet),
         Err(InvalidAddress)
     );
 }

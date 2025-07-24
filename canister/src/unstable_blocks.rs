@@ -1,12 +1,12 @@
 mod outpoints_cache;
 
 use crate::{
-    blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree},
+    blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree, Depth, DifficultyBasedDepth},
     runtime::print,
     types::{Address, TxOut},
     UtxoSet,
 };
-use bitcoin::BlockHeader;
+use bitcoin::block::Header;
 use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
@@ -15,9 +15,46 @@ use serde::{Deserialize, Serialize};
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
 
-// The maximum number of blocks that a chain on testnet can exceed other chains before its
-// anchor block is marked as stable.
-const TESTNET_CHAIN_MAX_DEPTH: u128 = 1000;
+/// Max allowed depth difference between the two longest branches
+/// in the unstable block tree on `Testnet` and `Regtest`.
+const MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE: Depth = Depth::new(500);
+
+/// Max number (soft limit) of unstable blocks in `Testnet` and `Regtest`.
+///
+/// When the number of unstable blocks exceeds this limit, the depth difference
+/// drops to the current `stability_threshold` value.
+const MAX_UNSTABLE_BLOCKS: usize = 1_500;
+
+/// Returns the maximum allowed depth difference between the two longest
+/// branches in the unstable block tree on `Testnet` and `Regtest`
+/// adaptively adjusted to the total number of unstable blocks.
+///
+/// In these networks, difficulty resets to 1 if no block is found for
+/// 20 minutes, leading to excessive chain growth before an anchor block
+/// is considered stable.  
+///
+/// Without this limit, the unstable block tree could grow uncontrollably,
+/// causing high memory usage and potentially leading to out-of-memory (OOM)
+/// or stack overflow errors.  
+///
+/// This applies only to test environments and does not affect `Mainnet`.
+pub fn testnet_unstable_max_depth_difference(
+    total_unstable_blocks: usize,
+    stability_threshold: u32,
+) -> Depth {
+    let max_depth_diff = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as u32;
+    let min_depth_diff = stability_threshold.min(max_depth_diff - 1);
+
+    if total_unstable_blocks >= MAX_UNSTABLE_BLOCKS {
+        return Depth::new(min_depth_diff as u64);
+    }
+
+    let range = (max_depth_diff - min_depth_diff) as f64;
+    let ratio = total_unstable_blocks as f64 / MAX_UNSTABLE_BLOCKS as f64;
+    let interpolated = max_depth_diff as f64 - ratio * range;
+
+    Depth::new(interpolated.round() as u64)
+}
 
 /// A data structure for maintaining all unstable blocks.
 ///
@@ -76,17 +113,22 @@ impl UnstableBlocks {
         self.stability_threshold = stability_threshold;
     }
 
-    pub fn anchor_difficulty(&self) -> u64 {
+    pub fn anchor_difficulty(&self) -> u128 {
         self.tree.root.difficulty(self.network)
     }
 
     pub fn normalized_stability_threshold(&self) -> u128 {
-        self.anchor_difficulty() as u128 * self.stability_threshold as u128
+        self.anchor_difficulty() * self.stability_threshold as u128
     }
 
-    /// Returns the number of tips available in the current block tree.
-    pub fn num_tips(&self) -> u32 {
-        self.tree.num_tips()
+    /// Returns the number of tips in the tree.
+    pub fn tip_count(&self) -> u32 {
+        self.tree.tip_count()
+    }
+
+    /// Returns the depths of all tips in the tree.
+    pub fn tip_depths(&self) -> Vec<usize> {
+        self.tree.tip_depths()
     }
 
     fn get_network(&self) -> Network {
@@ -100,12 +142,12 @@ impl UnstableBlocks {
     }
 
     /// Returns the depth of the unstable block tree.
-    pub fn blocks_depth(&self) -> u128 {
+    pub fn blocks_depth(&self) -> Depth {
         self.tree.depth()
     }
 
     /// Returns the difficulty-based depth of the unstable block tree.
-    pub fn blocks_difficulty_based_depth(&self) -> u128 {
+    pub fn blocks_difficulty_based_depth(&self) -> DifficultyBasedDepth {
         self.tree.difficulty_based_depth(self.network)
     }
 
@@ -121,7 +163,7 @@ impl UnstableBlocks {
     // Inserts the block header of the block that should be received.
     pub fn insert_next_block_header(
         &mut self,
-        block_header: BlockHeader,
+        block_header: Header,
         stable_height: Height,
     ) -> Result<(), BlockDoesNotExtendTree> {
         let prev_block_hash = BlockHash::from(block_header.prev_blockhash);
@@ -142,7 +184,7 @@ impl UnstableBlocks {
     }
 
     /// Returns true if the given block header is already stored as one of the next block headers.
-    pub fn has_next_block_header(&self, block_header: &BlockHeader) -> bool {
+    pub fn has_next_block_header(&self, block_header: &Header) -> bool {
         self.next_block_headers
             .get_header(&BlockHash::from(block_header.block_hash()))
             .is_some()
@@ -153,12 +195,12 @@ impl UnstableBlocks {
         self.next_block_headers.get_max_height()
     }
 
-    // Returns BlockHeader chain from the tip up to the first block
+    // Returns Header chain from the tip up to the first block
     // header outside the main chain in the reverse order.
     pub fn get_next_block_headers_chain_with_tip(
         &self,
         tip_block_hash: BlockHash,
-    ) -> Vec<(&BlockHeader, BlockHash)> {
+    ) -> Vec<(&Header, BlockHash)> {
         let mut chain = vec![];
         let mut curr_hash = tip_block_hash;
         while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
@@ -174,7 +216,7 @@ impl UnstableBlocks {
         &self,
         stable_height: Height,
         heights: std::ops::RangeInclusive<Height>,
-    ) -> impl Iterator<Item = &BlockHeader> {
+    ) -> impl Iterator<Item = &Header> {
         if *heights.end() < stable_height {
             // `stable_height` is larger than any height from the range, which implies none of the requested
             // blocks are in unstable blocks, hence the result should be an empty iterator.
@@ -205,22 +247,30 @@ pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
 /// is stable. The child `C` becomes the new `anchor` block, and all its
 /// siblings are discarded.
 pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> {
-    match get_stable_child(blocks) {
-        Some(stable_child_idx) => {
-            let old_anchor = blocks.tree.root.clone();
+    let stable_child_idx = get_stable_child(blocks)?;
 
-            // Replace the unstable block tree with that of the stable child.
-            blocks.tree = blocks.tree.children.swap_remove(stable_child_idx);
+    let old_anchor = blocks.tree.root.clone();
 
-            // Remove the outpoints of the old anchor from the cache.
-            blocks.outpoints_cache.remove(&old_anchor);
-
-            blocks.next_block_headers.remove_until_height(stable_height);
-
-            Some(old_anchor)
-        }
-        None => None,
+    // Remove the outpoints of obsolete blocks from the cache.
+    let obsolete_blocks: Vec<_> = blocks
+        .tree
+        .children
+        .iter()
+        .enumerate()
+        .filter(|(idx, _)| *idx != stable_child_idx)
+        .flat_map(|(_, obsolete_child)| obsolete_child.blocks())
+        .chain(std::iter::once(old_anchor.clone()))
+        .collect();
+    for block in obsolete_blocks {
+        blocks.outpoints_cache.remove(&block);
     }
+
+    // Replace the unstable block tree with that of the stable child.
+    blocks.tree = blocks.tree.children.swap_remove(stable_child_idx);
+
+    blocks.next_block_headers.remove_until_height(stable_height);
+
+    Some(old_anchor)
 }
 
 /// Pushes a new block into the store.
@@ -308,13 +358,12 @@ pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
     unreachable!("There must be at least one height with exactly one block.");
 }
 
-pub fn get_blocks(blocks: &UnstableBlocks) -> Vec<&Block> {
-    blocks
-        .tree
-        .blockchains()
-        .into_iter()
-        .flat_map(|bc| bc.into_chain())
-        .collect()
+pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
+    blocks.tree.get_hashes()
+}
+
+pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
+    blocks.tree.blocks_count()
 }
 
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
@@ -329,100 +378,94 @@ pub fn get_chain_with_tip<'a>(
 
 // Returns the index of the `anchor`'s stable child if it exists.
 fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
-    // Compute the difficulty based depth of all the children.
     let network = blocks.get_network();
 
-    let mut depths: Vec<_> = blocks
+    // Compute and sort children by difficulty-based depth.
+    let mut difficulty_based_depths: Vec<_> = blocks
         .tree
         .children
         .iter()
         .enumerate()
         .map(|(idx, child)| (child.difficulty_based_depth(network), idx))
         .collect();
+    difficulty_based_depths.sort_by_key(|(difficulty_based_depth, _)| *difficulty_based_depth);
 
-    // Sort by depth.
-    depths.sort_by_key(|(depth, _child_idx)| *depth);
+    let difficulty_based_stability_threshold =
+        DifficultyBasedDepth::new(blocks.normalized_stability_threshold());
 
-    let normalized_stability_threshold = blocks.normalized_stability_threshold();
+    let (difficulty_based_deepest_depth, child_idx) = difficulty_based_depths.last()?;
+    let max_depth_difference =
+        testnet_unstable_max_depth_difference(blocks_count(blocks), blocks.stability_threshold());
 
-    match depths.last() {
-        Some((deepest_depth, child_idx)) => {
-            match network {
-                Network::Testnet | Network::Regtest => {
-                    // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
-                    // in case a block hasn't been found for 20 minutes. This can be problematic.
-                    // Consider the following scenario:
-                    //
-                    // * Assume a `stability_threshold` of 144.
-                    // * The anchor at height `h` has difficulty of 4642.
-                    // * The anchor will be marked as stable if the difficulty-based depth of
-                    //   the successor blocks is `stability_threshold * difficulty(anchor)` = 668,448
-                    // * The difficulty is reset to the minimum of 1.
-                    // * The canister will now need to maintain a chain of length 668,448 just to
-                    //   mark the anchor block as stable!
-                    //
-                    // Very long chains can cause the stack to overflow, resulting in a broken
-                    // canister.
-                    //
-                    // The pragmatic solution in this case is to bound the length of the chain. If
-                    // one chain starts exceeding other chains by a certain length, we assume that
-                    // the anchor is stable even if the difficulty requirement hasn't been met.
-                    //
-                    // This scenario is only relevant for testnets, so this addition is safe and
-                    // has no impact on the behavior of the mainnet canister.
-                    if blocks.tree.children[*child_idx].depth() >= TESTNET_CHAIN_MAX_DEPTH {
-                        // If there's another competing chain, verify that it's at least
-                        // `TESTNET_CHAIN_MAX_DEPTH` blocks behind the longest chain to mark the
-                        // current anchor as stable.
-                        let second_deepest_depth = match depths.len().checked_sub(2) {
-                            None => 0,
-                            Some(idx) => {
-                                let (_, second_child_idx) = depths[idx];
-                                blocks.tree.children[second_child_idx].depth()
-                            }
-                        };
+    // Prevent excessive chain growth in testnets where difficulty resets.
+    if network == Network::Testnet || network == Network::Regtest {
+        // The difficulty in the Bitcoin testnet/regtest can be reset to the minimum
+        // in case a block hasn't been found for 20 minutes. This can be problematic.
+        // Consider the following scenario:
+        //
+        // * Assume a `stability_threshold` of 144.
+        // * The anchor at height `h` has difficulty of 4642.
+        // * The anchor will be marked as stable if the difficulty-based depth of
+        //   the successor blocks is `stability_threshold * difficulty(anchor)` = 668,448
+        // * The difficulty is reset to the minimum of 1.
+        // * The canister will now need to maintain a chain of length 668,448 just to
+        //   mark the anchor block as stable!
+        //
+        // Very long chains can cause the stack to overflow, resulting in a broken
+        // canister.
+        //
+        // The pragmatic solution in this case is to bound the length of the chain. If
+        // one chain starts exceeding other chains by a certain length, we assume that
+        // the anchor is stable even if the difficulty requirement hasn't been met.
+        //
+        // This scenario is only relevant for testnets, so this addition is safe and
+        // has no impact on the behavior of the mainnet canister.
+        let deepest_depth = blocks.tree.children[*child_idx].depth();
+        if deepest_depth >= max_depth_difference {
+            // Ensure the second-longest chain is far enough behind.
+            let second_deepest_depth = difficulty_based_depths
+                .len()
+                .checked_sub(2)
+                .map(|idx| {
+                    let (_, second_child_idx) = difficulty_based_depths[idx];
+                    blocks.tree.children[second_child_idx].depth()
+                })
+                .unwrap_or(Depth::new(0));
 
-                        // NOTE: We use a `saturating_sub` here because `depths` is ordered by
-                        // `difficulty_based_depth`, whereas here the chains are compared by their
-                        // `depth`, so it's not guaranteed that `deepest_depth >= second_deepest_depth`.
-                        if deepest_depth.saturating_sub(second_deepest_depth)
-                            >= TESTNET_CHAIN_MAX_DEPTH
-                        {
-                            print(&format!("Detected a chain that's > {TESTNET_CHAIN_MAX_DEPTH} blocks ahead of any other chain. Assuming its root is stable..."));
-                            return Some(*child_idx);
-                        }
-                    }
-                }
-                Network::Mainnet => {
-                    // The difficulty on mainnet is much more stable and is bounded to change by a
-                    // factor of 4, so there is no limit that needs to be imposed.
-                }
+            // NOTE: We use `saturating_sub` because `depths` is sorted by
+            // `difficulty_based_depth`, but here we compare chains by `depth`.
+            // This means `deepest_depth` may be smaller than `second_deepest_depth`,
+            // so subtraction must not underflow.
+            if deepest_depth.saturating_sub(second_deepest_depth) >= max_depth_difference {
+                print(&format!(
+                    "Detected a chain that's > {max_depth_difference} blocks ahead. \
+                    Assuming its root is stable..."
+                ));
+                return Some(*child_idx);
             }
-
-            // The deepest child tree must have a depth >= normalized_stability_threshold.
-            if *deepest_depth < normalized_stability_threshold {
-                // Need a depth of at least >= normalized_stability_threshold.
-                return None;
-            }
-
-            // If there is more than one child, the difference in depth
-            // between the deepest child and all the others must be >= normalized_stability_threshold.
-            if depths.len() >= 2 {
-                if let Some((second_deepest_depth, _)) = depths.get(depths.len() - 2) {
-                    if deepest_depth - second_deepest_depth < normalized_stability_threshold {
-                        // Difference must be >= normalized_stability_threshold.
-                        return None;
-                    }
-                }
-            }
-
-            Some(*child_idx)
-        }
-        None => {
-            // The anchor has no children. Nothing to return.
-            None
         }
     }
+
+    // Ensure the deepest child meets the stability threshold.
+    if *difficulty_based_deepest_depth < difficulty_based_stability_threshold {
+        return None;
+    }
+
+    // If there are multiple children, ensure the longest chain is significantly ahead.
+    if difficulty_based_depths.len() >= 2 {
+        if let Some((difficulty_based_second_deepest_depth, _)) =
+            difficulty_based_depths.get(difficulty_based_depths.len() - 2)
+        {
+            if *difficulty_based_deepest_depth - *difficulty_based_second_deepest_depth
+                < difficulty_based_stability_threshold
+            {
+                // Difference must be >= difficulty_based_stability_threshold.
+                return None;
+            }
+        }
+    }
+
+    Some(*child_idx)
 }
 
 #[cfg(test)]
@@ -492,7 +535,10 @@ mod test {
         // difficulty_based_depth is 15 + 20 + 110 = 145 is greater than
         // normalized_stability_threshold is 20 * 7 = 140 and it does not have
         // any siblings. Hence, block_0 should be returned when calling `pop`.
-        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 145);
+        assert_eq!(
+            forest.tree.children[0].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(145)
+        );
 
         assert_eq!(peek(&forest), Some(&block_0));
         assert_eq!(pop(&mut forest, 0), Some(block_0));
@@ -571,8 +617,14 @@ mod test {
         // None of the forks are stable, because fork1 has difficulty_based_depth of 10,
         // while fork2 has difficulty_based_depth 5, while normalized_stability_threshold
         // is 3 * 4 = 12. Hence, we shouldn't get anything.
-        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 10);
-        assert_eq!(forest.tree.children[1].difficulty_based_depth(network), 5);
+        assert_eq!(
+            forest.tree.children[0].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(10)
+        );
+        assert_eq!(
+            forest.tree.children[1].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(5)
+        );
 
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest, 0), None);
@@ -593,8 +645,14 @@ mod test {
         // 10 + 1 = 11, satisfying sencond condition
         // 30 - 11 > normalized_stability_threshold. So we can get a
         // stable child, and fork2_block should be a new anchor.
-        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 11);
-        assert_eq!(forest.tree.children[1].difficulty_based_depth(network), 30);
+        assert_eq!(
+            forest.tree.children[0].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(11)
+        );
+        assert_eq!(
+            forest.tree.children[1].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(30)
+        );
 
         assert_eq!(peek(&forest), Some(&genesis_block));
         assert_eq!(pop(&mut forest, 0), Some(genesis_block));
@@ -604,7 +662,10 @@ mod test {
         // its difficulty_based_depth is 25,
         // normalized_stability_threshold is 3 * 5 = 15,
         // and it does not have any siblings.
-        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 25);
+        assert_eq!(
+            forest.tree.children[0].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(25)
+        );
 
         assert_eq!(peek(&forest), Some(&fork2_block));
         assert_eq!(pop(&mut forest, 0), Some(fork2_block));
@@ -622,7 +683,10 @@ mod test {
         // difficulty_based_depth is 75, and
         // normalized_stability_threshold is 3 * 25 = 75,
         // hence difficulty_based_depth >= normalized_stability_threshold.
-        assert_eq!(forest.tree.children[0].difficulty_based_depth(network), 75);
+        assert_eq!(
+            forest.tree.children[0].difficulty_based_depth(network),
+            DifficultyBasedDepth::new(75)
+        );
 
         assert_eq!(peek(&forest), Some(&block_2));
         assert_eq!(pop(&mut forest, 0), Some(block_2));
@@ -915,7 +979,7 @@ mod test {
 
         // Assert the chain that will be built exceeds the maximum allowed, so that we can test
         // that case.
-        assert!(chain_len > TESTNET_CHAIN_MAX_DEPTH);
+        assert!(Depth::new(chain_len) > MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE);
 
         // Build a long chain where the first block has a substantially higher difficulty than the
         // remaining blocks.
@@ -946,17 +1010,17 @@ mod test {
         // of the anchor block.
         assert_eq!(
             unstable_blocks.normalized_stability_threshold(),
-            anchor_block_difficulty as u128 * stability_threshold as u128
+            anchor_block_difficulty * stability_threshold as u128
         );
 
         // The normalized stability threshold is still not met, which means that, in theory,
         // there are no stable blocks that can be popped.
         assert!(
             unstable_blocks.blocks_difficulty_based_depth()
-                < unstable_blocks.normalized_stability_threshold()
+                < DifficultyBasedDepth::new(unstable_blocks.normalized_stability_threshold())
         );
 
-        assert_eq!(unstable_blocks.blocks_depth(), chain_len);
+        assert_eq!(unstable_blocks.blocks_depth(), Depth::new(chain_len));
 
         // Even though the chain's difficulty-based depth doesn't exceed the normalized stability
         // threshold, the anchor block can now be popped because the chain's length has exceeded
@@ -965,68 +1029,81 @@ mod test {
     }
 
     #[test]
-    fn long_testnet_chain_along_with_a_fork() {
-        let stability_threshold = 144;
-        let chain_len = 2000;
-        let anchor_block_difficulty = 4642;
+    fn long_testnet_chain_with_fork() {
+        let total_unstable_blocks = MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE.get() as usize;
+        let stability_threshold = total_unstable_blocks as u32;
+        let anchor_block_difficulty = 4_642;
         let remaining_blocks_difficulty = 1;
         let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
 
-        // Assert the chain that will be built exceeds the maximum allowed, so that we can test
-        // that case.
-        assert!(chain_len > TESTNET_CHAIN_MAX_DEPTH);
+        let fork_depth = 100; // An arbitrary number of blocks.
+        let initial_depth_diff =
+            testnet_unstable_max_depth_difference(total_unstable_blocks, stability_threshold).get()
+                as u32
+                - 1;
+        let main_chain_depth = fork_depth + initial_depth_diff;
 
-        // Build a long chain where the first block has a substantially higher difficulty than the
-        // remaining blocks.
-        let chain = BlockChainBuilder::new(chain_len as u32)
-            // Set the difficulty of the anchor block to be high.
+        // Ensure the anchor block has significantly higher difficulty than the rest.
+        assert!(anchor_block_difficulty > 1_000 * remaining_blocks_difficulty);
+
+        // Main chain A: Includes the anchor block.
+        let chain_a = BlockChainBuilder::new(main_chain_depth)
             .with_difficulty(anchor_block_difficulty, 0..1)
-            // Set the difficulty of the remaining blocks to be low.
             .with_difficulty(remaining_blocks_difficulty, 1..)
             .build();
 
-        // Build a second chain that's a fork of the first.
-        let second_chain = BlockChainBuilder::fork(&chain[0], TESTNET_CHAIN_MAX_DEPTH as u32 - 1)
+        // Fork B: Starts at anchor, therefore adds `fork_depth - 1` blocks after the anchor.
+        let chain_b = BlockChainBuilder::fork(&chain_a[0], fork_depth - 1)
             .with_difficulty(remaining_blocks_difficulty, 0..)
             .build();
 
+        // Insert all blocks from both chains.
         let mut unstable_blocks =
-            UnstableBlocks::new(&utxos, stability_threshold, chain[0].clone(), network);
-
-        // Insert chains into the state.
-        for block in chain.iter().skip(1) {
-            push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
-        }
-        for block in second_chain.iter() {
+            UnstableBlocks::new(&utxos, stability_threshold, chain_a[0].clone(), network);
+        for block in chain_a.iter().skip(1).chain(chain_b.iter()) {
             push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
         }
 
-        // The normalized stability threshold is still not met, which means that, in theory,
-        // there are no stable blocks that can be popped.
-        assert!(
-            unstable_blocks.blocks_difficulty_based_depth()
-                < unstable_blocks.normalized_stability_threshold()
+        // Confirm total depth matches main chain depth.
+        assert_eq!(
+            unstable_blocks.blocks_depth().get() as u32,
+            main_chain_depth
         );
 
-        // If there's a very long testnet chain `A`, and there exists another chain `B` s.t.
-        // depth(A) - depth(B) < TESTNET_CHAIN_MAX_DEPTH, the root of chain `A` is considered stable.
-        assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
+        // Before extending, check that the fork is still within unstable range.
+        let actual_depth_diff = unstable_blocks.blocks_depth().get() as u32 - fork_depth;
+        assert!(actual_depth_diff < initial_depth_diff + 1);
 
-        // Add one more block to the second chain, so that it's depth is `TESTNET_CHAIN_MAX_DEPTH`.
-        push(
-            &mut unstable_blocks,
-            &utxos,
-            BlockBuilder::with_prev_header(second_chain.last().unwrap().header()).build(),
-        )
-        .unwrap();
+        // Ensure difficulty-based stability is not yet reached.
+        assert!(
+            unstable_blocks.blocks_difficulty_based_depth()
+                < DifficultyBasedDepth::new(unstable_blocks.normalized_stability_threshold())
+        );
 
-        // Now, depth(A) - depth(B) >= TESTNET_CHAIN_MAX_DEPTH and the root of chain `A`
-        // is considered unstable.
+        // At this point, `chain_a[0]` should be unstable.
+        assert_eq!(peek(&unstable_blocks), None);
+
+        // Extend `A` by one block.
+        let new_block = BlockBuilder::with_prev_header(chain_a.last().unwrap().header()).build();
+        push(&mut unstable_blocks, &utxos, new_block.clone()).unwrap();
+
+        // Now the depth difference should be at least the threshold.
+        let new_depth_difference = unstable_blocks.blocks_depth().get() as u32 - fork_depth;
+        assert!(new_depth_difference >= initial_depth_diff);
+
+        // Since the depth condition is now met, `chain_a[0]` should be stable.
+        assert_eq!(peek(&unstable_blocks), Some(&chain_a[0]));
+
+        // Extend `B` by one block.
+        let new_block = BlockBuilder::with_prev_header(chain_b.last().unwrap().header()).build();
+        push(&mut unstable_blocks, &utxos, new_block.clone()).unwrap();
+
+        // Now `chain_a[0]` should be unstable again.
         assert_eq!(peek(&unstable_blocks), None);
     }
 
-    fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<BlockHeader>) {
+    fn get_block_headers_helper(block_num: usize) -> (UnstableBlocks, Vec<Header>) {
         let mut headers = vec![];
         let block_0 = BlockBuilder::genesis().build();
         headers.push(*block_0.header());
@@ -1078,6 +1155,29 @@ mod test {
                     result.next();
                 }
             }
+        );
+    }
+
+    #[test]
+    fn test_testnet_unstable_max_depth_difference() {
+        let stability_threshold = 144;
+
+        // When there are no unstable blocks, the max depth difference is at its highest.
+        assert_eq!(
+            testnet_unstable_max_depth_difference(0, stability_threshold),
+            MAX_TESTNET_UNSTABLE_DEPTH_DIFFERENCE
+        );
+
+        // At the limit, the depth difference is at its minimum.
+        assert_eq!(
+            testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS, stability_threshold),
+            Depth::new(stability_threshold as u64)
+        );
+
+        // Going over the limit keeps the depth difference at the minimum.
+        assert_eq!(
+            testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS + 1, stability_threshold),
+            Depth::new(stability_threshold as u64)
         );
     }
 }

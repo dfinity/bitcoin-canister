@@ -12,6 +12,8 @@
 # Use the following commands:
 #
 # docker build -t canisters .
+# or
+# docker build --build-arg CHUNK_HASHES_PATH=/bootstrap/chunk_hashes.txt  -t canisters .
 #
 # docker run --rm --entrypoint cat canisters /ic-btc-canister.wasm.gz > ic-btc-canister.wasm.gz
 # docker run --rm --entrypoint cat canisters /uploader.wasm.gz > uploader.wasm.gz
@@ -27,7 +29,7 @@ FROM ubuntu@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3
 
 # NOTE: if this version is updated, then the version in rust-toolchain.toml
 # should be updated as well.
-ARG rust_version=1.76.0
+ARG rust_version=1.84.0
 ARG CHUNK_HASHES_PATH
 ARG BTC_FEATURES=""
 

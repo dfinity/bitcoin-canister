@@ -1,18 +1,18 @@
 use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
-use bitcoin::BlockHeader;
+use bitcoin::{block::Header, hashes::Hash};
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.
 pub struct ValidationContext<'a> {
     state: &'a State,
     // BlockHash is stored in order to avoid repeatedly calling to
-    // BlockHeader::block_hash() which is expensive.
-    chain: Vec<(&'a BlockHeader, ic_btc_types::BlockHash)>,
+    // Header::block_hash() which is expensive.
+    chain: Vec<(&'a Header, ic_btc_types::BlockHash)>,
 }
 
 impl<'a> ValidationContext<'a> {
     /// Initialize a `ValidationContext` for the given block header.
-    pub fn new(state: &'a State, header: &BlockHeader) -> Result<Self, BlockDoesNotExtendTree> {
+    pub fn new(state: &'a State, header: &Header) -> Result<Self, BlockDoesNotExtendTree> {
         // Retrieve the chain that the given header extends.
         // The given header must extend one of the unstable blocks.
         let prev_block_hash = header.prev_blockhash.into();
@@ -30,7 +30,7 @@ impl<'a> ValidationContext<'a> {
     /// The given block header can be in the 'NextBlockHeaders'.
     pub fn new_with_next_block_headers(
         state: &'a State,
-        header: &BlockHeader,
+        header: &Header,
     ) -> Result<Self, BlockDoesNotExtendTree> {
         let prev_block_hash = header.prev_blockhash.into();
         let next_block_headers_chain = state
@@ -49,10 +49,10 @@ impl<'a> ValidationContext<'a> {
 }
 
 /// Implements the `HeaderStore` trait that's used for validating headers.
-impl<'a> HeaderStore for ValidationContext<'a> {
-    fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<BlockHeader> {
+impl HeaderStore for ValidationContext<'_> {
+    fn get_with_block_hash(&self, hash: &bitcoin::BlockHash) -> Option<Header> {
         // Check if the header is in the chain.
-        let hash = ic_btc_types::BlockHash::from(hash.to_vec());
+        let hash = ic_btc_types::BlockHash::from(hash.as_raw_hash().as_byte_array().to_vec());
         for item in self.chain.iter() {
             if item.1 == hash {
                 return Some(*item.0);
@@ -69,7 +69,7 @@ impl<'a> HeaderStore for ValidationContext<'a> {
         self.state.utxos.next_height() + self.chain.len() as u32 - 1
     }
 
-    fn get_with_height(&self, height: u32) -> Option<BlockHeader> {
+    fn get_with_height(&self, height: u32) -> Option<Header> {
         if height < self.state.utxos.next_height() {
             // The height requested is for a stable block.
             // Retrieve the block header from the stable block headers.

@@ -1,6 +1,7 @@
 //! Types used in the interface of the Bitcoin Canister.
 
 use candid::{CandidType, Deserialize, Principal};
+use datasize::DataSize;
 use serde::Serialize;
 use serde_bytes::ByteBuf;
 use std::fmt;
@@ -14,12 +15,22 @@ pub type Height = u32;
 pub type Page = ByteBuf;
 pub type BlockHeader = Vec<u8>;
 
-#[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
+/// Default stability threshold for the Bitcoin canister.
+/// Must not be zero — a value of 0 can make the canister follow wrong branches,
+/// get stuck, and require a manual reset.
+const DEFAULT_STABILITY_THRESHOLD: u128 = 144; // ~24 hours at 10 min per block
+
+#[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash, DataSize)]
 pub enum Network {
+    /// Bitcoin Mainnet.
     #[serde(rename = "mainnet")]
     Mainnet,
+
+    /// Bitcoin Testnet4.
     #[serde(rename = "testnet")]
     Testnet,
+
+    /// Bitcoin Regtest.
     #[serde(rename = "regtest")]
     Regtest,
 }
@@ -75,13 +86,21 @@ impl From<NetworkInRequest> for Network {
 /// while not breaking current dapps that are using uppercase variants.
 #[derive(CandidType, Clone, Copy, Deserialize, Debug, Eq, PartialEq, Serialize, Hash)]
 pub enum NetworkInRequest {
+    /// Bitcoin Mainnet.
     Mainnet,
+    /// Bitcoin Mainnet.
     #[allow(non_camel_case_types)]
     mainnet,
+
+    /// Bitcoin Testnet4.
     Testnet,
+    /// Bitcoin Testnet4.
     #[allow(non_camel_case_types)]
     testnet,
+
+    /// Bitcoin Regtest.
     Regtest,
+    /// Bitcoin Regtest.
     #[allow(non_camel_case_types)]
     regtest,
 }
@@ -620,6 +639,7 @@ impl From<InitConfig> for Config {
             config.syncing = syncing;
         }
 
+        let fees_explicitly_set = init_config.fees.is_some();
         if let Some(fees) = init_config.fees {
             config.fees = fees;
         }
@@ -644,6 +664,15 @@ impl From<InitConfig> for Config {
             config.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
         }
 
+        // Config post-processing.
+        if !fees_explicitly_set {
+            config.fees = match config.network {
+                Network::Mainnet => Fees::mainnet(),
+                Network::Testnet => Fees::testnet(),
+                Network::Regtest => config.fees, // Keep unchanged for regtest.
+            };
+        }
+
         config
     }
 }
@@ -651,7 +680,7 @@ impl From<InitConfig> for Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            stability_threshold: 0,
+            stability_threshold: DEFAULT_STABILITY_THRESHOLD,
             network: Network::Regtest,
             blocks_source: Principal::management_canister(),
             syncing: Flag::Enabled,
@@ -709,6 +738,52 @@ pub struct Fees {
     /// The maximum amount of cycles that can be charged in a `get_block_headers` request.
     /// A request must send at least this amount for it to be accepted.
     pub get_block_headers_maximum: u128,
+}
+
+impl Fees {
+    pub fn testnet() -> Self {
+        // https://internetcomputer.org/docs/references/bitcoin-how-it-works#bitcoin-testnet
+        Self {
+            get_utxos_base: 20_000_000,
+            get_utxos_cycles_per_ten_instructions: 4,
+            get_utxos_maximum: 4_000_000_000,
+
+            get_current_fee_percentiles: 4_000_000,
+            get_current_fee_percentiles_maximum: 40_000_000,
+
+            get_balance: 4_000_000,
+            get_balance_maximum: 40_000_000,
+
+            send_transaction_base: 2_000_000_000,
+            send_transaction_per_byte: 8_000_000,
+
+            get_block_headers_base: 20_000_000,
+            get_block_headers_cycles_per_ten_instructions: 4,
+            get_block_headers_maximum: 4_000_000_000,
+        }
+    }
+
+    pub fn mainnet() -> Self {
+        // https://internetcomputer.org/docs/references/bitcoin-how-it-works#bitcoin-mainnet
+        Self {
+            get_utxos_base: 50_000_000,
+            get_utxos_cycles_per_ten_instructions: 10,
+            get_utxos_maximum: 10_000_000_000,
+
+            get_current_fee_percentiles: 10_000_000,
+            get_current_fee_percentiles_maximum: 100_000_000,
+
+            get_balance: 10_000_000,
+            get_balance_maximum: 100_000_000,
+
+            send_transaction_base: 5_000_000_000,
+            send_transaction_per_byte: 20_000_000,
+
+            get_block_headers_base: 50_000_000,
+            get_block_headers_cycles_per_ten_instructions: 10,
+            get_block_headers_maximum: 10_000_000_000,
+        }
+    }
 }
 
 #[cfg(test)]

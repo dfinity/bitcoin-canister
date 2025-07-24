@@ -9,7 +9,7 @@ use ic_cdk::api::call::CallResult;
 use ic_cdk::api::call::RejectionCode;
 #[cfg(not(target_arch = "wasm32"))]
 use serde::Deserialize;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(any(not(target_arch = "wasm32"), feature = "mock_time"))]
 use std::cell::RefCell;
 use std::future::Future;
 
@@ -44,13 +44,18 @@ thread_local! {
     // Responses are returned in the order provided.
     static GET_SUCCESSORS_RESPONSES: RefCell<Vec<GetSuccessorsReply>> = RefCell::new(Vec::default());
 
-    pub static GET_SUCCESSORS_RESPONSES_INDEX: RefCell<usize> = RefCell::new(0);
+    pub static GET_SUCCESSORS_RESPONSES_INDEX: RefCell<usize> = const { RefCell::new(0) };
 
-    static PERFORMANCE_COUNTER: RefCell<u64> = RefCell::new(0);
+    static PERFORMANCE_COUNTER: RefCell<u64> = const { RefCell::new(0) };
 
-    static PERFORMANCE_COUNTER_STEP: RefCell<u64> = RefCell::new(0);
+    static PERFORMANCE_COUNTER_STEP: RefCell<u64> = const { RefCell::new(0) };
 
-    static CYCLES_BALANCE: RefCell<u64> = RefCell::new(0);
+    static CYCLES_BALANCE: RefCell<u64> = const { RefCell::new(0) };
+}
+
+#[cfg(feature = "mock_time")]
+thread_local! {
+    static MOCK_TIME: RefCell<Option<u64>> = const { RefCell::new(None) };
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -201,21 +206,40 @@ pub fn get_cycles_balance() -> u64 {
     CYCLES_BALANCE.with(|c| *c.borrow())
 }
 
-/// Returns the current time in seconds.
-#[cfg(target_arch = "wasm32")]
-pub fn time() -> u64 {
-    // to get seconds from nanoseconds
-    ic_cdk::api::time() / 1_000_000_000
+/// Gets current timestamp, in seconds since the epoch (1970-01-01).
+pub fn time_secs() -> u64 {
+    time() / 1_000_000_000
 }
 
+/// Gets current timestamp, in nanoseconds since the epoch (1970-01-01).
+#[cfg(target_arch = "wasm32")]
+pub fn time() -> u64 {
+    #[cfg(feature = "mock_time")]
+    {
+        if let Some(mock_time) = MOCK_TIME.with(|t| *t.borrow()) {
+            return mock_time;
+        }
+    }
+
+    ic_cdk::api::time()
+}
+
+/// Gets current timestamp, in nanoseconds since the epoch (1970-01-01).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn time() -> u64 {
+    #[cfg(feature = "mock_time")]
+    {
+        if let Some(mock_time) = MOCK_TIME.with(|t| *t.borrow()) {
+            return mock_time;
+        }
+    }
+
     use std::time::SystemTime;
 
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
-        .as_secs()
+        .as_nanos() as u64
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -226,4 +250,20 @@ pub fn cycles_burn() -> u128 {
 #[cfg(not(target_arch = "wasm32"))]
 pub fn cycles_burn() -> u128 {
     1_000_000
+}
+
+#[cfg(feature = "mock_time")]
+pub mod mock_time {
+    use super::MOCK_TIME;
+
+    /// Sets the mock time to a specific timestamp since epoch.
+    /// If `mock_time` is None, the real IC/system time will be used.
+    pub fn set_mock_time(mock_time: Option<u64>) {
+        MOCK_TIME.with(|t| *t.borrow_mut() = mock_time);
+    }
+
+    /// Sets the mock time to a specific timestamp in seconds since epoch.
+    pub fn set_mock_time_secs(timestamp_secs: u64) {
+        set_mock_time(Some(timestamp_secs * 1_000_000_000));
+    }
 }

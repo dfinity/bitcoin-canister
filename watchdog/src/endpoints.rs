@@ -1,12 +1,11 @@
-use crate::config::BitcoinNetwork;
-use crate::http::{HttpRequestConfig, TransformFnWrapper};
-use crate::print;
 use crate::{
-    transform_api_bitaps_com_block, transform_api_blockchair_com_block,
+    config::BitcoinNetwork,
+    http::{HttpRequestConfig, TransformFnWrapper},
+    print, transform_api_bitaps_com_block, transform_api_blockchair_com_block,
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
     transform_bitcoinexplorer_org_block, transform_blockchain_info_hash,
     transform_blockchain_info_height, transform_blockstream_info_hash,
-    transform_blockstream_info_height, transform_chain_api_btc_com_block,
+    transform_blockstream_info_height, transform_chain_api_btc_com_block, transform_mempool_height,
 };
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use regex::Regex;
@@ -14,22 +13,8 @@ use serde_json::json;
 
 /// Creates a config for fetching mainnet block data from api.bitaps.com.
 pub fn endpoint_api_bitaps_com_block_mainnet() -> HttpRequestConfig {
-    endpoint_api_bitaps_com_block(BitcoinNetwork::Mainnet)
-}
-
-/// Creates a config for fetching testnet block data from api.bitaps.com.
-pub fn endpoint_api_bitaps_com_block_testnet() -> HttpRequestConfig {
-    endpoint_api_bitaps_com_block(BitcoinNetwork::Testnet)
-}
-
-/// Creates a config for fetching block data from api.bitaps.com.
-fn endpoint_api_bitaps_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
-    let url = match bitcoin_network {
-        BitcoinNetwork::Mainnet => "https://api.bitaps.com/btc/v1/blockchain/block/last",
-        BitcoinNetwork::Testnet => "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
-    };
     HttpRequestConfig::new(
-        url,
+        "https://api.bitaps.com/btc/v1/blockchain/block/last",
         Some(TransformFnWrapper {
             name: "transform_api_bitaps_com_block",
             func: transform_api_bitaps_com_block,
@@ -48,22 +33,8 @@ fn endpoint_api_bitaps_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequest
 
 /// Creates a config for fetching mainnet block data from api.blockchair.com.
 pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
-    endpoint_api_blockchair_com_block(BitcoinNetwork::Mainnet)
-}
-
-/// Creates a config for fetching testnet block data from api.blockchair.com.
-pub fn endpoint_api_blockchair_com_block_testnet() -> HttpRequestConfig {
-    endpoint_api_blockchair_com_block(BitcoinNetwork::Testnet)
-}
-
-/// Creates a config for fetching block data from api.blockchair.com.
-fn endpoint_api_blockchair_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
-    let url = match bitcoin_network {
-        BitcoinNetwork::Mainnet => "https://api.blockchair.com/bitcoin/stats",
-        BitcoinNetwork::Testnet => "https://api.blockchair.com/bitcoin/testnet/stats",
-    };
     HttpRequestConfig::new(
-        url,
+        "https://api.blockchair.com/bitcoin/stats",
         Some(TransformFnWrapper {
             name: "transform_api_blockchair_com_block",
             func: transform_api_blockchair_com_block,
@@ -82,22 +53,8 @@ fn endpoint_api_blockchair_com_block(bitcoin_network: BitcoinNetwork) -> HttpReq
 
 /// Creates a config for fetching mainnet block data from api.blockcypher.com.
 pub fn endpoint_api_blockcypher_com_block_mainnet() -> HttpRequestConfig {
-    endpoint_api_blockcypher_com_block(BitcoinNetwork::Mainnet)
-}
-
-/// Creates a config for fetching testnet block data from api.blockcypher.com.
-pub fn endpoint_api_blockcypher_com_block_testnet() -> HttpRequestConfig {
-    endpoint_api_blockcypher_com_block(BitcoinNetwork::Testnet)
-}
-
-/// Creates a config for fetching block data from api.blockcypher.com.
-fn endpoint_api_blockcypher_com_block(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
-    let url = match bitcoin_network {
-        BitcoinNetwork::Mainnet => "https://api.blockcypher.com/v1/btc/main",
-        BitcoinNetwork::Testnet => "https://api.blockcypher.com/v1/btc/test3",
-    };
     HttpRequestConfig::new(
-        url,
+        "https://api.blockcypher.com/v1/btc/main",
         Some(TransformFnWrapper {
             name: "transform_api_blockcypher_com_block",
             func: transform_api_blockcypher_com_block,
@@ -224,22 +181,8 @@ pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
 
 /// Creates a config for fetching mainnet hash data from blockstream.info.
 pub fn endpoint_blockstream_info_hash_mainnet() -> HttpRequestConfig {
-    endpoint_blockstream_info_hash(BitcoinNetwork::Mainnet)
-}
-
-/// Creates a config for fetching testnet hash data from blockstream.info.
-pub fn endpoint_blockstream_info_hash_testnet() -> HttpRequestConfig {
-    endpoint_blockstream_info_hash(BitcoinNetwork::Testnet)
-}
-
-/// Creates a config for fetching hash data from blockstream.info.
-fn endpoint_blockstream_info_hash(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
-    let url = match bitcoin_network {
-        BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/hash",
-        BitcoinNetwork::Testnet => "https://blockstream.info/testnet/api/blocks/tip/hash",
-    };
     HttpRequestConfig::new(
-        url,
+        "https://blockstream.info/api/blocks/tip/hash",
         Some(TransformFnWrapper {
             name: "transform_blockstream_info_hash",
             func: transform_blockstream_info_hash,
@@ -257,22 +200,8 @@ fn endpoint_blockstream_info_hash(bitcoin_network: BitcoinNetwork) -> HttpReques
 
 /// Creates a config for fetching mainnet height data from blockstream.info.
 pub fn endpoint_blockstream_info_height_mainnet() -> HttpRequestConfig {
-    endpoint_blockstream_info_height(BitcoinNetwork::Mainnet)
-}
-
-/// Creates a config for fetching testnet height data from blockstream.info.
-pub fn endpoint_blockstream_info_height_testnet() -> HttpRequestConfig {
-    endpoint_blockstream_info_height(BitcoinNetwork::Testnet)
-}
-
-/// Creates a config for fetching height data from blockstream.info.
-fn endpoint_blockstream_info_height(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
-    let url = match bitcoin_network {
-        BitcoinNetwork::Mainnet => "https://blockstream.info/api/blocks/tip/height",
-        BitcoinNetwork::Testnet => "https://blockstream.info/testnet/api/blocks/tip/height",
-    };
     HttpRequestConfig::new(
-        url,
+        "https://blockstream.info/api/blocks/tip/height",
         Some(TransformFnWrapper {
             name: "transform_blockstream_info_height",
             func: transform_blockstream_info_height,
@@ -311,6 +240,43 @@ pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
             })
         },
     )
+}
+
+/// Creates a config for fetching mainnet height data from blockchain.info.
+pub fn endpoint_mempool_height(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
+    let url = match bitcoin_network {
+        BitcoinNetwork::Mainnet => "https://mempool.space/api/blocks/tip/height",
+        BitcoinNetwork::Testnet => "https://mempool.space/testnet4/api/blocks/tip/height",
+    };
+    HttpRequestConfig::new(
+        url,
+        Some(TransformFnWrapper {
+            name: "transform_mempool_height",
+            func: transform_mempool_height,
+        }),
+        |raw| {
+            apply_to_body(raw, |text| {
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet block data from api.blockcypher.com.
+pub fn endpoint_mempool_height_mainnet() -> HttpRequestConfig {
+    endpoint_mempool_height(BitcoinNetwork::Mainnet)
+}
+
+/// Creates a config for fetching testnet block data from api.blockcypher.com.
+pub fn endpoint_mempool_height_testnet() -> HttpRequestConfig {
+    endpoint_mempool_height(BitcoinNetwork::Testnet)
 }
 
 /// Applies the given transformation function to the body of the response.
@@ -405,20 +371,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_bitaps_com_block_testnet() {
-        run_http_request_test(
-            endpoint_api_bitaps_com_block_testnet(),
-            "https://api.bitaps.com/btc/testnet/v1/blockchain/block/last",
-            test_utils::API_BITAPS_COM_TESTNET_RESPONSE,
-            json!({
-                "height": 2000001,
-                "hash": "0000000000000000000fff111111111111111111111111111111111111111111",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_api_blockchair_com_block() {
         run_http_request_test(
             endpoint_api_blockchair_com_block_mainnet(),
@@ -469,7 +421,7 @@ mod test {
             "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
             test_utils::BITCOIN_CANISTER_TESTNET_RESPONSE,
             json!({
-                "height": 2000007,
+                "height": 55001,
             }),
         )
         .await;
@@ -542,6 +494,32 @@ mod test {
         .await;
     }
 
+    #[tokio::test]
+    async fn test_mempool_height_mainnet() {
+        run_http_request_test(
+            endpoint_mempool_height_mainnet(),
+            "https://mempool.space/api/blocks/tip/height",
+            test_utils::MEMPOOL_HEIGHT_MAINNET_RESPONSE,
+            json!({
+                "height": 700008,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_mempool_height_testnet() {
+        run_http_request_test(
+            endpoint_mempool_height_testnet(),
+            "https://mempool.space/testnet4/api/blocks/tip/height",
+            test_utils::MEMPOOL_HEIGHT_TESTNET_RESPONSE,
+            json!({
+                "height": 55002,
+            }),
+        )
+        .await;
+    }
+
     #[test]
     fn test_transform_function_names() {
         test_utils::mock_mainnet_outcalls();
@@ -562,7 +540,8 @@ mod test {
                 "transform_blockchain_info_height",
                 "transform_blockstream_info_hash",
                 "transform_blockstream_info_height",
-                "transform_chain_api_btc_com_block"
+                "transform_chain_api_btc_com_block",
+                "transform_mempool_height",
             ]
         );
     }
@@ -604,17 +583,14 @@ mod test {
         let expected_status = candid::Nat::from(404u16);
         let test_cases = [
             endpoint_api_blockchair_com_block_mainnet(),
-            endpoint_api_blockchair_com_block_testnet(),
             endpoint_api_blockcypher_com_block_mainnet(),
-            endpoint_api_blockcypher_com_block_testnet(),
             endpoint_bitcoin_canister(),
             endpoint_blockchain_info_hash_mainnet(),
             endpoint_blockchain_info_height_mainnet(),
             endpoint_blockstream_info_hash_mainnet(),
-            endpoint_blockstream_info_hash_testnet(),
             endpoint_blockstream_info_height_mainnet(),
-            endpoint_blockstream_info_height_testnet(),
             endpoint_chain_api_btc_com_block_mainnet(),
+            endpoint_mempool_height_testnet(),
         ];
         for config in test_cases {
             // Arrange

@@ -1,28 +1,49 @@
 use crate::{
     api::{get_balance, get_current_fee_percentiles, get_utxos},
-    genesis_block, heartbeat,
+    genesis_block, heartbeat, init,
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
     types::{
-        BlockBlob, BlockHeaderBlob, GetBalanceRequest, GetSuccessorsCompleteResponse,
-        GetSuccessorsResponse, GetUtxosRequest,
+        into_bitcoin_network, BlockBlob, BlockHeaderBlob, GetBalanceRequest,
+        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
     verify_synced, with_state, SYNCED_THRESHOLD,
 };
-use crate::{init, test_utils::random_p2pkh_address};
-use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::{Block as BitcoinBlock, BlockHeader};
+use bitcoin::{
+    block::Header,
+    consensus::{Decodable, Encodable},
+    p2p::Magic,
+    Block as BitcoinBlock, Network as BitcoinNetwork,
+};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosFilter};
 use ic_btc_interface::{OutPoint, Utxo};
+use ic_btc_test_utils::random_p2pkh_address;
 use ic_btc_types::{Block, BlockHash};
 use ic_cdk::api::call::RejectionCode;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
 use std::{fs::File, panic::catch_unwind};
+
 mod confirmation_counts;
+
+/// Helper function to save a chain to a file in hex format.
+#[cfg(feature = "save_chain_as_hex")]
+fn save_chain_as_hex_file(chain: &[BitcoinBlock], file_name: &str) -> std::io::Result<()> {
+    use std::io::{BufWriter, Write};
+    let file = File::create(file_name)?;
+    let mut writer = BufWriter::new(file);
+
+    chain.iter().try_for_each(|block| {
+        let mut bytes = Vec::new();
+        block.consensus_encode(&mut bytes)?;
+        writeln!(writer, "{}", hex::encode(bytes))
+    })?;
+
+    Ok(())
+}
 
 async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     let mut chain: Vec<BitcoinBlock> = vec![];
@@ -42,16 +63,18 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
                     // Reached EOF
                     break;
                 }
-                magic
+                Magic::from_bytes(magic.to_le_bytes())
             }
         };
 
         assert_eq!(
             magic,
             match network {
-                Network::Mainnet => 0xD9B4BEF9,
-                Network::Testnet | Network::Regtest => 0x0709110B,
+                Network::Mainnet => BitcoinNetwork::Bitcoin,
+                Network::Testnet => BitcoinNetwork::Testnet4,
+                Network::Regtest => BitcoinNetwork::Regtest,
             }
+            .magic()
         );
 
         let _block_size = blk_file.read_u32::<LittleEndian>().unwrap();
@@ -73,6 +96,15 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     }
 
     println!("Built chain with length: {}", chain.len());
+
+    #[cfg(feature = "save_chain_as_hex")]
+    if network == Network::Testnet {
+        save_chain_as_hex_file(
+            &chain[..4000.min(chain.len())],
+            "../benchmarks/src/testnet_blocks.txt",
+        )
+        .unwrap();
+    }
 
     // Map the blocks into responses that are given to the hearbeat.
     let responses: Vec<_> = chain
@@ -110,16 +142,16 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
 }
 
 fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
-    let block_hash = BlockHash::from_str(block_hash).unwrap();
-
     let header = state.stable_block_headers.get_with_height(height).unwrap();
+    let hash = header.block_hash().to_string();
+    assert_eq!(block_hash, hash, "Block hash mismatch at height {}", height);
+
+    let block_hash = BlockHash::from_str(block_hash).unwrap();
     let header_2 = state
         .stable_block_headers
         .get_with_block_hash(&block_hash)
         .unwrap();
-
     assert_eq!(header, header_2);
-    assert_eq!(block_hash, header.block_hash().into());
 }
 
 #[async_std::test]
@@ -376,7 +408,12 @@ async fn testnet_10k_blocks() {
     // Set a reasonable performance counter step to trigger time-slicing.
     runtime::set_performance_counter_step(100_000);
 
-    process_chain(Network::Testnet, "test-data/testnet_10k_blocks.dat", 10_000).await;
+    process_chain(
+        Network::Testnet,
+        "test-data/testnet4_10k_blocks.dat",
+        10_000,
+    )
+    .await;
 
     // Validate we've ingested all the blocks.
     assert_eq!(with_state(main_chain_height), 10_000);
@@ -389,25 +426,29 @@ async fn testnet_10k_blocks() {
 
     // Check the block headers/heights of a few random blocks.
     crate::with_state(|state| {
+        // https://mempool.space/testnet4/block/00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043
         verify_block_header(
             state,
             0,
             &genesis_block(Network::Testnet).block_hash().to_string(),
         );
+        // https://mempool.space/testnet4/block/000000004deda718e1471a0b5899303e84df0d7a437284b93d29698724f11a0c
         verify_block_header(
             state,
             10,
-            "00000000700e92a916b46b8b91a14d1303d5d91ef0b09eecc3151fb958fd9a2e",
+            "000000004deda718e1471a0b5899303e84df0d7a437284b93d29698724f11a0c",
         );
+        // https://mempool.space/testnet4/block/000000000286736136f91cad37d93209b204eb26ac5df3908a5695d8c38b2ffd
         verify_block_header(
             state,
             7182,
-            "00000000077ba5bfae938af835f0d6431a55a1dee5ca64de23786ff180ebe033",
+            "000000000286736136f91cad37d93209b204eb26ac5df3908a5695d8c38b2ffd",
         );
+        // https://mempool.space/testnet4/block/000000000033c3815a71dde90eb10608a83fcef1f8448ce2e4de9a91a457350f
         verify_block_header(
             state,
             9997,
-            "00000000346b2ce3eab1bc5043d2a59e0e5b1e2da6554de26d8a4c683ecf5fdd",
+            "000000000033c3815a71dde90eb10608a83fcef1f8448ce2e4de9a91a457350f",
         );
     });
 }
@@ -415,14 +456,15 @@ async fn testnet_10k_blocks() {
 #[async_std::test]
 async fn time_slices_large_block_with_multiple_transactions() {
     let network = Network::Regtest;
+    let btc_network = into_bitcoin_network(network);
     init(InitConfig {
         stability_threshold: Some(0),
         network: Some(network),
         ..Default::default()
     });
 
-    let address_1 = random_p2pkh_address(network);
-    let address_2 = random_p2pkh_address(network);
+    let address_1 = random_p2pkh_address(btc_network).into();
+    let address_2 = random_p2pkh_address(btc_network).into();
 
     let tx_1 = TransactionBuilder::coinbase()
         .with_output(&address_1, 1000)
@@ -541,7 +583,7 @@ async fn test_rejections_counting() {
 }
 
 // Serialize header.
-fn get_header_blob(header: &BlockHeader) -> BlockHeaderBlob {
+fn get_header_blob(header: &Header) -> BlockHeaderBlob {
     let mut header_buff = vec![];
     header.consensus_encode(&mut header_buff).unwrap();
     header_buff.into()
@@ -779,19 +821,21 @@ async fn fee_percentiles_evaluation_helper() {
     let block_0 = {
         let fee = 1;
         let balance = 1000;
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         let tx_1 = TransactionBuilder::coinbase()
-            .with_output(&random_p2pkh_address(Network::Regtest), balance)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance)
             .build();
         let tx_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint {
                 txid: tx_1.txid(),
                 vout: 0,
             })
-            .with_output(&random_p2pkh_address(Network::Regtest), balance - fee)
+            .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
-        BlockBuilder::with_prev_header(genesis_block(Network::Regtest).header())
+        BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(tx_1)
             .with_transaction(tx_2.clone())
             .build()

@@ -12,6 +12,7 @@ readme = "README.md"
 
 [dependencies]
 candid = { workspace = true }
+datasize = { workspace = true }
 serde = { workspace = true }
 serde_bytes = { workspace = true }
 

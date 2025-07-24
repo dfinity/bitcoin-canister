@@ -20,7 +20,7 @@ mod validation;
 
 use crate::{
     api::set_config::set_config_no_verification,
-    runtime::{msg_cycles_accept, msg_cycles_available},
+    runtime::{msg_cycles_accept, msg_cycles_available, print},
     state::State,
     types::{into_bitcoin_network, HttpRequest, HttpResponse},
 };
@@ -46,7 +46,7 @@ use utxo_set::UtxoSet;
 const SYNCED_THRESHOLD: u32 = 2;
 
 thread_local! {
-    static STATE: RefCell<Option<State>> = RefCell::new(None);
+    static STATE: RefCell<Option<State>> = const { RefCell::new(None) };
 }
 
 /// A helper method to read the state.
@@ -79,8 +79,17 @@ fn set_state(state: State) {
     });
 }
 
+/// Resets the fetch mutex and discards any in-progress response.
+fn reset_syncing_state(state: &mut State) {
+    print("Resetting syncing state...");
+    state.syncing_state.is_fetching_blocks = false;
+    state.syncing_state.response_to_process = None;
+}
+
 /// Initializes the state of the Bitcoin canister.
 pub fn init(init_config: InitConfig) {
+    print("Running init...");
+
     let config = Config::from(init_config);
     set_state(State::new(
         config
@@ -163,10 +172,18 @@ pub fn get_config() -> Config {
 }
 
 pub fn pre_upgrade() {
+    print("Running pre_upgrade...");
+
     // Serialize the state.
     let mut state_bytes = vec![];
-    with_state(|state| ciborium::ser::into_writer(state, &mut state_bytes))
-        .expect("failed to encode state");
+    with_state_mut(|state| {
+        // Reset syncing state to ensure the canister
+        // is not locked in a fetching blocks state after the upgrade.
+        reset_syncing_state(state);
+
+        ciborium::ser::into_writer(state, &mut state_bytes)
+    })
+    .expect("failed to encode state");
 
     // Write the length of the serialized bytes to memory, followed by the
     // by the bytes themselves.
@@ -177,6 +194,8 @@ pub fn pre_upgrade() {
 }
 
 pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
+    print("Running post_upgrade...");
+
     let memory = memory::get_upgrades_memory();
 
     // Read the length of the state bytes.
@@ -192,6 +211,12 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
 
     set_state(state);
+
+    // Reset syncing state to ensure the next upgrade works reliably,
+    // even if the upgrade event interrupted the canister fetching state.
+    with_state_mut(|state| {
+        reset_syncing_state(state);
+    });
 
     // Update the state based on the provided configuration.
     if let Some(config_update) = config_update {
@@ -293,9 +318,10 @@ pub(crate) fn is_synced() -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_btc_interface::{Network, NetworkInRequest};
+    use ic_btc_interface::{Fees, Network, NetworkInRequest};
     use ic_btc_test_utils::build_regtest_chain;
     use proptest::prelude::*;
+    use state::ResponseToProcess;
 
     proptest! {
         #[test]
@@ -380,6 +406,33 @@ mod test {
 
         // The config has been updated with the new stability threshold.
         assert_eq!(get_config().stability_threshold, stability_threshold);
+    }
+
+    #[test]
+    fn test_upgrade_resets_sync_state() {
+        let network = Network::Regtest;
+        init(InitConfig {
+            stability_threshold: Some(144),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        // Simulate a state where the canister is fetching blocks.
+        with_state_mut(|state| {
+            state.syncing_state.is_fetching_blocks = true;
+            state.syncing_state.response_to_process =
+                Some(ResponseToProcess::Complete(Default::default())); // Some fake response.
+        });
+
+        // Upgrade the canister.
+        pre_upgrade();
+        post_upgrade(None);
+
+        // The syncing state should be reset.
+        with_state(|s| {
+            assert!(!s.syncing_state.is_fetching_blocks); // No longer fetching blocks.
+            assert!(s.syncing_state.response_to_process.is_none()); // No response to process.
+        });
     }
 
     #[test]
@@ -595,7 +648,7 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.syncing_state.syncing == Flag::Disabled);
+            assert_eq!(s.syncing_state.syncing, Flag::Disabled);
         });
 
         init(InitConfig {
@@ -604,7 +657,7 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.syncing_state.syncing == Flag::Enabled);
+            assert_eq!(s.syncing_state.syncing, Flag::Enabled);
         });
     }
 
@@ -616,7 +669,7 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.disable_api_if_not_fully_synced == Flag::Disabled);
+            assert_eq!(s.disable_api_if_not_fully_synced, Flag::Disabled);
         });
 
         init(InitConfig {
@@ -625,7 +678,32 @@ mod test {
         });
 
         with_state(|s| {
-            assert!(s.disable_api_if_not_fully_synced == Flag::Enabled);
+            assert_eq!(s.disable_api_if_not_fully_synced, Flag::Enabled);
         });
+    }
+
+    #[test]
+    fn init_applies_default_fees_when_not_explicitly_provided() {
+        let custom = Fees {
+            get_utxos_base: 123,
+            ..Default::default()
+        };
+        let test_cases = [
+            (Network::Testnet, None, Fees::testnet()),
+            (Network::Mainnet, None, Fees::mainnet()),
+            (Network::Regtest, None, Fees::default()),
+            (Network::Testnet, Some(custom.clone()), custom.clone()),
+            (Network::Mainnet, Some(custom.clone()), custom.clone()),
+            (Network::Regtest, Some(custom.clone()), custom),
+        ];
+        for (network, provided_fees, expected_fees) in test_cases {
+            init(InitConfig {
+                network: Some(network),
+                fees: provided_fees.clone(),
+                ..Default::default()
+            });
+
+            with_state(|s| assert_eq!(s.fees, expected_fees));
+        }
     }
 }

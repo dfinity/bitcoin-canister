@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{inc_performance_counter, performance_counter, print, time},
+    runtime::{inc_performance_counter, performance_counter, print, time_secs},
     types::{
         into_bitcoin_network, Address, BlockHeaderBlob, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
@@ -11,7 +11,7 @@ use crate::{
     validation::ValidationContext,
     UtxoSet,
 };
-use bitcoin::{consensus::Decodable, BlockHeader};
+use bitcoin::{block::Header, consensus::Decodable};
 use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
@@ -83,6 +83,12 @@ impl State {
         let unstable_blocks =
             UnstableBlocks::new(&utxos, stability_threshold, genesis_block, network);
 
+        let fees = match network {
+            Network::Mainnet => Fees::mainnet(),
+            Network::Testnet => Fees::testnet(),
+            Network::Regtest => Fees::default(),
+        };
+
         Self {
             utxos,
             unstable_blocks,
@@ -90,7 +96,7 @@ impl State {
             blocks_source: Principal::management_canister(),
             fee_percentiles_cache: None,
             stable_block_headers: BlockHeaderStore::init(),
-            fees: Fees::default(),
+            fees,
             metrics: Metrics::default(),
             api_access: Flag::Enabled,
             disable_api_if_not_fully_synced: Flag::Enabled,
@@ -124,7 +130,7 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
         &ValidationContext::new(state, block.header())
             .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
         block.header(),
-        time(),
+        time_secs(),
     )?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
@@ -162,7 +168,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     // Finish ingesting the stable block that's partially ingested, if that exists.
     print("Running ingest_block_continue...");
     match state.utxos.ingest_block_continue() {
-        None => {}
+        None => {} // No block to continue ingesting.
         Some(Slicing::Paused(())) => return has_state_changed(state),
         Some(Slicing::Done((ingested_block_hash, stats))) => {
             state.metrics.block_ingestion_stats = stats;
@@ -207,7 +213,7 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
             break;
         }
 
-        let block_header = match BlockHeader::consensus_decode(block_header_blob.as_slice()) {
+        let block_header = match Header::consensus_decode(&mut block_header_blob.as_slice()) {
             Ok(header) => header,
             Err(err) => {
                 print(&format!(
@@ -231,7 +237,7 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
                     &into_bitcoin_network(state.network()),
                     &store,
                     &block_header,
-                    time(),
+                    time_secs(),
                 ),
                 Err(err) => Err(err),
             };
@@ -264,8 +270,12 @@ pub fn main_chain_height(state: &State) -> Height {
         - 1
 }
 
-pub fn get_unstable_blocks(state: &State) -> Vec<&Block> {
-    unstable_blocks::get_blocks(&state.unstable_blocks)
+pub fn get_block_hashes(state: &State) -> Vec<BlockHash> {
+    unstable_blocks::get_block_hashes(&state.unstable_blocks)
+}
+
+pub fn unstable_blocks_total(state: &State) -> usize {
+    unstable_blocks::blocks_count(&state.unstable_blocks)
 }
 
 // The maximum size in bytes of a bitcoin script for it to be considered "small".
@@ -325,6 +335,16 @@ pub struct SyncingState {
 
     /// The number of errors occurred when inserting a block.
     pub num_insert_block_errors: u64,
+
+    /// Stats about the request sent to GetSuccessors.
+    /// NOTE: serde(default) is used here for backward-compatibility.
+    #[serde(default)]
+    pub get_successors_request_stats: SuccessorsRequestStats,
+
+    /// Stats about the responses received from GetSuccessors.
+    /// NOTE: serde(default) is used here for backward-compatibility.
+    #[serde(default)]
+    pub get_successors_response_stats: SuccessorsResponseStats,
 }
 
 impl Default for SyncingState {
@@ -336,7 +356,87 @@ impl Default for SyncingState {
             num_get_successors_rejects: 0,
             num_block_deserialize_errors: 0,
             num_insert_block_errors: 0,
+            get_successors_request_stats: SuccessorsRequestStats::default(),
+            get_successors_response_stats: SuccessorsResponseStats::default(),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
+pub struct SuccessorsRequestStats {
+    pub total_count: u64,
+    pub initial_count: u64,
+    pub follow_up_count: u64,
+
+    pub total_size: u64,
+    pub initial_size: u64,
+    pub follow_up_size: u64,
+
+    pub last_request_time: Option<u64>,
+}
+
+impl SuccessorsRequestStats {
+    pub fn get_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_count),
+            (("type", "initial"), self.initial_count),
+            (("type", "follow_up"), self.follow_up_count),
+        ]
+    }
+
+    pub fn get_size_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_size),
+            (("type", "initial"), self.initial_size),
+            (("type", "follow_up"), self.follow_up_size),
+        ]
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Default)]
+pub struct SuccessorsResponseStats {
+    pub total_count: u64,
+    pub complete_count: u64,
+    pub partial_count: u64,
+    pub follow_up_count: u64,
+
+    pub total_block_count: u64,
+    pub complete_block_count: u64,
+    pub partial_block_count: u64,
+    pub follow_up_block_count: u64,
+
+    pub total_size: u64,
+    pub complete_size: u64,
+    pub partial_size: u64,
+    pub follow_up_size: u64,
+}
+
+impl SuccessorsResponseStats {
+    pub fn get_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_count),
+            (("type", "complete"), self.complete_count),
+            (("type", "partial"), self.partial_count),
+            (("type", "follow_up"), self.follow_up_count),
+        ]
+    }
+
+    pub fn get_block_count_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_block_count),
+            (("type", "complete"), self.complete_block_count),
+            (("type", "partial"), self.partial_block_count),
+            (("type", "follow_up"), self.follow_up_block_count),
+        ]
+    }
+
+    pub fn get_size_metrics(&self) -> Vec<((&str, &str), u64)> {
+        vec![
+            (("type", "total"), self.total_size),
+            (("type", "complete"), self.complete_size),
+            (("type", "partial"), self.partial_size),
+            (("type", "follow_up"), self.follow_up_size),
+        ]
     }
 }
 

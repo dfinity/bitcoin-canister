@@ -1,17 +1,18 @@
 use crate::{
     api::get_current_fee_percentiles_impl,
-    runtime::{call_get_successors, cycles_burn, print},
+    runtime::{call_get_successors, cycles_burn, print, time},
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
         GetSuccessorsResponse,
     },
+    with_state, with_state_mut,
 };
-use crate::{with_state, with_state_mut};
-use bitcoin::consensus::Decodable;
-use bitcoin::Block as BitcoinBlock;
+use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
+use datasize::data_size;
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
+use std::time::Duration;
 
 /// The heartbeat of the Bitcoin canister.
 ///
@@ -19,6 +20,7 @@ use ic_btc_types::{Block, BlockHash};
 pub async fn heartbeat() {
     print("Starting heartbeat...");
 
+    collect_metrics();
     maybe_burn_cycles();
 
     if ingest_stable_blocks_into_utxoset() {
@@ -64,12 +66,33 @@ async fn maybe_fetch_blocks() -> bool {
         }
     };
 
+    with_state_mut(|s| {
+        let stats = &mut s.syncing_state.get_successors_request_stats;
+        let bytes = data_size(&request) as u64;
+        stats.total_count += 1;
+        stats.total_size += bytes;
+        match request {
+            GetSuccessorsRequest::Initial(_) => {
+                stats.initial_count += 1;
+                stats.initial_size += bytes;
+            }
+            GetSuccessorsRequest::FollowUp(_) => {
+                stats.follow_up_count += 1;
+                stats.follow_up_size += bytes;
+            }
+        }
+
+        let curr_time = time();
+        if let Some(prev_time) = stats.last_request_time.replace(curr_time) {
+            let interval = Duration::from_nanos(curr_time - prev_time).as_secs_f64();
+            s.metrics.get_successors_request_interval.observe(interval);
+        }
+    });
+
     print(&format!("Sending request: {:?}", request));
 
     let response: Result<(GetSuccessorsResponse,), _> =
         call_get_successors(with_state(|s| s.blocks_source), request).await;
-
-    print(&format!("Received response: {:?}", response));
 
     // Save the response.
     with_state_mut(|s| {
@@ -90,6 +113,19 @@ async fn maybe_fetch_blocks() -> bool {
                     s.syncing_state.response_to_process.is_none(),
                     "Received complete response before processing previous response."
                 );
+                let count = response.blocks.len() as u64;
+                let bytes = data_size(&response) as u64;
+                print(&format!(
+                    "Received complete response: {} blocks, total {} bytes.",
+                    count, bytes,
+                ));
+                let stats = &mut s.syncing_state.get_successors_response_stats;
+                stats.complete_count += 1;
+                stats.complete_block_count += count;
+                stats.complete_size += bytes;
+                stats.total_count += 1;
+                stats.total_block_count += count;
+                stats.total_size += bytes;
                 s.syncing_state.response_to_process = Some(ResponseToProcess::Complete(response));
             }
             GetSuccessorsResponse::Partial(partial_response) => {
@@ -98,6 +134,19 @@ async fn maybe_fetch_blocks() -> bool {
                     s.syncing_state.response_to_process.is_none(),
                     "Received partial response before processing previous response."
                 );
+                let bytes = data_size(&partial_response) as u64;
+                let remaining = partial_response.remaining_follow_ups as u64;
+                print(&format!(
+                    "Received partial response: {} bytes, {} follow-ups remaining.",
+                    bytes, remaining,
+                ));
+                let stats = &mut s.syncing_state.get_successors_response_stats;
+                stats.partial_count += 1;
+                stats.partial_block_count += 1;
+                stats.partial_size += bytes;
+                stats.total_count += 1;
+                stats.total_block_count += 1;
+                stats.total_size += bytes;
                 s.syncing_state.response_to_process =
                     Some(ResponseToProcess::Partial(partial_response, 0));
             }
@@ -105,11 +154,19 @@ async fn maybe_fetch_blocks() -> bool {
                 // Received a follow-up response.
                 // A follow-up response is only expected, and only makes sense, when there's
                 // a partial response to process.
-
+                let bytes = data_size(&block_bytes) as u64;
+                print(&format!("Received follow-up response: {} bytes.", bytes));
                 let (mut partial_response, mut follow_up_index) = match s.syncing_state.response_to_process.take() {
                     Some(ResponseToProcess::Partial(res, pages)) => (res, pages),
                     other => unreachable!("Cannot receive follow-up response without a previous partial response. Previous response found: {:?}", other)
                 };
+                let stats = &mut s.syncing_state.get_successors_response_stats;
+                stats.follow_up_count += 1;
+                stats.follow_up_block_count += 1;
+                stats.follow_up_size += bytes;
+                stats.total_count += 1;
+                stats.total_block_count += 1;
+                stats.total_size += bytes;
 
                 // Append block to partial response and increment # pages processed.
                 partial_response.partial_block.append(&mut block_bytes);
@@ -152,7 +209,7 @@ fn maybe_process_response() {
                 ));
                 for block_bytes in response.blocks.iter() {
                     // Deserialize the block.
-                    let block = match BitcoinBlock::consensus_decode(block_bytes.as_slice()) {
+                    let block = match BitcoinBlock::consensus_decode(&mut block_bytes.as_slice()) {
                         Ok(block) => block,
                         Err(err) => {
                             print(&format!(
@@ -225,10 +282,7 @@ fn maybe_get_successors_request() -> Option<GetSuccessorsRequest> {
         }
         None => {
             // No response is present. Send an initial request for new blocks.
-            let mut processed_block_hashes: Vec<BlockHash> = state::get_unstable_blocks(state)
-                .iter()
-                .map(|b| b.block_hash())
-                .collect();
+            let mut processed_block_hashes: Vec<BlockHash> = state::get_block_hashes(state);
 
             // We are guaranteed that there's always at least one block.
             let anchor = processed_block_hashes.remove(0);
@@ -260,20 +314,34 @@ fn maybe_burn_cycles() {
     }
 }
 
+fn collect_metrics() {
+    with_state_mut(|s| {
+        let metric = &mut s.metrics.unstable_blocks_tip_depths;
+        s.unstable_blocks
+            .tip_depths()
+            .into_iter()
+            .for_each(|depth| metric.observe(depth as f64));
+    })
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{
         genesis_block, init,
         runtime::{self, GetSuccessorsReply},
-        test_utils::{random_p2pkh_address, BlockBuilder, BlockChainBuilder, TransactionBuilder},
-        types::{Address, BlockBlob, GetSuccessorsCompleteResponse, GetSuccessorsPartialResponse},
+        test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
+        types::{
+            into_bitcoin_network, Address, BlockBlob, GetSuccessorsCompleteResponse,
+            GetSuccessorsPartialResponse,
+        },
         utxo_set::IngestingBlock,
     };
-    use bitcoin::BlockHeader;
+    use bitcoin::block::Header;
     use ic_btc_interface::{InitConfig, Network};
+    use ic_btc_test_utils::random_p2pkh_address;
 
-    fn build_block(prev_header: &BlockHeader, address: Address, num_transactions: u128) -> Block {
+    fn build_block(prev_header: &Header, address: Address, num_transactions: u128) -> Block {
         let mut block = BlockBuilder::with_prev_header(prev_header);
         let mut value = 1;
         for _ in 0..num_transactions {
@@ -371,6 +439,7 @@ mod test {
     #[async_std::test]
     async fn time_slices_large_blocks() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         init(InitConfig {
             stability_threshold: Some(0),
@@ -379,7 +448,7 @@ mod test {
         });
 
         // Setup a chain of two blocks.
-        let address = random_p2pkh_address(network);
+        let address: Address = random_p2pkh_address(btc_network).into();
         let block_1 = build_block(genesis_block(network).header(), address.clone(), 6);
         let block_2 = build_block(block_1.header(), address, 1);
 
@@ -456,6 +525,8 @@ mod test {
     #[async_std::test]
     async fn time_slices_large_transactions() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
+
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
@@ -465,8 +536,8 @@ mod test {
             ..Default::default()
         });
 
-        let address_1 = random_p2pkh_address(network);
-        let address_2 = random_p2pkh_address(network);
+        let address_1 = random_p2pkh_address(btc_network).into();
+        let address_2 = random_p2pkh_address(btc_network).into();
 
         // Create a transaction where a few inputs are given to address 1.
         let mut tx_1 = TransactionBuilder::coinbase();
@@ -610,6 +681,7 @@ mod test {
     #[async_std::test]
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
 
         init(InitConfig {
             stability_threshold: Some(0),
@@ -617,7 +689,7 @@ mod test {
             ..Default::default()
         });
 
-        let address = random_p2pkh_address(network);
+        let address = random_p2pkh_address(btc_network).into();
         let block = BlockBuilder::with_prev_header(genesis_block(network).header())
             .with_transaction(
                 TransactionBuilder::coinbase()

@@ -3,6 +3,7 @@ set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source "${SCRIPT_DIR}/utils.sh"
+pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
 trap "dfx stop" EXIT SIGINT
@@ -47,7 +48,7 @@ check_charging()
 
   # Send invalid transaction.
   set +e
-  SEND_TX_OUTPUT=$(dfx canister  --wallet="${WALLET}" call --with-cycles "${EXPECTED_FEE}" bitcoin "${METHOD}" "${RECORD}" 2>&1);
+  SEND_TX_OUTPUT=$(dfx canister call --wallet "${WALLET}" --with-cycles "${EXPECTED_FEE}" bitcoin "${METHOD}" "${RECORD}" 2>&1);
   set -e
 
 

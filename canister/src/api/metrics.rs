@@ -1,4 +1,10 @@
-use crate::{metrics::InstructionHistogram, state, types::HttpResponse, with_state};
+use crate::{
+    metrics::{Histogram, InstructionHistogram},
+    state,
+    types::HttpResponse,
+    unstable_blocks::testnet_unstable_max_depth_difference,
+    with_state,
+};
 use ic_btc_interface::Flag;
 use ic_cdk::api::time;
 use ic_metrics_encoder::MetricsEncoder;
@@ -63,29 +69,43 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             state.unstable_blocks.anchor_difficulty() as f64,
             "The difficulty of the anchor block.",
         )?;
+        let stability_threshold = state.unstable_blocks.stability_threshold();
+        w.encode_gauge(
+            "stability_threshold",
+            stability_threshold as f64,
+            "The stability threshold.",
+        )?;
         w.encode_gauge(
             "normalized_stability_threshold",
             state.unstable_blocks.normalized_stability_threshold() as f64,
             "The stability threshold normalized by the difficulty of the anchor block.",
         )?;
+        let unstable_blocks_total = state::unstable_blocks_total(state);
         w.encode_gauge(
-            "unstable_blocks_num_tips",
-            state.unstable_blocks.num_tips() as f64,
-            "The number of tips in the unstable block tree.",
+            "testnet_unstable_max_depth_difference",
+            testnet_unstable_max_depth_difference(unstable_blocks_total, stability_threshold).get()
+                as f64,
+            "Max depth difference between the two longest unstable branches in Testnet/Regtest.",
         )?;
         w.encode_gauge(
+            "unstable_blocks_num_tips",
+            state.unstable_blocks.tip_count() as f64,
+            "The number of tips in the unstable block tree.",
+        )?;
+        encode_histogram(w, &state.metrics.unstable_blocks_tip_depths)?;
+        w.encode_gauge(
             "unstable_blocks_total",
-            state::get_unstable_blocks(state).len() as f64,
+            unstable_blocks_total as f64,
             "The number of unstable blocks.",
         )?;
         w.encode_gauge(
             "unstable_blocks_depth",
-            state.unstable_blocks.blocks_depth() as f64,
+            state.unstable_blocks.blocks_depth().get() as f64,
             "The depth of the unstable blocks.",
         )?;
         w.encode_gauge(
             "unstable_blocks_difficulty_based_depth",
-            state.unstable_blocks.blocks_difficulty_based_depth() as f64,
+            state.unstable_blocks.blocks_difficulty_based_depth().get() as f64,
             "The difficulty-based depth of the unstable blocks.",
         )?;
 
@@ -93,12 +113,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         w.encode_gauge(
             "stable_memory_size_in_bytes",
             (ic_cdk::api::stable::stable_size() * WASM_PAGE_SIZE) as f64,
-            "The size of stable memory in pages.",
+            "The size of stable memory in bytes.",
         )?;
         w.encode_gauge(
             "heap_size_in_bytes",
-            get_heap_size() as f64,
-            "The size of the heap memory in pages.",
+            get_heap_size_in_bytes() as f64,
+            "The size of the heap memory in bytes.",
         )?;
 
         // Errors
@@ -122,6 +142,9 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         encode_instruction_histogram(w, &state.metrics.get_utxos_total)?;
         encode_instruction_histogram(w, &state.metrics.get_utxos_apply_unstable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_utxos_build_utxos_vec)?;
+        encode_instruction_histogram(w, &state.metrics.get_block_headers_total)?;
+        encode_instruction_histogram(w, &state.metrics.get_block_headers_unstable_blocks)?;
+        encode_instruction_histogram(w, &state.metrics.get_block_headers_stable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_balance_total)?;
         encode_instruction_histogram(w, &state.metrics.get_balance_apply_unstable_blocks)?;
         encode_instruction_histogram(w, &state.metrics.get_current_fee_percentiles_total)?;
@@ -149,7 +172,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
             w,
             "block_ingestion_stats",
             "The stats of the most recent block ingested into the stable UTXO set.",
-            &state.metrics.block_ingestion_stats.get_labels_and_values(),
+            &state
+                .metrics
+                .block_ingestion_stats
+                .get_instruction_labels_and_values(),
+        )?;
+
+        w.encode_gauge(
+            "block_ingestion_num_rounds",
+            state.metrics.block_ingestion_stats.get_num_rounds() as f64,
+            "The number of rounds it took the most recent block to get ingested into the stable UTXO set.",
         )?;
 
         w.encode_gauge(
@@ -169,6 +201,42 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         .value(&[("flag", "enabled")], enabled)?
         .value(&[("flag", "disabled")], disabled)?;
 
+        let stats = &state.syncing_state.get_successors_request_stats;
+        encode_labeled_gauge(
+            w,
+            "get_successors_request_count",
+            "The number of get_successors requests.",
+            &stats.get_count_metrics(),
+        )?;
+        encode_labeled_gauge(
+            w,
+            "get_successors_request_size",
+            "The size of get_successors requests.",
+            &stats.get_size_metrics(),
+        )?;
+
+        encode_histogram(w, &state.metrics.get_successors_request_interval)?;
+
+        let stats = &state.syncing_state.get_successors_response_stats;
+        encode_labeled_gauge(
+            w,
+            "get_successors_response_count",
+            "The number of get_successors responses.",
+            &stats.get_count_metrics(),
+        )?;
+        encode_labeled_gauge(
+            w,
+            "get_successors_response_block_count",
+            "The number of blocks in get_successors responses.",
+            &stats.get_block_count_metrics(),
+        )?;
+        encode_labeled_gauge(
+            w,
+            "get_successors_response_size",
+            "The size of the get_successors responses.",
+            &stats.get_size_metrics(),
+        )?;
+
         Ok(())
     })
 }
@@ -176,6 +244,13 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
 fn encode_instruction_histogram(
     metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
     h: &InstructionHistogram,
+) -> io::Result<()> {
+    metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
+}
+
+fn encode_histogram(
+    metrics_encoder: &mut MetricsEncoder<Vec<u8>>,
+    h: &Histogram,
 ) -> io::Result<()> {
     metrics_encoder.encode_histogram(&h.name, h.buckets(), h.sum, &h.help)
 }
@@ -195,8 +270,8 @@ fn encode_labeled_gauge(
     Ok(())
 }
 
-// Returns the size of the heap in pages.
-fn get_heap_size() -> u64 {
+/// Returns the size of the heap in bytes.
+fn get_heap_size_in_bytes() -> u64 {
     #[cfg(target_arch = "wasm32")]
     {
         core::arch::wasm32::memory_size(0) as u64 * WASM_PAGE_SIZE

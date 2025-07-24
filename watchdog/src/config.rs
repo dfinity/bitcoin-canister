@@ -73,6 +73,7 @@ impl Config {
                 BitcoinBlockApi::BlockchainInfoMainnet,
                 BitcoinBlockApi::BlockstreamInfoMainnet,
                 BitcoinBlockApi::ChainApiBtcComMainnet,
+                BitcoinBlockApi::MempoolMainnet,
             ],
         }
     }
@@ -83,17 +84,12 @@ impl Config {
             bitcoin_network: BitcoinNetwork::Testnet,
             blocks_behind_threshold: 1000,
             blocks_ahead_threshold: 1000,
-            min_explorers: 2,
+            min_explorers: 1,
             bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
                 .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: INTERVAL_BETWEEN_FETCHES_SEC,
-            explorers: vec![
-                BitcoinBlockApi::ApiBitapsComTestnet,
-                BitcoinBlockApi::ApiBlockchairComTestnet,
-                BitcoinBlockApi::ApiBlockcypherComTestnet,
-                BitcoinBlockApi::BlockstreamInfoTestnet,
-            ],
+            explorers: vec![BitcoinBlockApi::MempoolTestnet],
         }
     }
 

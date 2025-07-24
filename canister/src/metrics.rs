@@ -36,6 +36,14 @@ pub struct Metrics {
 
     /// The total number of cycles burnt.
     pub cycles_burnt: Option<u128>,
+
+    /// The time interval between two consecutive GetSuccessors requests.
+    #[serde(default = "get_successors_request_interval")]
+    pub get_successors_request_interval: Histogram,
+
+    /// The depth distribution of unstable block branches.
+    #[serde(default = "unstable_blocks_tip_depths")]
+    pub unstable_blocks_tip_depths: Histogram,
 }
 
 impl Default for Metrics {
@@ -82,6 +90,10 @@ impl Default for Metrics {
             ),
 
             cycles_burnt: Some(0),
+
+            get_successors_request_interval: get_successors_request_interval(),
+
+            unstable_blocks_tip_depths: unstable_blocks_tip_depths(),
         }
     }
 }
@@ -159,6 +171,102 @@ fn default_get_block_headers_unstable_blocks() -> InstructionHistogram {
     InstructionHistogram::new(
         "inst_count_get_block_headers_unstable_blocks",
         "Instructions needed to build the block headers vec in a get_block_headers request from unstable blocks.",
+    )
+}
+
+/// A histogram for observing values, using custom bucket thresholds.
+#[derive(Serialize, Deserialize, PartialEq)]
+pub struct Histogram {
+    pub name: String,
+    pub help: String,
+    thresholds: Vec<u64>,  // Stores bucket thresholds
+    pub buckets: Vec<u64>, // Stores observation counts per bucket
+    pub sum: f64,
+}
+
+impl Histogram {
+    /// Creates a new histogram with custom bucket thresholds.
+    ///
+    /// `thresholds` must be a sorted vector of bucket limits (e.g., from `decimal_buckets()`).
+    pub fn new<S: Into<String>>(name: S, help: S, thresholds: Vec<u64>) -> Self {
+        assert!(
+            thresholds.windows(2).all(|w| w[0] < w[1]),
+            "Thresholds must be strictly increasing"
+        );
+
+        Self {
+            name: name.into(),
+            help: help.into(),
+            sum: 0.0,
+            buckets: vec![0; thresholds.len()], // One count per threshold
+            thresholds,
+        }
+    }
+
+    /// Observes a new value by updating the corresponding bucket count.
+    pub fn observe(&mut self, value: f64) {
+        if value < 0.0 {
+            return; // Ignore negative values
+        }
+        let bucket_idx = self.get_bucket(value);
+        self.buckets[bucket_idx] += 1;
+        self.sum += value;
+    }
+
+    /// Finds the index of the bucket where `value` belongs.
+    fn get_bucket(&self, value: f64) -> usize {
+        let value = value as u64;
+        match self.thresholds.binary_search(&value) {
+            Ok(idx) => idx,                              // Exact match found
+            Err(idx) => idx.min(self.buckets.len() - 1), // Next larger bucket or last bucket
+        }
+    }
+
+    /// Returns an iterator over bucket thresholds and their observed counts.
+    pub fn buckets(&self) -> impl Iterator<Item = (f64, f64)> + '_ {
+        self.thresholds
+            .iter()
+            .map(|&e| e as f64)
+            .chain(std::iter::once(f64::INFINITY))
+            .zip(self.buckets.iter().map(|&e| e as f64))
+    }
+}
+
+/// Generates logarithmic bucket thresholds using powers of 10 with `[1, 2, 5]` steps.
+///
+/// Example: `logarithmic_buckets(0, 4)` → `[1, 2, 5, 10, ..., 50_000]`
+///
+/// # Panics
+/// Panics if `min_power > max_power`.
+fn logarithmic_buckets(min_power: u32, max_power: u32) -> Vec<u64> {
+    assert!(
+        min_power <= max_power,
+        "min_power must be <= max_power, given {} and {}",
+        min_power,
+        max_power
+    );
+    let mut buckets = Vec::with_capacity(3 * (max_power - min_power + 1) as usize);
+    for n in min_power..=max_power {
+        for &m in &[1, 2, 5] {
+            buckets.push(m * 10_u64.pow(n));
+        }
+    }
+    buckets
+}
+
+fn get_successors_request_interval() -> Histogram {
+    Histogram::new(
+        "get_successors_request_interval",
+        "Time between consecutive GetSuccessors requests (1s to 50,000s).",
+        logarithmic_buckets(0, 4),
+    )
+}
+
+fn unstable_blocks_tip_depths() -> Histogram {
+    Histogram::new(
+        "unstable_blocks_tip_depths",
+        "Depth distribution of unstable block branches (1 to 50,000).",
+        logarithmic_buckets(0, 4),
     )
 }
 

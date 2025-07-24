@@ -12,12 +12,14 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::bitcoin_block_apis::BitcoinBlockApi;
-use crate::config::{BitcoinNetwork, Config};
-use crate::endpoints::*;
-use crate::fetch::BlockInfo;
-use crate::health::HealthStatus;
-use crate::types::{CandidHttpRequest, CandidHttpResponse};
+use crate::{
+    bitcoin_block_apis::BitcoinBlockApi,
+    config::{BitcoinNetwork, Config},
+    endpoints::*,
+    fetch::BlockInfo,
+    health::HealthStatus,
+    types::{CandidHttpRequest, CandidHttpResponse},
+};
 use ic_btc_interface::Flag;
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};
@@ -35,7 +37,7 @@ thread_local! {
     static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
-    static API_ACCESS_TARGET: RefCell<Option<Flag>> = RefCell::new(None);
+    static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
 }
 
 /// This function is called when the canister is created.
@@ -181,6 +183,11 @@ fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
 #[query]
 fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
     endpoint_chain_api_btc_com_block_mainnet().transform(raw)
+}
+
+#[query]
+fn transform_mempool_height(raw: TransformArgs) -> HttpResponse {
+    endpoint_mempool_height_mainnet().transform(raw)
 }
 
 #[cfg(test)]
