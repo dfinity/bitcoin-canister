@@ -3,6 +3,9 @@
 ## UNRELEASED
 
 Features:
+- fix: fix min_explorers number for testnet watchdog canister ([#365](https://github.com/dfinity/bitcoin-canister/pull/365))
+- feat: migrate watchdog canister to Testnet4 ([#352](https://github.com/dfinity/bitcoin-canister/pull/352))
+- fix: remove `rand` dependency from Bitcoin canister ([#348](https://github.com/dfinity/bitcoin-canister/pull/348))
 - chore: add watchdog canister metadata ([#329](https://github.com/dfinity/bitcoin-canister/pull/329)) by @maksymar
 - feat: re-enable tracking `api.bitaps.com` `testnet` explorer in watchdog canister ([#328](https://github.com/dfinity/bitcoin-canister/pull/328)) by @maksymar
 - feat: improve height target calculation for watchdog canister ([#327](https://github.com/dfinity/bitcoin-canister/pull/327)) by @maksymar
@@ -10,6 +13,8 @@ Features:
 - chore: update threshold of watchdog `testnet` canister ([#295](https://github.com/dfinity/bitcoin-canister/pull/295)) by @islam.elashi
 
 Chores:
+- chore: add canister_id.json and docker build script ([#409](https://github.com/dfinity/bitcoin-canister/pull/409))
+- chore: update dfx to 0.23 and rust to 1.81 ([#372](https://github.com/dfinity/bitcoin-canister/pull/372))
 - chore: sort dependencies in `Cargo.toml` files ([#330](https://github.com/dfinity/bitcoin-canister/pull/330)) by @maksymar
 - fix: do not include canbench in production ([#317](https://github.com/dfinity/bitcoin-canister/pull/317)) by @islam.elashi
 - chore: upgrade rust from `1.70` to `1.76` ([#281](https://github.com/dfinity/bitcoin-canister/pull/281)) by @islam.elashi
