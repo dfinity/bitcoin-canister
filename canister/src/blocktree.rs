@@ -65,17 +65,6 @@ impl<'a> BlockChain<'a> {
     }
 }
 
-/// Error returned when attempting to create a `BlockChain` out of an empty
-/// list of blocks.
-#[derive(Debug)]
-pub struct EmptyChainError {}
-
-impl fmt::Display for EmptyChainError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "cannot create a `BlockChain` from an empty chain")
-    }
-}
-
 /// Depth of a blockchain, measured in the number of blocks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Depth(u64);
