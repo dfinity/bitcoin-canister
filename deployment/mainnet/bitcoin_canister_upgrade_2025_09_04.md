@@ -56,6 +56,7 @@ didc encode '()' | xxd -r -p | sha256sum
 ## Wasm Verification
 
 Verify that the hash of the gzipped WASM matches the proposed hash.
+NOTE: This process is not yet guaranteed to match on Apple Silicon.
 
 ```
 git fetch
