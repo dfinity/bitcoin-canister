@@ -6,7 +6,7 @@ Git hash: `292b446a0ec64158eb2c68247530870ff201f274`
 
 New compressed Wasm hash: `579d0ece72da46b0040fc7e395d9c4133bd117e2d2a6f7f6056252ec7ce29eb8`
 
-Upgrade args hash: `cb67b7d883fa8d54e0ef985460a0e1f47f213a27cfa40bdf2e2c68b833c352a4`
+Upgrade args hash: `ac446fe33f87ddff7ff126fa8322e26effbdca2701c719c2d29e4c9bfd9aeecd`
 
 Target canister: `gatoo-6iaaa-aaaan-aaacq-cai`
 
@@ -42,7 +42,7 @@ git log --format='%C(auto) %h %s' release/2024-01-22.. -- watchdog
 ```
 git fetch
 git checkout 292b446a0ec64158eb2c68247530870ff201f274
-didc encode '(variant { mainnet })' | xxd -r -p | sha256sum
+didc encode -d ./watchdog/candid.did -t '(bitcoin_network)' "(variant { mainnet })" | xxd -r -p | sha256sum
 ```
 
 ## Wasm Verification
