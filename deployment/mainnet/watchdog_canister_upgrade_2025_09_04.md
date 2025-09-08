@@ -10,7 +10,7 @@ Upgrade args hash: `ac446fe33f87ddff7ff126fa8322e26effbdca2701c719c2d29e4c9bfd9a
 
 Target canister: `gatoo-6iaaa-aaaan-aaacq-cai`
 
-Previous Bitcoin canister proposal: https://dashboard.internetcomputer.org/proposal/127666
+Previous Watchdog canister proposal: https://dashboard.internetcomputer.org/proposal/127666
 
 ---
 
