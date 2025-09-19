@@ -1822,6 +1822,7 @@ dependencies = [
  "bitcoin",
  "csv",
  "hex",
+ "hex_lit",
  "proptest 0.9.6",
 ]
 
