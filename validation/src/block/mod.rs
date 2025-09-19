@@ -63,10 +63,13 @@ fn validate_block(block: &bitcoin::Block) -> Result<(), ValidateBlockError> {
         return Err(ValidateBlockError::InvalidMerkleRoot);
     }
 
-    validate_unique_transactions(&block.txdata)?;
-
     // TODO XC-497: evaluate performance impact of checking the witness commitment
     // like in [here](https://github.com/rust-bitcoin/rust-bitcoin/blob/674ac57bce47e343d8f7c82e451aed5568766ba0/bitcoin/src/blockdata/block.rs#L141)
+
+    // Depart from the Rust bitcoin implementation because it's currently subject to
+    // [CVE-2012-2459](https://bitcointalk.org/index.php?topic=102395)
+    validate_unique_transactions(&block.txdata)?;
+
     Ok(())
 }
 
