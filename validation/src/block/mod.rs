@@ -2,7 +2,9 @@
 mod tests;
 
 use crate::{HeaderStore, HeaderValidator, ValidateHeaderError};
-use bitcoin::Network;
+use bitcoin::{Network, Transaction, Txid};
+use std::collections::BTreeSet;
+use std::hash::Hash;
 use std::time::Duration;
 
 #[derive(Debug, PartialEq)]
@@ -11,6 +13,7 @@ pub enum ValidateBlockError {
     InvalidCoinbase,
     InvalidMerkleRoot,
     InvalidBlockHeader(ValidateHeaderError),
+    DuplicateTransactions,
 }
 
 impl From<ValidateHeaderError> for ValidateBlockError {
@@ -61,7 +64,20 @@ fn validate_block(block: &bitcoin::Block) -> Result<(), ValidateBlockError> {
         return Err(ValidateBlockError::InvalidMerkleRoot);
     }
 
+    validate_unique_transactions(&block.txdata)?;
+
     // TODO XC-497: evaluate performance impact of checking the witness commitment
     // like in [here](https://github.com/rust-bitcoin/rust-bitcoin/blob/674ac57bce47e343d8f7c82e451aed5568766ba0/bitcoin/src/blockdata/block.rs#L141)
+    Ok(())
+}
+
+fn validate_unique_transactions(transactions: &[Transaction]) -> Result<(), ValidateBlockError> {
+    let mut unique_normalized_txids: BTreeSet<_> = BTreeSet::new();
+    for tx in transactions {
+        let unique = unique_normalized_txids.insert(tx.compute_ntxid());
+        if !unique {
+            return Err(ValidateBlockError::DuplicateTransactions);
+        }
+    }
     Ok(())
 }
