@@ -10,6 +10,12 @@ pub enum ValidateBlockError {
     InvalidBlockHeader(ValidateHeaderError),
 }
 
+impl From<ValidateHeaderError> for ValidateBlockError {
+    fn from(error: ValidateHeaderError) -> Self {
+        Self::InvalidBlockHeader(error)
+    }
+}
+
 pub struct BlockValidator<T> {
     header_validator: HeaderValidator<T>,
 }
@@ -43,7 +49,8 @@ impl<T: HeaderStore> BlockValidator<T> {
             return Err(ValidateBlockError::InvalidMerkleRoot);
         }
 
-        // TODO: witness commitment
+        // TODO XC-497: evaluate performance impact of checking the witness commitment
+        // like in [here](https://github.com/rust-bitcoin/rust-bitcoin/blob/674ac57bce47e343d8f7c82e451aed5568766ba0/bitcoin/src/blockdata/block.rs#L141)
 
         self.header_validator
             .validate_header(&block.header, current_time)

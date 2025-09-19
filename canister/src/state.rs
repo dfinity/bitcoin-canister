@@ -16,7 +16,7 @@ use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use ic_btc_validation::{
-    validate_header, HeaderValidator, ValidateHeaderError as InsertBlockError,
+    BlockValidator, HeaderValidator, ValidateBlockError as InsertBlockError, ValidateHeaderError,
 };
 use serde::{Deserialize, Serialize};
 
@@ -127,13 +127,12 @@ impl State {
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
     let start = performance_counter();
-    validate_header(
-        &into_bitcoin_network(state.network()),
-        &ValidationContext::new(state, block.header())
-            .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
-        block.header(),
-        time_secs(),
-    )?;
+    let validator = BlockValidator::new(
+        ValidationContext::new(state, block.header())
+            .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)?,
+        into_bitcoin_network(state.network()),
+    );
+    validator.validate_block(block.internal_bitcoin_block(), time_secs())?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
         .expect("Inserting a block with a validated header must succeed.");
@@ -233,7 +232,7 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
 
         let validation_result =
             match ValidationContext::new_with_next_block_headers(state, &block_header)
-                .map_err(|_| InsertBlockError::PrevHeaderNotFound)
+                .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
             {
                 Ok(store) => {
                     let validator =
