@@ -172,7 +172,6 @@ impl<T: HeaderStore> HeaderValidator<T> {
             Network::Bitcoin | Network::Signet => {
                 Target::from_compact(self.compute_next_difficulty(prev_header, prev_height))
             }
-            other => unreachable!("Unsupported network: {:?}", other),
         }
     }
 
@@ -225,7 +224,6 @@ impl<T: HeaderStore> HeaderValidator<T> {
                 pow_limit_bits
             }
             Network::Bitcoin | Network::Signet => pow_limit_bits,
-            other => unreachable!("Unsupported network: {:?}", other),
         }
     }
 

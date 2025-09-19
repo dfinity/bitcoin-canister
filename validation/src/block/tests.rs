@@ -1,16 +1,14 @@
 use crate::fixtures::{SimpleHeaderStore, MOCK_CURRENT_TIME};
 use crate::{BlockValidator, ValidateBlockError};
 use bitcoin::consensus::deserialize;
-use bitcoin::hashes::Hash;
-use bitcoin::{block, CompactTarget, Network, TxMerkleNode};
+use bitcoin::Network;
 use hex_lit::hex;
-use std::str::FromStr;
 
 // Tests taken from
 // https://github.com/rust-bitcoin/rust-bitcoin/blob/674ac57bce47e343d8f7c82e451aed5568766ba0/bitcoin/src/blockdata/block.rs#L537
 mod bitcoin_tests {
     use crate::block::validate_block;
-    use crate::{BlockValidator, ValidateBlockError};
+    use crate::ValidateBlockError;
     use bitcoin::block::Header;
     use bitcoin::consensus::deserialize;
     use bitcoin::hashes::Hash;

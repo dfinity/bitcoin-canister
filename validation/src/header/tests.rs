@@ -4,7 +4,7 @@ use bitcoin::{
 };
 use csv::Reader;
 use proptest::prelude::*;
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 
 use super::*;
 use crate::constants::test::{
@@ -326,7 +326,7 @@ fn test_next_target_regtest() {
     let expected_pow = CompactTarget::from_consensus(7); // Some non-limit PoW, the actual value is not important.
     for chain_length in 1..10 {
         let (store, last_header) = create_chain(&network, expected_pow, chain_length);
-        assert_eq!((&store).height() + 1, chain_length);
+        assert_eq!(store.height() + 1, chain_length);
         // Act.
         let validator = HeaderValidator::new(&store, Network::Regtest);
         let target = validator.get_next_target(

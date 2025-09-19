@@ -2,9 +2,8 @@
 mod tests;
 
 use crate::{HeaderStore, HeaderValidator, ValidateHeaderError};
-use bitcoin::{Network, Transaction, Txid};
+use bitcoin::{Network, Transaction};
 use std::collections::BTreeSet;
-use std::hash::Hash;
 use std::time::Duration;
 
 #[derive(Debug, PartialEq)]
