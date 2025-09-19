@@ -583,6 +583,7 @@ mod test {
     use ic_btc_interface::Network;
     use ic_btc_test_utils::random_p2pkh_address;
     use ic_btc_types::into_bitcoin_network;
+    use maplit::btreeset;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
 
@@ -620,36 +621,78 @@ mod test {
     }
 
     #[test]
-    fn filter_provably_unspendable_utxos() {
-        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
-            let mut utxo = UtxoSet::new(*network);
+    fn filter_mainnet_provably_unspendable_utxos() {
+        test_filter_provably_unspendable_utxos(UtxoSet::new(Network::Mainnet));
+    }
 
+    #[test]
+    fn filter_testnet_provably_unspendable_utxos() {
+        test_filter_provably_unspendable_utxos(UtxoSet::new(Network::Testnet));
+    }
+
+    #[test]
+    fn filter_regtest_provably_unspendable_utxos() {
+        test_filter_provably_unspendable_utxos(UtxoSet::new(Network::Regtest));
+    }
+
+    fn test_filter_provably_unspendable_utxos(mut utxos_set: UtxoSet) {
+        let network = utxos_set.network;
+        let coinbase = TransactionBuilder::coinbase().build();
+        let coinbase_outpoint = OutPoint {
+            txid: coinbase.txid(),
+            vout: 0,
+        };
+        let coinbase_out = &coinbase.output()[0];
+
+        let block = BlockBuilder::genesis()
+            // A block must have a coinbase transaction
+            .with_transaction(coinbase.clone())
             // A provably unspendable tx.
-            let block = BlockBuilder::genesis()
-                .with_transaction(Transaction::new(bitcoin::Transaction {
-                    output: vec![BitcoinTxOut {
-                        value: Amount::from_sat(50_0000_0000),
-                        script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
-                    }],
-                    input: vec![],
-                    version: Version(1),
-                    lock_time: LockTime::from_consensus(0),
-                }))
-                .build();
+            .with_transaction(Transaction::new(bitcoin::Transaction {
+                output: vec![BitcoinTxOut {
+                    value: Amount::from_sat(50_0000_0000),
+                    script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
+                }],
+                input: vec![],
+                version: Version(1),
+                lock_time: LockTime::from_consensus(0),
+            }))
+            .build();
 
-            assert_eq!(
-                utxo.ingest_block(block.clone()),
-                Slicing::Done((
-                    block.block_hash(),
-                    BlockIngestionStats {
-                        num_rounds: 1,
-                        ..Default::default()
+        assert_eq!(
+            utxos_set.ingest_block(block.clone()),
+            Slicing::Done((
+                block.block_hash(),
+                BlockIngestionStats {
+                    num_rounds: 1,
+                    ..Default::default()
+                }
+            ))
+        );
+
+        let ingested_utxos: BTreeSet<_> = utxos_set.utxos.iter().collect();
+        assert_eq!(
+            ingested_utxos,
+            btreeset! { ( coinbase_outpoint.clone(), ( TxOut::from(coinbase_out), 0 ) ) },
+        );
+        let ingested_address_utxos: BTreeSet<_> = utxos_set.address_utxos.iter().collect();
+        assert_eq!(
+            ingested_address_utxos,
+            btreeset! {
+                (Blob::try_from(
+                    AddressUtxo {
+                        address: Address::from_script(&coinbase_out.script_pubkey, network).unwrap(),
+                        height: 0,
+                        outpoint: coinbase_outpoint,
                     }
-                ))
-            );
-            assert!(utxo.utxos.is_empty());
-            assert!(utxo.address_utxos.is_empty());
-        }
+                    .to_bytes()
+                    .as_ref(),
+                )
+                .unwrap(),
+                ()
+                )
+            }
+        );
     }
 
     #[test]
