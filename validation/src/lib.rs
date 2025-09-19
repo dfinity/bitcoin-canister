@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod fixtures;
+
 mod block;
 mod constants;
 mod header;

@@ -11,6 +11,7 @@ use crate::constants::test::{
     MAINNET_HEADER_586656, MAINNET_HEADER_705600, MAINNET_HEADER_705601, MAINNET_HEADER_705602,
     TESTNET_HEADER_2132555, TESTNET_HEADER_2132556,
 };
+use crate::fixtures::SimpleHeaderStore;
 
 const MOCK_CURRENT_TIME: Duration = Duration::from_secs(2_634_590_600);
 
@@ -325,7 +326,7 @@ fn test_next_target_regtest() {
     let expected_pow = CompactTarget::from_consensus(7); // Some non-limit PoW, the actual value is not important.
     for chain_length in 1..10 {
         let (store, last_header) = create_chain(&network, expected_pow, chain_length);
-        assert_eq!(store.height + 1, chain_length);
+        assert_eq!((&store).height() + 1, chain_length);
         // Act.
         let validator = HeaderValidator::new(&store, Network::Regtest);
         let target = validator.get_next_target(
@@ -365,79 +366,6 @@ fn test_compute_next_difficulty_for_backdated_blocks() {
 
     // Assert.
     assert_eq!(difficulty, CompactTarget::from_consensus(473956288));
-}
-
-#[derive(Clone)]
-struct StoredHeader {
-    header: Header,
-    height: BlockHeight,
-}
-
-struct SimpleHeaderStore {
-    headers: HashMap<BlockHash, StoredHeader>,
-    height: BlockHeight,
-    tip_hash: BlockHash,
-    initial_hash: BlockHash,
-}
-
-impl SimpleHeaderStore {
-    fn new(initial_header: Header, height: BlockHeight) -> Self {
-        let initial_hash = initial_header.block_hash();
-        let tip_hash = initial_header.block_hash();
-        let mut headers = HashMap::new();
-        headers.insert(
-            initial_hash,
-            StoredHeader {
-                header: initial_header,
-                height,
-            },
-        );
-
-        Self {
-            headers,
-            height,
-            tip_hash,
-            initial_hash,
-        }
-    }
-
-    fn add(&mut self, header: Header) {
-        let prev = self
-            .headers
-            .get(&header.prev_blockhash)
-            .expect("prev hash missing");
-        let stored_header = StoredHeader {
-            header,
-            height: prev.height + 1,
-        };
-
-        self.height = stored_header.height;
-        self.headers.insert(header.block_hash(), stored_header);
-        self.tip_hash = header.block_hash();
-    }
-}
-
-impl HeaderStore for &SimpleHeaderStore {
-    fn get_with_block_hash(&self, hash: &BlockHash) -> Option<Header> {
-        self.headers.get(hash).map(|stored| stored.header)
-    }
-
-    fn get_with_height(&self, height: u32) -> Option<Header> {
-        let blocks_to_traverse = self.height - height;
-        let mut header = self.headers.get(&self.tip_hash).unwrap().header;
-        for _ in 0..blocks_to_traverse {
-            header = self.headers.get(&header.prev_blockhash).unwrap().header;
-        }
-        Some(header)
-    }
-
-    fn height(&self) -> u32 {
-        self.height
-    }
-
-    fn get_initial_hash(&self) -> BlockHash {
-        self.initial_hash
-    }
 }
 
 fn deserialize_header(encoded_bytes: &str) -> Header {
