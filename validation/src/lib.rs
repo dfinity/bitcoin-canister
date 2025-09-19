@@ -1,4 +1,5 @@
 mod constants;
+mod block;
 mod header;
 
 pub use crate::constants::max_target;
