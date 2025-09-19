@@ -43,6 +43,8 @@ impl<T: HeaderStore> BlockValidator<T> {
             return Err(ValidateBlockError::InvalidMerkleRoot);
         }
 
+        // TODO: witness commitment
+
         self.header_validator
             .validate_header(&block.header, current_time)
             .map_err(ValidateBlockError::InvalidBlockHeader)
