@@ -561,15 +561,23 @@ mod test {
 
         // Create blocks with the two transactions above.
         let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header())
+            .with_transaction(TransactionBuilder::coinbase().build())
             .with_transaction(tx_1)
             .build();
+        assert_eq!(num_inputs(&block_1), 2);
+        assert_eq!(num_outputs(&block_1), tx_cardinality + 1);
 
         let block_2 = BlockBuilder::with_prev_header(block_1.header())
+            .with_transaction(TransactionBuilder::coinbase().build())
             .with_transaction(tx_2)
             .build();
+        assert_eq!(num_inputs(&block_2), tx_cardinality + 1);
+        assert_eq!(num_outputs(&block_2), tx_cardinality + 1);
 
         // An additional block so that the previous blocks are ingested into the stable UTXO set.
-        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header())
+            .with_transaction(TransactionBuilder::coinbase().build())
+            .build();
 
         // Serialize the blocks.
         let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone(), block_3]
@@ -604,27 +612,37 @@ mod test {
         // Run the heartbeat a few rounds to ingest the two stable blocks.
         // Three inputs/outputs are expected to be ingested per round.
         let expected_states = vec![
-            IngestingBlock::new_with_args(block_1.clone(), 0, 1, 2),
-            IngestingBlock::new_with_args(block_1.clone(), 0, 1, 5),
-            IngestingBlock::new_with_args(block_2.clone(), 0, 2, 0),
-            IngestingBlock::new_with_args(block_2.clone(), 0, 5, 0),
-            IngestingBlock::new_with_args(block_2.clone(), 0, 6, 2),
-            IngestingBlock::new_with_args(block_2.clone(), 0, 6, 5),
+            // Heartbeat 0: ingest block_1, coinbase
+            IngestingBlock::new_with_args(block_1.clone(), 1, 1, 1),
+            IngestingBlock::new_with_args(block_1.clone(), 1, 1, 4),
+            IngestingBlock::new_with_args(block_2.clone(), 1, 0, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 1, 3, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 1, 6, 0),
+            IngestingBlock::new_with_args(block_2.clone(), 1, 6, 3),
         ];
 
-        for expected_state in expected_states.into_iter() {
+        for (id, expected_state) in expected_states.into_iter().enumerate() {
             // Ingest stable blocks.
             runtime::performance_counter_reset();
             heartbeat().await;
 
             // Assert that execution has been paused.
             let partial_block = with_state(|s| s.utxos.ingesting_block.clone().unwrap());
-            assert_eq!(partial_block.block, expected_state.block);
-            assert_eq!(partial_block.next_tx_idx, expected_state.next_tx_idx);
-            assert_eq!(partial_block.next_input_idx, expected_state.next_input_idx);
             assert_eq!(
-                partial_block.next_output_idx,
-                expected_state.next_output_idx
+                partial_block.block, expected_state.block,
+                "Test case {id} failed",
+            );
+            assert_eq!(
+                partial_block.next_tx_idx, expected_state.next_tx_idx,
+                "Test case {id} failed",
+            );
+            assert_eq!(
+                partial_block.next_input_idx, expected_state.next_input_idx,
+                "Test case {id} failed",
+            );
+            assert_eq!(
+                partial_block.next_output_idx, expected_state.next_output_idx,
+                "Test case {id} failed",
             );
 
             // The addresses 1 and 2 do not change while ingestion is in progress.
@@ -863,5 +881,23 @@ mod test {
             with_state(|s| s.unstable_blocks.next_block_headers_max_height()),
             Some(30)
         );
+    }
+
+    fn num_inputs(block: &Block) -> u32 {
+        block
+            .internal_bitcoin_block()
+            .txdata
+            .iter()
+            .map(|tx| tx.input.len() as u32)
+            .sum()
+    }
+
+    fn num_outputs(block: &Block) -> u32 {
+        block
+            .internal_bitcoin_block()
+            .txdata
+            .iter()
+            .map(|tx| tx.output.len() as u32)
+            .sum()
     }
 }
