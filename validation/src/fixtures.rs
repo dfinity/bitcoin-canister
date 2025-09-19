@@ -2,6 +2,9 @@ use crate::{BlockHeight, HeaderStore};
 use bitcoin::block::Header;
 use bitcoin::BlockHash;
 use std::collections::HashMap;
+use std::time::Duration;
+
+pub const MOCK_CURRENT_TIME: Duration = Duration::from_secs(2_634_590_600);
 
 #[derive(Clone)]
 struct StoredHeader {
@@ -37,6 +40,11 @@ impl SimpleHeaderStore {
         }
     }
 
+    pub fn new_with_genesis(network: bitcoin::Network) -> Self {
+        let genesis = bitcoin::constants::genesis_block(network);
+        Self::new(genesis.header, 0)
+    }
+
     pub fn add(&mut self, header: Header) {
         let prev = self
             .headers
@@ -53,25 +61,41 @@ impl SimpleHeaderStore {
     }
 }
 
-impl HeaderStore for &SimpleHeaderStore {
+impl<T: AsRef<SimpleHeaderStore>> HeaderStore for T {
     fn get_with_block_hash(&self, hash: &BlockHash) -> Option<Header> {
-        self.headers.get(hash).map(|stored| stored.header)
+        self.as_ref().headers.get(hash).map(|stored| stored.header)
     }
 
     fn get_with_height(&self, height: u32) -> Option<Header> {
-        let blocks_to_traverse = self.height - height;
-        let mut header = self.headers.get(&self.tip_hash).unwrap().header;
+        let blocks_to_traverse = self.as_ref().height - height;
+        let mut header = self
+            .as_ref()
+            .headers
+            .get(&self.as_ref().tip_hash)
+            .unwrap()
+            .header;
         for _ in 0..blocks_to_traverse {
-            header = self.headers.get(&header.prev_blockhash).unwrap().header;
+            header = self
+                .as_ref()
+                .headers
+                .get(&header.prev_blockhash)
+                .unwrap()
+                .header;
         }
         Some(header)
     }
 
     fn height(&self) -> u32 {
-        self.height
+        self.as_ref().height
     }
 
     fn get_initial_hash(&self) -> BlockHash {
-        self.initial_hash
+        self.as_ref().initial_hash
+    }
+}
+
+impl AsRef<SimpleHeaderStore> for SimpleHeaderStore {
+    fn as_ref(&self) -> &SimpleHeaderStore {
+        self
     }
 }
