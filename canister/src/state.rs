@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{inc_performance_counter, performance_counter, print, time_secs},
+    runtime::{inc_performance_counter, performance_counter, print, duration_since_epoch},
     types::{
         into_bitcoin_network, Address, BlockHeaderBlob, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
@@ -132,7 +132,7 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
             .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)?,
         into_bitcoin_network(state.network()),
     );
-    validator.validate_block(block.internal_bitcoin_block(), time_secs())?;
+    validator.validate_block(block.internal_bitcoin_block(), duration_since_epoch())?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
         .expect("Inserting a block with a validated header must succeed.");
@@ -237,7 +237,7 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
                 Ok(store) => {
                     let validator =
                         HeaderValidator::new(store, into_bitcoin_network(state.network()));
-                    validator.validate_header(&block_header, time_secs())
+                    validator.validate_header(&block_header, duration_since_epoch())
                 }
                 Err(err) => Err(err),
             };

@@ -208,7 +208,7 @@ pub fn get_cycles_balance() -> u64 {
 }
 
 /// Gets current timestamp, in seconds since the epoch (1970-01-01).
-pub fn time_secs() -> Duration {
+pub fn duration_since_epoch() -> Duration {
     Duration::from_secs(time() / 1_000_000_000)
 }
 
