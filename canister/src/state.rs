@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{inc_performance_counter, performance_counter, print, duration_since_epoch},
+    runtime::{duration_since_epoch, inc_performance_counter, performance_counter, print},
     types::{
         into_bitcoin_network, Address, BlockHeaderBlob, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
