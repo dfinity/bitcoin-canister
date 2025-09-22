@@ -1011,6 +1011,7 @@ mod test {
             let address_1 = random_p2pkh_address(btc_network).into();
             let address_2 = random_p2pkh_address(btc_network).into();
             let address_3 = random_p2pkh_address(btc_network).into();
+            let address_miner = random_p2pkh_address(btc_network).into();
 
             let mut utxo_set = UtxoSet::new(network);
 
@@ -1058,14 +1059,19 @@ mod test {
                 .with_transaction(tx_0.clone())
                 .build();
 
-            // Block 1: Contains transactions 1 and 2.
+            // Block 1: Contains coinbase, transactions 1 and 2.
+            let mining_reward = 10;
+            let coinbase_tx=TransactionBuilder::coinbase().with_output(&address_miner, mining_reward).build();
             let block_1 = BlockBuilder::with_prev_header(block_0.header())
+                .with_transaction(coinbase_tx.clone())
                 .with_transaction(tx_1.clone())
                 .with_transaction(tx_2.clone())
                 .build();
+            let num_inputs_outputs_block_1 = num_inputs_outputs(&block_1);
+            prop_assert_eq!(num_inputs_outputs_block_1 as u64, tx_cardinality * 4 +1);
 
             // Ingest block 0 without any time-slicing.
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set.ingest_block(block_0.clone()),
                 Slicing::Done((
                     block_0.block_hash(),
@@ -1089,11 +1095,12 @@ mod test {
                     // Block 1 ingestion is paused. Assert that the state is exactly
                     // what we expect if only block 0 is ingested.
 
-                    assert_eq!(utxo_set.get_balance(&address_1), tx_cardinality);
-                    assert_eq!(utxo_set.get_balance(&address_2), 0);
-                    assert_eq!(utxo_set.get_balance(&address_3), 0);
+                    prop_assert_eq!(utxo_set.get_balance(&address_1), tx_cardinality);
+                    prop_assert_eq!(utxo_set.get_balance(&address_miner), 0);
+                    prop_assert_eq!(utxo_set.get_balance(&address_2), 0);
+                    prop_assert_eq!(utxo_set.get_balance(&address_3), 0);
 
-                    assert_eq!(
+                    prop_assert_eq!(
                         utxo_set
                             .get_address_outpoints(&address_1, &None)
                             .collect::<Vec<_>>(),
@@ -1105,14 +1112,21 @@ mod test {
                             .collect::<Vec<_>>()
                     );
 
-                    assert_eq!(
+                    prop_assert_eq!(
+                        utxo_set
+                            .get_address_outpoints(&address_miner, &None)
+                            .collect::<Vec<_>>(),
+                        vec![]
+                    );
+
+                    prop_assert_eq!(
                         utxo_set
                             .get_address_outpoints(&address_2, &None)
                             .collect::<Vec<_>>(),
                         vec![]
                     );
 
-                    assert_eq!(
+                    prop_assert_eq!(
                         utxo_set
                             .get_address_outpoints(&address_3, &None)
                             .collect::<Vec<_>>(),
@@ -1129,7 +1143,15 @@ mod test {
                             .is_some());
 
                         // All the outpoints in block 1 do not exist.
-                        assert_eq!(
+                        prop_assert_eq!(
+                            utxo_set.get_utxo(&OutPoint {
+                                vout: 0,
+                                txid: coinbase_tx.txid(),
+                            }),
+                            None
+                        );
+
+                        prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: i as u32,
                                 txid: tx_1.txid(),
@@ -1137,7 +1159,7 @@ mod test {
                             None
                         );
 
-                        assert_eq!(
+                        prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: i as u32,
                                 txid: tx_2.txid(),
@@ -1152,29 +1174,30 @@ mod test {
 
             // Finished ingesting block 1. Assert that the balances, addresses outpoints, and
             // UTXOs are updated accordingly.
-            assert_eq!(utxo_set.get_balance(&address_1), 0);
-            assert_eq!(utxo_set.get_balance(&address_2), 0);
-            assert_eq!(utxo_set.get_balance(&address_3), tx_cardinality);
-            assert_eq!(
+            prop_assert_eq!(utxo_set.get_balance(&address_1), 0);
+            prop_assert_eq!(utxo_set.get_balance(&address_miner), mining_reward);
+            prop_assert_eq!(utxo_set.get_balance(&address_2), 0);
+            prop_assert_eq!(utxo_set.get_balance(&address_3), tx_cardinality);
+            prop_assert_eq!(
                 num_rounds,
-                ((tx_cardinality * 4) as f32 / ingestion_rate as f32).ceil() as u32
+                (num_inputs_outputs_block_1 as f32 / ingestion_rate as f32).ceil() as u32
             );
 
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_1, &None)
                     .collect::<Vec<_>>(),
                 vec![]
             );
 
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_2, &None)
                     .collect::<Vec<_>>(),
                 vec![]
             );
 
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_3, &None)
                     .collect::<Vec<_>>(),
@@ -1188,7 +1211,7 @@ mod test {
 
             for i in 0..tx_cardinality {
                 // All the outpoints in tx 0 don't exist.
-                assert_eq!(
+                prop_assert_eq!(
                     utxo_set.get_utxo(&OutPoint {
                         vout: i as u32,
                         txid: tx_0.txid(),
@@ -1197,7 +1220,7 @@ mod test {
                 );
 
                 // All the outpoints in tx 1 don't exist.
-                assert_eq!(
+                prop_assert_eq!(
                     utxo_set.get_utxo(&OutPoint {
                         vout: i as u32,
                         txid: tx_1.txid(),
@@ -1229,5 +1252,20 @@ mod test {
                 false
             }
         })
+    }
+
+    fn num_inputs_outputs(block: &Block) -> usize {
+        let num_inputs = block
+            .txdata()
+            .iter()
+            .filter(|tx| !tx.is_coinbase())
+            .map(|tx| tx.input().len())
+            .sum::<usize>();
+        let num_outputs = block
+            .txdata()
+            .iter()
+            .map(|tx| tx.output().len())
+            .sum::<usize>();
+        num_inputs + num_outputs
     }
 }
