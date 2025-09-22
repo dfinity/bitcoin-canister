@@ -48,7 +48,7 @@ impl<T: HeaderStore> BlockValidator<T> {
 }
 
 fn validate_block(block: &bitcoin::Block) -> Result<(), ValidateBlockError> {
-    //check block like in
+    // Check block like in
     // [bitcoin](https://github.com/rust-bitcoin/rust-bitcoin/blob/674ac57bce47e343d8f7c82e451aed5568766ba0/bitcoin/src/blockdata/block.rs#L126)
     let transactions = &block.txdata;
     if transactions.is_empty() {
