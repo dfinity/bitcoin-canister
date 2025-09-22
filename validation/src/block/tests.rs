@@ -1,7 +1,9 @@
 use crate::fixtures::{SimpleHeaderStore, MOCK_CURRENT_TIME};
-use crate::{BlockValidator, ValidateBlockError};
+use crate::ValidateBlockError::InvalidBlockHeader;
+use crate::{BlockValidator, ValidateBlockError, ValidateHeaderError};
 use bitcoin::consensus::deserialize;
-use bitcoin::Network;
+use bitcoin::hashes::Hash;
+use bitcoin::{BlockHash, Network};
 use hex_lit::hex;
 
 // Tests taken from
@@ -84,6 +86,30 @@ mod bitcoin_tests {
         let header = hex!("010000004ddccd549d28f385ab457e98d1b11ce80bfea2c5ab93015ade4973e400000000bf4473e53794beae34e64fccc471dace6ae544180816f89591894e0f417a914cd74d6e49ffff001d323b3a7b");
         deserialize(&header).expect("can't deserialize correct block header")
     }
+}
+
+#[test]
+fn should_validate_header_before_block() {
+    // https://learnmeabitcoin.com/explorer/block/00000000839a8e6886ab5951d76f411475428afc90947ee320161bbf18eb6048
+    const BLOCK_1_HEX: &str = "010000006fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000982051fd1e4ba744bbbe680e1fee14677ba1a3c3540bf7b1cdb606e857233e0e61bc6649ffff001d01e362990101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0704ffff001d0104ffffffff0100f2052a0100000043410496b538e853519c726a2c91e61ec11600ae1390813a627c66fb8be7947be63c52da7589379515d4e0a604f8141781e62294721166bf621e73a82cbf2342c858eeac00000000";
+    let network = Network::Bitcoin;
+    let validator = BlockValidator::new(SimpleHeaderStore::new_with_genesis(network), network);
+    let mut invalid_block: bitcoin::Block = deserialize(&hex!(BLOCK_1_HEX)).unwrap();
+
+    // Change coinbase to be invalid by having 2 inputs (instead of 1)
+    let coinbase = invalid_block.txdata.get_mut(0).unwrap();
+    coinbase.input.push(coinbase.input.first().unwrap().clone());
+    assert_eq!(
+        validator.validate_block(&invalid_block, MOCK_CURRENT_TIME),
+        Err(ValidateBlockError::InvalidCoinbase)
+    );
+
+    // Invalidate header
+    invalid_block.header.prev_blockhash = BlockHash::all_zeros();
+    assert_eq!(
+        validator.validate_block(&invalid_block, MOCK_CURRENT_TIME),
+        Err(InvalidBlockHeader(ValidateHeaderError::PrevHeaderNotFound))
+    );
 }
 
 #[test]

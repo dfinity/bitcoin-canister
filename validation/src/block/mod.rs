@@ -39,11 +39,10 @@ impl<T: HeaderStore> BlockValidator<T> {
         block: &bitcoin::Block,
         current_time: Duration,
     ) -> Result<(), ValidateBlockError> {
-        validate_block(block).and_then(|()| {
-            self.header_validator
-                .validate_header(&block.header, current_time)
-                .map_err(ValidateBlockError::InvalidBlockHeader)
-        })
+        self.header_validator
+            .validate_header(&block.header, current_time)
+            .map_err(ValidateBlockError::InvalidBlockHeader)
+            .and_then(|()| validate_block(block))
     }
 }
 
