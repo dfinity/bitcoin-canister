@@ -674,6 +674,7 @@ mod test {
         assert_eq!(
             ingested_utxos,
             btreeset! { ( coinbase_outpoint.clone(), ( TxOut::from(coinbase_out), 0 ) ) },
+            "BUG: utxos should only contain the coinbase transaction"
         );
         let ingested_address_utxos: BTreeSet<_> = utxos_set.address_utxos.iter().collect();
         assert_eq!(
@@ -691,7 +692,8 @@ mod test {
                 .unwrap(),
                 ()
                 )
-            }
+            },
+            "BUG: address_utxos should only contain the address from the coinbase transaction output"
         );
     }
 
