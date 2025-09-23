@@ -108,6 +108,8 @@ pub fn init(init_config: InitConfig) {
     with_state_mut(|s| s.burn_cycles = config.burn_cycles);
     with_state_mut(|s| s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles);
     with_state_mut(|s| s.fees = config.fees);
+
+    print("...init completed!");
 }
 
 pub fn get_current_fee_percentiles(

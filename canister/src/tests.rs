@@ -1,16 +1,8 @@
-use crate::{
-    api::{get_balance, get_current_fee_percentiles, get_utxos},
-    genesis_block, heartbeat, init,
-    runtime::{self, GetSuccessorsReply},
-    state::main_chain_height,
-    test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
-    types::{
-        into_bitcoin_network, BlockBlob, BlockHeaderBlob, GetBalanceRequest,
-        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
-    },
-    utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    verify_synced, with_state, SYNCED_THRESHOLD,
-};
+use crate::types::Address;
+use crate::{api::{get_balance, get_current_fee_percentiles, get_utxos}, genesis_block, heartbeat, init, runtime::{self, GetSuccessorsReply}, state::main_chain_height, test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder}, types::{
+    into_bitcoin_network, BlockBlob, BlockHeaderBlob, GetBalanceRequest,
+    GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
+}, utxo_set::{IngestingBlock, DUPLICATE_TX_IDS}, verify_synced, with_state, with_state_mut, SYNCED_THRESHOLD};
 use bitcoin::{
     block::Header,
     consensus::{Decodable, Encodable},
@@ -908,4 +900,64 @@ async fn fee_percentiles_are_evaluated_eagerly() {
     // percentiles should NOT be empty, as they were eagerly evaluated
     // when blocks were ingested.
     assert_eq!(get_current_fee_percentiles().len(), 101);
+}
+
+#[test]
+fn test_chain() {
+    const MINER_ADDRESS: &str = "mwSSBD3NCriNXNMgd6dr2N2rxX9M9zXqrp";
+    const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
+    const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+
+    let tx_cardinality = 10_000;
+    let genesis = bitcoin::constants::genesis_block(bitcoin::Network::Regtest);
+    let mining_reward: u64 = 5_000_000_000;
+    let miner_address = Address::from_str(MINER_ADDRESS).unwrap();
+    let address_1 = Address::from_str(ADDRESS_1).unwrap();
+    let address_2 = Address::from_str(ADDRESS_2).unwrap();
+
+    crate::init(InitConfig {
+        network: Some(Network::Regtest),
+        ..Default::default()
+    });
+
+    // Transaction 0: A coinbase tx with `tx_cardinality` inputs, each giving 1 Satoshi to
+    // address 1.
+    let mut tx_0 = TransactionBuilder::coinbase();
+    for i in 0..tx_cardinality {
+        tx_0 = tx_0.with_output(&address_1, 1).with_lock_time(i as u32)
+    }
+    let tx_0 = tx_0.build();
+    let tx_0_id = tx_0.txid();
+
+    // Transaction 1: Consume all the outputs of transaction 0 *in reverse order* and create
+    // similar outputs for address 2.
+    //
+    // Consuming the inputs in reverse order here is deliberate as it allows to test
+    // whether or not they'll be sorted when they're re-added back in
+    // `get_address_outpoints`.
+    let mut tx_1 = TransactionBuilder::new();
+    for i in (0..tx_cardinality).rev() {
+        tx_1 = tx_1.with_input(ic_btc_types::OutPoint {
+            vout: i as u32,
+            txid: tx_0_id.clone(),
+        });
+    }
+    for i in 0..tx_cardinality {
+        tx_1 = tx_1.with_output(&address_2, 1).with_lock_time(i as u32);
+    }
+    let tx_1 = tx_1.build();
+
+    let block_1 = BlockBuilder::with_prev_header(&genesis.header)
+        .with_transaction(tx_0)
+        .build();
+    let block_2 = BlockBuilder::with_prev_header(block_1.header())
+        .with_transaction(TransactionBuilder::coinbase().build())
+        .with_transaction(tx_1)
+        .build();
+
+    with_state_mut(|s| {
+        crate::state::insert_block(s, block_1).unwrap();
+        crate::state::insert_block(s, block_2).unwrap();
+    });
+
 }

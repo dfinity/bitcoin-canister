@@ -1820,6 +1820,7 @@ name = "ic-btc-validation"
 version = "0.1.0"
 dependencies = [
  "bitcoin",
+ "canbench-rs",
  "csv",
  "hex",
  "hex_lit",

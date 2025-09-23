@@ -11,9 +11,15 @@ repository = "https://github.com/dfinity/bitcoin-canister"
 
 [dependencies]
 bitcoin = { workspace = true }
+canbench-rs = { workspace = true, optional = true }
 
 [dev-dependencies]
 csv = "1.1"
 hex = { workspace = true }
 hex_lit = { workspace = true }
 proptest = "0.9.4"
+
+# There are no benchmarks in the library itself, so by default it's turned off
+# to avoid having `cargo bench` look for benchmarks there.
+[lib]
+bench = false
