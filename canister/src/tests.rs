@@ -1,8 +1,17 @@
 use crate::types::Address;
-use crate::{api::{get_balance, get_current_fee_percentiles, get_utxos}, genesis_block, heartbeat, init, runtime::{self, GetSuccessorsReply}, state::main_chain_height, test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder}, types::{
-    into_bitcoin_network, BlockBlob, BlockHeaderBlob, GetBalanceRequest,
-    GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
-}, utxo_set::{IngestingBlock, DUPLICATE_TX_IDS}, verify_synced, with_state, with_state_mut, SYNCED_THRESHOLD};
+use crate::{
+    api::{get_balance, get_current_fee_percentiles, get_utxos},
+    genesis_block, heartbeat, init,
+    runtime::{self, GetSuccessorsReply},
+    state::main_chain_height,
+    test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
+    types::{
+        into_bitcoin_network, BlockBlob, BlockHeaderBlob, GetBalanceRequest,
+        GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
+    },
+    utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
+    verify_synced, with_state, with_state_mut, SYNCED_THRESHOLD,
+};
 use bitcoin::{
     block::Header,
     consensus::{Decodable, Encodable},
@@ -959,5 +968,4 @@ fn test_chain() {
         crate::state::insert_block(s, block_1).unwrap();
         crate::state::insert_block(s, block_2).unwrap();
     });
-
 }

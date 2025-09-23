@@ -76,7 +76,7 @@ impl<T: HeaderStore> HeaderValidator<T> {
     ) -> Result<(), ValidateHeaderError> {
         #[cfg(feature = "canbench-rs")]
         let _p = canbench_rs::bench_scope("validate_header");
-        
+
         let prev_height = self.store.height();
         let prev_header = match self.store.get_with_block_hash(&header.prev_blockhash) {
             Some(result) => result,
