@@ -54,37 +54,28 @@ fn test_is_header_valid() {
 }
 
 #[test]
-fn test_timestamp_is_less_than_2h_in_future() {
+fn test_timestamp_is_at_most_2h_in_future() {
     // Time is represented as the number of seconds after 01.01.1970 00:00.
-    // Hence, if block time is 10 seconds after that time,
-    // 'timestamp_is_less_than_2h_in_future' should return true.
+    assert!(timestamp_is_at_most_2h_in_future(Duration::from_secs(10), MOCK_CURRENT_TIME).is_ok());
 
     assert!(
-        timestamp_is_less_than_2h_in_future(Duration::from_secs(10), MOCK_CURRENT_TIME).is_ok()
+        timestamp_is_at_most_2h_in_future(MOCK_CURRENT_TIME - ONE_HOUR, MOCK_CURRENT_TIME).is_ok()
     );
+
+    assert!(timestamp_is_at_most_2h_in_future(MOCK_CURRENT_TIME, MOCK_CURRENT_TIME).is_ok());
 
     assert!(
-        timestamp_is_less_than_2h_in_future(MOCK_CURRENT_TIME - ONE_HOUR, MOCK_CURRENT_TIME)
-            .is_ok()
+        timestamp_is_at_most_2h_in_future(MOCK_CURRENT_TIME + ONE_HOUR, MOCK_CURRENT_TIME).is_ok()
     );
 
-    assert!(timestamp_is_less_than_2h_in_future(MOCK_CURRENT_TIME, MOCK_CURRENT_TIME).is_ok());
-
-    assert!(
-        timestamp_is_less_than_2h_in_future(MOCK_CURRENT_TIME + ONE_HOUR, MOCK_CURRENT_TIME)
-            .is_ok()
-    );
-
-    assert!(timestamp_is_less_than_2h_in_future(
+    assert!(timestamp_is_at_most_2h_in_future(
         MOCK_CURRENT_TIME + 2 * ONE_HOUR - Duration::from_secs(5),
         MOCK_CURRENT_TIME
     )
     .is_ok());
 
-    // 'timestamp_is_less_than_2h_in_future' should return false
-    // because the time is more than 2 hours from the current time.
     assert_eq!(
-        timestamp_is_less_than_2h_in_future(
+        timestamp_is_at_most_2h_in_future(
             MOCK_CURRENT_TIME + 2 * ONE_HOUR + Duration::from_secs(10),
             MOCK_CURRENT_TIME
         ),

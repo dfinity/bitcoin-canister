@@ -117,7 +117,7 @@ impl<T: HeaderStore> HeaderValidator<T> {
         header: &Header,
         current_time: Duration,
     ) -> Result<(), ValidateHeaderError> {
-        timestamp_is_less_than_2h_in_future(Duration::from_secs(header.time as u64), current_time)?;
+        timestamp_is_at_most_2h_in_future(Duration::from_secs(header.time as u64), current_time)?;
         let mut times = vec![];
         let mut current_header: Header = *header;
         let initial_hash = self.store.get_initial_hash();
@@ -284,7 +284,7 @@ impl<T: HeaderStore> HeaderValidator<T> {
     }
 }
 
-fn timestamp_is_less_than_2h_in_future(
+fn timestamp_is_at_most_2h_in_future(
     block_time: Duration,
     current_time: Duration,
 ) -> Result<(), ValidateHeaderError> {
