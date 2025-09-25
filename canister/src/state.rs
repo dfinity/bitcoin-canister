@@ -526,4 +526,25 @@ mod test {
         // Assert the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
     }
+
+    #[test]
+    fn should_not_ingest_twice_same_block() {
+        let stability_threshold = 0;
+        let num_blocks = 3;
+        let num_transactions_per_block = 10;
+        let network = Network::Regtest;
+        let blocks = build_chain(network, num_blocks, num_transactions_per_block);
+
+        let mut state = State::new(stability_threshold, network, blocks[0].clone());
+        insert_block(&mut state, blocks[1].clone()).unwrap();
+        insert_block(&mut state, blocks[2].clone()).unwrap();
+
+        let mut other_state = State::new(stability_threshold, network, blocks[0].clone());
+        insert_block(&mut other_state, blocks[1].clone()).unwrap();
+        insert_block(&mut other_state, blocks[2].clone()).unwrap();
+        insert_block(&mut other_state, blocks[1].clone()).unwrap();
+
+        assert_eq!(state.unstable_blocks, other_state.unstable_blocks);
+        assert!(state == other_state);
+    }
 }
