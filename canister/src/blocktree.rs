@@ -9,6 +9,7 @@ use std::ops::{Add, Sub};
 /// * the first block of the chain
 /// * the successors to this block (which can be an empty list)
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(Clone))]
 pub struct BlockChain<'a> {
     // The first block of this `BlockChain`, i.e. the one at the lowest height.
     first: &'a Block,
@@ -434,13 +435,15 @@ mod test {
     #[test]
     fn tree_single_block() {
         let block_tree = BlockTree::new(BlockBuilder::genesis().build());
+        let expected_chain = BlockChain {
+            first: &block_tree.root,
+            successors: vec![],
+        };
 
+        assert_eq!(block_tree.blockchains(), vec![expected_chain.clone()]);
         assert_eq!(
-            block_tree.blockchains(),
-            vec![BlockChain {
-                first: &block_tree.root,
-                successors: vec![],
-            }]
+            Some((expected_chain, vec![])),
+            block_tree.get_chain_with_tip(&block_tree.root.block_hash())
         );
     }
 
@@ -450,16 +453,27 @@ mod test {
         let genesis_block_header = *genesis_block.header();
         let mut block_tree = BlockTree::new(genesis_block);
 
+        let mut children = vec![];
         for i in 1..5 {
             // Create different blocks extending the genesis block.
             // Each one of these should be a separate fork.
-            block_tree
-                .extend(BlockBuilder::with_prev_header(&genesis_block_header).build())
-                .unwrap();
+            let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
+            children.push(block.clone());
+            block_tree.extend(block).unwrap();
             assert_eq!(block_tree.blockchains().len(), i);
         }
 
         assert_eq!(block_tree.children.len(), 4);
+        assert_eq!(
+            Some((
+                BlockChain {
+                    first: &block_tree.root,
+                    successors: vec![],
+                },
+                children.iter().collect()
+            )),
+            block_tree.get_chain_with_tip(&block_tree.root.block_hash())
+        );
     }
 
     #[test]
@@ -481,6 +495,7 @@ mod test {
             let chain = block_tree
                 .get_chain_with_tip(&block_hash)
                 .unwrap()
+                .0
                 .into_chain();
 
             // The first block should be the genesis block.
@@ -527,6 +542,7 @@ mod test {
                 let chain = block_tree
                     .get_chain_with_tip(&block_hash)
                     .unwrap()
+                    .0
                     .into_chain();
 
                 // The first block should be the genesis block.
