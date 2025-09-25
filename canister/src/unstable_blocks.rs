@@ -372,7 +372,7 @@ pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
 pub fn get_chain_with_tip<'a>(
     blocks: &'a UnstableBlocks,
     tip: &BlockHash,
-) -> Option<BlockChain<'a>> {
+) -> Option<(BlockChain<'a>, Vec<&'a Block>)> {
     blocks.tree.get_chain_with_tip(tip)
 }
 

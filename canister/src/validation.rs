@@ -17,6 +17,7 @@ impl<'a> ValidationContext<'a> {
         // The given header must extend one of the unstable blocks.
         let prev_block_hash = header.prev_blockhash.into();
         let chain = unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
+            .map(|(blockchain, _tip_successors)| blockchain)
             .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
             .into_chain()
             .iter()

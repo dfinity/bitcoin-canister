@@ -252,39 +252,53 @@ impl BlockTree {
     /// Returns a `BlockChain` starting from the anchor and ending with the `tip`.
     ///
     /// If the `tip` doesn't exist in the tree, `None` is returned.
-    pub fn get_chain_with_tip<'a>(&'a self, tip: &BlockHash) -> Option<BlockChain<'a>> {
+    pub fn get_chain_with_tip<'a>(
+        &'a self,
+        tip: &BlockHash,
+    ) -> Option<(BlockChain<'a>, Vec<&'a Block>)> {
         // Compute the chain in reverse order, as that's more efficient, and then
         // reverse it to get the answer in the correct order.
-        self.get_chain_with_tip_reverse(tip).map(|mut chain| {
-            // Safe to unwrap as the `chain` would contain at least the root of the
-            // `BlockTree` it was produced from.
-            // This would be the first block since the chain is in reverse order.
-            let first = chain.pop().unwrap();
-            // Reverse the chain to get the list of `successors` in the right order.
-            chain.reverse();
-            BlockChain {
-                first,
-                successors: chain,
-            }
-        })
+        self.get_chain_with_tip_reverse(tip)
+            .map(|(mut chain, tip_successors)| {
+                // Safe to unwrap as the `chain` would contain at least the root of the
+                // `BlockTree` it was produced from.
+                // This would be the first block since the chain is in reverse order.
+                let first = chain.pop().unwrap();
+                // Reverse the chain to get the list of `successors` in the right order.
+                chain.reverse();
+                (
+                    BlockChain {
+                        first,
+                        successors: chain,
+                    },
+                    tip_successors,
+                )
+            })
     }
 
     // Do a depth-first search to find the blockchain that ends with the given `tip`.
     // For performance reasons, the list is returned in the reverse order, starting
     // from `tip` and ending with `anchor`.
-    fn get_chain_with_tip_reverse<'a>(&'a self, tip: &BlockHash) -> Option<Vec<&'a Block>> {
+    fn get_chain_with_tip_reverse<'a>(
+        &'a self,
+        tip: &BlockHash,
+    ) -> Option<(Vec<&'a Block>, Vec<&'a Block>)> {
         if self.root.block_hash() == *tip {
-            return Some(vec![&self.root]);
+            return Some((vec![&self.root], self.direct_successors()));
         }
 
         for child in self.children.iter() {
-            if let Some(mut chain) = child.get_chain_with_tip_reverse(tip) {
+            if let Some((mut chain, tip_successors)) = child.get_chain_with_tip_reverse(tip) {
                 chain.push(&self.root);
-                return Some(chain);
+                return Some((chain, tip_successors));
             }
         }
 
         None
+    }
+
+    fn direct_successors(&self) -> Vec<&Block> {
+        self.children.iter().map(|c| &c.root).collect()
     }
 
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.

@@ -136,7 +136,7 @@ fn get_utxos_internal(
                 height,
                 outpoint,
             } = Page::from_bytes(page).map_err(|err| GetUtxosError::MalformedPage { err })?;
-            let chain =
+            let (chain, _tip_children) =
                 unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &tip_block_hash)
                     .ok_or(GetUtxosError::UnknownTipBlockHash {
                         tip_block_hash: tip_block_hash.to_vec(),
