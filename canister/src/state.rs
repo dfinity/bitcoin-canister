@@ -127,12 +127,19 @@ impl State {
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
     let start = performance_counter();
-    let validator = BlockValidator::new(
-        ValidationContext::new(state, block.header())
+    ic_btc_validation::validate::validate_block(
+        &into_bitcoin_network(state.network()),
+        &ValidationContext::new(state, block.header())
             .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)?,
-        into_bitcoin_network(state.network()),
-    );
-    validator.validate_block(block.internal_bitcoin_block(), duration_since_epoch())?;
+        block.internal_bitcoin_block(),
+        duration_since_epoch(),
+    )?;
+    // let validator = BlockValidator::new(
+    //     ValidationContext::new(state, block.header())
+    //         .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)?,
+    //     into_bitcoin_network(state.network()),
+    // );
+    // validator.validate_block(block.internal_bitcoin_block(), duration_since_epoch())?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
         .expect("Inserting a block with a validated header must succeed.");
