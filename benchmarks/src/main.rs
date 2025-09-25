@@ -158,42 +158,12 @@ fn insert_block_headers_multiple_times() -> BenchResult {
 
 #[bench(raw)]
 fn insert_block_with_10k_transactions() -> BenchResult {
-    let [block_1, block_2] = mini_chain(10_000);
-
-    ic_btc_canister::init(InitConfig {
-        network: Some(Network::Regtest),
-        ..Default::default()
-    });
-
-    with_state_mut(|s| {
-        ic_btc_canister::state::insert_block(s, block_1).unwrap();
-    });
-
-    bench_fn(|| {
-        with_state_mut(|s| {
-            ic_btc_canister::state::insert_block(s, block_2).unwrap();
-        });
-    })
+    bench_insert_block(10_000)
 }
 
 #[bench(raw)]
 fn insert_block_with_1k_transactions() -> BenchResult {
-    let [block_1, block_2] = mini_chain(1_000);
-
-    ic_btc_canister::init(InitConfig {
-        network: Some(Network::Regtest),
-        ..Default::default()
-    });
-
-    with_state_mut(|s| {
-        ic_btc_canister::state::insert_block(s, block_1).unwrap();
-    });
-
-    bench_fn(|| {
-        with_state_mut(|s| {
-            ic_btc_canister::state::insert_block(s, block_2).unwrap();
-        });
-    })
+    bench_insert_block(1_000)
 }
 
 #[bench(raw)]
@@ -217,59 +187,77 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
     })
 }
 
-/// Create a chain of 2 blocks after genesis.
-///
-/// 1st block:
-/// * 1 coinbase transaction with `tx_cardinality` outputs
-///
-/// 2nd block:
-/// * `tx_cardinality` transactions consuming the previous outputs
-fn mini_chain(tx_cardinality: u32) -> [Block; 2] {
-    const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
-    const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
+fn bench_insert_block(num_transactions: u32) -> BenchResult {
+    /// Create a chain of 2 blocks after genesis.
+    ///
+    /// 1st block:
+    /// * 1 coinbase transaction with `tx_cardinality` outputs
+    ///
+    /// 2nd block:
+    /// * `tx_cardinality` transactions consuming the previous outputs
+    fn mini_chain(tx_cardinality: u32) -> [Block; 2] {
+        const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
+        const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
 
-    let address_1 = bitcoin::Address::from_str(ADDRESS_1)
-        .unwrap()
-        .assume_checked();
-    let address_2 = bitcoin::Address::from_str(ADDRESS_2)
-        .unwrap()
-        .assume_checked();
+        let address_1 = bitcoin::Address::from_str(ADDRESS_1)
+            .unwrap()
+            .assume_checked();
+        let address_2 = bitcoin::Address::from_str(ADDRESS_2)
+            .unwrap()
+            .assume_checked();
 
-    // Transaction 1: A coinbase tx with `tx_cardinality` inputs, each giving 1 Satoshi to
-    // address 1.
-    let mut tx_1 = TransactionBuilder::coinbase();
-    for i in 0..tx_cardinality {
-        tx_1 = tx_1.with_output(&address_1, 1).with_lock_time(i)
+        // Transaction 1: A coinbase tx with `tx_cardinality` inputs, each giving 1 Satoshi to
+        // address 1.
+        let mut tx_1 = TransactionBuilder::coinbase();
+        for i in 0..tx_cardinality {
+            tx_1 = tx_1.with_output(&address_1, 1).with_lock_time(i)
+        }
+        let tx_1 = tx_1.build();
+        let tx_1_id: bitcoin::Txid = tx_1.compute_txid();
+
+        // Transaction 2: Consume all the outputs of transaction 1 *in reverse order* and create
+        // similar outputs for address 2.
+        let mut tx_2 = TransactionBuilder::new();
+        for i in (0..tx_cardinality).rev() {
+            tx_2 = tx_2.with_input(
+                bitcoin::OutPoint {
+                    vout: i,
+                    txid: tx_1_id,
+                },
+                None,
+            );
+        }
+        for i in 0..tx_cardinality {
+            tx_2 = tx_2.with_output(&address_2, 1).with_lock_time(i);
+        }
+        let tx_2 = tx_2.build();
+
+        let genesis = genesis_block(bitcoin::Network::Regtest);
+        let block_1 = BlockBuilder::with_prev_header(genesis.header)
+            .with_transaction(tx_1)
+            .build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header)
+            .with_transaction(TransactionBuilder::coinbase().build())
+            .with_transaction(tx_2)
+            .build();
+        [Block::new(block_1), Block::new(block_2)]
     }
-    let tx_1 = tx_1.build();
-    let tx_1_id: bitcoin::Txid = tx_1.compute_txid();
+    let [block_1, block_2] = mini_chain(num_transactions);
 
-    // Transaction 2: Consume all the outputs of transaction 1 *in reverse order* and create
-    // similar outputs for address 2.
-    let mut tx_2 = TransactionBuilder::new();
-    for i in (0..tx_cardinality).rev() {
-        tx_2 = tx_2.with_input(
-            bitcoin::OutPoint {
-                vout: i,
-                txid: tx_1_id,
-            },
-            None,
-        );
-    }
-    for i in 0..tx_cardinality {
-        tx_2 = tx_2.with_output(&address_2, 1).with_lock_time(i);
-    }
-    let tx_2 = tx_2.build();
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Regtest),
+        ..Default::default()
+    });
 
-    let genesis = genesis_block(bitcoin::Network::Regtest);
-    let block_1 = BlockBuilder::with_prev_header(genesis.header)
-        .with_transaction(tx_1)
-        .build();
-    let block_2 = BlockBuilder::with_prev_header(block_1.header)
-        .with_transaction(TransactionBuilder::coinbase().build())
-        .with_transaction(tx_2)
-        .build();
-    [Block::new(block_1), Block::new(block_2)]
+    with_state_mut(|s| {
+        ic_btc_canister::state::insert_block(s, block_1).unwrap();
+    });
+
+    bench_fn(|| {
+        with_state_mut(|s| {
+            ic_btc_canister::state::insert_block(s, block_2).unwrap();
+        });
+    })
 }
 
 fn main() {}
