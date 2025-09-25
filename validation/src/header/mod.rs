@@ -14,7 +14,7 @@ use crate::{
 /// An error thrown when trying to validate a header.
 #[derive(Debug, PartialEq)]
 pub enum ValidateHeaderError {
-    /// Used when the timestamp in the header is lower than
+    /// Used when the timestamp in the header is not greater than
     /// the median of timestamps of past 11 headers.
     HeaderIsOld,
     /// Used when the timestamp in the header is more than 2 hours

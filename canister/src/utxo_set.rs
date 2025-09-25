@@ -1070,7 +1070,7 @@ mod test {
                 .with_transaction(tx_2.clone())
                 .build();
             let num_inputs_outputs_block_1 = num_inputs_outputs(&block_1);
-            prop_assert_eq!(num_inputs_outputs_block_1 as u64, tx_cardinality * 4 +1);
+            prop_assert_eq!(num_inputs_outputs_block_1 as u64, tx_cardinality * 4 + 1);
 
             // Ingest block 0 without any time-slicing.
             prop_assert_eq!(
