@@ -13,7 +13,6 @@ pub enum ValidateBlockError {
     InvalidMerkleRoot,
     InvalidBlockHeader(ValidateHeaderError),
     DuplicateTransactions,
-    AlreadyKnown
 }
 
 impl From<ValidateHeaderError> for ValidateBlockError {

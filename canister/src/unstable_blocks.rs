@@ -236,10 +236,6 @@ impl UnstableBlocks {
             .collect::<Vec<_>>()
             .into_iter()
     }
-
-    pub fn contains(&self, block: &Block) -> bool {
-        self.tree.contains(block)
-    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.

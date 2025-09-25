@@ -331,7 +331,7 @@ impl BlockTree {
     }
 
     /// Returns true if a block exists in the tree, false otherwise.
-    pub(crate) fn contains(&self, block: &Block) -> bool {
+    fn contains(&self, block: &Block) -> bool {
         if self.root.block_hash() == block.block_hash() {
             return true;
         }
