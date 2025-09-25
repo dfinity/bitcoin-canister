@@ -127,6 +127,9 @@ impl State {
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
     let start = performance_counter();
+    if state.unstable_blocks.contains(&block) {
+        return Err(InsertBlockError::AlreadyKnown);
+    }
     let validator = BlockValidator::new(
         ValidationContext::new(state, block.header())
             .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)?,
@@ -542,9 +545,11 @@ mod test {
         let mut other_state = State::new(stability_threshold, network, blocks[0].clone());
         insert_block(&mut other_state, blocks[1].clone()).unwrap();
         insert_block(&mut other_state, blocks[2].clone()).unwrap();
-        insert_block(&mut other_state, blocks[1].clone()).unwrap();
+        assert_eq!(
+            insert_block(&mut other_state, blocks[1].clone()),
+            Err(InsertBlockError::AlreadyKnown)
+        );
 
-        assert_eq!(state.unstable_blocks, other_state.unstable_blocks);
         assert!(state == other_state);
     }
 }
