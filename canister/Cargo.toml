@@ -50,3 +50,4 @@ test-strategy = "0.3.1"
 file_memory = []
 save_chain_as_hex = []
 mock_time = []
+canbench-rs = ["dep:canbench-rs", "ic-btc-validation/canbench-rs"]

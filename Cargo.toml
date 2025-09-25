@@ -27,7 +27,7 @@ resolver = "2"
 
 [workspace.dependencies]
 assert_matches = "1.5.0"
-bitcoin = "0.32.5"
+bitcoin = "0.32.7"
 byteorder = "1.4.3"
 canbench-rs = "0.2.0"
 candid = "0.10.6"
@@ -37,6 +37,7 @@ clap = { version = "4.0.11", features = ["derive"] }
 datasize = "0.2.15"
 futures = "0.3.28"
 hex = "0.4.3"
+hex_lit = "0.1.1"
 ic-btc-canister = { path = "./canister" }
 ic-btc-interface = { path = "./interface" }
 ic-btc-test-utils = { path = "./test-utils" }
