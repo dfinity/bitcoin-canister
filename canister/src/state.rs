@@ -2,7 +2,7 @@ use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
     metrics::Metrics,
-    runtime::{inc_performance_counter, performance_counter, print, time_secs},
+    runtime::{duration_since_epoch, inc_performance_counter, performance_counter, print},
     types::{
         into_bitcoin_network, Address, BlockHeaderBlob, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
@@ -15,7 +15,9 @@ use bitcoin::{block::Header, consensus::Decodable};
 use candid::Principal;
 use ic_btc_interface::{Fees, Flag, Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
-use ic_btc_validation::{validate_header, ValidateHeaderError as InsertBlockError};
+use ic_btc_validation::{
+    BlockValidator, HeaderValidator, ValidateBlockError as InsertBlockError, ValidateHeaderError,
+};
 use serde::{Deserialize, Serialize};
 
 /// A structure used to maintain the entire state.
@@ -125,13 +127,12 @@ impl State {
 /// Returns an error if the block doesn't extend any known block in the state.
 pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockError> {
     let start = performance_counter();
-    validate_header(
-        &into_bitcoin_network(state.network()),
-        &ValidationContext::new(state, block.header())
-            .map_err(|_| InsertBlockError::PrevHeaderNotFound)?,
-        block.header(),
-        time_secs(),
-    )?;
+    let validator = BlockValidator::new(
+        ValidationContext::new(state, block.header())
+            .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)?,
+        into_bitcoin_network(state.network()),
+    );
+    validator.validate_block(block.internal_bitcoin_block(), duration_since_epoch())?;
 
     unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block)
         .expect("Inserting a block with a validated header must succeed.");
@@ -231,14 +232,13 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
 
         let validation_result =
             match ValidationContext::new_with_next_block_headers(state, &block_header)
-                .map_err(|_| InsertBlockError::PrevHeaderNotFound)
+                .map_err(|_| ValidateHeaderError::PrevHeaderNotFound)
             {
-                Ok(store) => validate_header(
-                    &into_bitcoin_network(state.network()),
-                    &store,
-                    &block_header,
-                    time_secs(),
-                ),
+                Ok(store) => {
+                    let validator =
+                        HeaderValidator::new(store, into_bitcoin_network(state.network()));
+                    validator.validate_header(&block_header, duration_since_epoch())
+                }
                 Err(err) => Err(err),
             };
 

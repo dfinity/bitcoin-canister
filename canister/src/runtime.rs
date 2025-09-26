@@ -12,6 +12,7 @@ use serde::Deserialize;
 #[cfg(any(not(target_arch = "wasm32"), feature = "mock_time"))]
 use std::cell::RefCell;
 use std::future::Future;
+use std::time::Duration;
 
 // The instruction limit in system subnets is 50B.
 #[cfg(not(target_arch = "wasm32"))]
@@ -207,8 +208,8 @@ pub fn get_cycles_balance() -> u64 {
 }
 
 /// Gets current timestamp, in seconds since the epoch (1970-01-01).
-pub fn time_secs() -> u64 {
-    time() / 1_000_000_000
+pub fn duration_since_epoch() -> Duration {
+    Duration::from_secs(time() / 1_000_000_000)
 }
 
 /// Gets current timestamp, in nanoseconds since the epoch (1970-01-01).
