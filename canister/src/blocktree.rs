@@ -199,10 +199,11 @@ impl BlockTree {
     ///   * The block is already present in the tree (no-op).
     ///   * The block is a successor of a block already in the tree.
     pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
-        if self.find(&block).is_some() {
-            // The block is already present in the tree. Nothing to do.
-            return Ok(());
-        }
+        debug_assert_eq!(
+            self.find(&block),
+            None,
+            "BUG: block {block:?} is already present in the tree, but this should have been prevented when instantiating `ValidationContext`"
+        );
 
         // Check if the block is a successor to any of the blocks in the tree.
         match self.find_mut(&block.header().prev_blockhash.into()) {
