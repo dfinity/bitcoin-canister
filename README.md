@@ -17,7 +17,7 @@ To this end, it provides a low-level API with a small set of functions, which se
 
 * [Documentation](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/)
 * [Interface Specification](/INTERFACE_SPECIFICATION.md)
-* [Tutorial: Deploying Your First Bitcoin Dapp](https://internetcomputer.org/docs/current/samples/deploying-your-first-bitcoin-dapp/)
-* [Tutorial: Developing Bitcoin Dapps Locally](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/local-development)
+* [Example: `basic_bitcoin` on ICP Ninja](https://icp.ninja/projects/basic-bitcoin)
+* [Tutorial: Use the `basic_bitcoin` example with a local Bitcoin regtest instance](https://internetcomputer.org/docs/build-on-btc/using-regtest)
 
 For developers contributing to this repo, please see the [development guide](/development-guide.md).
