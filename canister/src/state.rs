@@ -453,6 +453,8 @@ pub struct FeePercentilesCache {
 mod test {
     use super::*;
     use crate::test_utils::build_chain;
+    use ic_btc_validation::ValidateBlockError::InvalidBlockHeader;
+    use ic_btc_validation::ValidateHeaderError::PrevHeaderNotFound;
     use proptest::prelude::*;
 
     proptest! {
@@ -542,7 +544,10 @@ mod test {
         let mut other_state = State::new(stability_threshold, network, blocks[0].clone());
         insert_block(&mut other_state, blocks[1].clone()).unwrap();
         insert_block(&mut other_state, blocks[2].clone()).unwrap();
-        insert_block(&mut other_state, blocks[1].clone()).unwrap();
+        assert_eq!(
+            insert_block(&mut other_state, blocks[1].clone()),
+            Err(InvalidBlockHeader(PrevHeaderNotFound))
+        );
 
         assert_eq!(state.unstable_blocks, other_state.unstable_blocks);
         assert!(state == other_state);

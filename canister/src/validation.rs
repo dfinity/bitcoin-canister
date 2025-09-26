@@ -16,9 +16,18 @@ impl<'a> ValidationContext<'a> {
         // Retrieve the chain that the given header extends.
         // The given header must extend one of the unstable blocks.
         let prev_block_hash = header.prev_blockhash.into();
-        let chain = unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
-            .map(|(blockchain, _tip_successors)| blockchain)
-            .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
+        let current_block_hash = ic_btc_types::BlockHash::from(header.block_hash());
+        let (chain, tip_successors) =
+            unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
+                .ok_or_else(|| BlockDoesNotExtendTree(current_block_hash.clone()))?;
+        if tip_successors
+            .iter()
+            .any(|c| c.block_hash() == current_block_hash)
+        {
+            // TODO XC-497 change error type
+            return Err(BlockDoesNotExtendTree(current_block_hash));
+        }
+        let chain = chain
             .into_chain()
             .iter()
             .map(|block| (block.header(), block.block_hash()))
