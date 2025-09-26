@@ -549,7 +549,6 @@ mod test {
             Err(InvalidBlockHeader(PrevHeaderNotFound))
         );
 
-        assert_eq!(state.unstable_blocks, other_state.unstable_blocks);
         assert!(state == other_state);
     }
 }

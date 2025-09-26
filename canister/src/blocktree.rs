@@ -250,7 +250,8 @@ impl BlockTree {
         tips
     }
 
-    /// Returns a `BlockChain` starting from the anchor and ending with the `tip`.
+    /// Returns a `BlockChain` starting from the anchor and ending with the `tip`,
+    /// together with the tip's direct children.
     ///
     /// If the `tip` doesn't exist in the tree, `None` is returned.
     pub fn get_chain_with_tip<'a>(
@@ -321,8 +322,8 @@ impl BlockTree {
         res
     }
 
-    // Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
-    // along with its depth if it exists, and `None` otherwise.
+    /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
+    /// along with its depth if it exists, and `None` otherwise.
     pub fn find_mut<'a>(&'a mut self, blockhash: &BlockHash) -> Option<(&'a mut BlockTree, u32)> {
         fn find_mut_helper<'a>(
             block_tree: &'a mut BlockTree,
@@ -345,7 +346,8 @@ impl BlockTree {
         find_mut_helper(self, blockhash, 0)
     }
 
-    /// Returns true if a block exists in the tree, false otherwise.
+    /// Returns a `BlockTree` where the hash of the root matches the hash of the provided `block`
+    /// if it exists, and `None` otherwise.
     fn find(&self, block: &Block) -> Option<&BlockTree> {
         if self.root.block_hash() == block.block_hash() {
             return Some(self);
