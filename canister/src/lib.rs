@@ -42,6 +42,8 @@ use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
+use ic_btc_interface::UnstableBlocksResult;
+
 /// The maximum number of blocks the canister can be behind the tip to be considered synced.
 const SYNCED_THRESHOLD: u32 = 2;
 
@@ -170,6 +172,12 @@ pub fn get_config() -> Config {
         watchdog_canister: s.watchdog_canister,
         burn_cycles: s.burn_cycles,
         lazily_evaluate_fee_percentiles: s.lazily_evaluate_fee_percentiles,
+    })
+}
+
+pub fn get_unstable_blocks() -> UnstableBlocksResult {
+    with_state(|s| UnstableBlocksResult {
+        data: s.unstable_blocks.get_block_data(),
     })
 }
 
