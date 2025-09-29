@@ -694,6 +694,21 @@ impl Default for Config {
     }
 }
 
+#[derive(CandidType, Deserialize, Debug)]
+pub struct BlockData {
+    pub prev_block_hash: BlockHash,
+    pub block_hash: BlockHash,
+    pub children: Vec<BlockHash>,
+    pub height: u128,
+    pub difficulty: u128,
+    pub no_difficulty_counter: u128,
+}
+
+#[derive(CandidType, Deserialize, Debug)]
+pub struct UnstableBlocksResult {
+    pub data: Vec<BlockData>,
+}
+
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Debug, Clone, Default)]
 pub struct Fees {
     /// The base fee to charge for all `get_utxos` requests.
