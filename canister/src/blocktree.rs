@@ -634,8 +634,9 @@ mod test {
 
         let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
             vec![vec![]; chain_len];
+        expected_blocks_with_depths_by_heights[0].push((&chain[0], chain_len as u32));
 
-        for (i, block) in chain.iter().enumerate() {
+        for (i, block) in chain.iter().enumerate().skip(1) {
             expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
             block_tree.extend(block.clone()).unwrap();
         }
