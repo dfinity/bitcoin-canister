@@ -489,7 +489,7 @@ mod test {
 
         let mut block_tree = BlockTree::new(blocks[0].clone());
 
-        for block in blocks.iter() {
+        for block in blocks.iter().skip(1) {
             block_tree.extend(block.clone()).unwrap();
         }
 
