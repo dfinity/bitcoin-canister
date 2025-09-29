@@ -536,7 +536,7 @@ mod test {
                 blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
             }
 
-            for block in blocks.iter() {
+            for block in blocks.iter().skip(1) {
                 block_tree.extend(block.clone()).unwrap();
             }
 
