@@ -196,8 +196,9 @@ impl BlockTree {
     /// Extends the tree with the given block.
     ///
     /// Blocks can extend the tree in the following cases:
-    ///   * The block is already present in the tree (no-op).
     ///   * The block is a successor of a block already in the tree.
+    ///
+    /// Note that `ValidationContext` ensures that the block to insert is not already present.
     pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
         debug_assert_eq!(
             self.find(&block),
