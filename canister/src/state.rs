@@ -542,7 +542,7 @@ mod test {
     }
 
     #[test]
-    fn should_not_ingest_twice_same_block() {
+    fn should_not_ingest_same_block_twice() {
         let stability_threshold = 0;
         let num_blocks = 3;
         let num_transactions_per_block = 10;
