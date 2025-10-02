@@ -15,8 +15,8 @@ Previous Bitcoin canister proposal: https://dashboard.internetcomputer.org/propo
 ---
 
 ## Motivation
-TODO: THIS MUST BE FILLED OUT
 
+Regular upgrade of the Bitcoin canister that improves security in the presence of malicious nodes.
 
 ## Release Notes
 
