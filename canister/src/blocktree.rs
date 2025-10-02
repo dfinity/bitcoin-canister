@@ -288,7 +288,7 @@ impl BlockTree {
         tip: &BlockHash,
     ) -> Option<(Vec<&'a Block>, Vec<&'a Block>)> {
         if self.root.block_hash() == *tip {
-            return Some((vec![&self.root], self.direct_successors()));
+            return Some((vec![&self.root], self.get_child_blocks()));
         }
 
         for child in self.children.iter() {
@@ -301,7 +301,7 @@ impl BlockTree {
         None
     }
 
-    fn direct_successors(&self) -> Vec<&Block> {
+    fn get_child_blocks(&self) -> Vec<&Block> {
         self.children.iter().map(|c| &c.root).collect()
     }
 
@@ -753,7 +753,7 @@ mod test {
         let actual_children: BTreeSet<_> =
             tip_children.into_iter().map(|b| b.block_hash()).collect();
         let expected_children: BTreeSet<_> = tip
-            .direct_successors()
+            .get_child_blocks()
             .into_iter()
             .map(|b| b.block_hash())
             .collect();
