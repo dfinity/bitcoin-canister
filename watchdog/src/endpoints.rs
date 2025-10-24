@@ -619,7 +619,7 @@ mod test {
             "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
             test_utils::DOGECOIN_CANISTER_MAINNET_RESPONSE,
             json!({
-                "height": ???, // TODO(mducroux): complete
+                "height": 5931098,
             }),
         )
         .await;
@@ -632,7 +632,7 @@ mod test {
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.ic0.app/metrics",
-            test_utils::DOGECOIN_STAGING_CANISTER_MAINNET_RESPONSE,
+            test_utils::DOGECOIN_CANISTER_MAINNET_RESPONSE,
             json!({
                 "height": 5931098,
             }),

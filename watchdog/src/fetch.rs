@@ -1,7 +1,7 @@
-use candid::CandidType;
-use serde::{Deserialize, Serialize};
 use crate::bitcoin_block_apis::BlockApi;
 use crate::config::Network;
+use candid::CandidType;
+use serde::{Deserialize, Serialize};
 
 /// The data fetched from the external block APIs.
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
@@ -47,8 +47,11 @@ pub async fn fetch_all_data(network: Network) -> Vec<BlockInfo> {
 
 #[cfg(test)]
 mod test {
-    use crate::bitcoin_block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi, BitcoinTestnetExplorerBlockApi, DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi};
     use super::*;
+    use crate::bitcoin_block_apis::{
+        BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi, BitcoinTestnetExplorerBlockApi,
+        DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi,
+    };
     use crate::fetch::BlockInfo;
 
     #[tokio::test]
@@ -121,12 +124,7 @@ mod test {
         );
     }
 
-    #[tokio::test]
-    async fn test_fetch_all_data_dogecoin_mainnet() {
-        let staging_canister = false; // This parameter is not important. TODO(mducroux): revisit.
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
-        crate::test_utils::mock_dogecoin_mainnet_outcalls();
-
+    async fn verify_dogecoin_mainnet_fetch_results() {
         let result = fetch_all_data(Network::DogecoinMainnet).await;
         assert_eq!(
             result,
@@ -140,8 +138,10 @@ mod test {
                     height: Some(5926989),
                 },
                 BlockInfo {
-                    provider: BlockApi::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister),
-                    height: Some(???), // TODO(mducroux): complete
+                    provider: BlockApi::DogecoinProvider(
+                        DogecoinProviderBlockApi::DogecoinCanister
+                    ),
+                    height: Some(5931098),
                 },
                 BlockInfo {
                     provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
@@ -149,6 +149,24 @@ mod test {
                 },
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_dogecoin_mainnet() {
+        let staging_canister = false;
+        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::test_utils::mock_dogecoin_mainnet_outcalls();
+
+        verify_dogecoin_mainnet_fetch_results().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_dogecoin_mainnet_staging() {
+        let staging_canister = true;
+        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::test_utils::mock_dogecoin_mainnet_outcalls();
+
+        verify_dogecoin_mainnet_fetch_results().await;
     }
 
     #[tokio::test]
@@ -221,12 +239,7 @@ mod test {
         );
     }
 
-    #[tokio::test]
-    async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
-        let staging_canister = false; // This parameter is not important. TODO(mducroux): revisit.
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
-        crate::test_utils::mock_all_outcalls_404();
-
+    async fn verify_dogecoin_mainnet_fetch_failed_404() {
         let result = fetch_all_data(Network::DogecoinMainnet).await;
         assert_eq!(
             result,
@@ -240,7 +253,9 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BlockApi::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister),
+                    provider: BlockApi::DogecoinProvider(
+                        DogecoinProviderBlockApi::DogecoinCanister
+                    ),
                     height: None,
                 },
                 BlockInfo {
@@ -249,5 +264,23 @@ mod test {
                 },
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
+        let staging_canister = false;
+        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::test_utils::mock_all_outcalls_404();
+
+        verify_dogecoin_mainnet_fetch_failed_404().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_failed_404_dogecoin_mainnet_staging() {
+        let staging_canister = true;
+        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::test_utils::mock_all_outcalls_404();
+
+        verify_dogecoin_mainnet_fetch_failed_404().await;
     }
 }

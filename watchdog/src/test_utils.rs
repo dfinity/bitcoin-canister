@@ -407,10 +407,8 @@ pub const DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
 }"#;
 
 // https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics
-pub const DOGECOIN_CANISTER_MAINNET_RESPONSE: &str = r#""#; // TODO(mducroux): complete
-
 // https://bhuiy-ciaaa-aaaad-abwea-cai.raw.ic0.app/metrics
-pub const DOGECOIN_STAGING_CANISTER_MAINNET_RESPONSE: &str = r#"
+pub const DOGECOIN_CANISTER_MAINNET_RESPONSE: &str = r#"
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
     main_chain_height 5931098 1761310299589
