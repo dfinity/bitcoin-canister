@@ -59,7 +59,7 @@ where
 {
     let builder = ic_http::create_request().get(url).header(HttpHeader {
         name: "User-Agent".to_string(),
-        value: "bitcoin_watchdog_canister".to_string(),
+        value: "watchdog_canister".to_string(),
     });
     let builder = if let Some(func) = transform_func {
         builder.transform_func(func.name, func.func, vec![])

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Function to deploy the watchdog canister for mainnet bitcoin_canister.
-deploy_watchdog_canister_mainnet() {
-  dfx deploy --no-wallet watchdog --argument "(variant { mainnet })"
+deploy_watchdog_canister_bitcoin_mainnet() {
+  dfx deploy --no-wallet watchdog --argument "(variant { bitcoin_mainnet })"
 }
 
 # Function to get watchdog canister metrics.
@@ -14,11 +14,11 @@ get_watchdog_canister_metrics() {
 # Function to check for presence of specific fields in the config.
 check_config_fields() {
   CONFIG_FIELDS=(
-    "bitcoin_network"
+    "network"
     "blocks_behind_threshold"
     "blocks_ahead_threshold"
     "min_explorers"
-    "bitcoin_canister_principal"
+    "canister_principal"
     "delay_before_first_fetch_sec"
     "interval_between_fetches_sec"
     "explorers"
@@ -75,11 +75,11 @@ check_health_status_data() {
 # Function to check for presence of specific names in the metrics.
 check_metric_names() {
   METRIC_NAMES=(
-    "bitcoin_network"
+    "network"
     "blocks_behind_threshold"
     "blocks_ahead_threshold"
     "min_explorers"
-    "bitcoin_canister_height"
+    "canister_height"
     "height_target"
     "height_diff"
     "height_status"

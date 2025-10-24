@@ -24,6 +24,7 @@ regex = "1.7.0"
 serde = { workspace = true, features = ["derive"] }
 serde_bytes = { workspace = true }
 serde_json = { workspace = true }
+strum = { version = "0.27.2", features = ["derive"] }
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"

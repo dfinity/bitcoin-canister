@@ -1,11 +1,13 @@
+use crate::config::Network;
 use crate::{
-    config::BitcoinNetwork,
     http::{HttpRequestConfig, TransformFnWrapper},
     print, transform_api_bitaps_com_block, transform_api_blockchair_com_block,
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
     transform_bitcoinexplorer_org_block, transform_blockchain_info_hash,
     transform_blockchain_info_height, transform_blockstream_info_hash,
-    transform_blockstream_info_height, transform_chain_api_btc_com_block, transform_mempool_height,
+    transform_blockstream_info_height, transform_chain_api_btc_com_block,
+    transform_dogecoin_api_blockchair_com_block, transform_dogecoin_api_blockcypher_com_block,
+    transform_dogecoin_canister, transform_dogecoin_tokenview_height, transform_mempool_height,
 };
 use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use regex::Regex;
@@ -98,7 +100,7 @@ fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
 /// Creates a config for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        &crate::storage::get_config().get_bitcoin_canister_endpoint(),
+        &crate::storage::get_config().get_canister_endpoint(),
         Some(TransformFnWrapper {
             name: "transform_bitcoin_canister",
             func: transform_bitcoin_canister,
@@ -120,6 +122,7 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
 
 /// Creates a config for fetching mainnet block data from bitcoinexplorer.org.
 pub fn endpoint_bitcoinexplorer_org_block_mainnet() -> HttpRequestConfig {
+    // TODO: does not seem to be responsive, remove.
     HttpRequestConfig::new(
         "https://bitcoinexplorer.org/api/blocks/tip",
         Some(TransformFnWrapper {
@@ -242,11 +245,95 @@ pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
     )
 }
 
-/// Creates a config for fetching mainnet height data from blockchain.info.
-pub fn endpoint_mempool_height(bitcoin_network: BitcoinNetwork) -> HttpRequestConfig {
-    let url = match bitcoin_network {
-        BitcoinNetwork::Mainnet => "https://mempool.space/api/blocks/tip/height",
-        BitcoinNetwork::Testnet => "https://mempool.space/testnet4/api/blocks/tip/height",
+/// Creates a config for fetching Dogecoin mainnet block data from api.blockchair.com.
+pub fn endpoint_dogecoin_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.blockchair.com/dogecoin/stats",
+        Some(TransformFnWrapper {
+            name: "transform_dogecoin_api_blockchair_com_block",
+            func: transform_dogecoin_api_blockchair_com_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["best_block_height"].as_u64(),
+                    "hash": data["best_block_hash"].as_str(),
+                })
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching Dogecoin mainnet block data from api.blockcypher.com.
+pub fn endpoint_dogecoin_api_blockcypher_com_block_mainnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.blockcypher.com/v1/doge/main",
+        Some(TransformFnWrapper {
+            name: "transform_dogecoin_api_blockcypher_com_block",
+            func: transform_dogecoin_api_blockcypher_com_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                json!({
+                    "height": json["height"].as_u64(),
+                    "hash": json["hash"].as_str(),
+                    "previous_hash": json["previous_hash"].as_str(),
+                })
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching Dogecoin mainnet block data from doge.tokenview.io.
+pub fn endpoint_dogecoin_tokenview_height_mainnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://doge.tokenview.io/api/chainstat/doge",
+        Some(TransformFnWrapper {
+            name: "transform_dogecoin_tokenview_height",
+            func: transform_dogecoin_tokenview_height,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                let data = json["data"].clone();
+                json!({
+                    "height": data["block_no"].as_u64(),
+                })
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching block data from dogecoin_canister.
+pub fn endpoint_dogecoin_canister() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        &crate::storage::get_config().get_canister_endpoint(),
+        Some(TransformFnWrapper {
+            name: "transform_dogecoin_canister",
+            func: transform_dogecoin_canister,
+        }),
+        |raw| {
+            apply_to_body(raw, |text| {
+                // Dogecoin: same as Bitcoin canister
+                parse_bitcoin_canister_height(text)
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet height data from mempool.space.
+pub fn endpoint_mempool_height(network: Network) -> HttpRequestConfig {
+    let url = match network {
+        Network::BitcoinMainnet => "https://mempool.space/api/blocks/tip/height",
+        Network::BitcoinTestnet => "https://mempool.space/testnet4/api/blocks/tip/height",
+        _ => panic!("mempool explorer unsupported network: {:?}", network),
     };
     HttpRequestConfig::new(
         url,
@@ -271,12 +358,12 @@ pub fn endpoint_mempool_height(bitcoin_network: BitcoinNetwork) -> HttpRequestCo
 
 /// Creates a config for fetching mainnet block data from api.blockcypher.com.
 pub fn endpoint_mempool_height_mainnet() -> HttpRequestConfig {
-    endpoint_mempool_height(BitcoinNetwork::Mainnet)
+    endpoint_mempool_height(Network::BitcoinMainnet)
 }
 
 /// Creates a config for fetching testnet block data from api.blockcypher.com.
 pub fn endpoint_mempool_height_testnet() -> HttpRequestConfig {
-    endpoint_mempool_height(BitcoinNetwork::Testnet)
+    endpoint_mempool_height(Network::BitcoinTestnet)
 }
 
 /// Applies the given transformation function to the body of the response.
@@ -401,7 +488,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet() {
-        crate::storage::set_config(crate::config::Config::mainnet());
+        crate::storage::set_config(crate::config::Config::bitcoin_mainnet());
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
@@ -415,7 +502,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
-        crate::storage::set_config(crate::config::Config::testnet());
+        crate::storage::set_config(crate::config::Config::bitcoin_testnet());
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
@@ -495,6 +582,78 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_dogecoin_api_blockchair_com_block() {
+        run_http_request_test(
+            endpoint_dogecoin_api_blockchair_com_block_mainnet(),
+            "https://api.blockchair.com/dogecoin/stats",
+            test_utils::DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
+            json!({
+                "height": 5926987,
+                "hash": "36134366860560c09a6b216cdb6ef58e4ef73792fba514e6e04d074382d0974c",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_dogecoin_api_blockcypher_com_block() {
+        run_http_request_test(
+            endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
+            "https://api.blockcypher.com/v1/doge/main",
+            test_utils::DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
+            json!({
+                "height": 5926989,
+                "hash": "bfbcae1f6dcc41710caad2f638dbe9b4006f6c4dd456b99a12253b4152e55cf6",
+                "previous_hash": "0037287a6dfa3426da3e644da91d00b2d240a829b9b2a30d256b7eef89b78068",
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_dogecoin_canister_mainnet() {
+        let staging = false;
+        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging));
+        run_http_request_test(
+            endpoint_dogecoin_canister(),
+            "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
+            test_utils::DOGECOIN_CANISTER_MAINNET_RESPONSE,
+            json!({
+                "height": ???, // TODO(mducroux): complete
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_dogecoin_staging_canister_mainnet() {
+        let staging = true;
+        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging));
+        run_http_request_test(
+            endpoint_dogecoin_canister(),
+            "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.ic0.app/metrics",
+            test_utils::DOGECOIN_STAGING_CANISTER_MAINNET_RESPONSE,
+            json!({
+                "height": 5931098,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_dogecoin_tokenview_height_mainnet() {
+        run_http_request_test(
+            endpoint_dogecoin_tokenview_height_mainnet(),
+            "https://doge.tokenview.io/api/chainstat/doge",
+            test_utils::DOGECOIN_TOKENVIEW_HEIGHT_MAINNET_RESPONSE,
+            json!({
+                "height": 5931072,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
     async fn test_mempool_height_mainnet() {
         run_http_request_test(
             endpoint_mempool_height_mainnet(),
@@ -522,8 +681,9 @@ mod test {
 
     #[test]
     fn test_transform_function_names() {
-        test_utils::mock_mainnet_outcalls();
-        test_utils::mock_testnet_outcalls();
+        test_utils::mock_bitcoin_mainnet_outcalls();
+        test_utils::mock_bitcoin_testnet_outcalls();
+        test_utils::mock_dogecoin_mainnet_outcalls();
 
         let names = ic_http::mock::registered_transform_function_names();
         let names = names.iter().map(|s| s.as_str()).collect::<Vec<_>>();
@@ -541,6 +701,10 @@ mod test {
                 "transform_blockstream_info_hash",
                 "transform_blockstream_info_height",
                 "transform_chain_api_btc_com_block",
+                "transform_dogecoin_api_blockchair_com_block",
+                "transform_dogecoin_api_blockcypher_com_block",
+                "transform_dogecoin_tokenview_height",
+                "transform_dogecoin_canister",
                 "transform_mempool_height",
             ]
         );
@@ -590,6 +754,10 @@ mod test {
             endpoint_blockstream_info_hash_mainnet(),
             endpoint_blockstream_info_height_mainnet(),
             endpoint_chain_api_btc_com_block_mainnet(),
+            endpoint_dogecoin_api_blockchair_com_block_mainnet(),
+            endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
+            endpoint_dogecoin_canister(),
+            endpoint_dogecoin_tokenview_height_mainnet(),
             endpoint_mempool_height_testnet(),
         ];
         for config in test_cases {
