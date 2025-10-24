@@ -43,7 +43,7 @@ pub enum Canister {
     DogecoinMainnetStaging,
 }
 
-#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Network {
     BitcoinMainnet,
     BitcoinTestnet,
@@ -191,7 +191,7 @@ mod test {
     }
 
     #[test]
-    fn test_dogecoin_canister_endpoint_contains_principal_mainnet() {
+    fn test_dogecoin_canister_endpoint_contains_principal_mainnet_staging() {
         assert!(MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT
             .contains(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL));
     }

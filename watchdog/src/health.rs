@@ -44,14 +44,15 @@ pub struct HealthStatus {
 
 /// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
-    let network = crate::storage::get_config().network;
+    let config = crate::storage::get_config();
+    let canister = BlockApi::network_canister(config.network);
     compare(
-        crate::storage::get_block_info(&BlockApi::BitcoinCanister), // TODO(mducroux): this requires some refactoring
-        BlockApi::network_explorers(network)
+        crate::storage::get_block_info(&canister),
+        BlockApi::network_explorers(config.network)
             .iter()
             .filter_map(crate::storage::get_block_info)
             .collect::<Vec<_>>(),
-        crate::storage::get_config(),
+        config,
     )
 }
 
@@ -252,7 +253,7 @@ mod test {
     fn test_compare_no_explorers() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
             1_000,
         ));
         let other = vec![];
@@ -274,7 +275,7 @@ mod test {
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
             1_000,
         ));
         let other = vec![
@@ -314,7 +315,7 @@ mod test {
     fn test_compare_behind() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
             1_000,
         ));
         let other = vec![
@@ -362,7 +363,7 @@ mod test {
     fn test_compare_ahead() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
             1_000,
         ));
         let other = vec![

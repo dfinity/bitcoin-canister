@@ -260,6 +260,18 @@ impl DogecoinProviderBlockApi {
 }
 
 impl BlockApi {
+    /// Returns the canister API for the given network.
+    pub fn network_canister(network: Network) -> BlockApi {
+        match network {
+            Network::BitcoinMainnet | Network::BitcoinTestnet => {
+                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister)
+            }
+            Network::DogecoinMainnet => {
+                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
+            }
+        }
+    }
+
     /// Returns the list of all API providers.
     pub fn network_providers(network: Network) -> Vec<BlockApi> {
         match network {
@@ -657,7 +669,7 @@ mod test {
         }
 
         #[tokio::test]
-        async fn test_api_blockcypher_com_mainnet() {
+        async fn test_tokenview_mainnet() {
             test_utils::mock_dogecoin_mainnet_outcalls();
             run_test(
                 BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
