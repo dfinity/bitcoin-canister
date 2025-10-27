@@ -94,7 +94,7 @@ dfx canister stop ${REFERENCE_CANISTER_NAME}
 # TODO(mducroux): remove this line in the next release.
 mv ../candid.did.bak ../candid.did
 
-# Update the local dfx configuration to point to the 'watchdog' canister 
+# Update the local dfx configuration to point to the 'watchdog' canister
 # in the current branch, rather than the reference canister.
 sed -i'' -e 's/'${REFERENCE_CANISTER_NAME}'/watchdog/' .dfx/local/canister_ids.json
 
