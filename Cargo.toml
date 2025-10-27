@@ -29,7 +29,7 @@ resolver = "2"
 assert_matches = "1.5.0"
 bitcoin = "0.32.7"
 byteorder = "1.4.3"
-canbench-rs = "0.2.0"
+canbench-rs = "0.3.0"
 candid = "0.10.6"
 candid_parser = "0.1.4"
 ciborium = "0.2.1"
@@ -43,8 +43,8 @@ ic-btc-interface = { path = "./interface" }
 ic-btc-test-utils = { path = "./test-utils" }
 ic-btc-types = { path = "./types" }
 ic-btc-validation = { path = "./validation" }
-ic-cdk = "0.15.1"
-ic-cdk-macros = "0.15"
+ic-cdk = "0.18.7"
+ic-cdk-macros = "0.18"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
 ic-stable-structures = "0.6.7"
