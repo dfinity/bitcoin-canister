@@ -79,12 +79,20 @@ download_latest_release
 
 dfx start --background --clean
 
+# Update candid to use old variant names for deploying the old release.
+# TODO(mducroux): remove this line in the next release.
+sed -i.bak 's/type canister = variant {[^}]*}/type canister = variant {\n    mainnet;\n    testnet;\n}/' ../candid.did
+
 # Deploy the latest release.
 # TODO (mducroux): The new watchdog canister currently expects 'bitcoin_mainnet' as its argument, whereas the previous
 # TODO (mducroux): release uses 'mainnet'. Update this line to use "${ARGUMENT}" in the next release.
 dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(variant { mainnet })"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
+
+# Restore candid to use new variant names for the upgrade.
+# TODO(mducroux): remove this line in the next release.
+mv ../candid.did.bak ../candid.did
 
 # Update the local dfx configuration to point to the 'watchdog' canister 
 # in the current branch, rather than the reference canister.
@@ -95,10 +103,6 @@ if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
   echo "Failed to create and stop watchdog canister."
   exit 1
 fi
-
-# Update candid to accept both old and new variant names for the upgrade.
-# TODO(mducroux): remove this line in the next release.
-sed -i.bak 's/type canister = variant {$/&\n    mainnet;\n    testnet;/' ../candid.did
 
 # Deploy upgraded canister.
 dfx deploy --no-wallet watchdog --argument "${ARGUMENT}"
