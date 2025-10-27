@@ -80,7 +80,9 @@ download_latest_release
 dfx start --background --clean
 
 # Deploy the latest release.
-dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "${ARGUMENT}"
+# TODO (mducroux): The new watchdog canister currently expects 'bitcoin_mainnet' as its argument, whereas the previous
+# TODO (mducroux): release uses 'mainnet'. Update this line to use "${ARGUMENT}" in the next release.
+dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "mainnet"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
 
