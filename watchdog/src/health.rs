@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::BlockApi;
+use crate::bitcoin_block_apis::{BlockApi, CandidBlockApi};
 use crate::{config::Config, fetch::BlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -45,12 +45,16 @@ pub struct HealthStatus {
 /// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
     let config = crate::storage::get_config();
-    let canister = BlockApi::network_canister(config.network);
+    let block_api = BlockApi::network_canister(config.network);
     compare(
-        crate::storage::get_block_info(&canister),
+        crate::storage::get_block_info(&block_api.into()),
         BlockApi::network_explorers(config.network)
             .iter()
-            .filter_map(crate::storage::get_block_info)
+            .filter_map(|api| {
+                crate::storage::get_block_info(&<BlockApi as Into<CandidBlockApi>>::into(
+                    api.clone(),
+                ))
+            })
             .collect::<Vec<_>>(),
         config,
     )
@@ -128,7 +132,7 @@ fn median(values: &[u64]) -> Option<u64> {
     values.sort();
 
     let mid_index = length / 2;
-    let median_value = if length % 2 == 0 {
+    let median_value = if length.is_multiple_of(2) {
         (values[mid_index - 1] + values[mid_index]) / 2
     } else {
         values[mid_index]
@@ -253,7 +257,7 @@ mod test {
     fn test_compare_no_explorers() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![];
@@ -275,7 +279,7 @@ mod test {
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
@@ -315,7 +319,7 @@ mod test {
     fn test_compare_behind() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
@@ -363,7 +367,7 @@ mod test {
     fn test_compare_ahead() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![

@@ -1,5 +1,7 @@
-use crate::bitcoin_block_apis::{BitcoinMainnetExplorerBlockApi, DogecoinMainnetExplorerBlockApi};
-use crate::bitcoin_block_apis::{BitcoinTestnetExplorerBlockApi, BlockApi};
+use crate::bitcoin_block_apis::BitcoinTestnetExplorerBlockApi;
+use crate::bitcoin_block_apis::{
+    BitcoinMainnetExplorerBlockApi, CandidBlockApi, DogecoinMainnetExplorerBlockApi,
+};
 use candid::CandidType;
 use candid::Principal;
 use serde::{Deserialize, Serialize};
@@ -43,8 +45,11 @@ pub enum Canister {
 
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Network {
+    #[serde(rename = "mainnet")]
     BitcoinMainnet,
+    #[serde(rename = "testnet")]
     BitcoinTestnet,
+    #[serde(rename = "dogecoin_mainnet")]
     DogecoinMainnet,
 }
 
@@ -73,7 +78,7 @@ pub struct Config {
     pub interval_between_fetches_sec: u64,
 
     /// Explorers to use for fetching block data.
-    pub explorers: Vec<BlockApi>,
+    pub explorers: Vec<CandidBlockApi>,
 }
 
 impl Config {
@@ -121,7 +126,7 @@ impl Config {
             blocks_behind_threshold: 2,
             blocks_ahead_threshold: 2,
             min_explorers: 2,
-            canister_principal: if staging_canister {
+            canister_principal: if !staging_canister {
                 Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
             } else {
                 Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()

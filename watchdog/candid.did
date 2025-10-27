@@ -15,42 +15,22 @@ type height_status = variant {
     ahead;
 };
 
-/// Bitcoin mainnet block API providers.
-type bitcoin_mainnet_block_api = variant {
+/// Block API providers.
+type bitcoin_block_api = variant {
     api_bitaps_com_mainnet;
     api_blockchair_com_mainnet;
     api_blockcypher_com_mainnet;
+    bitcoin_canister;
     bitcoinexplorer_org_mainnet;
     blockchain_info_mainnet;
     blockstream_info_mainnet;
     chain_api_btc_com_mainnet;
-    mempool_mainnet;
-};
-
-/// Bitcoin testnet block API providers.
-type bitcoin_testnet_block_api = variant {
-    mempool_testnet;
-}
-
-/// Dogecoin block API providers.
-type dogecoin_block_api = record {
-    api_blockchair_com_mainnet;
-    api_blockcypher_com_mainnet;
-    tokenview_mainnet;
-};
-
-/// Bitcoin block API providers.
-type bitcoin_block_api = variant {
-    bitcoin_mainnet_block_api;
-    bitcoin_testnet_block_api;
-};
-
-/// Block API provider.
-type block_api = variant {
-    bitcoin_block_apis;
-    bitcoin_canister;
-    dogecoin_block_apis;
+    dogecoin_api_blockchair_com_mainnet;
+    dogecoin_api_blockcypher_com_mainnet;
     dogecoin_canister;
+    dogecoin_tokenview_mainnet;
+    mempool_mainnet;
+    mempool_testnet;
 };
 
 /// Information about a block from a specific API provider.
@@ -80,18 +60,17 @@ type health_status = record {
     explorers : vec block_info;
 };
 
-/// Canister to monitor.
-type canister_monitored = variant {
-    bitcoin_mainnet;
-    bitcoin_testnet;
+/// Network.
+type bitcoin_network = variant {
+    mainnet;
+    testnet;
     dogecoin_mainnet;
-    dogecoin_mainnet_staging;
 };
 
 /// Watchdog canister configuration.
 type config = record {
-    /// The canister to monitor.
-    canister : canister;
+    /// The network to use.
+    network : bitcoin_network;
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold : nat64;
@@ -112,7 +91,7 @@ type config = record {
     interval_between_fetches_sec : nat64;
 
     /// Explorers to use for fetching block data.
-    explorers : vec block_api;
+    explorers : vec bitcoin_block_api;
 };
 
 type flag = variant {
@@ -120,7 +99,14 @@ type flag = variant {
     disabled;
 };
 
-service : (canister_monitored) -> {
+type canister = variant {
+    bitcoin_mainnet;
+    bitcoin_testnet;
+    dogecoin_mainnet;
+    dogecoin_mainnet_staging;
+};
+
+service : (canister) -> {
     /// Returns the health status of the canister monitored.
     health_status : () -> (health_status) query;
 

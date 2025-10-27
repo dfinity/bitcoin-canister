@@ -296,9 +296,13 @@ pub fn endpoint_dogecoin_tokenview_height_mainnet() -> HttpRequestConfig {
         |raw| {
             apply_to_body_json(raw, |json| {
                 let data = json["data"].clone();
-                json!({
-                    "height": data["block_no"].as_u64(),
-                })
+                match data["block_no"]
+                    .as_u64()
+                    .or_else(|| data["block_no"].as_str()?.parse().ok())
+                {
+                    Some(h) => json!({"height": h}),
+                    None => json!({}),
+                }
             })
         },
     )
@@ -703,8 +707,8 @@ mod test {
                 "transform_chain_api_btc_com_block",
                 "transform_dogecoin_api_blockchair_com_block",
                 "transform_dogecoin_api_blockcypher_com_block",
-                "transform_dogecoin_tokenview_height",
                 "transform_dogecoin_canister",
+                "transform_dogecoin_tokenview_height",
                 "transform_mempool_height",
             ]
         );

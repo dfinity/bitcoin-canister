@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::BlockApi;
+use crate::bitcoin_block_apis::{BlockApi, CandidBlockApi};
 use crate::config::Network;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct BlockInfo {
     /// The provider of the block data.
-    pub provider: BlockApi,
+    pub provider: CandidBlockApi,
 
     /// The height of the block.
     pub height: Option<u64>,
@@ -15,7 +15,7 @@ pub struct BlockInfo {
 
 impl BlockInfo {
     #[cfg(test)]
-    pub fn new(provider: BlockApi, height: u64) -> Self {
+    pub fn new(provider: CandidBlockApi, height: u64) -> Self {
         Self {
             provider,
             height: Some(height),
@@ -37,7 +37,7 @@ pub async fn fetch_all_data(network: Network) -> Vec<BlockInfo> {
         .iter()
         .zip(results.iter())
         .map(|(api, value)| BlockInfo {
-            provider: api.clone(),
+            provider: CandidBlockApi::from(api.clone()),
             height: value["height"].as_u64(),
         })
         .collect();
@@ -96,7 +96,7 @@ mod test {
                     height: Some(700008),
                 },
                 BlockInfo {
-                    provider: BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: Some(700007),
                 },
             ]
@@ -117,7 +117,7 @@ mod test {
                     height: Some(55002),
                 },
                 BlockInfo {
-                    provider: BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: Some(55001),
                 },
             ]
@@ -138,14 +138,12 @@ mod test {
                     height: Some(5926989),
                 },
                 BlockInfo {
-                    provider: BlockApi::DogecoinProvider(
-                        DogecoinProviderBlockApi::DogecoinCanister
-                    ),
-                    height: Some(5931098),
-                },
-                BlockInfo {
                     provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
                     height: Some(5931072),
+                },
+                BlockInfo {
+                    provider: DogecoinProviderBlockApi::DogecoinCanister.into(),
+                    height: Some(5931098),
                 },
             ]
         );
@@ -211,7 +209,7 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
             ]
@@ -232,7 +230,7 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
             ]
@@ -253,13 +251,11 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BlockApi::DogecoinProvider(
-                        DogecoinProviderBlockApi::DogecoinCanister
-                    ),
+                    provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                    provider: DogecoinProviderBlockApi::DogecoinCanister.into(),
                     height: None,
                 },
             ]

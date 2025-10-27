@@ -12,7 +12,7 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::bitcoin_block_apis::BlockApi;
+use crate::bitcoin_block_apis::CandidBlockApi;
 use crate::config::Canister;
 use crate::{
     config::Config,
@@ -35,7 +35,7 @@ thread_local! {
     static CONFIG: RefCell<Config> = RefCell::new(Config::bitcoin_mainnet());
 
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RefCell<HashMap<BlockApi, BlockInfo>> = RefCell::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<CandidBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };

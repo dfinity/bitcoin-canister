@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::BlockApi;
+use crate::bitcoin_block_apis::CandidBlockApi;
 use crate::{config::Config, fetch::BlockInfo, API_ACCESS_TARGET, BLOCK_INFO_DATA, CONFIG};
 use ic_btc_interface::Flag;
 
@@ -20,7 +20,7 @@ pub fn insert_block_info(info: BlockInfo) {
 }
 
 /// Returns the data from the local storage.
-pub fn get_block_info(provider: &BlockApi) -> Option<BlockInfo> {
+pub fn get_block_info(provider: &CandidBlockApi) -> Option<BlockInfo> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }
 
