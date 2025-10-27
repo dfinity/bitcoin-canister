@@ -122,7 +122,7 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
 
 /// Creates a config for fetching mainnet block data from bitcoinexplorer.org.
 pub fn endpoint_bitcoinexplorer_org_block_mainnet() -> HttpRequestConfig {
-    // TODO: does not seem to be responsive, remove.
+    // TODO(XC-525): does not seem to be responsive, remove.
     HttpRequestConfig::new(
         "https://bitcoinexplorer.org/api/blocks/tip",
         Some(TransformFnWrapper {
