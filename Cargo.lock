@@ -1925,9 +1925,9 @@ checksum = "8b5c7628eac357aecda461130f8074468be5aa4d258a002032d82d817f79f1f8"
 
 [[package]]
 name = "ic-stable-structures"
-version = "0.6.7"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b492c5a16455ae78623eaa12ead96dda6c69a83c535b1b00789f19b381c8a24c"
+checksum = "8ee3372ddc0cf2a747fc26ce2d075a240ed6bfab151e63bc70109e8967f7ce6f"
 dependencies = [
  "ic_principal",
 ]

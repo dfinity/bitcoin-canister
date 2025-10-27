@@ -47,7 +47,7 @@ ic-cdk = "0.18.7"
 ic-cdk-macros = "0.18"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
-ic-stable-structures = "0.6.7"
+ic-stable-structures = "0.7.2"
 lazy_static = "1.4.0"
 pocket-ic = "6.0.0"
 serde = "1.0.171"

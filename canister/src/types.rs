@@ -137,6 +137,10 @@ impl StableStructuresStorable for Address {
         Cow::Borrowed(self.0.as_bytes())
     }
 
+    fn into_bytes(self) -> Vec<u8> {
+        self.0.as_bytes().to_vec()
+    }
+
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self(String::from_utf8(bytes.to_vec()).expect("Loading address cannot fail."))
     }
@@ -166,6 +170,17 @@ impl StableStructuresStorable for AddressUtxo {
         .collect();
 
         std::borrow::Cow::Owned(bytes)
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        vec![
+            Address::into_bytes(self.address),
+            self.height.into_bytes(),
+            OutPoint::into_bytes(self.outpoint),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
@@ -304,6 +319,10 @@ pub struct BlockHeaderBlob(Vec<u8>);
 impl StableStructuresStorable for BlockHeaderBlob {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         Cow::Borrowed(self.0.as_slice())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        self.0
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {

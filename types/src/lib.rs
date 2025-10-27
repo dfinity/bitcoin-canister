@@ -244,6 +244,10 @@ impl Storable for BlockHash {
         Cow::Borrowed(self.0.as_slice())
     }
 
+    fn into_bytes(self) -> Vec<u8> {
+        self.0
+    }
+
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Self::from(bytes.to_vec())
     }
@@ -371,6 +375,16 @@ impl Storable for OutPoint {
         assert_eq!(v.len(), OutPoint::size() as usize);
 
         std::borrow::Cow::Owned(v)
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        let mut v: Vec<u8> = self.txid.to_vec(); // Store the txid (32 bytes)
+        v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
+
+        // An outpoint is always exactly 36 bytes.
+        assert_eq!(v.len(), OutPoint::size() as usize);
+
+        v
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
