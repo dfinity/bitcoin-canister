@@ -183,7 +183,9 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
 
     fn next(&mut self) -> Option<Self::Item> {
         // First, iterate over the small utxos.
-        if let Some((key_bytes, value_bytes)) = self.small_utxos_iter.next() {
+        if let Some((key_bytes, value_bytes)) =
+            self.small_utxos_iter.next().map(|entry| entry.into_pair())
+        {
             return Some((
                 OutPoint::from_bytes(std::borrow::Cow::Borrowed(key_bytes.as_slice())),
                 <(TxOut, Height)>::from_bytes(value_bytes.as_slice().to_vec()),
@@ -191,7 +193,9 @@ impl<M: MemoryTrait + Clone> Iterator for Iter<'_, M> {
         }
 
         // Second, iterate over the medium utxos.
-        if let Some((key_bytes, value_bytes)) = self.medium_utxos_iter.next() {
+        if let Some((key_bytes, value_bytes)) =
+            self.medium_utxos_iter.next().map(|entry| entry.into_pair())
+        {
             return Some((
                 OutPoint::from_bytes(std::borrow::Cow::Borrowed(key_bytes.as_slice())),
                 <(TxOut, Height)>::from_bytes(value_bytes.as_slice().to_vec()),

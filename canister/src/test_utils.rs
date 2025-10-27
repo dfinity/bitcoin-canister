@@ -76,7 +76,7 @@ pub fn is_stable_btreemap_equal<M: Memory, K: Storable + Ord + Eq + Clone, V: St
     }
 
     for (x, y) in a.iter().zip(b.iter()) {
-        if x != y {
+        if x.into_pair() != y.into_pair() {
             return false;
         }
     }
