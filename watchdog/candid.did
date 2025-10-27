@@ -70,7 +70,7 @@ type bitcoin_network = variant {
 /// Watchdog canister configuration.
 type config = record {
     /// The network to use.
-    network : bitcoin_network;
+    bitcoin_network : bitcoin_network;
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold : nat64;
@@ -82,7 +82,7 @@ type config = record {
     min_explorers : nat64;
 
     /// Canister principal.
-    canister_principal : principal;
+    bitcoin_canister_principal : principal;
 
     /// The number of seconds to wait before the first data fetch.
     delay_before_first_fetch_sec : nat64;

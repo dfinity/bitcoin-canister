@@ -74,7 +74,7 @@ fn post_upgrade(canister: Canister) {
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_block_info_data() {
-    let network = crate::storage::get_config().network;
+    let network = crate::storage::get_config().bitcoin_network;
     let data = crate::fetch::fetch_all_data(network).await;
     data.into_iter().for_each(crate::storage::insert_block_info);
 }

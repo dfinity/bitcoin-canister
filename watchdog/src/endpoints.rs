@@ -1,4 +1,4 @@
-use crate::config::Network;
+use crate::config::BitcoinNetwork;
 use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
     print, transform_api_bitaps_com_block, transform_api_blockchair_com_block,
@@ -333,10 +333,10 @@ pub fn endpoint_dogecoin_canister() -> HttpRequestConfig {
 }
 
 /// Creates a config for fetching mainnet height data from mempool.space.
-pub fn endpoint_mempool_height(network: Network) -> HttpRequestConfig {
+pub fn endpoint_mempool_height(network: BitcoinNetwork) -> HttpRequestConfig {
     let url = match network {
-        Network::BitcoinMainnet => "https://mempool.space/api/blocks/tip/height",
-        Network::BitcoinTestnet => "https://mempool.space/testnet4/api/blocks/tip/height",
+        BitcoinNetwork::BitcoinMainnet => "https://mempool.space/api/blocks/tip/height",
+        BitcoinNetwork::BitcoinTestnet => "https://mempool.space/testnet4/api/blocks/tip/height",
         _ => panic!("mempool explorer unsupported network: {:?}", network),
     };
     HttpRequestConfig::new(
@@ -362,12 +362,12 @@ pub fn endpoint_mempool_height(network: Network) -> HttpRequestConfig {
 
 /// Creates a config for fetching mainnet block data from api.blockcypher.com.
 pub fn endpoint_mempool_height_mainnet() -> HttpRequestConfig {
-    endpoint_mempool_height(Network::BitcoinMainnet)
+    endpoint_mempool_height(BitcoinNetwork::BitcoinMainnet)
 }
 
 /// Creates a config for fetching testnet block data from api.blockcypher.com.
 pub fn endpoint_mempool_height_testnet() -> HttpRequestConfig {
-    endpoint_mempool_height(Network::BitcoinTestnet)
+    endpoint_mempool_height(BitcoinNetwork::BitcoinTestnet)
 }
 
 /// Applies the given transformation function to the body of the response.

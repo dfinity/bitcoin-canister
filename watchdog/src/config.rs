@@ -44,7 +44,7 @@ pub enum Canister {
 }
 
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Network {
+pub enum BitcoinNetwork {
     #[serde(rename = "mainnet")]
     BitcoinMainnet,
     #[serde(rename = "testnet")]
@@ -57,7 +57,7 @@ pub enum Network {
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     /// The network to use.
-    pub network: Network,
+    pub bitcoin_network: BitcoinNetwork,
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold: u64,
@@ -69,7 +69,7 @@ pub struct Config {
     pub min_explorers: u64,
 
     /// Monitored canister principal.
-    pub canister_principal: Principal,
+    pub bitcoin_canister_principal: Principal,
 
     /// The number of seconds to wait before the first data fetch.
     pub delay_before_first_fetch_sec: u64,
@@ -85,11 +85,12 @@ impl Config {
     /// Creates a new configuration for the Bitcoin mainnet.
     pub fn bitcoin_mainnet() -> Self {
         Self {
-            network: Network::BitcoinMainnet,
+            bitcoin_network: BitcoinNetwork::BitcoinMainnet,
             blocks_behind_threshold: 2,
             blocks_ahead_threshold: 2,
             min_explorers: 3,
-            canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap(),
+            bitcoin_canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
+                .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
             explorers: vec![
@@ -108,11 +109,12 @@ impl Config {
     /// Creates a new configuration for the Bitcoin testnet.
     pub fn bitcoin_testnet() -> Self {
         Self {
-            network: Network::BitcoinTestnet,
+            bitcoin_network: BitcoinNetwork::BitcoinTestnet,
             blocks_behind_threshold: 1000,
             blocks_ahead_threshold: 1000,
             min_explorers: 1,
-            canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap(),
+            bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
+                .unwrap(),
             delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
             interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
             explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.into()],
@@ -122,11 +124,11 @@ impl Config {
     /// Creates a new configuration for the Dogecoin mainnet.
     pub fn dogecoin_mainnet(staging_canister: bool) -> Self {
         Self {
-            network: Network::DogecoinMainnet,
+            bitcoin_network: BitcoinNetwork::DogecoinMainnet,
             blocks_behind_threshold: 2,
             blocks_ahead_threshold: 2,
             min_explorers: 2,
-            canister_principal: if !staging_canister {
+            bitcoin_canister_principal: if !staging_canister {
                 Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
             } else {
                 Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
@@ -153,7 +155,7 @@ impl Config {
 
     /// Returns the canister metrics endpoint.
     pub fn get_canister_endpoint(&self) -> String {
-        let principal = self.canister_principal.to_text();
+        let principal = self.bitcoin_canister_principal.to_text();
         format!("https://{principal}.raw.ic0.app/metrics")
     }
 }
@@ -202,9 +204,9 @@ mod test {
     #[test]
     fn test_config_mainnet() {
         let config = Config::bitcoin_mainnet();
-        assert_eq!(config.network, Network::BitcoinMainnet);
+        assert_eq!(config.bitcoin_network, BitcoinNetwork::BitcoinMainnet);
         assert_eq!(
-            config.canister_principal,
+            config.bitcoin_canister_principal,
             Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
@@ -216,9 +218,9 @@ mod test {
     #[test]
     fn test_config_testnet() {
         let config = Config::bitcoin_testnet();
-        assert_eq!(config.network, Network::BitcoinTestnet);
+        assert_eq!(config.bitcoin_network, BitcoinNetwork::BitcoinTestnet);
         assert_eq!(
-            config.canister_principal,
+            config.bitcoin_canister_principal,
             Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
@@ -231,9 +233,9 @@ mod test {
     fn test_config_dogecoin_mainnet() {
         let staging_canister = false;
         let config = Config::dogecoin_mainnet(staging_canister);
-        assert_eq!(config.network, Network::DogecoinMainnet);
+        assert_eq!(config.bitcoin_network, BitcoinNetwork::DogecoinMainnet);
         assert_eq!(
-            config.canister_principal,
+            config.bitcoin_canister_principal,
             Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
@@ -246,9 +248,9 @@ mod test {
     fn test_config_dogecoin_mainnet_staging() {
         let staging_canister = true;
         let config = Config::dogecoin_mainnet(staging_canister);
-        assert_eq!(config.network, Network::DogecoinMainnet);
+        assert_eq!(config.bitcoin_network, BitcoinNetwork::DogecoinMainnet);
         assert_eq!(
-            config.canister_principal,
+            config.bitcoin_canister_principal,
             Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(

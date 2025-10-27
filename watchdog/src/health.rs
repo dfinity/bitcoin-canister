@@ -45,10 +45,10 @@ pub struct HealthStatus {
 /// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
     let config = crate::storage::get_config();
-    let block_api = BlockApi::network_canister(config.network);
+    let block_api = BlockApi::network_canister(config.bitcoin_network);
     compare(
         crate::storage::get_block_info(&block_api.into()),
-        BlockApi::network_explorers(config.network)
+        BlockApi::network_explorers(config.bitcoin_network)
             .iter()
             .filter_map(|api| {
                 crate::storage::get_block_info(&<BlockApi as Into<CandidBlockApi>>::into(

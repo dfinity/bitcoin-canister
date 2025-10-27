@@ -1,5 +1,5 @@
 use crate::bitcoin_block_apis::{BlockApi, CandidBlockApi};
-use crate::config::Network;
+use crate::config::BitcoinNetwork;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,7 @@ impl BlockInfo {
 }
 
 /// Fetches the data from the external APIs.
-pub async fn fetch_all_data(network: Network) -> Vec<BlockInfo> {
+pub async fn fetch_all_data(network: BitcoinNetwork) -> Vec<BlockInfo> {
     let api_providers = BlockApi::network_providers(network);
 
     let futures = api_providers
@@ -59,7 +59,7 @@ mod test {
         crate::storage::set_config(crate::config::Config::bitcoin_mainnet());
         crate::test_utils::mock_bitcoin_mainnet_outcalls();
 
-        let result = fetch_all_data(Network::BitcoinMainnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinMainnet).await;
         assert_eq!(
             result,
             vec![
@@ -108,7 +108,7 @@ mod test {
         crate::storage::set_config(crate::config::Config::bitcoin_testnet());
         crate::test_utils::mock_bitcoin_testnet_outcalls();
 
-        let result = fetch_all_data(Network::BitcoinTestnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinTestnet).await;
         assert_eq!(
             result,
             vec![
@@ -125,7 +125,7 @@ mod test {
     }
 
     async fn verify_dogecoin_mainnet_fetch_results() {
-        let result = fetch_all_data(Network::DogecoinMainnet).await;
+        let result = fetch_all_data(BitcoinNetwork::DogecoinMainnet).await;
         assert_eq!(
             result,
             vec![
@@ -172,7 +172,7 @@ mod test {
         crate::storage::set_config(crate::config::Config::bitcoin_mainnet());
         crate::test_utils::mock_all_outcalls_404();
 
-        let result = fetch_all_data(Network::BitcoinMainnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinMainnet).await;
         assert_eq!(
             result,
             vec![
@@ -221,7 +221,7 @@ mod test {
         crate::storage::set_config(crate::config::Config::bitcoin_testnet());
         crate::test_utils::mock_all_outcalls_404();
 
-        let result = fetch_all_data(Network::BitcoinTestnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinTestnet).await;
         assert_eq!(
             result,
             vec![
@@ -238,7 +238,7 @@ mod test {
     }
 
     async fn verify_dogecoin_mainnet_fetch_failed_404() {
-        let result = fetch_all_data(Network::DogecoinMainnet).await;
+        let result = fetch_all_data(BitcoinNetwork::DogecoinMainnet).await;
         assert_eq!(
             result,
             vec![

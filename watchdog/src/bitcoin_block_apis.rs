@@ -1,4 +1,4 @@
-use crate::config::Network;
+use crate::config::BitcoinNetwork;
 use crate::{endpoints::*, print};
 use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
@@ -374,29 +374,29 @@ impl DogecoinProviderBlockApi {
 
 impl BlockApi {
     /// Returns the canister API for the given network.
-    pub fn network_canister(network: Network) -> Self {
+    pub fn network_canister(network: BitcoinNetwork) -> Self {
         match network {
-            Network::BitcoinMainnet | Network::BitcoinTestnet => {
+            BitcoinNetwork::BitcoinMainnet | BitcoinNetwork::BitcoinTestnet => {
                 Self::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister)
             }
-            Network::DogecoinMainnet => {
+            BitcoinNetwork::DogecoinMainnet => {
                 Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
             }
         }
     }
 
     /// Returns the list of all API providers.
-    pub fn network_providers(network: Network) -> Vec<Self> {
+    pub fn network_providers(network: BitcoinNetwork) -> Vec<Self> {
         match network {
-            Network::BitcoinMainnet => BitcoinProviderBlockApi::providers_mainnet()
+            BitcoinNetwork::BitcoinMainnet => BitcoinProviderBlockApi::providers_mainnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            Network::BitcoinTestnet => BitcoinProviderBlockApi::providers_testnet()
+            BitcoinNetwork::BitcoinTestnet => BitcoinProviderBlockApi::providers_testnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            Network::DogecoinMainnet => DogecoinProviderBlockApi::providers_mainnet()
+            BitcoinNetwork::DogecoinMainnet => DogecoinProviderBlockApi::providers_mainnet()
                 .iter()
                 .map(|&x| Self::DogecoinProvider(x))
                 .collect(),
@@ -404,17 +404,17 @@ impl BlockApi {
     }
 
     /// Returns the list of explorers only.
-    pub fn network_explorers(network: Network) -> Vec<Self> {
+    pub fn network_explorers(network: BitcoinNetwork) -> Vec<Self> {
         match network {
-            Network::BitcoinMainnet => BitcoinProviderBlockApi::explorers_mainnet()
+            BitcoinNetwork::BitcoinMainnet => BitcoinProviderBlockApi::explorers_mainnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            Network::BitcoinTestnet => BitcoinProviderBlockApi::explorers_testnet()
+            BitcoinNetwork::BitcoinTestnet => BitcoinProviderBlockApi::explorers_testnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            Network::DogecoinMainnet => DogecoinProviderBlockApi::explorers_mainnet()
+            BitcoinNetwork::DogecoinMainnet => DogecoinProviderBlockApi::explorers_mainnet()
                 .iter()
                 .map(|&x| Self::DogecoinProvider(x))
                 .collect(),
