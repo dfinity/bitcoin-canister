@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::{BlockApi, CandidBlockApi};
+use crate::block_apis::{BlockApi, CandidBlockApi};
 use crate::{config::Config, fetch::BlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -144,7 +144,7 @@ fn median(values: &[u64]) -> Option<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bitcoin_block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi};
+    use crate::block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi};
 
     #[test]
     fn test_median() {

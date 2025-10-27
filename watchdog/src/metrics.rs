@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::{BlockApi, CandidBlockApi};
+use crate::block_apis::{BlockApi, CandidBlockApi};
 use crate::config::BitcoinNetwork;
 use crate::{health::HeightStatus, types::CandidHttpResponse};
 use ic_btc_interface::Flag;

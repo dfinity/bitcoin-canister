@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::{BlockApi, CandidBlockApi};
+use crate::block_apis::{BlockApi, CandidBlockApi};
 use crate::config::BitcoinNetwork;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -48,7 +48,7 @@ pub async fn fetch_all_data(network: BitcoinNetwork) -> Vec<BlockInfo> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bitcoin_block_apis::{
+    use crate::block_apis::{
         BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi, BitcoinTestnetExplorerBlockApi,
         DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi,
     };

@@ -1,5 +1,5 @@
 mod api_access;
-mod bitcoin_block_apis;
+mod block_apis;
 mod config;
 mod endpoints;
 mod fetch;
@@ -12,7 +12,7 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::bitcoin_block_apis::CandidBlockApi;
+use crate::block_apis::CandidBlockApi;
 use crate::config::Canister;
 use crate::{
     config::Config,

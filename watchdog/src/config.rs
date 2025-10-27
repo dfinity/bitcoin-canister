@@ -1,5 +1,5 @@
-use crate::bitcoin_block_apis::BitcoinTestnetExplorerBlockApi;
-use crate::bitcoin_block_apis::{
+use crate::block_apis::BitcoinTestnetExplorerBlockApi;
+use crate::block_apis::{
     BitcoinMainnetExplorerBlockApi, CandidBlockApi, DogecoinMainnetExplorerBlockApi,
 };
 use candid::CandidType;

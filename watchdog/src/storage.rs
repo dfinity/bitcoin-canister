@@ -1,4 +1,4 @@
-use crate::bitcoin_block_apis::CandidBlockApi;
+use crate::block_apis::CandidBlockApi;
 use crate::{config::Config, fetch::BlockInfo, API_ACCESS_TARGET, BLOCK_INFO_DATA, CONFIG};
 use ic_btc_interface::Flag;
 
