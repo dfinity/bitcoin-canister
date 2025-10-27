@@ -151,7 +151,7 @@ impl<T: HeaderStore> HeaderValidator<T> {
     ) -> Target {
         match self.network {
             Network::Testnet | Network::Testnet4 | Network::Regtest => {
-                if (prev_height + 1) % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 {
+                if !(prev_height + 1).is_multiple_of(DIFFICULTY_ADJUSTMENT_INTERVAL) {
                     // This if statements is reached only for Regtest and Testnet networks
                     // Here is the quote from "https://en.bitcoin.it/wiki/Testnet"
                     // "If no block has been found in 20 minutes, the difficulty automatically
@@ -204,7 +204,7 @@ impl<T: HeaderStore> HeaderValidator<T> {
                 loop {
                     // Check if non-limit PoW found or it's time to adjust difficulty.
                     if current_header.bits != pow_limit_bits
-                        || current_height % DIFFICULTY_ADJUSTMENT_INTERVAL == 0
+                        || current_height.is_multiple_of(DIFFICULTY_ADJUSTMENT_INTERVAL)
                     {
                         return current_header.bits;
                     }
@@ -248,11 +248,7 @@ impl<T: HeaderStore> HeaderValidator<T> {
         }
         // Computing the `last_adjustment_header`.
         // `last_adjustment_header` is the last header with height multiple of 2016
-        let last_adjustment_height = if height < DIFFICULTY_ADJUSTMENT_INTERVAL {
-            0
-        } else {
-            height - DIFFICULTY_ADJUSTMENT_INTERVAL
-        };
+        let last_adjustment_height = height.saturating_sub(DIFFICULTY_ADJUSTMENT_INTERVAL);
         let last_adjustment_header = self
             .store
             .get_with_height(last_adjustment_height)
