@@ -243,7 +243,9 @@ impl<T: HeaderStore> HeaderValidator<T> {
         // regtest, simply return the previous difficulty target.
 
         let height = prev_height + 1;
-        if height % DIFFICULTY_ADJUSTMENT_INTERVAL != 0 || no_pow_retargeting(&self.network) {
+        if !height.is_multiple_of(DIFFICULTY_ADJUSTMENT_INTERVAL)
+            || no_pow_retargeting(&self.network)
+        {
             return prev_header.bits;
         }
         // Computing the `last_adjustment_header`.
