@@ -96,6 +96,10 @@ if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
+# Update candid to accept both old and new variant names for the upgrade.
+# TODO(mducroux): remove this line in the next release.
+sed -i.bak 's/type canister = variant {$/&\n    mainnet;\n    testnet;/' ../candid.did
+
 # Deploy upgraded canister.
 dfx deploy --no-wallet watchdog --argument "${ARGUMENT}"
 
