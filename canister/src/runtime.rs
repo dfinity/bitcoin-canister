@@ -70,7 +70,11 @@ pub fn call_get_successors(
                 .with_args(&(request,))
                 .await?;
             print(format!("bitcoin_get_successors result = {:?}", result));
-            result.candid()?
+            print(format!("candid decode result = {:?}", result.candid()));
+            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
+                blocks: vec![],
+                next: vec![],
+            })
         })
     }
 }
