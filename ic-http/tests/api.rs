@@ -18,7 +18,7 @@ async fn test_http_request_no_transform() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+    let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
         .await
         .unwrap();
 
@@ -42,7 +42,7 @@ async fn test_http_request_called_several_times() {
 
     // Act
     for _ in 0..calls {
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .unwrap();
         assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
@@ -72,7 +72,7 @@ async fn test_http_request_transform_status() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+    let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
         .await
         .unwrap();
 
@@ -101,7 +101,7 @@ async fn test_http_request_transform_body() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+    let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
         .await
         .unwrap();
 
@@ -158,7 +158,7 @@ async fn test_http_request_transform_both_status_and_body() {
     let responses: Vec<_> = results
         .into_iter()
         .filter(|result| result.is_ok())
-        .map(|result| result.unwrap().0)
+        .map(|result| result.unwrap())
         .collect();
 
     // Assert

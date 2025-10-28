@@ -113,7 +113,7 @@ mod test {
         crate::mock::mock(request.clone(), mock_response);
 
         // Act
-        let (response,) = crate::mock::http_request(request.clone()).await.unwrap();
+        let response = crate::mock::http_request(request.clone()).await.unwrap();
 
         // Assert
         assert_eq!(response.status, 200u8);

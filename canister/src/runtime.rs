@@ -63,21 +63,14 @@ thread_local! {
 pub fn call_get_successors(
     id: Principal,
     request: GetSuccessorsRequest,
-) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
+) -> impl Future<Output = CallResult<GetSuccessorsResponse>> {
     async move {
         Ok({
             let result = ic_cdk::call::Call::unbounded_wait(id, "bitcoin_get_successors")
                 .with_args(&(request,))
                 .await?;
-            print(&format!("bitcoin_get_successors result = {:?}", result));
-            let candid_result: Result<(GetSuccessorsResponse,), _> = result.candid();
-            print(&format!("candid decode result = {:?}", candid_result));
-            (GetSuccessorsResponse::Complete(
-                crate::types::GetSuccessorsCompleteResponse {
-                    blocks: vec![],
-                    next: vec![],
-                },
-            ),)
+            print(format!("bitcoin_get_successors result = {:?}", result));
+            result.candid()?
         })
     }
 }
@@ -86,7 +79,7 @@ pub fn call_get_successors(
 pub fn call_get_successors(
     _id: Principal,
     _request: GetSuccessorsRequest,
-) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
+) -> impl Future<Output = CallResult<GetSuccessorsResponse>> {
     use crate::types::GetSuccessorsCompleteResponse;
 
     let reply = GET_SUCCESSORS_RESPONSES.with(|responses| {
@@ -111,7 +104,7 @@ pub fn call_get_successors(
     });
 
     match reply {
-        GetSuccessorsReply::Ok(response) => std::future::ready(Ok((response,))),
+        GetSuccessorsReply::Ok(response) => std::future::ready(Ok(response)),
         GetSuccessorsReply::Err(code, msg) => std::future::ready(Err(
             ic_cdk::call::CallRejected::with_rejection(code as u32, msg).into(),
         )),

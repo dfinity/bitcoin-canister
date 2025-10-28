@@ -68,7 +68,7 @@ pub fn call_transform_function(
 /// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
-pub(crate) async fn http_request(request: HttpRequestArgs) -> CallResult<(HttpRequestResult,)> {
+pub(crate) async fn http_request(request: HttpRequestArgs) -> CallResult<HttpRequestResult> {
     let mut mock = crate::storage::mock_get(&request).ok_or(CallRejected::with_rejection(
         RejectCode::CanisterReject as u32,
         "No mock found".to_string(),
@@ -115,7 +115,7 @@ pub(crate) async fn http_request(request: HttpRequestArgs) -> CallResult<(HttpRe
     )
     .unwrap_or(mock_response);
 
-    Ok((transformed_response,))
+    Ok(transformed_response)
 }
 
 /// Returns the number of times the given request has been called.

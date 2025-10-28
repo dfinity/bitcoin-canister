@@ -56,7 +56,7 @@ async fn fetch(request: HttpRequestArgs) -> String {
     let result = ic_http::http_request(request, ZERO_CYCLES).await;
 
     match result {
-        Ok((response,)) => {
+        Ok(response) => {
             let body = String::from_utf8(response.body).unwrap();
             format!("Response: {:?}", body)
         }
@@ -97,7 +97,7 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .unwrap();
 
@@ -117,7 +117,7 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .unwrap();
 

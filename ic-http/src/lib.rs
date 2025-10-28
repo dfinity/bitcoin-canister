@@ -14,8 +14,8 @@
 //! ## Canister
 //!
 //! ```rust
-//! # use ic_cdk::api::management_canister::http_request::{
-//! #     CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
+//! # use ic_cdk::management_canister::{
+//! #     HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs,
 //! # };
 //! #
 //! # pub fn print(msg: &str) {
@@ -30,8 +30,8 @@
 //! #
 //! /// Apply a transform function to the HTTP response.
 //! #[ic_cdk_macros::query]
-//! fn transform(raw: TransformArgs) -> HttpResponse {
-//!     let mut response = HttpResponse {
+//! fn transform(raw: TransformArgs) -> HttpRequestResult {
+//!     let mut response = HttpRequestResult {
 //!         status: raw.response.status.clone(),
 //!         ..Default::default()
 //!     };
@@ -51,7 +51,7 @@
 //! }
 //!
 //! /// Create a request to the dummyjson.com API.
-//! fn build_request() -> CanisterHttpRequestArgument {
+//! fn build_request() -> HttpRequestArgs {
 //!     ic_http::create_request()
 //!         .get("https://dummyjson.com/quotes/1")
 //!         .header(HttpHeader {
@@ -70,12 +70,12 @@
 //!     let result = ic_http::http_request(request, cycles).await;
 //!
 //!     match result {
-//!         Ok((response,)) => {
+//!         Ok(response) => {
 //!             let body = String::from_utf8(response.body).unwrap();
 //!             format!("Response: {:?}", body)
 //!         }
-//!         Err((code, msg)) => {
-//!             format!("Error: {:?} {:?}", code, msg)
+//!         Err(err) => {
+//!             format!("Error: {}", err)
 //!         }
 //!     }
 //! }
@@ -102,7 +102,7 @@
 //!
 //!     // Act
 //!     let cycles = 0;
-//!     let (response,) = ic_http::http_request(request.clone(), cycles).await.unwrap();
+//!     let response = ic_http::http_request(request.clone(), cycles).await.unwrap();
 //!
 //!     // Assert
 //!     assert_eq!(

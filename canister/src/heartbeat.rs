@@ -91,13 +91,13 @@ async fn maybe_fetch_blocks() -> bool {
 
     print(&format!("Sending request: {:?}", request));
 
-    let response: Result<(GetSuccessorsResponse,), _> =
+    let response: Result<GetSuccessorsResponse, _> =
         call_get_successors(with_state(|s| s.blocks_source), request).await;
 
     // Save the response.
     with_state_mut(|s| {
         let response = match response {
-            Ok((response,)) => response,
+            Ok(response) => response,
             Err(err) => {
                 s.syncing_state.num_get_successors_rejects += 1;
                 print(&format!("Error fetching blocks: {}", err));

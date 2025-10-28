@@ -21,7 +21,7 @@ async fn get_bitcoin_canister_config() -> Option<BitcoinCanisterConfig> {
         .await
         .map_err(|err| print(&format!("Error getting Bitcoin canister config: {:?}", err)))
         .ok()?;
-    let (config,) = result
+    let config = result
         .candid()
         .map_err(|err| print(&format!("Error decoding get_config result: {:?}", err)))
         .ok()?;
