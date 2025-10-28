@@ -1,7 +1,7 @@
 use candid::{encode_one, Encode, Principal};
 use ic_btc_interface::InitConfig;
 use ic_cdk::management_canister::CanisterId;
-use pocket_ic::{ErrorCode, PocketIc, PocketIcBuilder, UserError};
+use pocket_ic::{ErrorCode, PocketIc, PocketIcBuilder, RejectResponse};
 use std::{path::PathBuf, process::Command};
 
 const BUILD_SCRIPT: &str = "scripts/build-canister.sh";
@@ -66,8 +66,8 @@ fn canbench_is_not_in_bitcoin_canister() {
                 "has_canbench",
                 encode_one(()).unwrap(),
             ),
-            Err(UserError {
-                code: ErrorCode::CanisterMethodNotFound,
+            Err(RejectResponse {
+                error_code: ErrorCode::CanisterMethodNotFound,
                 ..
             })
         );
