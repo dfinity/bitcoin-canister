@@ -69,12 +69,15 @@ pub fn call_get_successors(
             let result = ic_cdk::call::Call::unbounded_wait(id, "bitcoin_get_successors")
                 .with_args(&(request,))
                 .await?;
-            print(format!("bitcoin_get_successors result = {:?}", result));
-            print(format!("candid decode result = {:?}", result.candid()));
-            GetSuccessorsResponse::Complete(GetSuccessorsCompleteResponse {
-                blocks: vec![],
-                next: vec![],
-            })
+            print(&format!("bitcoin_get_successors result = {:?}", result));
+            let candid_result: Result<(GetSuccessorsResponse,), _> = result.candid();
+            print(&format!("candid decode result = {:?}", candid_result));
+            (GetSuccessorsResponse::Complete(
+                crate::types::GetSuccessorsCompleteResponse {
+                    blocks: vec![],
+                    next: vec![],
+                },
+            ),)
         })
     }
 }
