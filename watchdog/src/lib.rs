@@ -117,7 +117,7 @@ pub fn http_request(request: CandidHttpRequest) -> CandidHttpResponse {
 // Prints a message to the console.
 fn print(msg: &str) {
     #[cfg(target_arch = "wasm32")]
-    ic_cdk::api::print(msg);
+    ic_cdk::api::debug_print(msg);
 
     #[cfg(not(target_arch = "wasm32"))]
     println!("{}", msg);
