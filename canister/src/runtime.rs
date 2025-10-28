@@ -65,12 +65,13 @@ pub fn call_get_successors(
     request: GetSuccessorsRequest,
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
     async move {
-        Ok(
-            ic_cdk::call::Call::unbounded_wait(id, "bitcoin_get_successors")
+        Ok({
+            let result = ic_cdk::call::Call::unbounded_wait(id, "bitcoin_get_successors")
                 .with_args(&(request,))
-                .await?
-                .candid()?,
-        )
+                .await?;
+            print(format!("bitcoin_get_successors result = {:?}", result));
+            result.candid()?
+        })
     }
 }
 
