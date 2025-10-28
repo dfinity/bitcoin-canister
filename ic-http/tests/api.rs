@@ -155,11 +155,7 @@ async fn test_http_request_transform_both_status_and_body() {
         ic_http::http_request(request_2.clone(), ZERO_CYCLES),
     ];
     let results = futures::future::join_all(futures).await;
-    let responses: Vec<_> = results
-        .into_iter()
-        .filter(|result| result.is_ok())
-        .map(|result| result.unwrap())
-        .collect();
+    let responses: Vec<_> = results.into_iter().flatten().collect();
 
     // Assert
     assert_eq!(
