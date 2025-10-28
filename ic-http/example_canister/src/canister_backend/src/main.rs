@@ -140,8 +140,8 @@ mod test {
         assert!(matches!(
             result,
             Err(ic_cdk::call::Error::CallRejected(rejected))
-            if rejected.raw_reject_code() == RejectCode::SysFatal as u32
-               && rejected.reject_message() == "system fatal error"
+            if rejected.raw_reject_code() == RejectCode::SysFatal as u32 &&
+               rejected.reject_message() == "system fatal error"
         ));
         assert_eq!(ic_http::mock::times_called(request), 1);
     }

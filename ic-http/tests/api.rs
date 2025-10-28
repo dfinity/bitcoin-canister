@@ -304,10 +304,12 @@ async fn test_http_request_error() {
     let result = ic_http::http_request(request.clone(), ZERO_CYCLES).await;
 
     // Assert
-    assert_eq!(
+    assert!(matches!(
         result,
-        Err((RejectCode::SysFatal, "system fatal error".to_string()))
-    );
+        Err(ic_cdk::call::Error::CallRejected(reject))
+        if reject.raw_reject_code() == RejectCode::SysFatal as u32 &&
+           reject.reject_message() == "system fatal error"
+    ));
     assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
@@ -324,9 +326,11 @@ async fn test_http_request_error_with_delay() {
 
     // Assert
     assert!(start.elapsed() > Duration::from_millis(100));
-    assert_eq!(
+    assert!(matches!(
         result,
-        Err((RejectCode::SysFatal, "system fatal error".to_string()))
-    );
+        Err(ic_cdk::call::Error::CallRejected(reject))
+        if reject.raw_reject_code() == RejectCode::SysFatal as u32 &&
+           reject.reject_message() == "system fatal error"
+    ));
     assert_eq!(ic_http::mock::times_called(request), 1);
 }
