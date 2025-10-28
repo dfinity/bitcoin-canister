@@ -536,7 +536,7 @@ mod test {
         expected = "Received 9223372036854775807 cycles. 18446744073709551615 cycles are required."
     )]
     fn test_verify_has_enough_cycles_panics_with_not_enough_cycles() {
-        verify_has_enough_cycles(u128::MAX as u128);
+        verify_has_enough_cycles(u128::MAX);
     }
 
     #[test]
