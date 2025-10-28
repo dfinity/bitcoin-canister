@@ -60,8 +60,8 @@ async fn fetch(request: HttpRequestArgs) -> String {
             let body = String::from_utf8(response.body).unwrap();
             format!("Response: {:?}", body)
         }
-        Err((code, msg)) => {
-            format!("Error: {:?} {:?}", code, msg)
+        Err(err) => {
+            format!("Error: {}", err)
         }
     }
 }
@@ -137,10 +137,12 @@ mod test {
         let result = ic_http::http_request(request.clone(), ZERO_CYCLES).await;
 
         // Assert.
-        assert_eq!(
+        assert!(matches!(
             result,
-            Err((RejectCode::SysFatal, "system fatal error".to_string()))
-        );
+            Err(ic_cdk::call::Error::CallRejected(rejected))
+            if rejected.raw_reject_code() == RejectCode::SysFatal as u32
+               && rejected.reject_message() == "system fatal error"
+        ));
         assert_eq!(ic_http::mock::times_called(request), 1);
     }
 }
