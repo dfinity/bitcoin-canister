@@ -19,7 +19,7 @@ fn is_watchdog_caller() -> bool {
 
     #[cfg(target_arch = "wasm32")]
     {
-        crate::with_state(|s| Some(ic_cdk::caller()) == s.watchdog_canister)
+        crate::with_state(|s| Some(ic_cdk::api::msg_caller()) == s.watchdog_canister)
     }
 }
 
@@ -70,7 +70,7 @@ pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
 fn verify_caller() {
     #[cfg(target_arch = "wasm32")]
     {
-        if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        if !ic_cdk::api::is_controller(&ic_cdk::api::msg_caller()) {
             panic!("Only controllers can call set_config");
         }
     }
