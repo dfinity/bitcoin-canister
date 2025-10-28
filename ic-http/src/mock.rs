@@ -1,4 +1,4 @@
-use ic_cdk::call::RejectCode;
+use ic_cdk::call::{CallRejected, CallResult, RejectCode};
 use ic_cdk::management_canister::{HttpRequestArgs, HttpRequestResult, TransformArgs};
 use std::time::Duration;
 
@@ -6,7 +6,7 @@ use std::time::Duration;
 #[derive(Clone)]
 pub(crate) struct Mock {
     pub(crate) request: HttpRequestArgs,
-    result: Option<Result<HttpRequestResult, (RejectCode, String)>>,
+    result: Option<CallResult<HttpRequestResult>>,
     delay: Duration,
     times_called: u64,
 }
@@ -47,7 +47,9 @@ pub fn mock_error_with_delay(
 ) {
     crate::storage::mock_insert(Mock {
         request,
-        result: Some(Err(error)),
+        result: Some(Err(
+            CallRejected::with_rejection(error.0 as u32, error.1).into()
+        )),
         delay,
         times_called: 0,
     });
@@ -66,11 +68,11 @@ pub fn call_transform_function(
 /// Handles incoming HTTP requests by retrieving a mock response based
 /// on the request, possibly delaying the response, transforming the response if necessary,
 /// and returning it. If there is no mock found, it returns an error.
-pub(crate) async fn http_request(
-    request: HttpRequestArgs,
-) -> Result<(HttpRequestResult,), (RejectCode, String)> {
-    let mut mock = crate::storage::mock_get(&request)
-        .ok_or((RejectCode::CanisterReject, "No mock found".to_string()))?;
+pub(crate) async fn http_request(request: HttpRequestArgs) -> CallResult<(HttpRequestResult,)> {
+    let mut mock = crate::storage::mock_get(&request).ok_or(CallRejected::with_rejection(
+        RejectCode::CanisterReject as u32,
+        "No mock found".to_string(),
+    ))?;
     mock.times_called += 1;
     crate::storage::mock_insert(mock.clone());
 
@@ -91,14 +93,15 @@ pub(crate) async fn http_request(
     // Check if the response body exceeds the maximum allowed size.
     if let Some(max_response_bytes) = mock.request.max_response_bytes {
         if mock_response.body.len() as u64 > max_response_bytes {
-            return Err((
-                RejectCode::SysFatal,
+            return Err(CallRejected::with_rejection(
+                RejectCode::SysFatal as u32,
                 format!(
                     "Value of 'Content-length' header exceeds http body size limit, {} > {}.",
                     mock_response.body.len(),
                     max_response_bytes
                 ),
-            ));
+            )
+            .into());
         }
     }
 

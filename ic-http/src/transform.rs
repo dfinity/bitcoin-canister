@@ -17,7 +17,13 @@ where
 {
     #[cfg(target_arch = "wasm32")]
     {
-        TransformContext::from_name(candid_function_name.to_string(), context)
+        TransformContext {
+            function: ic_cdk::management_canister::TransformFunc::new(
+                ic_cdk::api::canister_self(),
+                candid_function_name.to_string(),
+            ),
+            context,
+        }
     }
 
     #[cfg(not(target_arch = "wasm32"))]
