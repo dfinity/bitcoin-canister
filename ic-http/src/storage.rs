@@ -2,8 +2,7 @@ use crate::{
     mock::{hash, Mock},
     transform::TransformFn,
 };
-use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk::management_canister::{HttpRequestArgs, HttpRequestResult, TransformArgs};
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -24,7 +23,7 @@ pub(crate) fn mock_insert(mock: Mock) {
 }
 
 /// Returns a cloned mock from the thread-local hashmap that corresponds to the provided request.
-pub(crate) fn mock_get(request: &CanisterHttpRequestArgument) -> Option<Mock> {
+pub(crate) fn mock_get(request: &HttpRequestArgs) -> Option<Mock> {
     MOCKS.with(|cell| cell.read().unwrap().get(&hash(request)).cloned())
 }
 
@@ -41,7 +40,10 @@ pub(crate) fn transform_function_insert(name: String, func: Box<TransformFn>) {
 }
 
 /// Executes the transform function that corresponds to the provided name.
-pub(crate) fn transform_function_call(name: String, arg: TransformArgs) -> Option<HttpResponse> {
+pub(crate) fn transform_function_call(
+    name: String,
+    arg: TransformArgs,
+) -> Option<HttpRequestResult> {
     TRANSFORM_FUNCTIONS.with(|cell| cell.read().unwrap().get(&name).map(|f| f(arg)))
 }
 

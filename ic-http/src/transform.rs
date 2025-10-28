@@ -1,12 +1,10 @@
-use ic_cdk::api::management_canister::http_request::{
-    HttpResponse, TransformArgs, TransformContext,
-};
+use ic_cdk::management_canister::{HttpRequestResult, TransformArgs, TransformContext};
 
 #[cfg(not(target_arch = "wasm32"))]
-use {candid::Principal, ic_cdk::api::management_canister::http_request::TransformFunc};
+use {candid::Principal, ic_cdk::management_canister::TransformFunc};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub type TransformFn = dyn Fn(TransformArgs) -> HttpResponse + 'static;
+pub type TransformFn = dyn Fn(TransformArgs) -> HttpRequestResult + 'static;
 
 /// Creates a `TransformContext` from a transform function and a context.
 pub(crate) fn create_transform_context<T>(
@@ -15,7 +13,7 @@ pub(crate) fn create_transform_context<T>(
     context: Vec<u8>,
 ) -> TransformContext
 where
-    T: Fn(TransformArgs) -> HttpResponse + 'static,
+    T: Fn(TransformArgs) -> HttpRequestResult + 'static,
 {
     #[cfg(target_arch = "wasm32")]
     {
@@ -40,22 +38,22 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_cdk::api::management_canister::http_request::CanisterHttpRequestArgument;
+    use ic_cdk::management_canister::HttpRequestArgs;
 
     /// A test transform function.
-    fn transform_function_1(arg: TransformArgs) -> HttpResponse {
+    fn transform_function_1(arg: TransformArgs) -> HttpRequestResult {
         arg.response
     }
 
     /// A test transform function.
-    fn transform_function_2(arg: TransformArgs) -> HttpResponse {
+    fn transform_function_2(arg: TransformArgs) -> HttpRequestResult {
         arg.response
     }
 
     /// Inserts the provided transform function into a thread-local hashmap.
     fn insert<T>(name: &str, f: T)
     where
-        T: Fn(TransformArgs) -> HttpResponse + 'static,
+        T: Fn(TransformArgs) -> HttpRequestResult + 'static,
     {
         crate::storage::transform_function_insert(name.to_string(), Box::new(f));
     }
@@ -77,13 +75,13 @@ mod test {
 
     /// Transform function which intentionally creates a new request passing
     /// itself as the target transform function.
-    fn transform_function_with_overwrite(arg: TransformArgs) -> HttpResponse {
+    fn transform_function_with_overwrite(arg: TransformArgs) -> HttpRequestResult {
         create_request_with_transform();
         arg.response
     }
 
     /// Creates a request with a transform function which overwrites itself.
-    fn create_request_with_transform() -> CanisterHttpRequestArgument {
+    fn create_request_with_transform() -> HttpRequestArgs {
         crate::request::create_request()
             .url("https://www.example.com")
             .transform_func(

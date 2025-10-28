@@ -4,9 +4,9 @@
 //! facilitate testing.
 use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
 use candid::Principal;
-use ic_cdk::api::call::CallResult;
 #[cfg(not(target_arch = "wasm32"))]
-use ic_cdk::api::call::RejectionCode;
+use ic_cdk::call::RejectCode;
+use ic_cdk::call::{CallRejected, CallResult};
 #[cfg(not(target_arch = "wasm32"))]
 use serde::Deserialize;
 #[cfg(any(not(target_arch = "wasm32"), feature = "mock_time"))]
@@ -36,7 +36,7 @@ pub enum GetSuccessorsReply {
     Ok(GetSuccessorsResponse),
 
     /// Rejection from the caller.
-    Err(RejectionCode, String),
+    Err(RejectCode, String),
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -64,7 +64,7 @@ pub fn call_get_successors(
     id: Principal,
     request: GetSuccessorsRequest,
 ) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
-    return ic_cdk::api::call::call(id, "bitcoin_get_successors", (request,));
+    ic_cdk::api::call::call(id, "bitcoin_get_successors", (request,))
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -97,7 +97,9 @@ pub fn call_get_successors(
 
     match reply {
         GetSuccessorsReply::Ok(response) => std::future::ready(Ok((response,))),
-        GetSuccessorsReply::Err(code, msg) => std::future::ready(Err((code, msg))),
+        GetSuccessorsReply::Err(code, msg) => {
+            std::future::ready(Err(CallRejected::with_rejection(code as u32, msg).into()))
+        }
     }
 }
 

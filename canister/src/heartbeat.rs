@@ -98,9 +98,9 @@ async fn maybe_fetch_blocks() -> bool {
     with_state_mut(|s| {
         let response = match response {
             Ok((response,)) => response,
-            Err((code, msg)) => {
+            Err(err) => {
                 s.syncing_state.num_get_successors_rejects += 1;
-                print(&format!("Error fetching blocks: [{:?}] {}", code, msg));
+                print(&format!("Error fetching blocks: {}", err));
                 s.syncing_state.response_to_process = None;
                 return;
             }

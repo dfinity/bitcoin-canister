@@ -133,7 +133,7 @@ impl Storable for (TxOut, Height) {
 }
 
 impl StableStructuresStorable for Address {
-    fn to_bytes(&self) -> Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.0.as_bytes())
     }
 
@@ -159,7 +159,7 @@ pub struct AddressUtxo {
 }
 
 impl StableStructuresStorable for AddressUtxo {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         let bytes = vec![
             Address::to_bytes(&self.address).to_vec(),
             Storable::to_bytes(&self.height),
@@ -317,7 +317,7 @@ pub type BlockBlob = Vec<u8>;
 pub struct BlockHeaderBlob(Vec<u8>);
 
 impl StableStructuresStorable for BlockHeaderBlob {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.0.as_slice())
     }
 

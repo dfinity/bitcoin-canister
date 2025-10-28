@@ -21,7 +21,7 @@ use crate::{
     types::{CandidHttpRequest, CandidHttpResponse},
 };
 use ic_btc_interface::Flag;
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use ic_cdk_macros::{init, post_upgrade, query};
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
@@ -52,11 +52,11 @@ fn init(network: BitcoinNetwork) {
     set_timer(
         Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
         || {
-            ic_cdk::spawn(async {
+            ic_cdk::futures::spawn(async {
                 tick().await;
                 ic_cdk_timers::set_timer_interval(
                     Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::spawn(tick()),
+                    || ic_cdk::futures::spawn(tick()),
                 );
             })
         },
@@ -136,57 +136,57 @@ fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpResponse {
+fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_api_bitaps_com_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpResponse {
+fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_api_blockchair_com_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_api_blockcypher_com_block(raw: TransformArgs) -> HttpResponse {
+fn transform_api_blockcypher_com_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_api_blockcypher_com_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
+fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_canister().transform(raw)
 }
 
 #[query]
-fn transform_bitcoinexplorer_org_block(raw: TransformArgs) -> HttpResponse {
+fn transform_bitcoinexplorer_org_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoinexplorer_org_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpResponse {
+fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpRequestResult {
     endpoint_blockchain_info_hash_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_blockchain_info_height(raw: TransformArgs) -> HttpResponse {
+fn transform_blockchain_info_height(raw: TransformArgs) -> HttpRequestResult {
     endpoint_blockchain_info_height_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpResponse {
+fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpRequestResult {
     endpoint_blockstream_info_hash_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
+fn transform_blockstream_info_height(raw: TransformArgs) -> HttpRequestResult {
     endpoint_blockstream_info_height_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
+fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_chain_api_btc_com_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_mempool_height(raw: TransformArgs) -> HttpResponse {
+fn transform_mempool_height(raw: TransformArgs) -> HttpRequestResult {
     endpoint_mempool_height_mainnet().transform(raw)
 }
 

@@ -1,16 +1,13 @@
-use ic_cdk::api::call::RejectionCode;
-use ic_cdk::api::management_canister::http_request::{CanisterHttpRequestArgument, HttpResponse};
+use ic_cdk::call::RejectCode;
+use ic_cdk::management_canister::{HttpRequestArgs, HttpRequestResult};
 
 /// The result of a Call.
 ///
 /// Errors on the IC have two components; a Code and a message associated with it.
-pub type CallResult<R> = Result<R, (RejectionCode, String)>;
+pub type CallResult<R> = Result<R, (RejectCode, String)>;
 
 /// Make a HTTP request to a given URL and return HTTP response, possibly after a transformation.
-pub async fn http_request(
-    arg: CanisterHttpRequestArgument,
-    cycles: u128,
-) -> CallResult<(HttpResponse,)> {
+pub async fn http_request(arg: HttpRequestArgs, cycles: u128) -> CallResult<(HttpRequestResult,)> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         // Mocking cycles is not implemented at the moment.

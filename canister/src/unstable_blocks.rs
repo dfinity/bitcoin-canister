@@ -305,7 +305,7 @@ pub fn push(
 /// The most likely chain to be "main", we hypothesize, is the longest
 /// chain of blocks with an "uncontested" tip. As in, there exists no other
 /// block at the same height as the tip.
-pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain {
+pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_> {
     // Get all the blockchains that extend the anchor.
     let blockchains: Vec<BlockChain> = blocks.tree.blockchains();
 

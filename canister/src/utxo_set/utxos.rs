@@ -143,7 +143,7 @@ impl Utxos {
     /// Gets an iterator over the entries of the map.
     /// NOTE: The entries are not guaranteed to be sorted in any particular way.
     #[cfg(test)]
-    pub fn iter(&self) -> Iter<Memory> {
+    pub fn iter(&self) -> Iter<'_, Memory> {
         Iter::new(self)
     }
 

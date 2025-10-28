@@ -1,6 +1,6 @@
 use candid::{encode_one, Encode, Principal};
 use ic_btc_interface::InitConfig;
-use ic_cdk::api::management_canister::main::CanisterId;
+use ic_cdk::management_canister::CanisterId;
 use pocket_ic::{ErrorCode, PocketIc, PocketIcBuilder, UserError};
 use std::{path::PathBuf, process::Command};
 

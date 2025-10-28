@@ -22,7 +22,7 @@ use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosF
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_btc_test_utils::random_p2pkh_address;
 use ic_btc_types::{Block, BlockHash};
-use ic_cdk::api::call::RejectionCode;
+use ic_cdk::call::RejectCode;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
 use std::{fs::File, panic::catch_unwind};
@@ -570,7 +570,7 @@ async fn test_rejections_counting() {
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
     runtime::set_successors_response(GetSuccessorsReply::Err(
-        RejectionCode::CanisterReject,
+        RejectCode::CanisterReject,
         String::from("Test verification error."),
     ));
 

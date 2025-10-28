@@ -227,7 +227,7 @@ impl BlockTree {
     }
 
     /// Returns all the blockchains in the tree.
-    pub fn blockchains(&self) -> Vec<BlockChain> {
+    pub fn blockchains(&self) -> Vec<BlockChain<'_>> {
         if self.children.is_empty() {
             return vec![BlockChain {
                 first: &self.root,

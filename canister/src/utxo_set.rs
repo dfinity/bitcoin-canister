@@ -97,8 +97,8 @@ impl UtxoSet {
     /// Returns:
     ///   * `None` if there was no block to continue ingesting.
     ///   * `Slicing::Done(block_hash, ingestion_stats)` if the partially ingested
-    ///      block is now fully ingested, where `block_hash` is the hash of the ingested block,
-    ///      while 'ingestion_stats' is the number of instructions used to ingest block by type.
+    ///     block is now fully ingested, where `block_hash` is the hash of the ingested block,
+    ///     while 'ingestion_stats' is the number of instructions used to ingest block by type.
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
     pub fn ingest_block_continue(
         &mut self,
@@ -747,7 +747,7 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .iter()
-                .map(|entry| entry.key().clone())
+                .map(|entry| *entry.key())
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
                 Blob::try_from(AddressUtxo {
@@ -789,7 +789,7 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .iter()
-                .map(|entry| entry.key().clone())
+                .map(|entry| *entry.key())
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
                 Blob::try_from(AddressUtxo {
