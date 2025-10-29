@@ -97,6 +97,11 @@ fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
     }
 }
 
+/// Parses text for dogecoin_canister block height.
+fn parse_dogecoin_canister_height(text: String) -> Result<u64, String> {
+    parse_bitcoin_canister_height(text)
+}
+
 /// Creates a config for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
@@ -318,8 +323,7 @@ pub fn endpoint_dogecoin_canister() -> HttpRequestConfig {
         }),
         |raw| {
             apply_to_body(raw, |text| {
-                // Dogecoin: same as Bitcoin canister
-                parse_bitcoin_canister_height(text)
+                parse_dogecoin_canister_height(text)
                     .map(|height| {
                         json!({
                             "height": height,
