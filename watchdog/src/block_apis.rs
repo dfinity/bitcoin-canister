@@ -392,7 +392,7 @@ impl DogecoinProviderBlockApi {
     /// Returns the list of all Dogecoin mainnet API providers.
     fn providers_mainnet() -> Vec<Self> {
         let mut providers: Vec<DogecoinProviderBlockApi> = Self::explorers_mainnet();
-        // Add the Bitcoin canister, since it's not an explorer.
+        // Add the Dogecoin canister, since it's not an explorer.
         providers.push(DogecoinProviderBlockApi::DogecoinCanister);
 
         providers
