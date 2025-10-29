@@ -14,7 +14,7 @@ fn calculate_target(health: HealthStatus) -> Option<Flag> {
 }
 
 /// Fetches the canister config.
-async fn get_canister_config() -> Option<CanisterConfig> {
+async fn get_target_canister_config() -> Option<CanisterConfig> {
     let id = crate::storage::get_config().bitcoin_canister_principal;
     let result = ic_cdk::api::call::call(id, "get_config", ()).await;
     result
@@ -25,7 +25,7 @@ async fn get_canister_config() -> Option<CanisterConfig> {
 
 /// Fetches the actual API access flag from the canister.
 async fn fetch_actual_api_access() -> Option<Flag> {
-    let canister_config = get_canister_config().await;
+    let canister_config = get_target_canister_config().await;
 
     let actual = canister_config.map(|config| config.api_access);
     if actual.is_none() {
