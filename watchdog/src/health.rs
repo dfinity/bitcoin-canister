@@ -257,7 +257,7 @@ mod test {
     fn test_compare_no_explorers() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinProviderBlockApi::BitcoinCanister,
             1_000,
         ));
         let other = vec![];
@@ -279,18 +279,12 @@ mod test {
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinProviderBlockApi::BitcoinCanister,
             1_000,
         ));
         let other = vec![
-            BlockInfo::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_006,
-            ),
-            BlockInfo::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_005,
-            ),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
         ];
 
         // Assert
@@ -302,14 +296,8 @@ mod test {
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
-                    BlockInfo::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_006
-                    ),
-                    BlockInfo::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_005
-                    ),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
                 ],
             }
         );
@@ -319,22 +307,13 @@ mod test {
     fn test_compare_behind() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinProviderBlockApi::BitcoinCanister,
             1_000,
         ));
         let other = vec![
-            BlockInfo::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_006,
-            ),
-            BlockInfo::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_005,
-            ),
-            BlockInfo::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_004,
-            ),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_004),
         ];
 
         // Assert
@@ -346,18 +325,9 @@ mod test {
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfo::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_006
-                    ),
-                    BlockInfo::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_005
-                    ),
-                    BlockInfo::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_004
-                    ),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_004),
                 ],
             }
         );
@@ -367,13 +337,13 @@ mod test {
     fn test_compare_ahead() {
         // Arrange
         let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinProviderBlockApi::BitcoinCanister,
             1_000,
         ));
         let other = vec![
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 996),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 995),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 994),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 996),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 995),
+            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 994),
         ];
 
         // Assert
@@ -385,9 +355,9 @@ mod test {
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 996),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 995),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 994),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 996),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 995),
+                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 994),
                 ],
             }
         );

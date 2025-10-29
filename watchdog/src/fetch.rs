@@ -15,9 +15,9 @@ pub struct BlockInfo {
 
 impl BlockInfo {
     #[cfg(test)]
-    pub fn new(provider: CandidBlockApi, height: u64) -> Self {
+    pub fn new(provider: impl Into<CandidBlockApi>, height: u64) -> Self {
         Self {
-            provider,
+            provider: provider.into(),
             height: Some(height),
         }
     }
