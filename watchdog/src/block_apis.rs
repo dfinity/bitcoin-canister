@@ -4,11 +4,13 @@ use candid::CandidType;
 use ic_cdk::api::management_canister::http_request::HttpResponse;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use strum::{EnumIter, IntoEnumIterator};
 
 /// APIs that serve block data.
-#[derive(Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
+)]
 pub enum CandidBlockApi {
     #[serde(rename = "api_bitaps_com_mainnet")]
     ApiBitapsComMainnet,
@@ -369,7 +371,7 @@ impl BitcoinProviderBlockApi {
             .map(BitcoinProviderBlockApi::Mainnet)
             .collect();
         // Remove the explorers that are not configured.
-        let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
         explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).into()));
 
         explorers
@@ -381,7 +383,7 @@ impl BitcoinProviderBlockApi {
             .map(BitcoinProviderBlockApi::Testnet)
             .collect();
         // Remove the explorers that are not configured.
-        let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
         explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).into()));
 
         explorers
@@ -404,7 +406,7 @@ impl DogecoinProviderBlockApi {
             .map(DogecoinProviderBlockApi::Mainnet)
             .collect();
         // Remove the explorers that are not configured.
-        let configured: HashSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
         explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).into()));
 
         explorers
