@@ -640,7 +640,7 @@ mod test {
         ));
         run_http_request_test(
             endpoint_dogecoin_canister(),
-            "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.ic0.app/metrics",
+            "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics",
             test_utils::DOGECOIN_CANISTER_MAINNET_RESPONSE,
             json!({
                 "height": 5931098,

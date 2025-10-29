@@ -53,6 +53,13 @@ pub enum BitcoinNetwork {
     DogecoinMainnet,
 }
 
+/// Type of subnet the canister is deployed on.
+#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
+enum SubnetType {
+    System,
+    Application,
+}
+
 /// Watchdog canister configuration.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
@@ -79,6 +86,9 @@ pub struct Config {
 
     /// Explorers to use for fetching block data.
     pub explorers: Vec<CandidBlockApi>,
+
+    /// Type of subnet the target canister is deployed on.
+    subnet_type: SubnetType,
 }
 
 impl Config {
@@ -106,6 +116,7 @@ impl Config {
                     BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
                     BitcoinMainnetExplorerBlockApi::Mempool.into(),
                 ],
+                subnet_type: SubnetType::System,
             },
             Canister::BitcoinTestnet => Self {
                 bitcoin_network: BitcoinNetwork::BitcoinTestnet,
@@ -119,6 +130,7 @@ impl Config {
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.into()],
+                subnet_type: SubnetType::System,
             },
             Canister::DogecoinMainnet => Self {
                 bitcoin_network: BitcoinNetwork::DogecoinMainnet,
@@ -136,6 +148,7 @@ impl Config {
                     DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     DogecoinMainnetExplorerBlockApi::TokenView.into(),
                 ],
+                subnet_type: SubnetType::System,
             },
             Canister::DogecoinMainnetStaging => Self {
                 bitcoin_network: BitcoinNetwork::DogecoinMainnet,
@@ -153,6 +166,7 @@ impl Config {
                     DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     DogecoinMainnetExplorerBlockApi::TokenView.into(),
                 ],
+                subnet_type: SubnetType::Application,
             },
         }
     }
@@ -170,7 +184,11 @@ impl Config {
     /// Returns the canister metrics endpoint.
     pub fn get_canister_endpoint(&self) -> String {
         let principal = self.bitcoin_canister_principal.to_text();
-        format!("https://{principal}.raw.ic0.app/metrics")
+        let suffix = match self.subnet_type {
+            SubnetType::System => "raw.ic0.app",
+            SubnetType::Application => "raw.icp0.io",
+        };
+        format!("https://{principal}.{suffix}/metrics")
     }
 }
 
@@ -192,7 +210,7 @@ mod test {
 
     /// Mainnet dogecoin staging canister endpoint.
     const MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT: &str =
-        "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.ic0.app/metrics";
+        "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics";
 
     #[test]
     fn test_bitcoin_canister_endpoint_contains_principal_mainnet() {
