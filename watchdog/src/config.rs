@@ -82,64 +82,78 @@ pub struct Config {
 }
 
 impl Config {
-    /// Creates a new configuration for the Bitcoin mainnet.
-    pub fn bitcoin_mainnet() -> Self {
-        Self {
-            bitcoin_network: BitcoinNetwork::BitcoinMainnet,
-            blocks_behind_threshold: 2,
-            blocks_ahead_threshold: 2,
-            min_explorers: 3,
-            bitcoin_canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
+    /// Creates a new configuration for the given canister.
+    pub fn for_target(canister: Canister) -> Self {
+        match canister {
+            Canister::BitcoinMainnet => Self {
+                bitcoin_network: BitcoinNetwork::BitcoinMainnet,
+                blocks_behind_threshold: 2,
+                blocks_ahead_threshold: 2,
+                min_explorers: 3,
+                bitcoin_canister_principal: Principal::from_text(
+                    MAINNET_BITCOIN_CANISTER_PRINCIPAL,
+                )
                 .unwrap(),
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-            explorers: vec![
-                BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                BitcoinMainnetExplorerBlockApi::Mempool.into(),
-            ],
-        }
-    }
-
-    /// Creates a new configuration for the Bitcoin testnet.
-    pub fn bitcoin_testnet() -> Self {
-        Self {
-            bitcoin_network: BitcoinNetwork::BitcoinTestnet,
-            blocks_behind_threshold: 1000,
-            blocks_ahead_threshold: 1000,
-            min_explorers: 1,
-            bitcoin_canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
-                .unwrap(),
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-            explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.into()],
-        }
-    }
-
-    /// Creates a new configuration for the Dogecoin mainnet.
-    pub fn dogecoin_mainnet(staging_canister: bool) -> Self {
-        Self {
-            bitcoin_network: BitcoinNetwork::DogecoinMainnet,
-            blocks_behind_threshold: 2,
-            blocks_ahead_threshold: 2,
-            min_explorers: 2,
-            bitcoin_canister_principal: if !staging_canister {
-                Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
-            } else {
-                Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+                explorers: vec![
+                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                    BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
+                    BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
+                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
+                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
+                    BitcoinMainnetExplorerBlockApi::Mempool.into(),
+                ],
             },
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-            explorers: vec![
-                DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                DogecoinMainnetExplorerBlockApi::TokenView.into(),
-            ],
+            Canister::BitcoinTestnet => Self {
+                bitcoin_network: BitcoinNetwork::BitcoinTestnet,
+                blocks_behind_threshold: 1000,
+                blocks_ahead_threshold: 1000,
+                min_explorers: 1,
+                bitcoin_canister_principal: Principal::from_text(
+                    TESTNET_BITCOIN_CANISTER_PRINCIPAL,
+                )
+                .unwrap(),
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+                explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.into()],
+            },
+            Canister::DogecoinMainnet => Self {
+                bitcoin_network: BitcoinNetwork::DogecoinMainnet,
+                blocks_behind_threshold: 2,
+                blocks_ahead_threshold: 2,
+                min_explorers: 2,
+                bitcoin_canister_principal: Principal::from_text(
+                    MAINNET_DOGECOIN_CANISTER_PRINCIPAL,
+                )
+                .unwrap(),
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+                explorers: vec![
+                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                    DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                ],
+            },
+            Canister::DogecoinMainnetStaging => Self {
+                bitcoin_network: BitcoinNetwork::DogecoinMainnet,
+                blocks_behind_threshold: 2,
+                blocks_ahead_threshold: 2,
+                min_explorers: 2,
+                bitcoin_canister_principal: Principal::from_text(
+                    MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL,
+                )
+                .unwrap(),
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+                explorers: vec![
+                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                    DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                ],
+            },
         }
     }
 
@@ -203,7 +217,7 @@ mod test {
 
     #[test]
     fn test_config_mainnet() {
-        let config = Config::bitcoin_mainnet();
+        let config = Config::for_target(Canister::BitcoinMainnet);
         assert_eq!(config.bitcoin_network, BitcoinNetwork::BitcoinMainnet);
         assert_eq!(
             config.bitcoin_canister_principal,
@@ -217,7 +231,7 @@ mod test {
 
     #[test]
     fn test_config_testnet() {
-        let config = Config::bitcoin_testnet();
+        let config = Config::for_target(Canister::BitcoinTestnet);
         assert_eq!(config.bitcoin_network, BitcoinNetwork::BitcoinTestnet);
         assert_eq!(
             config.bitcoin_canister_principal,
@@ -231,8 +245,7 @@ mod test {
 
     #[test]
     fn test_config_dogecoin_mainnet() {
-        let staging_canister = false;
-        let config = Config::dogecoin_mainnet(staging_canister);
+        let config = Config::for_target(Canister::DogecoinMainnet);
         assert_eq!(config.bitcoin_network, BitcoinNetwork::DogecoinMainnet);
         assert_eq!(
             config.bitcoin_canister_principal,
@@ -246,8 +259,7 @@ mod test {
 
     #[test]
     fn test_config_dogecoin_mainnet_staging() {
-        let staging_canister = true;
-        let config = Config::dogecoin_mainnet(staging_canister);
+        let config = Config::for_target(Canister::DogecoinMainnetStaging);
         assert_eq!(config.bitcoin_network, BitcoinNetwork::DogecoinMainnet);
         assert_eq!(
             config.bitcoin_canister_principal,

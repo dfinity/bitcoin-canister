@@ -52,11 +52,12 @@ mod test {
         BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi, BitcoinTestnetExplorerBlockApi,
         DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi,
     };
+    use crate::config::Canister;
     use crate::fetch::BlockInfo;
 
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet() {
-        crate::storage::set_config(crate::config::Config::bitcoin_mainnet());
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
         crate::test_utils::mock_bitcoin_mainnet_outcalls();
 
         let result = fetch_all_data(BitcoinNetwork::BitcoinMainnet).await;
@@ -105,7 +106,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_testnet() {
-        crate::storage::set_config(crate::config::Config::bitcoin_testnet());
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
         crate::test_utils::mock_bitcoin_testnet_outcalls();
 
         let result = fetch_all_data(BitcoinNetwork::BitcoinTestnet).await;
@@ -151,8 +152,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet() {
-        let staging_canister = false;
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
         crate::test_utils::mock_dogecoin_mainnet_outcalls();
 
         verify_dogecoin_mainnet_fetch_results().await;
@@ -160,8 +160,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet_staging() {
-        let staging_canister = true;
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::DogecoinMainnetStaging,
+        ));
         crate::test_utils::mock_dogecoin_mainnet_outcalls();
 
         verify_dogecoin_mainnet_fetch_results().await;
@@ -169,7 +170,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_mainnet() {
-        crate::storage::set_config(crate::config::Config::bitcoin_mainnet());
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
         crate::test_utils::mock_all_outcalls_404();
 
         let result = fetch_all_data(BitcoinNetwork::BitcoinMainnet).await;
@@ -218,7 +219,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_testnet() {
-        crate::storage::set_config(crate::config::Config::bitcoin_testnet());
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
         crate::test_utils::mock_all_outcalls_404();
 
         let result = fetch_all_data(BitcoinNetwork::BitcoinTestnet).await;
@@ -264,8 +265,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
-        let staging_canister = false;
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
         crate::test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;
@@ -273,8 +273,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet_staging() {
-        let staging_canister = true;
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging_canister));
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::DogecoinMainnetStaging,
+        ));
         crate::test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;

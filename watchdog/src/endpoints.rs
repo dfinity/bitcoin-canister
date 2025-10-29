@@ -414,6 +414,7 @@ fn apply_to_body_json(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::config::Canister;
     use crate::test_utils;
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
@@ -492,7 +493,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet() {
-        crate::storage::set_config(crate::config::Config::bitcoin_mainnet());
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
@@ -506,7 +507,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
-        crate::storage::set_config(crate::config::Config::bitcoin_testnet());
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
@@ -616,8 +617,7 @@ mod test {
 
     #[tokio::test]
     async fn test_dogecoin_canister_mainnet() {
-        let staging = false;
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging));
+        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
@@ -631,8 +631,9 @@ mod test {
 
     #[tokio::test]
     async fn test_dogecoin_staging_canister_mainnet() {
-        let staging = true;
-        crate::storage::set_config(crate::config::Config::dogecoin_mainnet(staging));
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::DogecoinMainnetStaging,
+        ));
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.ic0.app/metrics",

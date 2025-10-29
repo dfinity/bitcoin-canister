@@ -32,7 +32,7 @@ use std::time::Duration;
 
 thread_local! {
     /// The local storage for the configuration.
-    static CONFIG: RefCell<Config> = RefCell::new(Config::bitcoin_mainnet());
+    static CONFIG: RefCell<Config> = RefCell::new(Config::for_target(Canister::BitcoinMainnet));
 
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<CandidBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
@@ -44,12 +44,7 @@ thread_local! {
 /// This function is called when the canister is created.
 #[init]
 fn init(canister: Canister) {
-    let config = match canister {
-        Canister::BitcoinMainnet => Config::bitcoin_mainnet(),
-        Canister::BitcoinTestnet => Config::bitcoin_testnet(),
-        Canister::DogecoinMainnet => Config::dogecoin_mainnet(false),
-        Canister::DogecoinMainnetStaging => Config::dogecoin_mainnet(true),
-    };
+    let config = Config::for_target(canister);
     crate::storage::set_config(config);
 
     set_timer(
@@ -220,25 +215,28 @@ mod test {
     #[test]
     fn init_with_bitcoin_testnet_uses_testnet_config() {
         init(Canister::BitcoinTestnet);
-        assert_eq!(get_config(), Config::bitcoin_testnet());
+        assert_eq!(get_config(), Config::for_target(Canister::BitcoinTestnet));
     }
 
     #[test]
     fn init_with_bitcoin_mainnet_uses_mainnet_config() {
         init(Canister::BitcoinMainnet);
-        assert_eq!(get_config(), Config::bitcoin_mainnet());
+        assert_eq!(get_config(), Config::for_target(Canister::BitcoinMainnet));
     }
 
     #[test]
     fn init_with_dogecoin_mainnet_uses_mainnet_config() {
         init(Canister::DogecoinMainnet);
-        assert_eq!(get_config(), Config::dogecoin_mainnet(false));
+        assert_eq!(get_config(), Config::for_target(Canister::DogecoinMainnet));
     }
 
     #[test]
     fn init_with_dogecoin_mainnet_staging_uses_mainnet_staging_config() {
         init(Canister::DogecoinMainnetStaging);
-        assert_eq!(get_config(), Config::dogecoin_mainnet(true));
+        assert_eq!(
+            get_config(),
+            Config::for_target(Canister::DogecoinMainnetStaging)
+        );
     }
 
     #[test]
