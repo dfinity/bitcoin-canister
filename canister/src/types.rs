@@ -173,10 +173,15 @@ impl StableStructuresStorable for AddressUtxo {
     }
 
     fn into_bytes(self) -> Vec<u8> {
+        let AddressUtxo {
+            address,
+            height,
+            outpoint,
+        } = self;
         vec![
-            Address::into_bytes(self.address),
-            self.height.into_bytes(),
-            OutPoint::into_bytes(self.outpoint),
+            Address::into_bytes(address),
+            height.into_bytes(),
+            OutPoint::into_bytes(outpoint),
         ]
         .into_iter()
         .flatten()
