@@ -121,7 +121,7 @@ pub enum BitcoinProviderBlockApi {
 
 impl From<BitcoinProviderBlockApi> for CandidBlockApi {
     fn from(api: BitcoinProviderBlockApi) -> Self {
-        BlockApi::BitcoinProvider(api).into()
+        CandidBlockApi::from(BlockApi::BitcoinProvider(api))
     }
 }
 
@@ -153,7 +153,7 @@ pub enum DogecoinProviderBlockApi {
 
 impl From<DogecoinProviderBlockApi> for CandidBlockApi {
     fn from(api: DogecoinProviderBlockApi) -> Self {
-        BlockApi::DogecoinProvider(api).into()
+        CandidBlockApi::from(BlockApi::DogecoinProvider(api))
     }
 }
 
@@ -185,19 +185,19 @@ impl From<DogecoinMainnetExplorerBlockApi> for BlockApi {
 
 impl From<BitcoinMainnetExplorerBlockApi> for CandidBlockApi {
     fn from(api: BitcoinMainnetExplorerBlockApi) -> Self {
-        BlockApi::from(api).into()
+        CandidBlockApi::from(BlockApi::from(api))
     }
 }
 
 impl From<BitcoinTestnetExplorerBlockApi> for CandidBlockApi {
     fn from(api: BitcoinTestnetExplorerBlockApi) -> Self {
-        BlockApi::from(api).into()
+        CandidBlockApi::from(BlockApi::from(api))
     }
 }
 
 impl From<DogecoinMainnetExplorerBlockApi> for CandidBlockApi {
     fn from(api: DogecoinMainnetExplorerBlockApi) -> Self {
-        BlockApi::from(api).into()
+        CandidBlockApi::from(BlockApi::from(api))
     }
 }
 
