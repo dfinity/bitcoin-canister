@@ -129,19 +129,12 @@ impl From<BitcoinProviderBlockApi> for CandidBlockApi {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter)]
 pub enum BitcoinMainnetExplorerBlockApi {
     ApiBitapsCom,
-
     ApiBlockchairCom,
-
     ApiBlockcypherCom,
-
     BitcoinExplorerOrg,
-
     BlockchainInfo,
-
     BlockstreamInfo,
-
     ChainApiBtcCom,
-
     Mempool,
 }
 
@@ -168,9 +161,7 @@ impl From<DogecoinProviderBlockApi> for CandidBlockApi {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter)]
 pub enum DogecoinMainnetExplorerBlockApi {
     ApiBlockchairCom,
-
     ApiBlockcypherCom,
-
     TokenView,
 }
 
