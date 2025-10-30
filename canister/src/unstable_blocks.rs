@@ -255,7 +255,7 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
 
     // Remove the outpoints of obsolete blocks from the cache.
     for block in tree.blocks() {
-        blocks.outpoints_cache.remove(&block);
+        blocks.outpoints_cache.remove(block);
     }
 
     blocks.next_block_headers.remove_until_height(stable_height);
