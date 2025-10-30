@@ -64,7 +64,7 @@ pub fn testnet_unstable_max_depth_difference(
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct UnstableBlocks {
     stability_threshold: u32,
-    tree: BlockTree,
+    tree: BlockTree<Block>,
     outpoints_cache: OutPointsCache,
     network: Network,
     // The headers of the blocks that are expected to be received.

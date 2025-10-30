@@ -127,12 +127,12 @@ impl Sub for DifficultyBasedDepth {
 
 /// Maintains a tree of connected blocks.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BlockTree {
+pub struct BlockTree<Block> {
     pub root: Block,
-    pub children: Vec<BlockTree>,
+    pub children: Vec<BlockTree<Block>>,
 }
 
-impl BlockTree {
+impl BlockTree<Block> {
     /// Creates a new `BlockTree` with the given block as its root.
     pub fn new(root: Block) -> Self {
         Self {
@@ -321,12 +321,15 @@ impl BlockTree {
 
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
     /// along with its depth if it exists, and `None` otherwise.
-    pub fn find_mut<'a>(&'a mut self, blockhash: &BlockHash) -> Option<(&'a mut BlockTree, u32)> {
+    pub fn find_mut<'a>(
+        &'a mut self,
+        blockhash: &BlockHash,
+    ) -> Option<(&'a mut BlockTree<Block>, u32)> {
         fn find_mut_helper<'a>(
-            block_tree: &'a mut BlockTree,
+            block_tree: &'a mut BlockTree<Block>,
             blockhash: &BlockHash,
             depth: u32,
-        ) -> Option<(&'a mut BlockTree, u32)> {
+        ) -> Option<(&'a mut BlockTree<Block>, u32)> {
             if block_tree.root.block_hash() == blockhash {
                 return Some((block_tree, depth));
             }
@@ -345,7 +348,7 @@ impl BlockTree {
 
     /// Returns a `BlockTree` where the hash of the root matches the hash of the provided `block`
     /// if it exists, and `None` otherwise.
-    fn find(&self, block: &Block) -> Option<&BlockTree> {
+    fn find(&self, block: &Block) -> Option<&BlockTree<Block>> {
         if self.root.block_hash() == block.block_hash() {
             return Some(self);
         }
@@ -399,6 +402,8 @@ mod test {
     use proptest::prelude::*;
     use std::collections::BTreeSet;
     use test_strategy::proptest;
+
+    type BlockTree = super::BlockTree<Block>;
 
     // For generating arbitrary BlockTrees.
     impl Arbitrary for BlockTree {
