@@ -127,8 +127,8 @@ impl Sub for DifficultyBasedDepth {
 /// Maintains a tree of connected blocks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlockTree<Block> {
-    pub root: Block,
-    pub children: Vec<BlockTree<Block>>,
+    root: Block,
+    children: Vec<BlockTree<Block>>,
 }
 
 impl<Block> BlockTree<Block> {
@@ -138,6 +138,18 @@ impl<Block> BlockTree<Block> {
             root,
             children: vec![],
         }
+    }
+
+    pub fn root(&self) -> &Block {
+        &self.root
+    }
+
+    pub fn children(&self) -> &[Self] {
+        &self.children
+    }
+
+    pub fn remove_child(&mut self, idx: usize) -> Self {
+        self.children.swap_remove(idx)
     }
 
     /// Returns all blocks in the tree with their depths
@@ -268,7 +280,7 @@ impl<Block: ChainBlock> BlockTree<Block> {
     /// Note that `ValidationContext` ensures that the block to insert is not already present.
     pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
         debug_assert!(
-            self.find(&block).is_none(),
+            self.find(block.block_hash()).is_none(),
             "BUG: block {} is already present in the tree, but this should have been prevented when instantiating `ValidationContext`",
             block.block_hash()
         );
@@ -383,13 +395,13 @@ impl<Block: ChainBlock> BlockTree<Block> {
 
     /// Returns a `BlockTree` where the hash of the root matches the hash of the provided `block`
     /// if it exists, and `None` otherwise.
-    fn find(&self, block: &Block) -> Option<&BlockTree<Block>> {
-        if self.root.block_hash() == block.block_hash() {
+    fn find(&self, block_hash: &BlockHash) -> Option<&BlockTree<Block>> {
+        if self.root.block_hash() == block_hash {
             return Some(self);
         }
 
         for child in self.children.iter() {
-            if let res @ Some(_) = child.find(block) {
+            if let res @ Some(_) = child.find(block_hash) {
                 return res;
             }
         }
@@ -748,7 +760,9 @@ mod test {
         let chosen_block = blocks[random_index % blocks.len()];
 
         let (chain, tip_children) = tree.get_chain_with_tip(chosen_block.block_hash()).unwrap();
-        let tip = tree.find(chain.tip()).expect("BUG: could not find tip");
+        let tip = tree
+            .find(chain.tip().block_hash())
+            .expect("BUG: could not find tip");
         prop_assert_eq!(tip.root.block_hash(), chain.tip().block_hash());
 
         let actual_children: BTreeSet<_> =
