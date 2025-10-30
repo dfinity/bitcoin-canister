@@ -47,14 +47,14 @@ impl<'a> AddressUtxoSet<'a> {
     pub fn apply_block(&mut self, block: &Block) {
         for outpoint in self
             .unstable_blocks
-            .get_removed_outpoints(&block.block_hash(), &self.address)
+            .get_removed_outpoints(block.block_hash(), &self.address)
         {
             self.removed_outpoints.insert(outpoint.clone());
         }
 
         for outpoint in self
             .unstable_blocks
-            .get_added_outpoints(&block.block_hash(), &self.address)
+            .get_added_outpoints(block.block_hash(), &self.address)
         {
             let (txout, height) = self
                 .unstable_blocks
@@ -154,7 +154,7 @@ mod test {
             address_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
                 outpoint: OutPoint {
-                    txid: coinbase_tx.txid(),
+                    txid: coinbase_tx.txid().clone(),
                     vout: 0
                 },
                 value: 1000,
@@ -183,7 +183,7 @@ mod test {
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
         let tx = TransactionBuilder::new()
-            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid().clone(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
@@ -207,7 +207,7 @@ mod test {
             address_2_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
                 outpoint: OutPoint {
-                    txid: tx.txid(),
+                    txid: tx.txid().clone(),
                     vout: 0
                 },
                 value: 1000,
@@ -237,8 +237,8 @@ mod test {
 
         // Address 1 spends both outputs in a single transaction.
         let tx = TransactionBuilder::new()
-            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
-            .with_input(OutPoint::new(coinbase_tx.txid(), 1))
+            .with_input(OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid().clone(), 1))
             .with_output(&address_2, 1500)
             .with_output(&address_1, 400)
             .build();
@@ -265,7 +265,7 @@ mod test {
             address_1_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
                 outpoint: OutPoint {
-                    txid: tx.txid(),
+                    txid: tx.txid().clone(),
                     vout: 1
                 },
                 value: 400,
@@ -278,7 +278,7 @@ mod test {
             address_2_utxo_set.into_iter(None).collect::<Vec<_>>(),
             vec![Utxo {
                 outpoint: OutPoint {
-                    txid: tx.txid(),
+                    txid: tx.txid().clone(),
                     vout: 0
                 },
                 value: 1500,

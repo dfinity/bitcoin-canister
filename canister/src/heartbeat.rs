@@ -550,7 +550,7 @@ mod test {
         let mut tx_2 = TransactionBuilder::new();
         for i in 0..tx_cardinality {
             tx_2 = tx_2.with_input(ic_btc_types::OutPoint {
-                txid: tx_1.txid(),
+                txid: tx_1.txid().clone(),
                 vout: i,
             });
         }

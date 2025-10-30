@@ -87,7 +87,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     println!("# blocks in file: {}", blocks.len());
 
     // Build the chain
-    chain.push(blocks.remove(&genesis_block(network).block_hash()).unwrap());
+    chain.push(blocks.remove(genesis_block(network).block_hash()).unwrap());
     for _ in 1..num_blocks {
         let next_block = blocks
             .remove(&chain[chain.len() - 1].block_hash().into())
@@ -829,7 +829,7 @@ async fn fee_percentiles_evaluation_helper() {
             .build();
         let tx_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint {
-                txid: tx_1.txid(),
+                txid: tx_1.txid().clone(),
                 vout: 0,
             })
             .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)

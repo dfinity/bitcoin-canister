@@ -171,7 +171,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         let popped_block = unstable_blocks::pop(&mut state.unstable_blocks, stable_height);
 
         // Sanity check that we just popped the same block that was ingested.
-        assert_eq!(popped_block.unwrap().block_hash(), ingested_block_hash);
+        assert_eq!(popped_block.unwrap().block_hash(), &ingested_block_hash);
     }
 
     let prev_state = (
@@ -559,7 +559,7 @@ mod test {
         assert_eq!(
             insert_block(&mut other_state, blocks[1].clone()),
             Err(InsertBlockError::from(
-                ValidationContextError::AlreadyKnown(blocks[1].block_hash())
+                ValidationContextError::AlreadyKnown(blocks[1].block_hash().clone())
             ))
         );
 

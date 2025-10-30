@@ -47,7 +47,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
 
     // If fee percentiles were already cached, then return the cached results.
     if let Some(cache) = &state.fee_percentiles_cache {
-        if cache.tip_block_hash == tip_block_hash {
+        if &cache.tip_block_hash == tip_block_hash {
             return cache.fee_percentiles.clone();
         }
     }
@@ -71,7 +71,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     let fee_percentiles = percentiles(fees_per_byte);
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
-        tip_block_hash,
+        tip_block_hash: tip_block_hash.clone(),
         fee_percentiles: fee_percentiles.clone(),
     });
 
@@ -283,7 +283,7 @@ mod test {
             };
 
             let tx = TransactionBuilder::new()
-                .with_input(OutPoint::new(previous_tx.txid(), 0))
+                .with_input(OutPoint::new(previous_tx.txid().clone(), 0))
                 .with_output(&address_1, change)
                 .with_output(&address_2, pay)
                 .build();
@@ -363,7 +363,7 @@ mod test {
             .with_output(&random_p2pkh_address(btc_network).into(), balance)
             .build();
         let tx_2 = TransactionBuilder::new()
-            .with_input(OutPoint::new(tx_1.txid(), 0))
+            .with_input(OutPoint::new(tx_1.txid().clone(), 0))
             .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
@@ -408,7 +408,7 @@ mod test {
                 .with_output(&random_p2pkh_address(btc_network).into(), balance)
                 .build();
             let tx_2 = TransactionBuilder::new()
-                .with_input(OutPoint::new(tx_1.txid(), 0))
+                .with_input(OutPoint::new(tx_1.txid().clone(), 0))
                 .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
                 .build();
 
@@ -617,12 +617,12 @@ mod test {
             vec![4u8, 2u8],
         ]);
         let tx = TransactionBuilder::new()
-            .with_input_and_witness(OutPoint::new(coinbase_tx.txid(), 0), witness)
+            .with_input_and_witness(OutPoint::new(coinbase_tx.txid().clone(), 0), witness)
             .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 
         let tx_without_witness = TransactionBuilder::new()
-            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid().clone(), 0))
             .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)
             .build();
 

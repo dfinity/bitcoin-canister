@@ -31,14 +31,14 @@ impl<'a> ValidationContext<'a> {
                 })?;
         if tip_successors
             .iter()
-            .any(|c| c.block_hash() == current_block_hash)
+            .any(|c| c.block_hash() == &current_block_hash)
         {
             return Err(ValidationContextError::AlreadyKnown(current_block_hash));
         }
         let chain = chain
             .into_chain()
             .iter()
-            .map(|block| (block.header(), block.block_hash()))
+            .map(|block| (block.header(), block.block_hash().clone()))
             .collect();
 
         Ok(Self { state, chain })
@@ -53,7 +53,7 @@ impl<'a> ValidationContext<'a> {
         let prev_block_hash = header.prev_blockhash.into();
         let next_block_headers_chain = state
             .unstable_blocks
-            .get_next_block_headers_chain_with_tip(prev_block_hash);
+            .get_next_block_headers_chain_with_tip(&prev_block_hash);
         if next_block_headers_chain.is_empty() {
             Self::new(state, header)
         } else {
@@ -144,10 +144,10 @@ mod test {
         assert_eq!(
             validation_context.chain,
             vec![
-                (genesis.header(), genesis.block_hash()),
-                (block_0.header(), block_0.block_hash()),
-                (block_1.header(), block_1.block_hash()),
-                (block_2.header(), block_2.block_hash()),
+                (genesis.header(), genesis.block_hash().clone()),
+                (block_0.header(), block_0.block_hash().clone()),
+                (block_1.header(), block_1.block_hash().clone()),
+                (block_2.header(), block_2.block_hash().clone()),
             ]
         );
 

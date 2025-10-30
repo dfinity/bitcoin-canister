@@ -50,7 +50,11 @@ impl BlockHeaderStore {
             .consensus_encode(&mut header_blob)
             .expect("block header must be valid");
 
-        self.insert(block_hash, BlockHeaderBlob::from(header_blob), height);
+        self.insert(
+            block_hash.clone(),
+            BlockHeaderBlob::from(header_blob),
+            height,
+        );
     }
 
     /// Inserts a block's header and hash into the store.
