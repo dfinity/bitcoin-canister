@@ -12,7 +12,7 @@ use ic_stable_structures::{storable::Bound, Storable};
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 use std::{borrow::Cow, fmt, str::FromStr};
 
-/// Wrapper for [OnceCell] that implements [Serialize], [Deserialize].
+/// Wrapper for [OnceCell] that implements [Serialize] and [Deserialize].
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct OnceCell<T>(std::cell::OnceCell<T>);
 
@@ -289,10 +289,6 @@ impl Storable for BlockHash {
 }
 
 impl BlockHash {
-    pub fn as_slice(&self) -> &[u8] {
-        &self.0
-    }
-
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.clone()
     }
