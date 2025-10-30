@@ -12,13 +12,16 @@ use std::fmt;
 //
 // This flattening is necessary as a recursive data structure can cause a stack
 // overflow if the structure is very deep.
-impl Serialize for BlockTree {
+impl Serialize for BlockTree<Block> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         #[cfg(feature = "canbench-rs")]
         let _p = canbench_rs::bench_scope("serialize_blocktree");
 
         // Flatten a block tree into a list.
-        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<(&'a BitcoinBlock, usize)>) {
+        fn flatten<'a>(
+            tree: &'a BlockTree<Block>,
+            flattened_tree: &mut Vec<(&'a BitcoinBlock, usize)>,
+        ) {
             flattened_tree.push((tree.root.internal_bitcoin_block(), tree.children.len()));
 
             for child in &tree.children {
@@ -44,7 +47,7 @@ impl Serialize for BlockTree {
     }
 }
 
-impl<'de> Deserialize<'de> for BlockTree {
+impl<'de> Deserialize<'de> for BlockTree<Block> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -56,7 +59,7 @@ impl<'de> Deserialize<'de> for BlockTree {
 struct BlockTreeDeserializer;
 
 impl<'de> Visitor<'de> for BlockTreeDeserializer {
-    type Value = BlockTree;
+    type Value = BlockTree<Block>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("A blocktree deserializer.")
@@ -70,7 +73,7 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
         }
 
         // A stack containing a `BlockTree` along with how many children remain to be added to it.
-        let mut stack: Vec<(BlockTree, usize)> = Vec::new();
+        let mut stack: Vec<(BlockTree<Block>, usize)> = Vec::new();
 
         // Read the root and add it to the stack.
         let (root, children_to_add) = next(&mut seq).unwrap();
