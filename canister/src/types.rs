@@ -180,7 +180,7 @@ impl StableStructuresStorable for AddressUtxo {
         } = self;
         vec![
             Address::into_bytes(address),
-            height.into_bytes(),
+            Storable::to_bytes(&height),
             OutPoint::into_bytes(outpoint),
         ]
         .into_iter()
@@ -593,85 +593,117 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     }
 }
 
-#[test]
-fn test_utxo_ordering() {
-    let a = Utxo {
-        height: 3,
-        outpoint: OutPoint {
-            txid: Txid::from(vec![]),
-            vout: 0,
-        },
-        value: 123,
-    };
+#[cfg(test)]
+mod test {
+    use super::*;
+    use bitcoin::{hashes::Hash, PubkeyHash};
+    use ic_btc_interface::Txid as PublicTxid;
+    use proptest::prelude::*;
 
-    let b = Utxo {
-        height: 2,
-        outpoint: OutPoint {
-            txid: Txid::from(vec![1]),
-            vout: 0,
-        },
-        value: 123,
-    };
+    proptest! {
+        #[test]
+        fn serialize_address_utxo(
+            pubhash: [u8; 20],
+            height: Height,
+            txidhash: [u8; 32],
+            vout: u32,
+        ) {
+            // Test OutPoint
+            let txid = Txid::from(PublicTxid::from(txidhash));
+            let outpoint = OutPoint { txid, vout };
+            let bytes = outpoint.clone().into_bytes();
+            assert_eq!(outpoint.to_bytes().as_ref(), &bytes, "outpoint mismatch");
+            assert_eq!(outpoint, OutPoint::from_bytes(bytes.into()));
 
-    let c = Utxo {
-        height: 2,
-        outpoint: OutPoint {
-            txid: Txid::from(vec![1]),
-            vout: 0,
-        },
-        value: 123,
-    };
+            // Test AddressUtxo
+            let address = Address::from(BitcoinAddress::p2pkh(PubkeyHash::from_byte_array(pubhash), BitcoinNetwork::Bitcoin));
+             let utxo = AddressUtxo { address, height, outpoint };
+            let bytes = utxo.clone().into_bytes();
+            assert_eq!(utxo.to_bytes().as_ref(), &bytes, "utxo mismatch");
+            assert_eq!(utxo, AddressUtxo::from_bytes(bytes.into()));
+        }
+    }
 
-    let d = Utxo {
-        height: 2,
-        outpoint: OutPoint {
-            txid: Txid::from(vec![1]),
-            vout: 0,
-        },
-        value: 124,
-    };
+    #[test]
+    fn test_utxo_ordering() {
+        let a = Utxo {
+            height: 3,
+            outpoint: OutPoint {
+                txid: Txid::from(vec![]),
+                vout: 0,
+            },
+            value: 123,
+        };
 
-    // a < b == c < d
-    assert!(a < b);
-    assert!(b < d);
-    assert!(a < c);
-    assert!(c < d);
-    assert!(a < d);
+        let b = Utxo {
+            height: 2,
+            outpoint: OutPoint {
+                txid: Txid::from(vec![1]),
+                vout: 0,
+            },
+            value: 123,
+        };
 
-    // d > c == b > a
-    assert!(d > c);
-    assert!(c > a);
-    assert!(d > b);
-    assert!(b > a);
-    assert!(d > a);
+        let c = Utxo {
+            height: 2,
+            outpoint: OutPoint {
+                txid: Txid::from(vec![1]),
+                vout: 0,
+            },
+            value: 123,
+        };
 
-    // c == b
-    assert!(c == b);
-    assert!(c <= b);
-    assert!(c >= b);
-}
+        let d = Utxo {
+            height: 2,
+            outpoint: OutPoint {
+                txid: Txid::from(vec![1]),
+                vout: 0,
+            },
+            value: 124,
+        };
 
-#[test]
-fn test_txid_to_string() {
-    let txid = Txid::from(vec![
-        148, 87, 230, 105, 220, 107, 52, 76, 0, 144, 209, 14, 178, 42, 3, 119, 2, 40, 152, 212, 96,
-        127, 189, 241, 227, 206, 242, 163, 35, 193, 63, 169,
-    ]);
+        // a < b == c < d
+        assert!(a < b);
+        assert!(b < d);
+        assert!(a < c);
+        assert!(c < d);
+        assert!(a < d);
 
-    assert_eq!(
-        txid.to_string(),
-        "a93fc123a3f2cee3f1bd7f60d498280277032ab20ed190004c346bdc69e65794"
-    );
-}
+        // d > c == b > a
+        assert!(d > c);
+        assert!(c > a);
+        assert!(d > b);
+        assert!(b > a);
+        assert!(d > a);
 
-#[test]
-fn test_address_from_invalid_script() {
-    let script = Script::from_bytes(&[
-        0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
-    ]); // Invalid script
+        // c == b
+        assert!(c == b);
+        assert!(c <= b);
+        assert!(c >= b);
+    }
 
-    assert_eq!(
-        Address::from_script(script, Network::Testnet),
-        Err(InvalidAddress)
-    );
+    #[test]
+    fn test_txid_to_string() {
+        let txid = Txid::from(vec![
+            148, 87, 230, 105, 220, 107, 52, 76, 0, 144, 209, 14, 178, 42, 3, 119, 2, 40, 152, 212,
+            96, 127, 189, 241, 227, 206, 242, 163, 35, 193, 63, 169,
+        ]);
+
+        assert_eq!(
+            txid.to_string(),
+            "a93fc123a3f2cee3f1bd7f60d498280277032ab20ed190004c346bdc69e65794"
+        );
+    }
+
+    #[test]
+    fn test_address_from_invalid_script() {
+        let script = Script::from_bytes(&[
+            0, 17, 97, 69, 142, 51, 3, 137, 205, 4, 55, 238, 159, 227, 100, 29, 112, 204, 24,
+        ]); // Invalid script
+
+        assert_eq!(
+            Address::from_script(script, Network::Testnet),
+            Err(InvalidAddress)
+        );
+    }
 }
