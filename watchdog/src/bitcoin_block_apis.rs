@@ -1,6 +1,6 @@
 use crate::{config::BitcoinNetwork, endpoints::*, print};
 use candid::CandidType;
-use ic_cdk::api::management_canister::http_request::HttpResponse;
+use ic_cdk::management_canister::HttpRequestResult;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashSet;
@@ -185,7 +185,7 @@ async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Val
     let result = ic_http::http_request(config.request(), cycles).await;
 
     match result {
-        Ok((response,)) if response.status == 200u8 => parse_response(response),
+        Ok(response) if response.status == 200u8 => parse_response(response),
         Ok(_) => json!({}),
         Err(error) => {
             print(&format!("HTTP request failed: {:?}", error));
@@ -195,7 +195,7 @@ async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Val
 }
 
 /// Parses the given HTTP response into a JSON value.
-fn parse_response(response: HttpResponse) -> serde_json::Value {
+fn parse_response(response: HttpRequestResult) -> serde_json::Value {
     match String::from_utf8(response.body) {
         Ok(json_str) => serde_json::from_str(&json_str).unwrap_or_else(|error| {
             print(&format!(

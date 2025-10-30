@@ -126,7 +126,7 @@ fn median(values: &[u64]) -> Option<u64> {
     values.sort();
 
     let mid_index = length / 2;
-    let median_value = if length % 2 == 0 {
+    let median_value = if length.is_multiple_of(2) {
         (values[mid_index - 1] + values[mid_index]) / 2
     } else {
         values[mid_index]

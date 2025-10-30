@@ -97,8 +97,8 @@ impl UtxoSet {
     /// Returns:
     ///   * `None` if there was no block to continue ingesting.
     ///   * `Slicing::Done(block_hash, ingestion_stats)` if the partially ingested
-    ///      block is now fully ingested, where `block_hash` is the hash of the ingested block,
-    ///      while 'ingestion_stats' is the number of instructions used to ingest block by type.
+    ///     block is now fully ingested, where `block_hash` is the hash of the ingested block,
+    ///     while 'ingestion_stats' is the number of instructions used to ingest block by type.
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
     pub fn ingest_block_continue(
         &mut self,
@@ -220,10 +220,9 @@ impl UtxoSet {
         let stable_outpoints = self
             .address_utxos
             .range(AddressUtxoRange::new(address, offset))
-            .map(|(address_utxo_blob, _)| {
-                let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
-                    address_utxo_blob.as_slice(),
-                ));
+            .map(|entry| {
+                let address_utxo =
+                    AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
                 address_utxo.outpoint
             })
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
@@ -676,7 +675,11 @@ mod test {
             btreeset! { ( coinbase_outpoint.clone(), ( TxOut::from(coinbase_out), 0 ) ) },
             "BUG: utxos should only contain the coinbase transaction"
         );
-        let ingested_address_utxos: BTreeSet<_> = utxos_set.address_utxos.iter().collect();
+        let ingested_address_utxos: BTreeSet<_> = utxos_set
+            .address_utxos
+            .iter()
+            .map(|entry| entry.into_pair())
+            .collect();
         assert_eq!(
             ingested_address_utxos,
             btreeset! {
@@ -744,7 +747,7 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .iter()
-                .map(|(k, _)| k)
+                .map(|entry| *entry.key())
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
                 Blob::try_from(AddressUtxo {
@@ -786,7 +789,7 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .iter()
-                .map(|(k, _)| k)
+                .map(|entry| *entry.key())
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
                 Blob::try_from(AddressUtxo {
@@ -827,10 +830,9 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .range(AddressUtxoRange::new(&address, &None))
-                .map(|(address_utxo_blob, _)| {
-                    let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
-                        address_utxo_blob.as_slice(),
-                    ));
+                .map(|entry| {
+                    let address_utxo =
+                        AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
                     address_utxo.height
                 })
                 .collect::<Vec<_>>(),

@@ -16,7 +16,7 @@ fn set_panic_hook() {
         };
 
         let err_info = format!("Panicked at '{}', {}:{}:{}", msg, file, line, col);
-        ic_cdk::api::print(&err_info);
+        ic_cdk::api::debug_print(&err_info);
         ic_cdk::api::trap(&err_info);
     }));
 }

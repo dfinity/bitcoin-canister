@@ -87,7 +87,7 @@ mod test {
 
         assert_eq!(
             crate::runtime::get_cycles_balance(),
-            13 + 27 * transaction_len as u64
+            13 + 27 * transaction_len as u128
         );
 
         // The metrics has been updated.

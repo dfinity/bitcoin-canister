@@ -24,12 +24,12 @@ Canister:
 ```rust
 /// Apply a transform function to the HTTP response.
 #[ic_cdk_macros::query]
-fn transform(raw: TransformArgs) -> HttpResponse {
-    let mut response = HttpResponse {
+fn transform(raw: TransformArgs) -> HttpRequestResult {
+    let mut response = HttpRequestResult {
         status: raw.response.status.clone(),
         ..Default::default()
     };
-    if response.status == 200 {
+    if response.status == 200_u8 {
         let original = parse_json(raw.response.body);
 
         // Extract the author from the JSON response.
@@ -45,7 +45,7 @@ fn transform(raw: TransformArgs) -> HttpResponse {
 }
 
 /// Create a request to the dummyjson.com API.
-fn build_request() -> CanisterHttpRequestArgument {
+fn build_request() -> HttpRequestArgs {
     ic_http::create_request()
         .get("https://dummyjson.com/quotes/1")
         .header(HttpHeader {
@@ -63,7 +63,7 @@ async fn fetch() -> String {
     let result = ic_http::http_request(request).await;
 
     match result {
-        Ok((response,)) => {
+        Ok(response) => {
             let body = String::from_utf8(response.body).unwrap();
             format!("Response: {:?}", body)
         }
@@ -94,7 +94,7 @@ async fn test_http_request_transform_body() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone()).await.unwrap();
+    let response = ic_http::http_request(request.clone()).await.unwrap();
 
     // Assert
     assert_eq!(

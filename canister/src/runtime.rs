@@ -4,9 +4,9 @@
 //! facilitate testing.
 use crate::types::{GetSuccessorsRequest, GetSuccessorsResponse, SendTransactionInternalRequest};
 use candid::Principal;
-use ic_cdk::api::call::CallResult;
+use ic_cdk::call::CallResult;
 #[cfg(not(target_arch = "wasm32"))]
-use ic_cdk::api::call::RejectionCode;
+use ic_cdk::call::RejectCode;
 #[cfg(not(target_arch = "wasm32"))]
 use serde::Deserialize;
 #[cfg(any(not(target_arch = "wasm32"), feature = "mock_time"))]
@@ -20,7 +20,7 @@ const INSTRUCTIONS_LIMIT: u64 = 50_000_000_000;
 
 #[cfg(target_arch = "wasm32")]
 pub fn print(msg: &str) {
-    ic_cdk::api::print(msg);
+    ic_cdk::api::debug_print(msg);
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -36,7 +36,7 @@ pub enum GetSuccessorsReply {
     Ok(GetSuccessorsResponse),
 
     /// Rejection from the caller.
-    Err(RejectionCode, String),
+    Err(RejectCode, String),
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -51,7 +51,7 @@ thread_local! {
 
     static PERFORMANCE_COUNTER_STEP: RefCell<u64> = const { RefCell::new(0) };
 
-    static CYCLES_BALANCE: RefCell<u64> = const { RefCell::new(0) };
+    static CYCLES_BALANCE: RefCell<u128> = const { RefCell::new(0) };
 }
 
 #[cfg(feature = "mock_time")]
@@ -63,15 +63,22 @@ thread_local! {
 pub fn call_get_successors(
     id: Principal,
     request: GetSuccessorsRequest,
-) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
-    return ic_cdk::api::call::call(id, "bitcoin_get_successors", (request,));
+) -> impl Future<Output = CallResult<GetSuccessorsResponse>> {
+    async move {
+        Ok(
+            ic_cdk::call::Call::unbounded_wait(id, "bitcoin_get_successors")
+                .with_args(&(request,))
+                .await?
+                .candid()?,
+        )
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn call_get_successors(
     _id: Principal,
     _request: GetSuccessorsRequest,
-) -> impl Future<Output = CallResult<(GetSuccessorsResponse,)>> {
+) -> impl Future<Output = CallResult<GetSuccessorsResponse>> {
     use crate::types::GetSuccessorsCompleteResponse;
 
     let reply = GET_SUCCESSORS_RESPONSES.with(|responses| {
@@ -96,8 +103,10 @@ pub fn call_get_successors(
     });
 
     match reply {
-        GetSuccessorsReply::Ok(response) => std::future::ready(Ok((response,))),
-        GetSuccessorsReply::Err(code, msg) => std::future::ready(Err((code, msg))),
+        GetSuccessorsReply::Ok(response) => std::future::ready(Ok(response)),
+        GetSuccessorsReply::Err(code, msg) => std::future::ready(Err(
+            ic_cdk::call::CallRejected::with_rejection(code as u32, msg).into(),
+        )),
     }
 }
 
@@ -106,7 +115,14 @@ pub fn call_send_transaction_internal(
     id: Principal,
     request: SendTransactionInternalRequest,
 ) -> impl Future<Output = CallResult<()>> {
-    return ic_cdk::api::call::call(id, "bitcoin_send_transaction_internal", (request,));
+    async move {
+        Ok(
+            ic_cdk::call::Call::unbounded_wait(id, "bitcoin_send_transaction_internal")
+                .with_args(&(request,))
+                .await?
+                .candid()?,
+        )
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -177,33 +193,33 @@ pub fn set_performance_counter_step(step_size: u64) {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn msg_cycles_available() -> u64 {
-    ic_cdk::api::call::msg_cycles_available()
+pub fn msg_cycles_available() -> u128 {
+    ic_cdk::api::msg_cycles_available()
 }
 
 /// Returns cycles available.
 ///
-/// Non-wasm32 targets return a hardcoded value of `u64::MAX / 2` only for tests
+/// Non-wasm32 targets return a hardcoded value of `u128::MAX / 2` only for tests
 /// to check behavior both below and above the available limit.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn msg_cycles_available() -> u64 {
-    u64::MAX / 2
+pub fn msg_cycles_available() -> u128 {
+    u128::MAX / 2
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn msg_cycles_accept(max_amount: u64) -> u64 {
-    ic_cdk::api::call::msg_cycles_accept(max_amount)
+pub fn msg_cycles_accept(max_amount: u128) -> u128 {
+    ic_cdk::api::msg_cycles_accept(max_amount)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn msg_cycles_accept(max_amount: u64) -> u64 {
+pub fn msg_cycles_accept(max_amount: u128) -> u128 {
     CYCLES_BALANCE.with(|c| *c.borrow_mut() += max_amount);
     max_amount
 }
 
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
-pub fn get_cycles_balance() -> u64 {
+pub fn get_cycles_balance() -> u128 {
     CYCLES_BALANCE.with(|c| *c.borrow())
 }
 
@@ -245,7 +261,7 @@ pub fn time() -> u64 {
 
 #[cfg(target_arch = "wasm32")]
 pub fn cycles_burn() -> u128 {
-    ic_cdk::api::cycles_burn(ic_cdk::api::canister_balance128())
+    ic_cdk::api::cycles_burn(ic_cdk::api::canister_cycle_balance())
 }
 
 #[cfg(not(target_arch = "wasm32"))]

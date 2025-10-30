@@ -1,5 +1,5 @@
-use ic_cdk::api::call::RejectionCode;
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk::call::RejectCode;
+use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use std::time::{Duration, Instant};
 
 const STATUS_CODE_OK: u64 = 200;
@@ -18,7 +18,7 @@ async fn test_http_request_no_transform() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+    let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
         .await
         .unwrap();
 
@@ -42,7 +42,7 @@ async fn test_http_request_called_several_times() {
 
     // Act
     for _ in 0..calls {
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .unwrap();
         assert_eq!(response.status, candid::Nat::from(STATUS_CODE_OK));
@@ -56,7 +56,7 @@ async fn test_http_request_called_several_times() {
 #[tokio::test]
 async fn test_http_request_transform_status() {
     // Arrange
-    fn transform(_arg: TransformArgs) -> HttpResponse {
+    fn transform(_arg: TransformArgs) -> HttpRequestResult {
         ic_http::create_response()
             .status(STATUS_CODE_NOT_FOUND)
             .build()
@@ -72,7 +72,7 @@ async fn test_http_request_transform_status() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+    let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
         .await
         .unwrap();
 
@@ -87,7 +87,7 @@ async fn test_http_request_transform_body() {
     // Arrange
     const ORIGINAL_BODY: &str = "original body";
     const TRANSFORMED_BODY: &str = "transformed body";
-    fn transform(_arg: TransformArgs) -> HttpResponse {
+    fn transform(_arg: TransformArgs) -> HttpRequestResult {
         ic_http::create_response().body(TRANSFORMED_BODY).build()
     }
     let request = ic_http::create_request()
@@ -101,7 +101,7 @@ async fn test_http_request_transform_body() {
     ic_http::mock::mock(request.clone(), mock_response);
 
     // Act
-    let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+    let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
         .await
         .unwrap();
 
@@ -117,13 +117,13 @@ async fn test_http_request_transform_both_status_and_body() {
     const ORIGINAL_BODY: &str = "original body";
     const TRANSFORMED_BODY: &str = "transformed body";
 
-    fn transform_status(arg: TransformArgs) -> HttpResponse {
+    fn transform_status(arg: TransformArgs) -> HttpRequestResult {
         let mut response = arg.response;
         response.status = candid::Nat::from(STATUS_CODE_NOT_FOUND);
         response
     }
 
-    fn transform_body(arg: TransformArgs) -> HttpResponse {
+    fn transform_body(arg: TransformArgs) -> HttpRequestResult {
         let mut response = arg.response;
         response.body = TRANSFORMED_BODY.as_bytes().to_vec();
         response
@@ -155,11 +155,7 @@ async fn test_http_request_transform_both_status_and_body() {
         ic_http::http_request(request_2.clone(), ZERO_CYCLES),
     ];
     let results = futures::future::join_all(futures).await;
-    let responses: Vec<_> = results
-        .into_iter()
-        .filter(|result| result.is_ok())
-        .map(|result| result.unwrap().0)
-        .collect();
+    let responses: Vec<_> = results.into_iter().flatten().collect();
 
     // Assert
     assert_eq!(
@@ -297,17 +293,19 @@ async fn test_http_request_concurrently() {
 async fn test_http_request_error() {
     // Arrange
     let request = ic_http::create_request().get("https://example.com").build();
-    let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+    let mock_error = (RejectCode::SysFatal, "system fatal error".to_string());
     ic_http::mock::mock_error(request.clone(), mock_error);
 
     // Act
     let result = ic_http::http_request(request.clone(), ZERO_CYCLES).await;
 
     // Assert
-    assert_eq!(
+    assert!(matches!(
         result,
-        Err((RejectionCode::SysFatal, "system fatal error".to_string()))
-    );
+        Err(ic_cdk::call::Error::CallRejected(reject))
+        if reject.raw_reject_code() == RejectCode::SysFatal as u32 &&
+           reject.reject_message() == "system fatal error"
+    ));
     assert_eq!(ic_http::mock::times_called(request), 1);
 }
 
@@ -315,7 +313,7 @@ async fn test_http_request_error() {
 async fn test_http_request_error_with_delay() {
     // Arrange
     let request = ic_http::create_request().get("https://example.com").build();
-    let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+    let mock_error = (RejectCode::SysFatal, "system fatal error".to_string());
     ic_http::mock::mock_error_with_delay(request.clone(), mock_error, Duration::from_millis(200));
 
     // Act
@@ -324,9 +322,11 @@ async fn test_http_request_error_with_delay() {
 
     // Assert
     assert!(start.elapsed() > Duration::from_millis(100));
-    assert_eq!(
+    assert!(matches!(
         result,
-        Err((RejectionCode::SysFatal, "system fatal error".to_string()))
-    );
+        Err(ic_cdk::call::Error::CallRejected(reject))
+        if reject.raw_reject_code() == RejectCode::SysFatal as u32 &&
+           reject.reject_message() == "system fatal error"
+    ));
     assert_eq!(ic_http::mock::times_called(request), 1);
 }

@@ -81,7 +81,7 @@ impl BlockHeaderStore {
     ) -> impl Iterator<Item = BlockHeaderBlob> + '_ {
         self.block_heights
             .range(heights)
-            .map(move |(_, block_hash)| self.block_headers.get(&block_hash).unwrap())
+            .map(move |entry| self.block_headers.get(&entry.value()).unwrap())
     }
 }
 
