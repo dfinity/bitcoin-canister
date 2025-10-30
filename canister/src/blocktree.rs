@@ -10,7 +10,7 @@ use std::ops::{Add, Sub};
 /// * the successors to this block (which can be an empty list)
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(test, derive(Clone))]
-pub struct BlockChain<'a> {
+pub struct BlockChain<'a, Block> {
     // The first block of this `BlockChain`, i.e. the one at the lowest height.
     first: &'a Block,
     // The successor blocks of this `BlockChain`, i.e. the chain after the
@@ -18,7 +18,7 @@ pub struct BlockChain<'a> {
     successors: Vec<&'a Block>,
 }
 
-impl<'a> BlockChain<'a> {
+impl<'a, Block> BlockChain<'a, Block> {
     /// Creates a new `BlockChain` with the given `first` block and an empty list
     /// of successors.
     pub fn new(first: &'a Block) -> Self {
@@ -222,7 +222,7 @@ impl BlockTree {
     }
 
     /// Returns all the blockchains in the tree.
-    pub fn blockchains(&self) -> Vec<BlockChain<'_>> {
+    pub fn blockchains(&self) -> Vec<BlockChain<'_, Block>> {
         if self.children.is_empty() {
             return vec![BlockChain {
                 first: &self.root,
@@ -240,7 +240,7 @@ impl BlockTree {
                         first: &self.root,
                         successors: bc.into_chain(),
                     })
-                    .collect::<Vec<BlockChain>>(),
+                    .collect::<Vec<_>>(),
             );
         }
 
@@ -254,7 +254,7 @@ impl BlockTree {
     pub fn get_chain_with_tip<'a>(
         &'a self,
         tip: &BlockHash,
-    ) -> Option<(BlockChain<'a>, Vec<&'a Block>)> {
+    ) -> Option<(BlockChain<'a, Block>, Vec<&'a Block>)> {
         // Compute the chain in reverse order, as that's more efficient, and then
         // reverse it to get the answer in the correct order.
         self.get_chain_with_tip_reverse(tip)
