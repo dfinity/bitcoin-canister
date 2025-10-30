@@ -211,10 +211,7 @@ impl<Block> BlockTree<Block> {
     /// Returns all the blockchains in the tree.
     pub fn blockchains(&self) -> Vec<BlockChain<'_, Block>> {
         if self.children.is_empty() {
-            return vec![BlockChain {
-                first: &self.root,
-                successors: vec![],
-            }];
+            return vec![BlockChain::new(&self.root)];
         }
 
         let mut tips = vec![];
@@ -248,10 +245,10 @@ impl<Block> BlockTree<Block> {
     }
 
     /// Returns all blocks in the tree.
-    pub fn blocks(&self) -> Vec<&Block> {
-        let mut blocks = vec![&self.root];
+    pub fn blocks(&self) -> impl Iterator<Item = &Block> {
+        let mut blocks: Box<dyn Iterator<Item = &Block>> = Box::new(vec![&self.root].into_iter());
         for child in self.children.iter() {
-            blocks.extend(child.blocks());
+            blocks = Box::new(blocks.chain(child.blocks()));
         }
         blocks
     }
