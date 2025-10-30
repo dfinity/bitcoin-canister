@@ -249,28 +249,18 @@ pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
 pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> {
     let stable_child_idx = get_stable_child(blocks)?;
 
-    let old_anchor = blocks.tree.root().clone();
+    // Replace the unstable block tree with that of the stable child.
+    let mut tree = blocks.tree.remove_child(stable_child_idx);
+    std::mem::swap(&mut tree, &mut blocks.tree);
 
     // Remove the outpoints of obsolete blocks from the cache.
-    let obsolete_blocks: Vec<_> = blocks
-        .tree
-        .children()
-        .iter()
-        .enumerate()
-        .filter(|(idx, _)| *idx != stable_child_idx)
-        .flat_map(|(_, obsolete_child)| obsolete_child.blocks())
-        .chain(std::iter::once(&old_anchor))
-        .collect();
-    for block in obsolete_blocks {
-        blocks.outpoints_cache.remove(block);
+    for block in tree.blocks() {
+        blocks.outpoints_cache.remove(&block);
     }
-
-    // Replace the unstable block tree with that of the stable child.
-    blocks.tree = blocks.tree.remove_child(stable_child_idx);
 
     blocks.next_block_headers.remove_until_height(stable_height);
 
-    Some(old_anchor)
+    Some(tree.into_root())
 }
 
 /// Pushes a new block into the store.
