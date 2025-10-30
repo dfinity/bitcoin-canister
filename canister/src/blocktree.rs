@@ -1,4 +1,3 @@
-use bitcoin::hashes::Hash;
 use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
@@ -132,7 +131,7 @@ pub struct BlockTree<Block> {
     pub children: Vec<BlockTree<Block>>,
 }
 
-impl BlockTree<Block> {
+impl<Block> BlockTree<Block> {
     /// Creates a new `BlockTree` with the given block as its root.
     pub fn new(root: Block) -> Self {
         Self {
@@ -193,34 +192,6 @@ impl BlockTree<Block> {
             .collect()
     }
 
-    /// Extends the tree with the given block.
-    ///
-    /// Blocks can extend the tree in the following cases:
-    ///   * The block is a successor of a block already in the tree.
-    ///
-    /// Note that `ValidationContext` ensures that the block to insert is not already present.
-    pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
-        debug_assert_eq!(
-            self.find(&block),
-            None,
-            "BUG: block {block:?} is already present in the tree, but this should have been prevented when instantiating `ValidationContext`"
-        );
-
-        // Check if the block is a successor to any of the blocks in the tree.
-        match self.find_mut(&block.header().prev_blockhash.into()) {
-            Some((block_subtree, _)) => {
-                assert_eq!(
-                    block_subtree.root.block_hash().as_bytes(),
-                    block.header().prev_blockhash.as_byte_array().as_slice()
-                );
-                // Add the block as a successor.
-                block_subtree.children.push(BlockTree::new(block));
-                Ok(())
-            }
-            None => Err(BlockDoesNotExtendTree(*block.block_hash())),
-        }
-    }
-
     /// Returns all the blockchains in the tree.
     pub fn blockchains(&self) -> Vec<BlockChain<'_, Block>> {
         if self.children.is_empty() {
@@ -245,6 +216,74 @@ impl BlockTree<Block> {
         }
 
         tips
+    }
+
+    fn get_child_blocks(&self) -> Vec<&Block> {
+        self.children.iter().map(|c| &c.root).collect()
+    }
+
+    /// Returns the number of blocks in the tree.
+    pub fn blocks_count(&self) -> usize {
+        1 + self
+            .children
+            .iter()
+            .map(|child| child.blocks_count())
+            .sum::<usize>()
+    }
+
+    /// Returns all blocks in the tree.
+    pub fn blocks(&self) -> Vec<&Block> {
+        let mut blocks = vec![&self.root];
+        for child in self.children.iter() {
+            blocks.extend(child.blocks());
+        }
+        blocks
+    }
+}
+
+pub trait ChainBlock {
+    fn block_hash(&self) -> &BlockHash;
+    fn prev_block_hash(&self) -> BlockHash;
+    fn difficulty(&self, network: Network) -> u128;
+}
+
+impl ChainBlock for Block {
+    fn block_hash(&self) -> &BlockHash {
+        self.block_hash()
+    }
+    fn prev_block_hash(&self) -> BlockHash {
+        BlockHash::from(self.header().prev_blockhash)
+    }
+    fn difficulty(&self, network: Network) -> u128 {
+        self.difficulty(network)
+    }
+}
+
+impl<Block: ChainBlock> BlockTree<Block> {
+    /// Extends the tree with the given block.
+    ///
+    /// Blocks can extend the tree in the following cases:
+    ///   * The block is a successor of a block already in the tree.
+    ///
+    /// Note that `ValidationContext` ensures that the block to insert is not already present.
+    pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
+        debug_assert!(
+            self.find(&block).is_none(),
+            "BUG: block {} is already present in the tree, but this should have been prevented when instantiating `ValidationContext`",
+            block.block_hash()
+        );
+
+        // Check if the block is a successor to any of the blocks in the tree.
+        let prev_block_hash = block.prev_block_hash();
+        match self.find_mut(&prev_block_hash) {
+            Some((block_subtree, _)) => {
+                assert_eq!(block_subtree.root.block_hash(), &prev_block_hash);
+                // Add the block as a successor.
+                block_subtree.children.push(BlockTree::new(block));
+                Ok(())
+            }
+            None => Err(BlockDoesNotExtendTree(block.block_hash().clone())),
+        }
     }
 
     /// Returns a `BlockChain` starting from the anchor and ending with the `tip`,
@@ -296,10 +335,6 @@ impl BlockTree<Block> {
         None
     }
 
-    fn get_child_blocks(&self) -> Vec<&Block> {
-        self.children.iter().map(|c| &c.root).collect()
-    }
-
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
     pub fn difficulty_based_depth(&self, network: Network) -> DifficultyBasedDepth {
         let mut res = DifficultyBasedDepth::new(0);
@@ -325,7 +360,7 @@ impl BlockTree<Block> {
         &'a mut self,
         blockhash: &BlockHash,
     ) -> Option<(&'a mut BlockTree<Block>, u32)> {
-        fn find_mut_helper<'a>(
+        fn find_mut_helper<'a, Block: ChainBlock>(
             block_tree: &'a mut BlockTree<Block>,
             blockhash: &BlockHash,
             depth: u32,
@@ -368,24 +403,6 @@ impl BlockTree<Block> {
         hashes.push(*self.root.block_hash());
         hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
         hashes
-    }
-
-    /// Returns the number of blocks in the tree.
-    pub fn blocks_count(&self) -> usize {
-        1 + self
-            .children
-            .iter()
-            .map(|child| child.blocks_count())
-            .sum::<usize>()
-    }
-
-    /// Returns all blocks in the tree.
-    pub fn blocks(&self) -> Vec<Block> {
-        let mut blocks = vec![self.root.clone()];
-        for child in self.children.iter() {
-            blocks.extend(child.blocks());
-        }
-        blocks
     }
 }
 
@@ -513,10 +530,7 @@ mod test {
 
             // All blocks should be correctly chained to one another.
             for i in 1..chain.len() {
-                assert_eq!(
-                    chain[i - 1].block_hash().as_bytes(),
-                    chain[i].header().prev_blockhash.as_byte_array().as_slice()
-                )
+                assert_eq!(chain[i - 1].block_hash(), &chain[i].prev_block_hash())
             }
         }
     }
@@ -555,10 +569,7 @@ mod test {
 
                 // All blocks should be correctly chained to one another.
                 for i in 1..chain.len() {
-                    assert_eq!(
-                        chain[i - 1].block_hash().as_bytes(),
-                        chain[i].header().prev_blockhash.as_byte_array().as_slice()
-                    )
+                    assert_eq!(chain[i - 1].block_hash(), &chain[i].prev_block_hash())
                 }
             }
 

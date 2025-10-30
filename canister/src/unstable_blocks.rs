@@ -259,10 +259,10 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
         .enumerate()
         .filter(|(idx, _)| *idx != stable_child_idx)
         .flat_map(|(_, obsolete_child)| obsolete_child.blocks())
-        .chain(std::iter::once(old_anchor.clone()))
+        .chain(std::iter::once(&old_anchor))
         .collect();
     for block in obsolete_blocks {
-        blocks.outpoints_cache.remove(&block);
+        blocks.outpoints_cache.remove(block);
     }
 
     // Replace the unstable block tree with that of the stable child.
