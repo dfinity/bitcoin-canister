@@ -66,7 +66,7 @@ impl Block {
         use bitcoin::consensus::Encodable;
         self.block
             .consensus_encode(buffer)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            .map_err(std::io::Error::other)
     }
 
     // Computes the difficulty given a block's target.
@@ -240,8 +240,12 @@ impl std::fmt::Display for Txid {
 pub struct BlockHash(Vec<u8>);
 
 impl Storable for BlockHash {
-    fn to_bytes(&self) -> Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.0.as_slice())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        self.0
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
@@ -363,7 +367,7 @@ impl From<OutPoint> for bitcoin::OutPoint {
 }
 
 impl Storable for OutPoint {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
@@ -371,6 +375,16 @@ impl Storable for OutPoint {
         assert_eq!(v.len(), OutPoint::size() as usize);
 
         std::borrow::Cow::Owned(v)
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        let mut v: Vec<u8> = self.txid.to_vec(); // Store the txid (32 bytes)
+        v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
+
+        // An outpoint is always exactly 36 bytes.
+        assert_eq!(v.len(), OutPoint::size() as usize);
+
+        v
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {

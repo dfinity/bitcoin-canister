@@ -1,15 +1,13 @@
-use ic_cdk::api::management_canister::http_request::{
-    CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
-};
+use ic_cdk::management_canister::{HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs};
 
-pub type TransformFn = fn(TransformArgs) -> HttpResponse;
+pub type TransformFn = fn(TransformArgs) -> HttpRequestResult;
 
 /// Stores the configuration of the HTTP request, which includes:
 /// - URL
 /// - HTTP request
 /// - Transform function inner implementation to be called inside the canister's endpoint
 pub struct HttpRequestConfig {
-    request: CanisterHttpRequestArgument,
+    request: HttpRequestArgs,
     transform_implementation: TransformFn,
 }
 
@@ -25,7 +23,7 @@ impl HttpRequestConfig {
         transform_implementation: TransformFn,
     ) -> Self
     where
-        T: Fn(TransformArgs) -> HttpResponse + 'static,
+        T: Fn(TransformArgs) -> HttpRequestResult + 'static,
     {
         Self {
             request: create_request(url, transform_endpoint),
@@ -34,12 +32,12 @@ impl HttpRequestConfig {
     }
 
     /// Executes the transform function.
-    pub fn transform(&self, raw: TransformArgs) -> HttpResponse {
+    pub fn transform(&self, raw: TransformArgs) -> HttpRequestResult {
         (self.transform_implementation)(raw)
     }
 
     /// Returns the HTTP request.
-    pub fn request(&self) -> CanisterHttpRequestArgument {
+    pub fn request(&self) -> HttpRequestArgs {
         self.request.clone()
     }
 
@@ -50,12 +48,9 @@ impl HttpRequestConfig {
     }
 }
 
-fn create_request<T>(
-    url: &str,
-    transform_func: Option<TransformFnWrapper<T>>,
-) -> CanisterHttpRequestArgument
+fn create_request<T>(url: &str, transform_func: Option<TransformFnWrapper<T>>) -> HttpRequestArgs
 where
-    T: Fn(TransformArgs) -> HttpResponse + 'static,
+    T: Fn(TransformArgs) -> HttpRequestResult + 'static,
 {
     let builder = ic_http::create_request().get(url).header(HttpHeader {
         name: "User-Agent".to_string(),

@@ -9,7 +9,7 @@ use crate::{
     transform_dogecoin_api_blockchair_com_block, transform_dogecoin_api_blockcypher_com_block,
     transform_dogecoin_canister, transform_dogecoin_tokenview_height, transform_mempool_height,
 };
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
+use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use regex::Regex;
 use serde_json::json;
 
@@ -375,8 +375,8 @@ pub fn endpoint_mempool_height_testnet() -> HttpRequestConfig {
 }
 
 /// Applies the given transformation function to the body of the response.
-fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpResponse {
-    let mut response = HttpResponse {
+fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpRequestResult {
+    let mut response = HttpRequestResult {
         status: raw.response.status.clone(),
         ..Default::default()
     };
@@ -400,7 +400,7 @@ fn apply_to_body(raw: TransformArgs, f: impl FnOnce(String) -> String) -> HttpRe
 fn apply_to_body_json(
     raw: TransformArgs,
     f: impl FnOnce(serde_json::Value) -> serde_json::Value,
-) -> HttpResponse {
+) -> HttpRequestResult {
     apply_to_body(raw, |text| match serde_json::from_str(&text) {
         Err(e) => {
             print(&format!(
@@ -443,7 +443,7 @@ mod test {
             .build();
         ic_http::mock::mock(request.clone(), mock_response);
 
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .expect("HTTP request failed");
 
@@ -776,7 +776,7 @@ mod test {
             ic_http::mock::mock(request.clone(), mock_response);
 
             // Act
-            let (response,) = ic_http::http_request(request, ZERO_CYCLES).await.unwrap();
+            let response = ic_http::http_request(request, ZERO_CYCLES).await.unwrap();
 
             // Assert
             assert_eq!(response.status, expected_status, "url: {:?}", config.url());

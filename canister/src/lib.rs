@@ -247,8 +247,6 @@ pub(crate) fn genesis_block(network: Network) -> Block {
 
 pub(crate) fn charge_cycles(amount: u128) {
     verify_has_enough_cycles(amount);
-
-    let amount: u64 = amount.try_into().expect("amount must be u64");
     assert_eq!(
         msg_cycles_accept(amount),
         amount,
@@ -258,8 +256,6 @@ pub(crate) fn charge_cycles(amount: u128) {
 
 /// Panics if the request contains less than the amount of cycles given.
 pub(crate) fn verify_has_enough_cycles(amount: u128) {
-    let amount: u64 = amount.try_into().expect("amount must be u64");
-
     if msg_cycles_available() < amount {
         panic!(
             "Received {} cycles. {} cycles are required.",
@@ -537,10 +533,10 @@ mod test {
 
     #[test]
     #[should_panic(
-        expected = "Received 9223372036854775807 cycles. 18446744073709551615 cycles are required."
+        expected = "Received 170141183460469231731687303715884105727 cycles. 340282366920938463463374607431768211455 cycles are required."
     )]
     fn test_verify_has_enough_cycles_panics_with_not_enough_cycles() {
-        verify_has_enough_cycles(u64::MAX as u128);
+        verify_has_enough_cycles(u128::MAX);
     }
 
     #[test]

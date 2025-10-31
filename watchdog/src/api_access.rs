@@ -16,11 +16,16 @@ fn calculate_target(health: HealthStatus) -> Option<Flag> {
 /// Fetches the canister config.
 async fn get_target_canister_config() -> Option<CanisterConfig> {
     let id = crate::storage::get_config().bitcoin_canister_principal;
-    let result = ic_cdk::api::call::call(id, "get_config", ()).await;
-    result
-        .map(|(config,)| config)
+    let result = ic_cdk::call::Call::unbounded_wait(id, "get_config")
+        .with_args(&())
+        .await
         .map_err(|err| print(&format!("Error getting canister config: {:?}", err)))
-        .ok()
+        .ok()?;
+    let config = result
+        .candid()
+        .map_err(|err| print(&format!("Error decoding get_config result: {:?}", err)))
+        .ok()?;
+    Some(config)
 }
 
 /// Fetches the actual API access flag from the canister.
@@ -42,13 +47,11 @@ async fn update_api_access(target: Option<Flag>) {
         api_access: target,
         ..Default::default()
     };
-    let result = ic_cdk::api::call::call(id, "set_config", (set_config_request,)).await;
-    match result {
-        Ok(()) => (),
-        Err(err) => {
-            print(&format!("Error setting canister config: {:?}", err));
-        }
-    }
+    ic_cdk::call::Call::unbounded_wait(id, "set_config")
+        .with_args(&(set_config_request,))
+        .await
+        .map_err(|err| print(&format!("Error setting canister config: {:?}", err)))
+        .ok();
 }
 
 /// Synchronizes the API access flag of the canister.

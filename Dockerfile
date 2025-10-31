@@ -29,7 +29,7 @@ FROM ubuntu@sha256:626ffe58f6e7566e00254b638eb7e0f3b11d4da9675088f4781a50ae288f3
 
 # NOTE: if this version is updated, then the version in rust-toolchain.toml
 # should be updated as well.
-ARG rust_version=1.84.0
+ARG rust_version=1.90.0
 ARG CHUNK_HASHES_PATH
 ARG BTC_FEATURES=""
 
