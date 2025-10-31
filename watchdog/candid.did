@@ -106,13 +106,25 @@ type canister = variant {
     dogecoin_mainnet_staging;
 };
 
-service : (canister) -> {
-    /// Returns the health status of the canister monitored.
+type init_arg = record {
+    /// The target canister.
+    target : canister;
+};
+
+type upgrade_arg = record {};
+
+type watchdog_arg = variant {
+    init : init_arg;
+    upgrade : upgrade_arg;
+};
+
+service : (opt watchdog_arg) -> {
+    /// Returns the health status of the target canister.
     health_status : () -> (health_status) query;
 
     /// Returns the configuration of the Watchdog canister.
     get_config : () -> (config) query;
 
-    /// Returns the API access target for the canister monitored.
+    /// Returns the API access target for the target canister.
     get_api_access_target : () -> (opt flag) query;
 };
