@@ -31,9 +31,6 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 thread_local! {
-    /// The local storage for the configuration.
-    static CONFIG: RefCell<Config> = RefCell::new(Config::for_target(Canister::BitcoinMainnet));
-
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<CandidBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
 
@@ -64,7 +61,22 @@ fn init(canister: Canister) {
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
 fn post_upgrade(canister: Canister) {
-    init(canister)
+    // Update config for the canister target
+    let config = Config::for_target(canister);
+    crate::storage::set_config(config);
+
+    set_timer(
+        Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
+        || {
+            ic_cdk::futures::spawn(async {
+                tick().await;
+                ic_cdk_timers::set_timer_interval(
+                    Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
+                    || ic_cdk::futures::spawn(tick()),
+                );
+            })
+        },
+    );
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
