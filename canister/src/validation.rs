@@ -25,10 +25,9 @@ impl<'a> ValidationContext<'a> {
         let prev_block_hash = header.prev_blockhash.into();
         let current_block_hash = ic_btc_types::BlockHash::from(header.block_hash());
         let (chain, tip_successors) =
-            unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
-                .ok_or_else(|| {
-                    ValidationContextError::BlockDoesNotExtendTree(current_block_hash)
-                })?;
+            unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash).ok_or(
+                ValidationContextError::BlockDoesNotExtendTree(current_block_hash),
+            )?;
         if tip_successors
             .iter()
             .any(|c| c.block_hash() == &current_block_hash)
@@ -59,7 +58,7 @@ impl<'a> ValidationContext<'a> {
         } else {
             let mut context = Self::new(state, next_block_headers_chain[0].0)?;
             for item in next_block_headers_chain.iter() {
-                context.chain.push(item.clone())
+                context.chain.push(*item)
             }
             Ok(context)
         }

@@ -261,7 +261,18 @@ impl std::fmt::Display for Txid {
 
 // A blob representing a block hash.
 #[derive(
-    CandidType, PartialEq, Clone, Copy, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash, DataSize,
+    CandidType,
+    Clone,
+    Copy,
+    Default,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Hash,
+    DataSize,
 )]
 pub struct BlockHash([u8; 32]);
 
@@ -327,15 +338,9 @@ impl FromStr for BlockHash {
 
 impl fmt::Display for BlockHash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut b = self.0.clone();
+        let mut b = self.0;
         b.reverse();
         write!(f, "{}", hex::encode(b))
-    }
-}
-
-impl Default for BlockHash {
-    fn default() -> Self {
-        Self([0; 32])
     }
 }
 

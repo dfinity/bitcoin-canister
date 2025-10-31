@@ -156,7 +156,7 @@ impl UnstableBlocks {
         let (_, depth) = self
             .tree
             .find_mut(block_hash)
-            .ok_or_else(|| BlockDoesNotExtendTree(*block_hash))?;
+            .ok_or(BlockDoesNotExtendTree(*block_hash))?;
         Ok(depth)
     }
 
@@ -283,7 +283,7 @@ pub fn push(
     let (parent_block_tree, depth) = blocks
         .tree
         .find_mut(&block.header().prev_blockhash.into())
-        .ok_or_else(|| BlockDoesNotExtendTree(block_hash))?;
+        .ok_or(BlockDoesNotExtendTree(block_hash))?;
 
     let height = utxos.next_height() + depth + 1;
 
