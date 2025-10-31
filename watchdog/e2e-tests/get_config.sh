@@ -14,7 +14,7 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the watchdog canister.
-deploy_watchdog_canister_mainnet
+deploy_watchdog_canister_bitcoin_mainnet
 
 # Check config contains all the necessary fields.
 check_config_fields

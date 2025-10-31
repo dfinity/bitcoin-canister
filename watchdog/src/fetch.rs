@@ -1,12 +1,13 @@
-use crate::{bitcoin_block_apis::BitcoinBlockApi, config::BitcoinNetwork};
+use crate::block_apis::{BlockApi, CandidBlockApi};
+use crate::config::BitcoinNetwork;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
-/// The data fetched from the external bitcoin block APIs.
+/// The data fetched from the external block APIs.
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct BlockInfo {
-    /// The provider of the bitcoin block data.
-    pub provider: BitcoinBlockApi,
+    /// The provider of the block data.
+    pub provider: CandidBlockApi,
 
     /// The height of the block.
     pub height: Option<u64>,
@@ -14,17 +15,17 @@ pub struct BlockInfo {
 
 impl BlockInfo {
     #[cfg(test)]
-    pub fn new(provider: BitcoinBlockApi, height: u64) -> Self {
+    pub fn new(provider: impl Into<CandidBlockApi>, height: u64) -> Self {
         Self {
-            provider,
+            provider: provider.into(),
             height: Some(height),
         }
     }
 }
 
 /// Fetches the data from the external APIs.
-pub async fn fetch_all_data(bitcoin_network: BitcoinNetwork) -> Vec<BlockInfo> {
-    let api_providers = BitcoinBlockApi::network_providers(bitcoin_network);
+pub async fn fetch_all_data(network: BitcoinNetwork) -> Vec<BlockInfo> {
+    let api_providers = BlockApi::network_providers(network);
 
     let futures = api_providers
         .iter()
@@ -36,7 +37,7 @@ pub async fn fetch_all_data(bitcoin_network: BitcoinNetwork) -> Vec<BlockInfo> {
         .iter()
         .zip(results.iter())
         .map(|(api, value)| BlockInfo {
-            provider: api.clone(),
+            provider: CandidBlockApi::from(api.clone()),
             height: value["height"].as_u64(),
         })
         .collect();
@@ -47,51 +48,56 @@ pub async fn fetch_all_data(bitcoin_network: BitcoinNetwork) -> Vec<BlockInfo> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::block_apis::{
+        BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi, BitcoinTestnetExplorerBlockApi,
+        DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi,
+    };
+    use crate::config::Canister;
     use crate::fetch::BlockInfo;
 
     #[tokio::test]
-    async fn test_fetch_all_data_mainnet() {
-        crate::storage::set_config(crate::config::Config::mainnet());
-        crate::test_utils::mock_mainnet_outcalls();
+    async fn test_fetch_all_data_bitcoin_mainnet() {
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
+        crate::test_utils::mock_bitcoin_mainnet_outcalls();
 
-        let result = fetch_all_data(BitcoinNetwork::Mainnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinMainnet).await;
         assert_eq!(
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
                     height: Some(700001),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     height: Some(700002),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     height: Some(700003),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
                     height: Some(861687),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockchainInfoMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: Some(700004),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfoMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: Some(700005),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ChainApiBtcComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
                     height: Some(700006),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::MempoolMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
                     height: Some(700008),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: Some(700007),
                 },
             ]
@@ -100,68 +106,111 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_testnet() {
-        crate::storage::set_config(crate::config::Config::testnet());
-        crate::test_utils::mock_testnet_outcalls();
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
+        crate::test_utils::mock_bitcoin_testnet_outcalls();
 
-        let result = fetch_all_data(BitcoinNetwork::Testnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinTestnet).await;
         assert_eq!(
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::MempoolTestnet,
+                    provider: BitcoinTestnetExplorerBlockApi::Mempool.into(),
                     height: Some(55002),
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: Some(55001),
                 },
             ]
         );
     }
 
-    #[tokio::test]
-    async fn test_fetch_all_data_failed_404_mainnet() {
-        crate::storage::set_config(crate::config::Config::mainnet());
-        crate::test_utils::mock_all_outcalls_404();
-
-        let result = fetch_all_data(BitcoinNetwork::Mainnet).await;
+    async fn verify_dogecoin_mainnet_fetch_results() {
+        let result = fetch_all_data(BitcoinNetwork::DogecoinMainnet).await;
         assert_eq!(
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBitapsComMainnet,
+                    provider: DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                    height: Some(5926987),
+                },
+                BlockInfo {
+                    provider: DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                    height: Some(5926989),
+                },
+                BlockInfo {
+                    provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                    height: Some(5931072),
+                },
+                BlockInfo {
+                    provider: DogecoinProviderBlockApi::DogecoinCanister.into(),
+                    height: Some(5931098),
+                },
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_dogecoin_mainnet() {
+        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
+        crate::test_utils::mock_dogecoin_mainnet_outcalls();
+
+        verify_dogecoin_mainnet_fetch_results().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_dogecoin_mainnet_staging() {
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::DogecoinMainnetStaging,
+        ));
+        crate::test_utils::mock_dogecoin_mainnet_outcalls();
+
+        verify_dogecoin_mainnet_fetch_results().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_failed_404_bitcoin_mainnet() {
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
+        crate::test_utils::mock_all_outcalls_404();
+
+        let result = fetch_all_data(BitcoinNetwork::BitcoinMainnet).await;
+        assert_eq!(
+            result,
+            vec![
+                BlockInfo {
+                    provider: BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockchairComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ApiBlockcypherComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinExplorerOrgMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockchainInfoMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BlockstreamInfoMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::ChainApiBtcComMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::MempoolMainnet,
+                    provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
             ]
@@ -169,23 +218,66 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_fetch_all_data_failed_404_testnet() {
-        crate::storage::set_config(crate::config::Config::testnet());
+    async fn test_fetch_all_data_failed_404_bitcoin_testnet() {
+        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
         crate::test_utils::mock_all_outcalls_404();
 
-        let result = fetch_all_data(BitcoinNetwork::Testnet).await;
+        let result = fetch_all_data(BitcoinNetwork::BitcoinTestnet).await;
         assert_eq!(
             result,
             vec![
                 BlockInfo {
-                    provider: BitcoinBlockApi::MempoolTestnet,
+                    provider: BitcoinTestnetExplorerBlockApi::Mempool.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinBlockApi::BitcoinCanister,
+                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
             ]
         );
+    }
+
+    async fn verify_dogecoin_mainnet_fetch_failed_404() {
+        let result = fetch_all_data(BitcoinNetwork::DogecoinMainnet).await;
+        assert_eq!(
+            result,
+            vec![
+                BlockInfo {
+                    provider: DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                    height: None,
+                },
+                BlockInfo {
+                    provider: DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                    height: None,
+                },
+                BlockInfo {
+                    provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                    height: None,
+                },
+                BlockInfo {
+                    provider: DogecoinProviderBlockApi::DogecoinCanister.into(),
+                    height: None,
+                },
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
+        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
+        crate::test_utils::mock_all_outcalls_404();
+
+        verify_dogecoin_mainnet_fetch_failed_404().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_failed_404_dogecoin_mainnet_staging() {
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::DogecoinMainnetStaging,
+        ));
+        crate::test_utils::mock_all_outcalls_404();
+
+        verify_dogecoin_mainnet_fetch_failed_404().await;
     }
 }

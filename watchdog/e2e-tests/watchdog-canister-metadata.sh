@@ -11,7 +11,7 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the watchdog canister.
-deploy_watchdog_canister_mainnet
+deploy_watchdog_canister_bitcoin_mainnet
 
 # Check the canister's metadata section for the Candid interface.
 METADATA=$(dfx canister metadata watchdog candid:service)

@@ -14,7 +14,7 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the watchdog canister.
-deploy_watchdog_canister_mainnet
+deploy_watchdog_canister_bitcoin_mainnet
 
 # Check health status has specific fields.
 check_health_status_fields
