@@ -61,7 +61,7 @@ pub fn testnet_unstable_max_depth_difference(
 /// A block `b` is considered stable if:
 ///   depth(block) ≥ stability_threshold
 ///   ∀ b', height(b') = height(b): depth(b) - depth(b’) ≥ stability_threshold
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct UnstableBlocks {
     stability_threshold: u32,
     tree: BlockTree,
@@ -81,7 +81,7 @@ impl UnstableBlocks {
 
         Self {
             stability_threshold,
-            tree: BlockTree::new(anchor.clone()),
+            tree: BlockTree::new(anchor),
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
