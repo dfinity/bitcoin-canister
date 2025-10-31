@@ -27,7 +27,7 @@ impl<'a> ValidationContext<'a> {
         let (chain, tip_successors) =
             unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
                 .ok_or_else(|| {
-                    ValidationContextError::BlockDoesNotExtendTree(current_block_hash.clone())
+                    ValidationContextError::BlockDoesNotExtendTree(current_block_hash)
                 })?;
         if tip_successors
             .iter()
@@ -38,7 +38,7 @@ impl<'a> ValidationContext<'a> {
         let chain = chain
             .into_chain()
             .iter()
-            .map(|block| (block.header(), block.block_hash().clone()))
+            .map(|block| (block.header(), *block.block_hash()))
             .collect();
 
         Ok(Self { state, chain })
@@ -144,10 +144,10 @@ mod test {
         assert_eq!(
             validation_context.chain,
             vec![
-                (genesis.header(), genesis.block_hash().clone()),
-                (block_0.header(), block_0.block_hash().clone()),
-                (block_1.header(), block_1.block_hash().clone()),
-                (block_2.header(), block_2.block_hash().clone()),
+                (genesis.header(), *genesis.block_hash()),
+                (block_0.header(), *block_0.block_hash()),
+                (block_1.header(), *block_1.block_hash()),
+                (block_2.header(), *block_2.block_hash()),
             ]
         );
 

@@ -156,7 +156,7 @@ impl UnstableBlocks {
         let (_, depth) = self
             .tree
             .find_mut(block_hash)
-            .ok_or_else(|| BlockDoesNotExtendTree(block_hash.clone()))?;
+            .ok_or_else(|| BlockDoesNotExtendTree(*block_hash))?;
         Ok(depth)
     }
 
@@ -202,7 +202,7 @@ impl UnstableBlocks {
         tip_block_hash: &BlockHash,
     ) -> Vec<(&Header, BlockHash)> {
         let mut chain = vec![];
-        let mut curr_hash = tip_block_hash.clone();
+        let mut curr_hash = *tip_block_hash;
         while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
             chain.push((curr_header, curr_hash));
             curr_hash = BlockHash::from(curr_header.prev_blockhash);
@@ -279,10 +279,11 @@ pub fn push(
     utxos: &UtxoSet,
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
+    let block_hash = *block.block_hash();
     let (parent_block_tree, depth) = blocks
         .tree
         .find_mut(&block.header().prev_blockhash.into())
-        .ok_or_else(|| BlockDoesNotExtendTree(block.block_hash().clone()))?;
+        .ok_or_else(|| BlockDoesNotExtendTree(block_hash))?;
 
     let height = utxos.next_height() + depth + 1;
 
@@ -290,8 +291,6 @@ pub fn push(
         .outpoints_cache
         .insert(utxos, &block, height)
         .expect("inserting to outpoints cache must succeed.");
-
-    let block_hash = block.block_hash().clone();
 
     parent_block_tree.extend(block)?;
 
@@ -1042,18 +1041,18 @@ mod test {
         assert_eq!(
             unstable_blocks.get_next_block_headers_chain_with_tip(block_3.block_hash()),
             vec![
-                (block_0.header(), block_0.block_hash().clone()),
-                (block_1.header(), block_1.block_hash().clone()),
-                (block_2.header(), block_2.block_hash().clone()),
-                (block_3.header(), block_3.block_hash().clone())
+                (block_0.header(), *block_0.block_hash()),
+                (block_1.header(), *block_1.block_hash()),
+                (block_2.header(), *block_2.block_hash()),
+                (block_3.header(), *block_3.block_hash())
             ]
         );
         assert_eq!(
             unstable_blocks.get_next_block_headers_chain_with_tip(block_y.block_hash()),
             vec![
-                (block_0.header(), block_0.block_hash().clone()),
-                (block_x.header(), block_x.block_hash().clone()),
-                (block_y.header(), block_y.block_hash().clone()),
+                (block_0.header(), *block_0.block_hash()),
+                (block_x.header(), *block_x.block_hash()),
+                (block_y.header(), *block_y.block_hash()),
             ]
         );
     }

@@ -16,7 +16,7 @@ impl NextBlockHeaders {
         let hash_vec = self.height_to_hash.entry(height).or_default();
 
         if !hash_vec.contains(&block_hash) {
-            hash_vec.push(block_hash.clone());
+            hash_vec.push(block_hash);
         }
 
         self.hash_to_height_and_header

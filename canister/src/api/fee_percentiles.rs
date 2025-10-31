@@ -71,7 +71,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     let fee_percentiles = percentiles(fees_per_byte);
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
-        tip_block_hash: tip_block_hash.clone(),
+        tip_block_hash: *tip_block_hash,
         fee_percentiles: fee_percentiles.clone(),
     });
 
