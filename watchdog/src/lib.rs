@@ -184,22 +184,22 @@ fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
-fn transform_dogecoin_api_blockchair_com_block(raw: TransformArgs) -> HttpResponse {
+fn transform_dogecoin_api_blockchair_com_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_dogecoin_api_blockchair_com_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_dogecoin_api_blockcypher_com_block(raw: TransformArgs) -> HttpResponse {
+fn transform_dogecoin_api_blockcypher_com_block(raw: TransformArgs) -> HttpRequestResult {
     endpoint_dogecoin_api_blockcypher_com_block_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_dogecoin_tokenview_height(raw: TransformArgs) -> HttpResponse {
+fn transform_dogecoin_tokenview_height(raw: TransformArgs) -> HttpRequestResult {
     endpoint_dogecoin_tokenview_height_mainnet().transform(raw)
 }
 
 #[query]
-fn transform_dogecoin_canister(raw: TransformArgs) -> HttpResponse {
+fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
     endpoint_dogecoin_canister().transform(raw)
 }
 
