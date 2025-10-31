@@ -13,7 +13,7 @@ mod types;
 mod test_utils;
 
 use crate::block_apis::CandidBlockApi;
-use crate::config::Canister;
+use crate::types::WatchdogArg;
 use crate::{
     config::Config,
     endpoints::*,
@@ -40,17 +40,22 @@ thread_local! {
 
 /// This function is called when the canister is created.
 #[init]
-fn init(canister: Canister) {
-    let config = Config::for_target(canister);
-    crate::storage::set_config(config);
+fn init(watchdog_arg: WatchdogArg) {
+    let target = match watchdog_arg {
+        WatchdogArg::Init(args) => args.target,
+        WatchdogArg::Upgrade(_) => panic!("cannot initialize canister during upgrade"),
+    };
+
+    let config = Config::for_target(target);
+    storage::set_config(config);
 
     set_timer(
-        Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
+        Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
         || {
             ic_cdk::futures::spawn(async {
                 tick().await;
                 ic_cdk_timers::set_timer_interval(
-                    Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
+                    Duration::from_secs(storage::get_config().interval_between_fetches_sec),
                     || ic_cdk::futures::spawn(tick()),
                 );
             })
@@ -60,24 +65,7 @@ fn init(canister: Canister) {
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade(canister: Canister) {
-    // Update config for the canister target
-    let config = Config::for_target(canister);
-    crate::storage::set_config(config);
-
-    set_timer(
-        Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
-        || {
-            ic_cdk::futures::spawn(async {
-                tick().await;
-                ic_cdk_timers::set_timer_interval(
-                    Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::futures::spawn(tick()),
-                );
-            })
-        },
-    );
-}
+fn post_upgrade(_watchdog_arg: Option<WatchdogArg>) {}
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_block_info_data() {
@@ -223,28 +211,38 @@ fn transform_mempool_height(raw: TransformArgs) -> HttpRequestResult {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::config::Canister;
+    use crate::types::InitArg;
 
     #[test]
     fn init_with_bitcoin_testnet_uses_testnet_config() {
-        init(Canister::BitcoinTestnet);
+        let canister = Canister::BitcoinTestnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
         assert_eq!(get_config(), Config::for_target(Canister::BitcoinTestnet));
     }
 
     #[test]
     fn init_with_bitcoin_mainnet_uses_mainnet_config() {
-        init(Canister::BitcoinMainnet);
+        let canister = Canister::BitcoinMainnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
         assert_eq!(get_config(), Config::for_target(Canister::BitcoinMainnet));
     }
 
     #[test]
     fn init_with_dogecoin_mainnet_uses_mainnet_config() {
-        init(Canister::DogecoinMainnet);
+        let canister = Canister::DogecoinMainnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
         assert_eq!(get_config(), Config::for_target(Canister::DogecoinMainnet));
     }
 
     #[test]
     fn init_with_dogecoin_mainnet_staging_uses_mainnet_staging_config() {
-        init(Canister::DogecoinMainnetStaging);
+        let canister = Canister::DogecoinMainnetStaging;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
         assert_eq!(
             get_config(),
             Config::for_target(Canister::DogecoinMainnetStaging)
