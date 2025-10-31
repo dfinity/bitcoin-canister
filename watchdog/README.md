@@ -1,6 +1,13 @@
 # Watchdog canister
 
-Watchdog service for a bitcoin_canister that compares its latest block height against several bitcoin explorer APIs and decides if bitcoin_canister is healthy or not.
+Watchdog service for canisters that compares their latest block height against several explorer APIs and decides if the
+canister is healthy or not.
+
+## Networks supported
+
+- Bitcoin Mainnet
+- Bitcoin Testnet
+- Dogecoin Mainnet
 
 ## Commands
 
