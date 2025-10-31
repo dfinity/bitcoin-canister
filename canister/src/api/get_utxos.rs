@@ -390,7 +390,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().clone().into(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0
                     },
                     value: 1000,
@@ -458,7 +458,7 @@ mod test {
         for i in (0..num_blocks).rev() {
             let expected_utxo = Utxo {
                 outpoint: OutPoint {
-                    txid: transactions[i as usize].txid().clone().into(),
+                    txid: transactions[i as usize].txid().into(),
                     vout: 0,
                 },
                 value: i + 1,
@@ -552,7 +552,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().clone().into(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -590,7 +590,7 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
-            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
@@ -615,7 +615,7 @@ mod test {
                 GetUtxosResponse {
                     utxos: vec![Utxo {
                         outpoint: OutPoint {
-                            txid: tx.txid().clone().into(),
+                            txid: tx.txid().into(),
                             vout: 0,
                         },
                         value: 1000,
@@ -666,7 +666,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: coinbase_tx.txid().clone().into(),
+                        txid: coinbase_tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -752,7 +752,7 @@ mod test {
         let block_0_utxos = GetUtxosResponse {
             utxos: vec![Utxo {
                 outpoint: OutPoint {
-                    txid: coinbase_tx.txid().clone().into(),
+                    txid: coinbase_tx.txid().into(),
                     vout: 0,
                 },
                 value: 1000,
@@ -775,7 +775,7 @@ mod test {
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
         let tx = TransactionBuilder::new()
-            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
@@ -796,7 +796,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().clone().into(),
+                        txid: tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -825,7 +825,7 @@ mod test {
         // Extend block 0 (again) with block 1 that spends the 1000 satoshis to address 3
         // This causes a fork.
         let tx = TransactionBuilder::new()
-            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_3, 1000)
             .build();
         let block_1_prime = BlockBuilder::with_prev_header(block_0.header())
@@ -877,7 +877,7 @@ mod test {
         // In this case, the fork of [block 1', block 2'] will be considered the "main"
         // chain, and will be part of the UTXOs.
         let tx = TransactionBuilder::new()
-            .with_input(ic_btc_types::OutPoint::new(tx.txid().clone(), 0))
+            .with_input(ic_btc_types::OutPoint::new(tx.txid(), 0))
             .with_output(&address_4, 1000)
             .build();
         let block_2_prime = BlockBuilder::with_prev_header(block_1_prime.header())
@@ -937,7 +937,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().clone().into(),
+                        txid: tx.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -985,7 +985,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().clone().into(),
+                        txid: tx.txid().into(),
                         vout: 0
                     },
                     value: 1000,
@@ -1041,7 +1041,7 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
-            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())

@@ -829,7 +829,7 @@ async fn fee_percentiles_evaluation_helper() {
             .build();
         let tx_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint {
-                txid: tx_1.txid().clone(),
+                txid: tx_1.txid(),
                 vout: 0,
             })
             .with_output(&random_p2pkh_address(btc_network).into(), balance - fee)

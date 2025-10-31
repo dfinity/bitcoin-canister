@@ -168,8 +168,9 @@ impl Transaction {
         self.tx.base_size()
     }
 
-    pub fn txid(&self) -> &Txid {
-        self.txid.get_or_init(||
+    pub fn txid(&self) -> Txid {
+        self.txid
+            .get_or_init(||
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
             Txid::from(
@@ -178,6 +179,7 @@ impl Transaction {
                     .as_byte_array()
                     .to_vec(),
             ))
+            .clone()
     }
 }
 

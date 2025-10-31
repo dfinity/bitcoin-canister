@@ -255,7 +255,7 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
         let tx = TransactionBuilder::new()
-            .with_input(OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_2 = BlockBuilder::with_prev_header(block_1.header())

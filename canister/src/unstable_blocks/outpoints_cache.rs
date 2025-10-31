@@ -128,7 +128,7 @@ impl OutPointsCache {
             // many we inserted into the cache that reference them.
             for (i, txout) in tx.output().iter().enumerate() {
                 let outpoint = OutPoint {
-                    txid: tx.txid().clone(),
+                    txid: tx.txid(),
                     vout: i as u32,
                 };
 
@@ -199,7 +199,7 @@ impl OutPointsCache {
                 decrement_count_and_maybe_remove(
                     self,
                     &OutPoint {
-                        txid: tx.txid().clone(),
+                        txid: tx.txid(),
                         vout: i as u32,
                     },
                 );
@@ -270,7 +270,7 @@ mod test {
 
         // The cache contains the outpoint of block 0.
         let outpoint_0 = OutPoint {
-            txid: tx_0.txid().clone(),
+            txid: tx_0.txid(),
             vout: 0,
         };
         assert_eq!(
@@ -301,12 +301,12 @@ mod test {
         cache.insert(&utxos, &block_1, 1).unwrap();
 
         let outpoint_coinbase_1 = OutPoint {
-            txid: tx_coinbase_block_1.txid().clone(),
+            txid: tx_coinbase_block_1.txid(),
             vout: 0,
         };
 
         let outpoint_1 = OutPoint {
-            txid: tx_1.txid().clone(),
+            txid: tx_1.txid(),
             vout: 0,
         };
 
@@ -333,17 +333,17 @@ mod test {
                 },
                 added_outpoints: maplit::btreemap! {
                     block_0.block_hash().clone() => maplit::btreemap! {
-                        address_1.clone() => vec![OutPoint::new(tx_0.txid().clone(), 0)]
+                        address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                     block_1.block_hash().clone() => maplit::btreemap! {
-                        address_2.clone() => vec![OutPoint::new(tx_1.txid().clone(), 0)],
-                        address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid().clone(), 0)]
+                        address_2.clone() => vec![OutPoint::new(tx_1.txid(), 0)],
+                        address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
                     block_0.block_hash().clone() => maplit::btreemap! {},
                     block_1.block_hash().clone() => maplit::btreemap! {
-                        address_1.clone() => vec![OutPoint::new(tx_0.txid().clone(), 0)]
+                        address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
             }
@@ -373,13 +373,13 @@ mod test {
                 },
                 added_outpoints: maplit::btreemap! {
                     block_1.block_hash().clone() => maplit::btreemap! {
-                        address_2 => vec![OutPoint::new(tx_1.txid().clone(), 0)],
-                        address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid().clone(), 0)]
+                        address_2 => vec![OutPoint::new(tx_1.txid(), 0)],
+                        address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
                     block_1.block_hash().clone() => maplit::btreemap! {
-                        address_1 => vec![OutPoint::new(tx_0.txid().clone(), 0)]
+                        address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
             }
@@ -416,7 +416,7 @@ mod test {
 
         // The outpoint of block 0.
         let outpoint_0 = OutPoint {
-            txid: tx_0.txid().clone(),
+            txid: tx_0.txid(),
             vout: 0,
         };
 
@@ -457,13 +457,13 @@ mod test {
 
         // The outpoint of block 0.
         let outpoint_0 = OutPoint {
-            txid: tx_0.txid().clone(),
+            txid: tx_0.txid(),
             vout: 0,
         };
 
         // An outpoint that doesn't exist. A block containing this should fail.
         let faulty_outpoint = OutPoint {
-            txid: tx_0.txid().clone(),
+            txid: tx_0.txid(),
             vout: 1,
         };
 
@@ -497,7 +497,7 @@ mod test {
                 },
                 added_outpoints: maplit::btreemap! {
                     block_0.block_hash().clone() => maplit::btreemap! {
-                        address_1 => vec![OutPoint::new(tx_0.txid().clone(), 0)]
+                        address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {

@@ -638,7 +638,7 @@ mod test {
         let network = utxos_set.network;
         let coinbase = TransactionBuilder::coinbase().build();
         let coinbase_outpoint = OutPoint {
-            txid: coinbase.txid().clone(),
+            txid: coinbase.txid(),
             vout: 0,
         };
         let coinbase_out = &coinbase.output()[0];
@@ -731,7 +731,7 @@ mod test {
 
         let expected = vec![Utxo {
             outpoint: OutPoint {
-                txid: coinbase_tx.txid().clone(),
+                txid: coinbase_tx.txid(),
                 vout: 0,
             },
             value: 1000,
@@ -753,7 +753,7 @@ mod test {
                 Blob::try_from(AddressUtxo {
                     address: address_1.clone(),
                     height: 0,
-                    outpoint: OutPoint::new(coinbase_tx.txid().clone(), 0)
+                    outpoint: OutPoint::new(coinbase_tx.txid(), 0)
                 }.to_bytes().as_ref()).unwrap()
             }
         );
@@ -762,7 +762,7 @@ mod test {
 
         // Spend the output to address 2.
         let tx = TransactionBuilder::new()
-            .with_input(OutPoint::new(coinbase_tx.txid().clone(), 0))
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         ingest_tx(&mut utxo, &tx);
@@ -779,7 +779,7 @@ mod test {
                 .collect::<Vec<_>>(),
             vec![Utxo {
                 outpoint: OutPoint {
-                    txid: tx.txid().clone(),
+                    txid: tx.txid(),
                     vout: 0
                 },
                 value: 1000,
@@ -795,7 +795,7 @@ mod test {
                 Blob::try_from(AddressUtxo {
                     address: address_2,
                     height: 1,
-                    outpoint: OutPoint::new(tx.txid().clone(), 0)
+                    outpoint: OutPoint::new(tx.txid(), 0)
                 }.to_bytes().as_ref()).unwrap()
             }
         );
@@ -882,7 +882,7 @@ mod test {
 
         let tx_2 = TransactionBuilder::new()
             .with_input(OutPoint {
-                txid: tx_1.txid().clone(),
+                txid: tx_1.txid(),
                 vout: 0,
             })
             .with_output(&address_2, 1000)
@@ -922,12 +922,12 @@ mod test {
         let tx_2 = TransactionBuilder::new()
             // Consume the positive UTXO
             .with_input(OutPoint {
-                txid: tx_1.txid().clone(),
+                txid: tx_1.txid(),
                 vout: 0,
             })
             // then consume the zero UTXO
             .with_input(OutPoint {
-                txid: tx_1.txid().clone(),
+                txid: tx_1.txid(),
                 vout: 1,
             })
             .with_output(&address_2, 1000)
@@ -966,12 +966,12 @@ mod test {
         let tx_2 = TransactionBuilder::new()
             // Consume the positive UTXO
             .with_input(OutPoint {
-                txid: tx_1.txid().clone(),
+                txid: tx_1.txid(),
                 vout: 0,
             })
             // then consume the zero UTXO
             .with_input(OutPoint {
-                txid: tx_1.txid().clone(),
+                txid: tx_1.txid(),
                 vout: 1,
             })
             .with_output(&address_2, 1000)
@@ -1037,7 +1037,7 @@ mod test {
             for i in (0..tx_cardinality).rev() {
                 tx_1 = tx_1.with_input(OutPoint {
                     vout: i as u32,
-                    txid: tx_0.txid().clone(),
+                    txid: tx_0.txid(),
                 });
             }
             for i in 0..tx_cardinality {
@@ -1052,7 +1052,7 @@ mod test {
                 tx_2 = tx_2
                     .with_input(OutPoint {
                         vout: i as u32,
-                        txid: tx_1.txid().clone(),
+                        txid: tx_1.txid(),
                     })
                     .with_output(&address_3, 1);
             }
@@ -1110,7 +1110,7 @@ mod test {
                             .collect::<Vec<_>>(),
                         (0..tx_cardinality)
                             .map(|i| OutPoint {
-                                txid: tx_0.txid().clone(),
+                                txid: tx_0.txid(),
                                 vout: i as u32
                             })
                             .collect::<Vec<_>>()
@@ -1142,7 +1142,7 @@ mod test {
                         assert!(utxo_set
                             .get_utxo(&OutPoint {
                                 vout: i as u32,
-                                txid: tx_0.txid().clone(),
+                                txid: tx_0.txid(),
                             })
                             .is_some());
 
@@ -1150,7 +1150,7 @@ mod test {
                         prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: 0,
-                                txid: coinbase_tx.txid().clone(),
+                                txid: coinbase_tx.txid(),
                             }),
                             None
                         );
@@ -1158,7 +1158,7 @@ mod test {
                         prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: i as u32,
-                                txid: tx_1.txid().clone(),
+                                txid: tx_1.txid(),
                             }),
                             None
                         );
@@ -1166,7 +1166,7 @@ mod test {
                         prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: i as u32,
-                                txid: tx_2.txid().clone(),
+                                txid: tx_2.txid(),
                             }),
                             None
                         );
@@ -1207,7 +1207,7 @@ mod test {
                     .collect::<Vec<_>>(),
                 (0..tx_cardinality)
                     .map(|i| OutPoint {
-                        txid: tx_2.txid().clone(),
+                        txid: tx_2.txid(),
                         vout: i as u32
                     })
                     .collect::<Vec<_>>()
@@ -1218,7 +1218,7 @@ mod test {
                 prop_assert_eq!(
                     utxo_set.get_utxo(&OutPoint {
                         vout: i as u32,
-                        txid: tx_0.txid().clone(),
+                        txid: tx_0.txid(),
                     }),
                     None
                 );
@@ -1227,7 +1227,7 @@ mod test {
                 prop_assert_eq!(
                     utxo_set.get_utxo(&OutPoint {
                         vout: i as u32,
-                        txid: tx_1.txid().clone(),
+                        txid: tx_1.txid(),
                     }),
                     None
                 );
@@ -1236,7 +1236,7 @@ mod test {
                 assert!(utxo_set
                     .get_utxo(&OutPoint {
                         vout: i as u32,
-                        txid: tx_2.txid().clone(),
+                        txid: tx_2.txid(),
                     }).is_some());
             }
         }
