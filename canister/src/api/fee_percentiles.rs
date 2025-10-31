@@ -47,7 +47,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
 
     // If fee percentiles were already cached, then return the cached results.
     if let Some(cache) = &state.fee_percentiles_cache {
-        if cache.tip_block_hash == tip_block_hash {
+        if &cache.tip_block_hash == tip_block_hash {
             return cache.fee_percentiles.clone();
         }
     }
@@ -71,7 +71,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     let fee_percentiles = percentiles(fees_per_byte);
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
-        tip_block_hash,
+        tip_block_hash: tip_block_hash.clone(),
         fee_percentiles: fee_percentiles.clone(),
     });
 

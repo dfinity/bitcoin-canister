@@ -37,7 +37,7 @@ proptest! {
         }).unwrap();
 
         assert_eq!(res.tip_height, chain_len - 1);
-        assert_eq!(res.tip_block_hash, chain[chain_len as usize - 1].block_hash().to_vec());
+        assert_eq!(&res.tip_block_hash, chain[chain_len as usize - 1].block_hash().as_bytes());
 
         for i in 1..chain_len {
             let res = get_utxos(GetUtxosRequest {
@@ -47,7 +47,7 @@ proptest! {
 
             let block_depth = chain_len - i;
             assert_eq!(res.tip_height, block_depth);
-            assert_eq!(res.tip_block_hash, chain[block_depth as usize].block_hash().to_vec());
+            assert_eq!(&res.tip_block_hash, chain[block_depth as usize].block_hash().as_bytes());
         }
     }
 }
@@ -87,7 +87,7 @@ proptest! {
         }).unwrap();
 
         assert_eq!(res.tip_height, chain_len - 1);
-        assert_eq!(res.tip_block_hash, chain[chain_len as usize - 1].block_hash().to_vec());
+        assert_eq!(&res.tip_block_hash, chain[chain_len as usize - 1].block_hash().as_bytes());
 
         for i in 1..chain_len {
             let res = get_utxos(GetUtxosRequest {
@@ -107,7 +107,7 @@ proptest! {
             };
 
             assert_eq!(res.tip_height, expected_height);
-            assert_eq!(res.tip_block_hash, chain[expected_height as usize].block_hash().to_vec());
+            assert_eq!(&res.tip_block_hash, chain[expected_height as usize].block_hash().as_bytes());
         }
     }
 }
@@ -135,7 +135,7 @@ async fn multiple_forks() {
     .unwrap();
 
     assert_eq!(res.tip_height, 6);
-    assert_eq!(res.tip_block_hash, a[6].block_hash().to_vec());
+    assert_eq!(&res.tip_block_hash, a[6].block_hash().as_bytes());
 
     // With two confirmations the tip is expected to be a[3].
     let res = get_utxos(GetUtxosRequest {
@@ -145,7 +145,7 @@ async fn multiple_forks() {
     .unwrap();
 
     assert_eq!(res.tip_height, 3);
-    assert_eq!(res.tip_block_hash, a[3].block_hash().to_vec());
+    assert_eq!(&res.tip_block_hash, a[3].block_hash().as_bytes());
 }
 
 fn ingest_blocks<'a>(blocks: impl Iterator<Item = &'a Block>) {

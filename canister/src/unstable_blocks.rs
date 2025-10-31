@@ -61,7 +61,7 @@ pub fn testnet_unstable_max_depth_difference(
 /// A block `b` is considered stable if:
 ///   depth(block) ≥ stability_threshold
 ///   ∀ b', height(b') = height(b): depth(b) - depth(b’) ≥ stability_threshold
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct UnstableBlocks {
     stability_threshold: u32,
     tree: BlockTree,
@@ -81,7 +81,7 @@ impl UnstableBlocks {
 
         Self {
             stability_threshold,
-            tree: BlockTree::new(anchor.clone()),
+            tree: BlockTree::new(anchor),
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
@@ -199,10 +199,10 @@ impl UnstableBlocks {
     // header outside the main chain in the reverse order.
     pub fn get_next_block_headers_chain_with_tip(
         &self,
-        tip_block_hash: BlockHash,
+        tip_block_hash: &BlockHash,
     ) -> Vec<(&Header, BlockHash)> {
         let mut chain = vec![];
-        let mut curr_hash = tip_block_hash;
+        let mut curr_hash = tip_block_hash.clone();
         while let Some(curr_header) = self.next_block_headers.get_header(&curr_hash) {
             chain.push((curr_header, curr_hash));
             curr_hash = BlockHash::from(curr_header.prev_blockhash);
@@ -282,7 +282,7 @@ pub fn push(
     let (parent_block_tree, depth) = blocks
         .tree
         .find_mut(&block.header().prev_blockhash.into())
-        .ok_or_else(|| BlockDoesNotExtendTree(block.block_hash()))?;
+        .ok_or_else(|| BlockDoesNotExtendTree(block.block_hash().clone()))?;
 
     let height = utxos.next_height() + depth + 1;
 
@@ -291,7 +291,7 @@ pub fn push(
         .insert(utxos, &block, height)
         .expect("inserting to outpoints cache must succeed.");
 
-    let block_hash = block.block_hash();
+    let block_hash = block.block_hash().clone();
 
     parent_block_tree.extend(block)?;
 
@@ -741,21 +741,21 @@ mod test {
 
         assert_eq!(
             (BlockChain::new(&block_0), vec![&block_1]),
-            get_chain_with_tip(&forest, &block_0.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1]),
                 vec![&block_2]
             ),
-            get_chain_with_tip(&forest, &block_1.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2]),
                 vec![]
             ),
-            get_chain_with_tip(&forest, &block_2.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
     }
 
@@ -781,21 +781,21 @@ mod test {
 
         assert_eq!(
             (BlockChain::new(&block_0), vec![&block_1, &block_2]),
-            get_chain_with_tip(&forest, &block_0.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1]),
                 vec![]
             ),
-            get_chain_with_tip(&forest, &block_1.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_2]),
                 vec![]
             ),
-            get_chain_with_tip(&forest, &block_2.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
     }
 
@@ -826,28 +826,28 @@ mod test {
 
         assert_eq!(
             (BlockChain::new(&block_0), vec![&block_1, &block_2]),
-            get_chain_with_tip(&forest, &block_0.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1]),
                 vec![]
             ),
-            get_chain_with_tip(&forest, &block_1.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_2]),
                 vec![&block_3]
             ),
-            get_chain_with_tip(&forest, &block_2.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_2, &block_3]),
                 vec![]
             ),
-            get_chain_with_tip(&forest, &block_3.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_3.block_hash()).unwrap()
         );
     }
 
@@ -883,28 +883,28 @@ mod test {
 
         assert_eq!(
             (BlockChain::new(&block_0), vec![&block_1]),
-            get_chain_with_tip(&forest, &block_0.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1]),
                 vec![&block_2, &block_a]
             ),
-            get_chain_with_tip(&forest, &block_1.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2]),
                 vec![&block_3]
             ),
-            get_chain_with_tip(&forest, &block_2.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
         assert_eq!(
             (
                 BlockChain::new_with_successors(&block_0, vec![&block_1, &block_a]),
                 vec![&block_b]
             ),
-            get_chain_with_tip(&forest, &block_a.block_hash()).unwrap()
+            get_chain_with_tip(&forest, block_a.block_hash()).unwrap()
         );
     }
 
@@ -1042,18 +1042,18 @@ mod test {
         assert_eq!(
             unstable_blocks.get_next_block_headers_chain_with_tip(block_3.block_hash()),
             vec![
-                (block_0.header(), block_0.block_hash()),
-                (block_1.header(), block_1.block_hash()),
-                (block_2.header(), block_2.block_hash()),
-                (block_3.header(), block_3.block_hash())
+                (block_0.header(), block_0.block_hash().clone()),
+                (block_1.header(), block_1.block_hash().clone()),
+                (block_2.header(), block_2.block_hash().clone()),
+                (block_3.header(), block_3.block_hash().clone())
             ]
         );
         assert_eq!(
             unstable_blocks.get_next_block_headers_chain_with_tip(block_y.block_hash()),
             vec![
-                (block_0.header(), block_0.block_hash()),
-                (block_x.header(), block_x.block_hash()),
-                (block_y.header(), block_y.block_hash()),
+                (block_0.header(), block_0.block_hash().clone()),
+                (block_x.header(), block_x.block_hash().clone()),
+                (block_y.header(), block_y.block_hash().clone()),
             ]
         );
     }

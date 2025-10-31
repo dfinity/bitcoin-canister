@@ -87,7 +87,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     println!("# blocks in file: {}", blocks.len());
 
     // Build the chain
-    chain.push(blocks.remove(&genesis_block(network).block_hash()).unwrap());
+    chain.push(blocks.remove(genesis_block(network).block_hash()).unwrap());
     for _ in 1..num_blocks {
         let next_block = blocks
             .remove(&chain[chain.len() - 1].block_hash().into())

@@ -53,7 +53,7 @@ pub struct Page {
 impl Page {
     pub fn to_bytes(&self) -> Vec<u8> {
         vec![
-            self.tip_block_hash.clone().to_vec(),
+            self.tip_block_hash.to_vec(),
             Storable::to_bytes(&self.height).to_vec(),
             OutPoint::to_bytes(&self.outpoint).to_vec(),
         ]

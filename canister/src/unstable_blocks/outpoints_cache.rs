@@ -156,9 +156,9 @@ impl OutPointsCache {
         }
 
         self.added_outpoints
-            .insert(block.block_hash(), added_outpoints);
+            .insert(block.block_hash().clone(), added_outpoints);
         self.removed_outpoints
-            .insert(block.block_hash(), removed_outpoints);
+            .insert(block.block_hash().clone(), removed_outpoints);
 
         Ok(())
     }
@@ -207,8 +207,8 @@ impl OutPointsCache {
         }
 
         let block_hash = block.block_hash();
-        self.added_outpoints.remove(&block_hash);
-        self.removed_outpoints.remove(&block_hash);
+        self.added_outpoints.remove(block_hash);
+        self.removed_outpoints.remove(block_hash);
     }
 }
 
@@ -332,17 +332,17 @@ mod test {
                     }
                 },
                 added_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {
+                    block_0.block_hash().clone() => maplit::btreemap! {
                         address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
-                    block_1.block_hash() => maplit::btreemap! {
+                    block_1.block_hash().clone() => maplit::btreemap! {
                         address_2.clone() => vec![OutPoint::new(tx_1.txid(), 0)],
                         address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {},
-                    block_1.block_hash() => maplit::btreemap! {
+                    block_0.block_hash().clone() => maplit::btreemap! {},
+                    block_1.block_hash().clone() => maplit::btreemap! {
                         address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
@@ -372,13 +372,13 @@ mod test {
                     }
                 },
                 added_outpoints: maplit::btreemap! {
-                    block_1.block_hash() => maplit::btreemap! {
+                    block_1.block_hash().clone() => maplit::btreemap! {
                         address_2 => vec![OutPoint::new(tx_1.txid(), 0)],
                         address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
-                    block_1.block_hash() => maplit::btreemap! {
+                    block_1.block_hash().clone() => maplit::btreemap! {
                         address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
@@ -496,12 +496,12 @@ mod test {
                     },
                 },
                 added_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {
+                    block_0.block_hash().clone() => maplit::btreemap! {
                         address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {}
+                    block_0.block_hash().clone() => maplit::btreemap! {}
                 },
             }
         );

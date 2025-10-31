@@ -210,19 +210,14 @@ impl BlockTree {
         match self.find_mut(&block.header().prev_blockhash.into()) {
             Some((block_subtree, _)) => {
                 assert_eq!(
-                    block_subtree.root.block_hash().to_vec(),
-                    block
-                        .header()
-                        .prev_blockhash
-                        .as_raw_hash()
-                        .as_byte_array()
-                        .to_vec()
+                    block_subtree.root.block_hash().as_bytes(),
+                    block.header().prev_blockhash.as_byte_array().as_slice()
                 );
                 // Add the block as a successor.
                 block_subtree.children.push(BlockTree::new(block));
                 Ok(())
             }
-            None => Err(BlockDoesNotExtendTree(block.block_hash())),
+            None => Err(BlockDoesNotExtendTree(block.block_hash().clone())),
         }
     }
 
@@ -287,7 +282,7 @@ impl BlockTree {
         &'a self,
         tip: &BlockHash,
     ) -> Option<(Vec<&'a Block>, Vec<&'a Block>)> {
-        if self.root.block_hash() == *tip {
+        if self.root.block_hash() == tip {
             return Some((vec![&self.root], self.get_child_blocks()));
         }
 
@@ -332,7 +327,7 @@ impl BlockTree {
             blockhash: &BlockHash,
             depth: u32,
         ) -> Option<(&'a mut BlockTree, u32)> {
-            if block_tree.root.block_hash() == *blockhash {
+            if block_tree.root.block_hash() == blockhash {
                 return Some((block_tree, depth));
             }
 
@@ -367,7 +362,7 @@ impl BlockTree {
     /// Returns the hashes of all blocks in the tree.
     pub fn get_hashes(&self) -> Vec<BlockHash> {
         let mut hashes = Vec::with_capacity(self.children.len() + 1);
-        hashes.push(self.root.block_hash());
+        hashes.push(self.root.block_hash().clone());
         hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
         hashes
     }
@@ -448,7 +443,7 @@ mod test {
         assert_eq!(block_tree.blockchains(), vec![expected_chain.clone()]);
         assert_eq!(
             Some((expected_chain, vec![])),
-            block_tree.get_chain_with_tip(&block_tree.root.block_hash())
+            block_tree.get_chain_with_tip(block_tree.root.block_hash())
         );
     }
 
@@ -477,7 +472,7 @@ mod test {
                 },
                 children.iter().collect()
             )),
-            block_tree.get_chain_with_tip(&block_tree.root.block_hash())
+            block_tree.get_chain_with_tip(block_tree.root.block_hash())
         );
     }
 
@@ -498,7 +493,7 @@ mod test {
             // Fetch the blockchain with the `block` as tip.
             let block_hash = block.block_hash();
             let chain = block_tree
-                .get_chain_with_tip(&block_hash)
+                .get_chain_with_tip(block_hash)
                 .unwrap()
                 .0
                 .into_chain();
@@ -514,13 +509,8 @@ mod test {
             // All blocks should be correctly chained to one another.
             for i in 1..chain.len() {
                 assert_eq!(
-                    chain[i - 1].block_hash().to_vec(),
-                    chain[i]
-                        .header()
-                        .prev_blockhash
-                        .as_raw_hash()
-                        .as_byte_array()
-                        .to_vec()
+                    chain[i - 1].block_hash().as_bytes(),
+                    chain[i].header().prev_blockhash.as_byte_array().as_slice()
                 )
             }
         }
@@ -545,7 +535,7 @@ mod test {
                 // Fetch the blockchain with the `block` as tip.
                 let block_hash = block.block_hash();
                 let chain = block_tree
-                    .get_chain_with_tip(&block_hash)
+                    .get_chain_with_tip(block_hash)
                     .unwrap()
                     .0
                     .into_chain();
@@ -561,13 +551,8 @@ mod test {
                 // All blocks should be correctly chained to one another.
                 for i in 1..chain.len() {
                     assert_eq!(
-                        chain[i - 1].block_hash().to_vec(),
-                        chain[i]
-                            .header()
-                            .prev_blockhash
-                            .as_raw_hash()
-                            .as_byte_array()
-                            .to_vec()
+                        chain[i - 1].block_hash().as_bytes(),
+                        chain[i].header().prev_blockhash.as_byte_array().as_slice()
                     )
                 }
             }
@@ -746,7 +731,7 @@ mod test {
         flatten(&tree, &mut blocks);
         let chosen_block = blocks[random_index % blocks.len()];
 
-        let (chain, tip_children) = tree.get_chain_with_tip(&chosen_block.block_hash()).unwrap();
+        let (chain, tip_children) = tree.get_chain_with_tip(chosen_block.block_hash()).unwrap();
         let tip = tree.find(chain.tip()).expect("BUG: could not find tip");
         prop_assert_eq!(tip.root.block_hash(), chain.tip().block_hash());
 
@@ -764,7 +749,7 @@ mod test {
             if let Some(prev) = chain.last() {
                 prop_assert_eq!(
                     prev.block_hash(),
-                    ic_btc_types::BlockHash::from(tip.header().prev_blockhash)
+                    &ic_btc_types::BlockHash::from(tip.header().prev_blockhash)
                 );
             }
         }

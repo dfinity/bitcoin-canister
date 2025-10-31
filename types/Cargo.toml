@@ -16,5 +16,9 @@ ic-stable-structures = { workspace = true }
 serde = { workspace = true }
 serde_bytes = { workspace = true }
 
+[dev-dependencies]
+ciborium = { workspace = true }
+proptest = { workspace = true }
+
 [features]
 mock_difficulty = []

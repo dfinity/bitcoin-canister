@@ -42,7 +42,7 @@ ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
 maplit = "1.0.2"
 pocket-ic = { workspace = true }
-proptest = "0.9.4"
+proptest = { workspace = true }
 tempfile = { workspace = true }
 test-strategy = "0.3.1"
 
