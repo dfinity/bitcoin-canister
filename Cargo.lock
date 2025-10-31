@@ -1815,6 +1815,7 @@ dependencies = [
  "ic-btc-interface",
  "ic-btc-validation",
  "ic-stable-structures",
+ "proptest 0.9.6",
  "serde",
  "serde_bytes",
 ]

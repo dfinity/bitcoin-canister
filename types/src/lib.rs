@@ -433,26 +433,27 @@ impl Storable for OutPoint {
 #[cfg(test)]
 mod test {
     use super::*;
+    use proptest::proptest;
     use std::cell::RefCell;
 
-    #[test]
-    fn serialization_of_ref_cell_equals_once_cell() {
-        // Empty case
-        let ref_cell = RefCell::new(None);
-        let mut ref_bytes = vec![];
-        ciborium::ser::into_writer(&ref_cell, &mut ref_bytes).unwrap();
-        let once_cell: OnceCell<BlockHash> = OnceCell::new();
-        let mut once_bytes = vec![];
-        ciborium::ser::into_writer(&once_cell, &mut once_bytes).unwrap();
-        assert_eq!(ref_bytes, once_bytes);
+    proptest! {
+        #[test]
+        fn serialization_of_ref_cell_equals_once_cell(hash: Option<[u8; 32]>) {
+            let blockhash = hash.map(|s| BlockHash(s.as_slice().to_vec()));
+            let ref_cell = RefCell::new(blockhash.clone());
+             let mut ref_bytes = vec![];
+            ciborium::ser::into_writer(&ref_cell, &mut ref_bytes).unwrap();
 
-        // With element case
-        let hash = BlockHash(vec![1, 2, 3, 4, 5, 6]);
-        *ref_cell.borrow_mut() = Some(hash.clone());
-        ciborium::ser::into_writer(&ref_cell, &mut ref_bytes).unwrap();
-        once_cell.0.set(hash).unwrap();
-        ciborium::ser::into_writer(&once_cell, &mut once_bytes).unwrap();
-        assert_eq!(ref_bytes, once_bytes);
+            let once_cell: OnceCell<BlockHash> = OnceCell::new();
+            if let Some(hash) = blockhash {
+                let _ = once_cell.get_or_init(|| hash);
+            }
+            let mut once_bytes = vec![];
+            ciborium::ser::into_writer(&once_cell, &mut once_bytes).unwrap();
+
+            // assert the serialized bytes are the same
+            assert_eq!(ref_bytes, once_bytes);
+        }
     }
 
     #[test]
