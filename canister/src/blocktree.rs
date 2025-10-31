@@ -210,13 +210,8 @@ impl BlockTree {
         match self.find_mut(&block.header().prev_blockhash.into()) {
             Some((block_subtree, _)) => {
                 assert_eq!(
-                    block_subtree.root.block_hash().to_vec(),
-                    block
-                        .header()
-                        .prev_blockhash
-                        .as_raw_hash()
-                        .as_byte_array()
-                        .to_vec()
+                    block_subtree.root.block_hash().as_bytes(),
+                    block.header().prev_blockhash.as_byte_array().as_slice()
                 );
                 // Add the block as a successor.
                 block_subtree.children.push(BlockTree::new(block));
@@ -514,13 +509,8 @@ mod test {
             // All blocks should be correctly chained to one another.
             for i in 1..chain.len() {
                 assert_eq!(
-                    chain[i - 1].block_hash().to_vec(),
-                    chain[i]
-                        .header()
-                        .prev_blockhash
-                        .as_raw_hash()
-                        .as_byte_array()
-                        .to_vec()
+                    chain[i - 1].block_hash().as_bytes(),
+                    chain[i].header().prev_blockhash.as_byte_array().as_slice()
                 )
             }
         }
@@ -561,13 +551,8 @@ mod test {
                 // All blocks should be correctly chained to one another.
                 for i in 1..chain.len() {
                     assert_eq!(
-                        chain[i - 1].block_hash().to_vec(),
-                        chain[i]
-                            .header()
-                            .prev_blockhash
-                            .as_raw_hash()
-                            .as_byte_array()
-                            .to_vec()
+                        chain[i - 1].block_hash().as_bytes(),
+                        chain[i].header().prev_blockhash.as_byte_array().as_slice()
                     )
                 }
             }

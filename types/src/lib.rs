@@ -229,10 +229,6 @@ impl Txid {
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
     }
-
-    pub fn to_vec(&self) -> Vec<u8> {
-        self.bytes.clone()
-    }
 }
 
 impl From<Txid> for PublicTxid {
@@ -289,6 +285,9 @@ impl Storable for BlockHash {
 }
 
 impl BlockHash {
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
     pub fn to_vec(&self) -> Vec<u8> {
         self.0.clone()
     }
@@ -398,7 +397,7 @@ impl From<OutPoint> for bitcoin::OutPoint {
 
 impl Storable for OutPoint {
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
-        let mut v: Vec<u8> = self.txid.to_vec(); // Store the txid (32 bytes)
+        let mut v: Vec<u8> = self.txid.as_bytes().to_vec();
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
         // An outpoint is always exactly 36 bytes.
@@ -408,7 +407,7 @@ impl Storable for OutPoint {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        let mut v: Vec<u8> = self.txid.to_vec(); // Store the txid (32 bytes)
+        let mut v: Vec<u8> = self.txid.as_bytes().to_vec(); // Store the txid (32 bytes)
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
         // An outpoint is always exactly 36 bytes.
