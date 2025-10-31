@@ -175,7 +175,6 @@ impl Transaction {
             Txid::from(
                 self.tx
                     .compute_txid()
-                    .as_raw_hash()
                     .as_byte_array()
                     .to_vec(),
             ))
@@ -214,7 +213,6 @@ impl FromStr for Txid {
         use bitcoin::Txid as BitcoinTxid;
         let bytes = BitcoinTxid::from_str(txid)
             .unwrap()
-            .as_raw_hash()
             .as_byte_array()
             .to_vec();
         Ok(Self::from(bytes))
@@ -307,7 +305,7 @@ impl From<Vec<u8>> for BlockHash {
 
 impl From<bitcoin::BlockHash> for BlockHash {
     fn from(block_hash: bitcoin::BlockHash) -> Self {
-        Self(block_hash.as_raw_hash().as_byte_array().to_vec())
+        Self(block_hash.as_byte_array().to_vec())
     }
 }
 
@@ -318,7 +316,6 @@ impl FromStr for BlockHash {
         Ok(Self(
             bitcoin::BlockHash::from_str(s)
                 .map_err(|e| e.to_string())?
-                .as_raw_hash()
                 .as_byte_array()
                 .to_vec(),
         ))
@@ -378,7 +375,7 @@ impl OutPoint {
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self {
-            txid: Txid::from(bitcoin_outpoint.txid.as_raw_hash().as_byte_array().to_vec()),
+            txid: Txid::from(bitcoin_outpoint.txid.as_byte_array().to_vec()),
             vout: bitcoin_outpoint.vout,
         }
     }
@@ -437,6 +434,10 @@ mod test {
     use std::cell::RefCell;
 
     proptest! {
+        // OnceCell<T> is introduced to replace the use of RefCell<Option<T>>.
+        // In order to ensure this change does not break compatibility during
+        // upgrades, the test below checks their serialization formats (in CBOR)
+        // remain the same.
         #[test]
         fn serialization_of_ref_cell_equals_once_cell(hash: Option<[u8; 32]>) {
             let blockhash = hash.map(|s| BlockHash(s.as_slice().to_vec()));
