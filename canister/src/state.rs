@@ -559,7 +559,7 @@ mod test {
         assert_eq!(
             insert_block(&mut other_state, blocks[1].clone()),
             Err(InsertBlockError::from(
-                ValidationContextError::AlreadyKnown(blocks[1].block_hash())
+                ValidationContextError::AlreadyKnown(*blocks[1].block_hash())
             ))
         );
 

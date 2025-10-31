@@ -114,10 +114,7 @@ mod test {
                 .0,
             5
         );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&5).unwrap(), vec![hash1]);
 
         // Check that inserting the same element does not
         // create a duplicate.
@@ -132,10 +129,7 @@ mod test {
                 .0,
             5
         );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&5).unwrap(), vec![hash1]);
 
         block_headers.insert(header2, 5);
 
@@ -172,36 +166,24 @@ mod test {
 
         assert_eq!(
             *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
+            vec![hash1, hash2]
         );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&7).unwrap(),
-            vec![hash3.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&7).unwrap(), vec![hash3]);
         assert_eq!(block_headers.height_to_hash.len(), 2);
         assert_eq!(block_headers.hash_to_height_and_header.len(), 3);
         assert_eq!(block_headers.get_max_height(), Some(7));
 
         block_headers.remove(&hash2);
 
-        assert_eq!(
-            *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone()]
-        );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&7).unwrap(),
-            vec![hash3.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&5).unwrap(), vec![hash1]);
+        assert_eq!(*block_headers.height_to_hash.get(&7).unwrap(), vec![hash3]);
         assert_eq!(block_headers.height_to_hash.len(), 2);
         assert_eq!(block_headers.hash_to_height_and_header.len(), 2);
         assert_eq!(block_headers.get_max_height(), Some(7));
 
         block_headers.remove(&hash3);
 
-        assert_eq!(
-            *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&5).unwrap(), vec![hash1]);
         assert_eq!(block_headers.height_to_hash.get(&7), None);
         assert_eq!(block_headers.height_to_hash.len(), 1);
         assert_eq!(block_headers.hash_to_height_and_header.len(), 1);
@@ -236,16 +218,10 @@ mod test {
 
         assert_eq!(
             *block_headers.height_to_hash.get(&5).unwrap(),
-            vec![hash1.clone(), hash2.clone()]
+            vec![hash1, hash2]
         );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&7).unwrap(),
-            vec![hash3.clone()]
-        );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&9).unwrap(),
-            vec![hash4.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&7).unwrap(), vec![hash3]);
+        assert_eq!(*block_headers.height_to_hash.get(&9).unwrap(), vec![hash4]);
         assert_eq!(block_headers.height_to_hash.len(), 3);
         assert_eq!(block_headers.hash_to_height_and_header.len(), 4);
         assert_eq!(block_headers.get_max_height(), Some(9));
@@ -256,14 +232,8 @@ mod test {
             *block_headers.height_to_hash.get(&5).unwrap(),
             vec![hash1, hash2]
         );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&7).unwrap(),
-            vec![hash3.clone()]
-        );
-        assert_eq!(
-            *block_headers.height_to_hash.get(&9).unwrap(),
-            vec![hash4.clone()]
-        );
+        assert_eq!(*block_headers.height_to_hash.get(&7).unwrap(), vec![hash3]);
+        assert_eq!(*block_headers.height_to_hash.get(&9).unwrap(), vec![hash4]);
         assert_eq!(block_headers.height_to_hash.len(), 3);
         assert_eq!(block_headers.hash_to_height_and_header.len(), 4);
         assert_eq!(block_headers.get_max_height(), Some(9));
