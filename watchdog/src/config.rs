@@ -2,9 +2,12 @@ use crate::block_apis::BitcoinTestnetExplorerBlockApi;
 use crate::block_apis::{
     BitcoinMainnetExplorerBlockApi, CandidBlockApi, DogecoinMainnetExplorerBlockApi,
 };
-use candid::CandidType;
-use candid::Principal;
+use candid::{CandidType, Encode};
+use candid::{Decode, Principal};
+use ic_stable_structures::storable::Bound;
+use ic_stable_structures::Storable;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 /// Mainnet bitcoin canister principal.
 const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
@@ -190,6 +193,22 @@ impl Config {
         };
         format!("https://{principal}.{suffix}/metrics")
     }
+}
+
+impl Storable for Config {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        Encode!(&self).unwrap()
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+
+    const BOUND: Bound = Bound::Unbounded;
 }
 
 #[cfg(test)]

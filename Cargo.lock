@@ -4423,6 +4423,7 @@ dependencies = [
  "ic-cdk-timers",
  "ic-http",
  "ic-metrics-encoder",
+ "ic-stable-structures",
  "regex",
  "serde",
  "serde_bytes",

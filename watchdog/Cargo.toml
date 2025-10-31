@@ -20,6 +20,7 @@ ic-cdk-macros = { workspace = true }
 ic-cdk-timers = "0.12"
 ic-http = { workspace = true }
 ic-metrics-encoder = { workspace = true }
+ic-stable-structures = { workspace = true }
 regex = "1.7.0"
 serde = { workspace = true, features = ["derive"] }
 serde_bytes = { workspace = true }
