@@ -261,7 +261,7 @@ fn get_utxos_from_chain(
     let rest = utxos.split_off(utxos.len().min(utxo_limit));
     let next_page = rest.first().map(|next| {
         Page {
-            tip_block_hash: tip_block_hash.clone(),
+            tip_block_hash: *tip_block_hash,
             height: next.height,
             outpoint: OutPoint::new(Txid::from(next.outpoint.txid), next.outpoint.vout),
         }

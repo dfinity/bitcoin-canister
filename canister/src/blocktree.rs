@@ -217,7 +217,7 @@ impl BlockTree {
                 block_subtree.children.push(BlockTree::new(block));
                 Ok(())
             }
-            None => Err(BlockDoesNotExtendTree(block.block_hash().clone())),
+            None => Err(BlockDoesNotExtendTree(*block.block_hash())),
         }
     }
 
@@ -362,7 +362,7 @@ impl BlockTree {
     /// Returns the hashes of all blocks in the tree.
     pub fn get_hashes(&self) -> Vec<BlockHash> {
         let mut hashes = Vec::with_capacity(self.children.len() + 1);
-        hashes.push(self.root.block_hash().clone());
+        hashes.push(*self.root.block_hash());
         hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
         hashes
     }

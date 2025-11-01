@@ -151,7 +151,7 @@ impl UtxoSet {
 
         // Block ingestion complete.
         self.next_height += 1;
-        Some(Slicing::Done((block.block_hash().clone(), stats)))
+        Some(Slicing::Done((*block.block_hash(), stats)))
     }
 
     /// Returns the balance of the given address.
@@ -661,7 +661,7 @@ mod test {
         assert_eq!(
             utxos_set.ingest_block(block.clone()),
             Slicing::Done((
-                block.block_hash().clone(),
+                *block.block_hash(),
                 BlockIngestionStats {
                     num_rounds: 1,
                     ..Default::default()
@@ -940,7 +940,7 @@ mod test {
         assert_eq!(
             utxo_set.ingest_block(block.clone()),
             Slicing::Done((
-                block.block_hash().clone(),
+                *block.block_hash(),
                 BlockIngestionStats {
                     num_rounds: 1,
                     ..Default::default()
@@ -1078,7 +1078,7 @@ mod test {
             prop_assert_eq!(
                 utxo_set.ingest_block(block_0.clone()),
                 Slicing::Done((
-                    block_0.block_hash().clone(),
+                    *block_0.block_hash(),
                     BlockIngestionStats {
                         num_rounds: 1,
                         ..Default::default()
