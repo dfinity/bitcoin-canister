@@ -260,6 +260,8 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
 
     blocks.next_block_headers.remove_until_height(stable_height);
 
+    // The block returned here is the previous anchor block. The new
+    // anchor block was its child (see above).
     Some(tree.into_root())
 }
 
