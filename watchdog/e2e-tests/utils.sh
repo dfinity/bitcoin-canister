@@ -2,7 +2,7 @@
 
 # Function to deploy the watchdog canister for mainnet bitcoin_canister.
 deploy_watchdog_canister_bitcoin_mainnet() {
-  dfx deploy --no-wallet watchdog --argument "(variant { Init = record { target = (variant { bitcoin_mainnet } ) } } )"
+  dfx deploy --no-wallet watchdog --argument "(variant { init = record { target = (variant { bitcoin_mainnet } ) } } )"
 }
 
 # Function to get watchdog canister metrics.
