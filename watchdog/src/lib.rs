@@ -49,23 +49,16 @@ fn init(watchdog_arg: WatchdogArg) {
     let config = Config::for_target(target);
     storage::set_config(config);
 
-    set_timer(
-        Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
-        || {
-            ic_cdk::futures::spawn(async {
-                tick().await;
-                ic_cdk_timers::set_timer_interval(
-                    Duration::from_secs(storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::futures::spawn(tick()),
-                );
-            })
-        },
-    );
+    start_block_info_fetch_loop();
 }
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
 fn post_upgrade(_watchdog_arg: Option<WatchdogArg>) {
+    start_block_info_fetch_loop();
+}
+
+fn start_block_info_fetch_loop() {
     set_timer(
         Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
         || {
