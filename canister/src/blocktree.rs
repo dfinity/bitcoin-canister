@@ -295,7 +295,7 @@ impl<Block: ChainBlock> BlockTree<Block> {
                 block_subtree.children.push(BlockTree::new(block));
                 Ok(())
             }
-            None => Err(BlockDoesNotExtendTree(block.block_hash().clone())),
+            None => Err(BlockDoesNotExtendTree(*block.block_hash())),
         }
     }
 
