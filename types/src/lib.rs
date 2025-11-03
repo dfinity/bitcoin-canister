@@ -465,6 +465,28 @@ mod test {
         }
     }
 
+    #[derive(Serialize)]
+    struct VecHash(Vec<u8>);
+
+    proptest! {
+        // BlockHash was changed from Vec<u8> to [u8; 32]. The test below
+        // upgrades, the test below checks their serialization formats (in CBOR)
+        // remain the same.
+        #[test]
+        fn serialization_of_fixed_array_equals_vec(hash: [u8; 32]) {
+            let fixed_hash = BlockHash(hash);
+             let mut fixed_hash_bytes = vec![];
+            ciborium::ser::into_writer(&fixed_hash, &mut fixed_hash_bytes).unwrap();
+
+            let vec_hash = VecHash(hash.to_vec());
+            let mut vec_hash_bytes = vec![];
+            ciborium::ser::into_writer(&vec_hash, &mut vec_hash_bytes).unwrap();
+
+            // assert the serialized bytes are the same
+            assert_eq!(fixed_hash_bytes, vec_hash_bytes);
+        }
+    }
+
     #[test]
     fn target_difficulty() {
         use bitcoin::CompactTarget;
