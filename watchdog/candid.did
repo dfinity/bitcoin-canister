@@ -118,7 +118,7 @@ type WatchdogArg = variant {
     Upgrade : opt UpgradeArg;
 };
 
-service : (WatchdogArg) -> {
+service : (watchdog_arg : WatchdogArg) -> {
     /// Returns the health status of the target canister.
     health_status : () -> (health_status) query;
 
