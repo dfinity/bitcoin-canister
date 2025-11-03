@@ -12,7 +12,7 @@ set -Eexuo pipefail
 
 # Constants.
 REFERENCE_CANISTER_NAME="watchdog-upgradability-test"
-ARGUMENT="(variant { Init = record { target = (variant { bitcoin_mainnet } ) } } )"
+# ARGUMENT="(variant { Init = record { target = (variant { bitcoin_mainnet } ) } } )"
 
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
