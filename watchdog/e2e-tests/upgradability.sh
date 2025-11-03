@@ -12,7 +12,6 @@ set -Eexuo pipefail
 
 # Constants.
 REFERENCE_CANISTER_NAME="watchdog-upgradability-test"
-# ARGUMENT="(variant { Init = record { target = (variant { bitcoin_mainnet } ) } } )"
 
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -105,13 +104,13 @@ if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
 fi
 
 # Deploy upgraded canister.
-dfx deploy --no-wallet watchdog --argument "()"
+dfx deploy --no-wallet watchdog --argument "(variant {Upgrade})"
 
 dfx canister start watchdog
 dfx canister stop watchdog
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged watchdog --argument "()"
+dfx deploy --upgrade-unchanged watchdog --argument "(variant {Upgrade})"
 dfx canister start watchdog
 
 echo "SUCCESS"
