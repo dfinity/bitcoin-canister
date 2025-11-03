@@ -236,6 +236,11 @@ impl UnstableBlocks {
             .collect::<Vec<_>>()
             .into_iter()
     }
+
+    /// Returns the length of the main chain based on the heaviest cumulative difficulty.
+    pub fn get_main_chain_length(&self) -> usize {
+        self.tree.get_main_chain_length(self.network)
+    }
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
@@ -344,17 +349,19 @@ pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_> {
 /// Returns the length of the "main chain".
 /// See `get_main_chain` for what defines a main chain.
 pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
-    let blocks_by_height = blocks.blocks_with_depths_by_heights();
+    // let blocks_by_height = blocks.blocks_with_depths_by_heights();
 
-    // Traverse the heights in reverse order. The highest height with a single block corresponds to
-    // the tip of the main chain.
-    for height in (0..blocks_by_height.len()).rev() {
-        if blocks_by_height[height].len() == 1 {
-            return height + 1;
-        }
-    }
+    // // Traverse the heights in reverse order. The highest height with a single block corresponds to
+    // // the tip of the main chain.
+    // for height in (0..blocks_by_height.len()).rev() {
+    //     if blocks_by_height[height].len() == 1 {
+    //         return height + 1;
+    //     }
+    // }
 
-    unreachable!("There must be at least one height with exactly one block.");
+    // unreachable!("There must be at least one height with exactly one block.");
+
+    blocks.get_main_chain_length()
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
