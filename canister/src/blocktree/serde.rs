@@ -1,6 +1,4 @@
-use super::BlockTree;
-use bitcoin::Block as BitcoinBlock;
-use ic_btc_types::Block;
+use super::{Block, BlockTree};
 use serde::{
     de::{Deserializer, SeqAccess, Visitor},
     ser::SerializeSeq,
@@ -8,75 +6,52 @@ use serde::{
 };
 use std::fmt;
 
-// Serialize a BlockTree by first flattening it into a list.
-//
-// This flattening is necessary as a recursive data structure can cause a stack
-// overflow if the structure is very deep.
-impl Serialize for BlockTree<Block> {
+/// Serialization helper to flatten a nested tree into a list.
+#[derive(Default)]
+struct FlattenedTree<T>(Vec<(T, usize)>);
+
+impl<T> FlattenedTree<T> {
+    fn map_from<'a, A>(&mut self, tree: &'a BlockTree<A>, f: &(impl Fn(&'a A) -> T + 'a)) {
+        self.0.push((f(&tree.root), tree.children.len()));
+        for child in &tree.children {
+            self.map_from(child, f)
+        }
+    }
+}
+
+impl<T: Serialize> Serialize for FlattenedTree<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        #[cfg(feature = "canbench-rs")]
-        let _p = canbench_rs::bench_scope("serialize_blocktree");
-
-        // Flatten a block tree into a list.
-        fn flatten<'a>(
-            tree: &'a BlockTree<Block>,
-            flattened_tree: &mut Vec<(&'a BitcoinBlock, usize)>,
-        ) {
-            flattened_tree.push((tree.root.internal_bitcoin_block(), tree.children.len()));
-
-            for child in &tree.children {
-                flatten(child, flattened_tree);
-            }
-        }
-
-        let mut flattened_tree = vec![];
-        {
-            #[cfg(feature = "canbench-rs")]
-            let _p = canbench_rs::bench_scope("serialize_blocktree_flatten");
-            flatten(self, &mut flattened_tree);
-        }
-
-        #[cfg(feature = "canbench-rs")]
-        let _p = canbench_rs::bench_scope("serialize_blocktree_serialize_seq");
-
-        let mut seq = serializer.serialize_seq(Some(flattened_tree.len()))?;
-        for e in flattened_tree {
+        let list = &self.0;
+        let mut seq = serializer.serialize_seq(Some(list.len()))?;
+        for e in list {
             seq.serialize_element(&e)?;
         }
         seq.end()
     }
 }
 
-impl<'de> Deserialize<'de> for BlockTree<Block> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_seq(BlockTreeDeserializer)
+/// Serialize `BlockTree<Block>` by flattening it into a list of `DogecoinBlock`.
+impl Serialize for BlockTree<Block> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut flattened = FlattenedTree(vec![]);
+        flattened.map_from(self, &|block| block.internal_bitcoin_block());
+        flattened.serialize(serializer)
     }
 }
 
-struct BlockTreeDeserializer;
+/// Deserialization helper has to be a trait because different `BlockTree` requires
+/// different visitor type.
+trait TreeVisitor<'de, T>: Sized {
+    // Each instance must implement its own `next` function.
+    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Option<(T, usize)>;
 
-impl<'de> Visitor<'de> for BlockTreeDeserializer {
-    type Value = BlockTree<Block>;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("A blocktree deserializer.")
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
-        fn next<'de, A: SeqAccess<'de>>(seq: &mut A) -> Option<(Block, usize)> {
-            seq.next_element::<(BitcoinBlock, usize)>()
-                .expect("reading next element must succeed")
-                .map(|(b, n)| (Block::new(b), n))
-        }
-
+    // Common routine that helps implementing [Desrialize::visit_seq].
+    fn visit_sequence<A: SeqAccess<'de>>(self, mut seq: A) -> Result<BlockTree<T>, A::Error> {
         // A stack containing a `BlockTree` along with how many children remain to be added to it.
-        let mut stack: Vec<(BlockTree<Block>, usize)> = Vec::new();
+        let mut stack: Vec<(BlockTree<T>, usize)> = Vec::new();
 
         // Read the root and add it to the stack.
-        let (root, children_to_add) = next(&mut seq).unwrap();
+        let (root, children_to_add) = self.next(&mut seq).unwrap();
         stack.push((BlockTree::new(root), children_to_add));
 
         while let Some((tree, children_to_add)) = stack.pop() {
@@ -87,7 +62,7 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
                     None => {
                         // There's no parent to this tree. Deserialization is complete.
                         // Assert that there's no more data to deserialize.
-                        assert_eq!(next(&mut seq), None);
+                        assert!(self.next(&mut seq).is_none());
                         return Ok(tree);
                     }
                 }
@@ -97,11 +72,43 @@ impl<'de> Visitor<'de> for BlockTreeDeserializer {
                 stack.push((tree, children_to_add - 1));
 
                 // Add the child to the stack.
-                let (child, grand_children_to_add) = next(&mut seq).unwrap();
+                let (child, grand_children_to_add) = self.next(&mut seq).unwrap();
                 stack.push((BlockTree::new(child), grand_children_to_add));
             }
         }
 
         unreachable!("expected more while deserializing BlockTree");
+    }
+}
+
+impl<'de> TreeVisitor<'de, Block> for BlockTreeVisitor {
+    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Option<(Block, usize)> {
+        seq.next_element::<(bitcoin::Block, usize)>()
+            .expect("reading next element must succeed")
+            .map(|(block, size)| (Block::new(block), size))
+    }
+}
+
+/// Visitor for `BlockTree<Block>`
+struct BlockTreeVisitor;
+
+impl<'de> Visitor<'de> for BlockTreeVisitor {
+    type Value = BlockTree<Block>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("A blocktree deserializer.")
+    }
+
+    fn visit_seq<A: SeqAccess<'de>>(self, seq: A) -> Result<Self::Value, A::Error> {
+        self.visit_sequence(seq)
+    }
+}
+
+impl<'de> Deserialize<'de> for BlockTree<Block> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(BlockTreeVisitor)
     }
 }
