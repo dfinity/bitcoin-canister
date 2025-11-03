@@ -470,8 +470,7 @@ mod test {
 
     proptest! {
         // BlockHash was changed from Vec<u8> to [u8; 32]. The test below
-        // upgrades, the test below checks their serialization formats (in CBOR)
-        // remain the same.
+        // checks their serialization formats (in CBOR) remain the same.
         #[test]
         fn serialization_of_fixed_array_equals_vec(hash: [u8; 32]) {
             let fixed_hash = BlockHash(hash);
