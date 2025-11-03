@@ -65,7 +65,20 @@ fn init(watchdog_arg: WatchdogArg) {
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade(_watchdog_arg: Option<WatchdogArg>) {}
+fn post_upgrade(_watchdog_arg: Option<WatchdogArg>) {
+    set_timer(
+        Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
+        || {
+            ic_cdk::futures::spawn(async {
+                tick().await;
+                ic_cdk_timers::set_timer_interval(
+                    Duration::from_secs(storage::get_config().interval_between_fetches_sec),
+                    || ic_cdk::futures::spawn(tick()),
+                );
+            })
+        },
+    );
+}
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_block_info_data() {
