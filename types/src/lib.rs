@@ -261,9 +261,20 @@ impl std::fmt::Display for Txid {
 
 // A blob representing a block hash.
 #[derive(
-    CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash, DataSize,
+    CandidType,
+    Clone,
+    Copy,
+    Default,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Hash,
+    DataSize,
 )]
-pub struct BlockHash(Vec<u8>);
+pub struct BlockHash([u8; 32]);
 
 impl Storable for BlockHash {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
@@ -271,7 +282,7 @@ impl Storable for BlockHash {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        self.0
+        self.0.to_vec()
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
@@ -289,7 +300,7 @@ impl BlockHash {
         &self.0
     }
     pub fn to_vec(&self) -> Vec<u8> {
-        self.0.clone()
+        self.0.to_vec()
     }
 }
 
@@ -298,16 +309,18 @@ impl From<Vec<u8>> for BlockHash {
         assert_eq!(
             bytes.len() as u32,
             Self::BOUND.max_size(),
-            "BlockHash must {} bytes",
+            "BlockHash must be {} bytes",
             Self::BOUND.max_size()
         );
-        Self(bytes)
+        let mut arr = [0; 32];
+        arr.copy_from_slice(&bytes[..32]);
+        Self(arr)
     }
 }
 
 impl From<bitcoin::BlockHash> for BlockHash {
     fn from(block_hash: bitcoin::BlockHash) -> Self {
-        Self(block_hash.as_byte_array().to_vec())
+        Self(block_hash.to_byte_array())
     }
 }
 
@@ -316,25 +329,18 @@ impl FromStr for BlockHash {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(
-            bitcoin::BlockHash::from_str(s)
+            *bitcoin::BlockHash::from_str(s)
                 .map_err(|e| e.to_string())?
-                .as_byte_array()
-                .to_vec(),
+                .as_byte_array(),
         ))
     }
 }
 
 impl fmt::Display for BlockHash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut b = self.0.clone();
+        let mut b = self.0;
         b.reverse();
         write!(f, "{}", hex::encode(b))
-    }
-}
-
-impl Default for BlockHash {
-    fn default() -> Self {
-        Self(vec![0; 32])
     }
 }
 
@@ -442,8 +448,8 @@ mod test {
         // remain the same.
         #[test]
         fn serialization_of_ref_cell_equals_once_cell(hash: Option<[u8; 32]>) {
-            let blockhash = hash.map(|s| BlockHash(s.as_slice().to_vec()));
-            let ref_cell = RefCell::new(blockhash.clone());
+            let blockhash = hash.map(BlockHash);
+            let ref_cell = RefCell::new(blockhash);
              let mut ref_bytes = vec![];
             ciborium::ser::into_writer(&ref_cell, &mut ref_bytes).unwrap();
 
@@ -456,6 +462,27 @@ mod test {
 
             // assert the serialized bytes are the same
             assert_eq!(ref_bytes, once_bytes);
+        }
+    }
+
+    #[derive(Serialize)]
+    struct VecHash(Vec<u8>);
+
+    proptest! {
+        // BlockHash was changed from Vec<u8> to [u8; 32]. The test below
+        // checks their serialization formats (in CBOR) remain the same.
+        #[test]
+        fn serialization_of_fixed_array_equals_vec(hash: [u8; 32]) {
+            let fixed_hash = BlockHash(hash);
+             let mut fixed_hash_bytes = vec![];
+            ciborium::ser::into_writer(&fixed_hash, &mut fixed_hash_bytes).unwrap();
+
+            let vec_hash = VecHash(hash.to_vec());
+            let mut vec_hash_bytes = vec![];
+            ciborium::ser::into_writer(&vec_hash, &mut vec_hash_bytes).unwrap();
+
+            // assert the serialized bytes are the same
+            assert_eq!(fixed_hash_bytes, vec_hash_bytes);
         }
     }
 
