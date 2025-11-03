@@ -106,19 +106,19 @@ type canister = variant {
     dogecoin_mainnet_staging;
 };
 
-type init_arg = record {
+type InitArg = record {
     /// The target canister.
     target : canister;
 };
 
-type upgrade_arg = record {};
+type UpgradeArg = record {};
 
-type watchdog_arg = variant {
-    init : init_arg;
-    upgrade : upgrade_arg;
+type WatchdogArg = variant {
+    Init : InitArg;
+    Upgrade : opt UpgradeArg;
 };
 
-service : (opt watchdog_arg) -> {
+service : (WatchdogArg) -> {
     /// Returns the health status of the target canister.
     health_status : () -> (health_status) query;
 
