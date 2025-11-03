@@ -22,7 +22,9 @@ pub struct CandidHttpResponse {
 
 #[derive(CandidType, Deserialize)]
 pub enum WatchdogArg {
+    #[serde(rename = "init")]
     Init(InitArg),
+    #[serde(rename = "upgrade")]
     Upgrade(UpgradeArg),
 }
 
