@@ -250,7 +250,7 @@ impl<Block> BlockTree<Block> {
     pub fn blocks(&self) -> impl Iterator<Item = &Block> {
         Box::new(
             std::iter::once(&self.root)
-                .chain(self.children.iter().map(|child| child.blocks()).flatten()),
+                .chain(self.children.iter().flat_map(|child| child.blocks())),
         ) as Box<dyn Iterator<Item = &Block>>
     }
 }
