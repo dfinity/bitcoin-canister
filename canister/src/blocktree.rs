@@ -152,8 +152,10 @@ impl<Block> BlockTree<Block> {
         &self.children
     }
 
-    pub fn remove_child(&mut self, idx: usize) -> Self {
-        self.children.swap_remove(idx)
+    /// Remove the child at given index and return it.
+    /// This function will panic if the index is out of range.
+    pub fn remove_child(&mut self, index: usize) -> Self {
+        self.children.swap_remove(index)
     }
 
     /// Returns all blocks in the tree with their depths
