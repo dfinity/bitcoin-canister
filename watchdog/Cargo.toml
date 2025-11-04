@@ -26,6 +26,7 @@ serde = { workspace = true, features = ["derive"] }
 serde_bytes = { workspace = true }
 serde_json = { workspace = true }
 strum = { version = "0.27.2", features = ["derive"] }
+ciborium = "0.2.2"
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"

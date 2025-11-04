@@ -2,8 +2,8 @@ use crate::block_apis::BitcoinTestnetExplorerBlockApi;
 use crate::block_apis::{
     BitcoinMainnetExplorerBlockApi, CandidBlockApi, DogecoinMainnetExplorerBlockApi,
 };
-use candid::{CandidType, Encode};
-use candid::{Decode, Principal};
+use candid::CandidType;
+use candid::Principal;
 use ic_stable_structures::storable::Bound;
 use ic_stable_structures::Storable;
 use serde::{Deserialize, Serialize};
@@ -197,18 +197,29 @@ impl Config {
 
 impl Storable for Config {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
-        Cow::Owned(Encode!(self).unwrap())
+        Cow::Owned(encode(self))
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        Encode!(&self).unwrap()
+        encode(&self)
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
+        decode(bytes.as_ref())
     }
 
     const BOUND: Bound = Bound::Unbounded;
+}
+
+fn encode(config: &Config) -> Vec<u8> {
+    let mut buf = vec![];
+    ciborium::ser::into_writer(config, &mut buf).expect("failed to encode state");
+    buf
+}
+
+fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {
+    ciborium::de::from_reader(bytes)
+        .unwrap_or_else(|e| panic!("failed to decode state bytes {}: {e}", hex::encode(bytes)))
 }
 
 #[cfg(test)]
