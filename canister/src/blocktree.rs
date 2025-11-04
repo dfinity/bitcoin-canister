@@ -246,11 +246,10 @@ impl<Block> BlockTree<Block> {
 
     /// Returns all blocks in the tree.
     pub fn blocks(&self) -> impl Iterator<Item = &Block> {
-        let mut blocks: Box<dyn Iterator<Item = &Block>> = Box::new(vec![&self.root].into_iter());
-        for child in self.children.iter() {
-            blocks = Box::new(blocks.chain(child.blocks()));
-        }
-        blocks
+        Box::new(
+            std::iter::once(&self.root)
+                .chain(self.children.iter().map(|child| child.blocks()).flatten()),
+        ) as Box<dyn Iterator<Item = &Block>>
     }
 }
 
@@ -758,6 +757,9 @@ mod test {
         }
         let mut blocks = vec![];
         flatten(&tree, &mut blocks);
+        assert_eq!(blocks, tree.blocks().collect::<Vec<_>>());
+        assert_eq!(blocks.len(), tree.blocks_count());
+
         let chosen_block = blocks[random_index % blocks.len()];
 
         let (chain, tip_children) = tree.get_chain_with_tip(chosen_block.block_hash()).unwrap();
