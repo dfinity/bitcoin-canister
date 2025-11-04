@@ -195,6 +195,12 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config::for_target(Canister::BitcoinMainnet)
+    }
+}
+
 impl Storable for Config {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Owned(encode(self))
