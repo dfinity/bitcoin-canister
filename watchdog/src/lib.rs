@@ -54,7 +54,10 @@ fn init(watchdog_arg: WatchdogArg) {
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade(_watchdog_arg: Option<WatchdogArg>) {
+fn post_upgrade(watchdog_arg: Option<WatchdogArg>) {
+    if let Some(WatchdogArg::Init(_)) = watchdog_arg {
+        panic!("cannot upgrade canister with init args");
+    };
     start_block_info_fetch_loop();
 }
 
