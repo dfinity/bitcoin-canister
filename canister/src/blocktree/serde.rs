@@ -30,7 +30,7 @@ impl<T: Serialize> Serialize for FlattenedTree<T> {
     }
 }
 
-/// Serialize `BlockTree<Block>` by flattening it into a list of `DogecoinBlock`.
+/// Serialize `BlockTree<Block>` by flattening it into a list of `Block`.
 impl Serialize for BlockTree<Block> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut flattened = FlattenedTree(vec![]);
