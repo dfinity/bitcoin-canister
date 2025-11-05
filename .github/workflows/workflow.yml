@@ -677,7 +677,7 @@ jobs:
         watchdog_health_status,
         watchdog_get_config,
         watchdog_metrics,
-        watchdog_upgradability,
+        #        watchdog_upgradability, TODO(mducroux): re-enable once we have a new watchdog canister release
         canister-build-reproducibility,
         bitcoin_canister_metadata,
       ]
@@ -734,9 +734,9 @@ jobs:
       - name: check watchdog_metrics result
         if: ${{ needs.watchdog_metrics.result != 'success' }}
         run: exit 1
-      - name: check watchdog_upgradability result
-        if: ${{ needs.watchdog_upgradability.result != 'success' }}
-        run: exit 1
+      #      - name: check watchdog_upgradability result TODO(mducroux): re-enable once we have a new watchdog canister release
+      #        if: ${{ needs.watchdog_upgradability.result != 'success' }}
+      #        run: exit 1
       - name: check canister-build-reproducibility result
         if: ${{ needs.canister-build-reproducibility.result != 'success' }}
         run: exit 1
