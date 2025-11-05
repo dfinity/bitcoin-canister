@@ -1,5 +1,5 @@
 use crate::block_apis::{BlockApi, CandidBlockApi};
-use crate::config::BitcoinNetwork;
+use crate::config::Network;
 use crate::{health::HeightStatus, types::CandidHttpResponse};
 use ic_btc_interface::Flag;
 use ic_metrics_encoder::MetricsEncoder;
@@ -38,10 +38,10 @@ pub fn get_metrics() -> CandidHttpResponse {
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     let config = crate::storage::get_config();
-    let (bitcoin_mainnet, bitcoin_testnet, dogecoin_mainnet) = match config.bitcoin_network {
-        BitcoinNetwork::BitcoinMainnet => (1.0, 0.0, 0.0),
-        BitcoinNetwork::BitcoinTestnet => (0.0, 1.0, 0.0),
-        BitcoinNetwork::DogecoinMainnet => (0.0, 0.0, 1.0),
+    let (bitcoin_mainnet, bitcoin_testnet, dogecoin_mainnet) = match config.network {
+        Network::BitcoinMainnet => (1.0, 0.0, 0.0),
+        Network::BitcoinTestnet => (0.0, 1.0, 0.0),
+        Network::DogecoinMainnet => (0.0, 0.0, 1.0),
     };
     w.gauge_vec("network", "Network.")?
         .value(&[("network", "bitcoin_mainnet")], bitcoin_mainnet)?
@@ -111,7 +111,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     let mut available_explorers_count: u64 = 0;
-    for explorer in BlockApi::network_explorers(config.bitcoin_network) {
+    for explorer in BlockApi::network_explorers(config.network) {
         let candid_explorer: CandidBlockApi = explorer.clone().into();
         let height = available_explorers
             .get(&candid_explorer)

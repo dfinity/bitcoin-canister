@@ -1,4 +1,4 @@
-use crate::config::BitcoinNetwork;
+use crate::config::Network;
 use crate::{endpoints::*, print};
 use candid::CandidType;
 use ic_cdk::management_canister::HttpRequestResult;
@@ -12,29 +12,29 @@ use strum::{EnumIter, IntoEnumIterator};
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum CandidBlockApi {
-    #[serde(rename = "api_bitaps_com_mainnet")]
-    ApiBitapsComMainnet,
+    #[serde(rename = "bitcoin_api_bitaps_com_mainnet")]
+    BitcoinApiBitapsComMainnet,
 
-    #[serde(rename = "api_blockchair_com_mainnet")]
-    ApiBlockchairComMainnet,
+    #[serde(rename = "bitcoin_api_blockchair_com_mainnet")]
+    BitcoinApiBlockchairComMainnet,
 
-    #[serde(rename = "api_blockcypher_com_mainnet")]
-    ApiBlockcypherComMainnet,
+    #[serde(rename = "bitcoin_api_blockcypher_com_mainnet")]
+    BitcoinApiBlockcypherComMainnet,
 
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
-    #[serde(rename = "bitcoinexplorer_org_mainnet")]
-    BitcoinExplorerOrgMainnet,
+    #[serde(rename = "bitcoin_bitcoinexplorer_org_mainnet")]
+    BitcoinBitcoinExplorerOrgMainnet,
 
-    #[serde(rename = "blockchain_info_mainnet")]
-    BlockchainInfoMainnet,
+    #[serde(rename = "bitcoin_blockchain_info_mainnet")]
+    BitcoinBlockchainInfoMainnet,
 
-    #[serde(rename = "blockstream_info_mainnet")]
-    BlockstreamInfoMainnet,
+    #[serde(rename = "bitcoin_blockstream_info_mainnet")]
+    BitcoinBlockstreamInfoMainnet,
 
-    #[serde(rename = "chain_api_btc_com_mainnet")]
-    ChainApiBtcComMainnet,
+    #[serde(rename = "bitcoin_chain_api_btc_com_mainnet")]
+    BitcoinChainApiBtcComMainnet,
 
     #[serde(rename = "dogecoin_api_blockchair_com_mainnet")]
     DogecoinApiBlockchairComMainnet,
@@ -48,11 +48,11 @@ pub enum CandidBlockApi {
     #[serde(rename = "dogecoin_tokenview_mainnet")]
     DogecoinTokenViewMainnet,
 
-    #[serde(rename = "mempool_mainnet")]
-    MempoolMainnet,
+    #[serde(rename = "bitcoin_mempool_mainnet")]
+    BitcoinMempoolMainnet,
 
-    #[serde(rename = "mempool_testnet")]
-    MempoolTestnet,
+    #[serde(rename = "bitcoin_mempool_testnet")]
+    BitcoinMempoolTestnet,
 }
 
 impl std::fmt::Display for CandidBlockApi {
@@ -82,30 +82,34 @@ impl From<BlockApi> for CandidBlockApi {
                 BitcoinProviderBlockApi::BitcoinCanister => CandidBlockApi::BitcoinCanister,
                 BitcoinProviderBlockApi::Mainnet(explorer) => match explorer {
                     BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
-                        CandidBlockApi::ApiBitapsComMainnet
+                        CandidBlockApi::BitcoinApiBitapsComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                        CandidBlockApi::ApiBlockchairComMainnet
+                        CandidBlockApi::BitcoinApiBlockchairComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                        CandidBlockApi::ApiBlockcypherComMainnet
+                        CandidBlockApi::BitcoinApiBlockcypherComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg => {
-                        CandidBlockApi::BitcoinExplorerOrgMainnet
+                        CandidBlockApi::BitcoinBitcoinExplorerOrgMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
-                        CandidBlockApi::BlockchainInfoMainnet
+                        CandidBlockApi::BitcoinBlockchainInfoMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
-                        CandidBlockApi::BlockstreamInfoMainnet
+                        CandidBlockApi::BitcoinBlockstreamInfoMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::ChainApiBtcCom => {
-                        CandidBlockApi::ChainApiBtcComMainnet
+                        CandidBlockApi::BitcoinChainApiBtcComMainnet
                     }
-                    BitcoinMainnetExplorerBlockApi::Mempool => CandidBlockApi::MempoolMainnet,
+                    BitcoinMainnetExplorerBlockApi::Mempool => {
+                        CandidBlockApi::BitcoinMempoolMainnet
+                    }
                 },
                 BitcoinProviderBlockApi::Testnet(explorer) => match explorer {
-                    BitcoinTestnetExplorerBlockApi::Mempool => CandidBlockApi::MempoolTestnet,
+                    BitcoinTestnetExplorerBlockApi::Mempool => {
+                        CandidBlockApi::BitcoinMempoolTestnet
+                    }
                 },
             },
             BlockApi::DogecoinProvider(provider) => match provider {
@@ -298,29 +302,29 @@ impl BlockApi {
     }
 
     /// Returns the canister API for the given network.
-    pub fn network_canister(network: BitcoinNetwork) -> Self {
+    pub fn network_canister(network: Network) -> Self {
         match network {
-            BitcoinNetwork::BitcoinMainnet | BitcoinNetwork::BitcoinTestnet => {
+            Network::BitcoinMainnet | Network::BitcoinTestnet => {
                 Self::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister)
             }
-            BitcoinNetwork::DogecoinMainnet => {
+            Network::DogecoinMainnet => {
                 Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
             }
         }
     }
 
     /// Returns the list of all API providers.
-    pub fn network_providers(network: BitcoinNetwork) -> Vec<Self> {
+    pub fn network_providers(network: Network) -> Vec<Self> {
         match network {
-            BitcoinNetwork::BitcoinMainnet => BitcoinProviderBlockApi::providers_mainnet()
+            Network::BitcoinMainnet => BitcoinProviderBlockApi::providers_mainnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            BitcoinNetwork::BitcoinTestnet => BitcoinProviderBlockApi::providers_testnet()
+            Network::BitcoinTestnet => BitcoinProviderBlockApi::providers_testnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            BitcoinNetwork::DogecoinMainnet => DogecoinProviderBlockApi::providers_mainnet()
+            Network::DogecoinMainnet => DogecoinProviderBlockApi::providers_mainnet()
                 .iter()
                 .map(|&x| Self::DogecoinProvider(x))
                 .collect(),
@@ -328,17 +332,17 @@ impl BlockApi {
     }
 
     /// Returns the list of explorers only.
-    pub fn network_explorers(network: BitcoinNetwork) -> Vec<Self> {
+    pub fn network_explorers(network: Network) -> Vec<Self> {
         match network {
-            BitcoinNetwork::BitcoinMainnet => BitcoinProviderBlockApi::explorers_mainnet()
+            Network::BitcoinMainnet => BitcoinProviderBlockApi::explorers_mainnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            BitcoinNetwork::BitcoinTestnet => BitcoinProviderBlockApi::explorers_testnet()
+            Network::BitcoinTestnet => BitcoinProviderBlockApi::explorers_testnet()
                 .iter()
                 .map(|&x| Self::BitcoinProvider(x))
                 .collect(),
-            BitcoinNetwork::DogecoinMainnet => DogecoinProviderBlockApi::explorers_mainnet()
+            Network::DogecoinMainnet => DogecoinProviderBlockApi::explorers_mainnet()
                 .iter()
                 .map(|&x| Self::DogecoinProvider(x))
                 .collect(),
@@ -509,36 +513,44 @@ mod test {
     fn test_names() {
         let expected: std::collections::HashMap<CandidBlockApi, &str> = [
             (
+                BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
+                "bitcoin_api_bitaps_com_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                "bitcoin_api_blockchair_com_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                "bitcoin_api_blockcypher_com_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
+                "bitcoin_bitcoinexplorer_org_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
+                "bitcoin_blockchain_info_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
+                "bitcoin_blockstream_info_mainnet",
+            ),
+            (
                 BitcoinProviderBlockApi::BitcoinCanister.into(),
                 "bitcoin_canister",
             ),
             (
-                BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                "api_bitaps_com_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                "api_blockchair_com_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                "api_blockcypher_com_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                "bitcoinexplorer_org_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                "blockchain_info_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                "blockstream_info_mainnet",
-            ),
-            (
                 BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                "chain_api_btc_com_mainnet",
+                "bitcoin_chain_api_btc_com_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::Mempool.into(),
+                "bitcoin_mempool_mainnet",
+            ),
+            (
+                BitcoinTestnetExplorerBlockApi::Mempool.into(),
+                "bitcoin_mempool_testnet",
             ),
             (
                 DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
@@ -555,14 +567,6 @@ mod test {
             (
                 DogecoinMainnetExplorerBlockApi::TokenView.into(),
                 "dogecoin_tokenview_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::Mempool.into(),
-                "mempool_mainnet",
-            ),
-            (
-                BitcoinTestnetExplorerBlockApi::Mempool.into(),
-                "mempool_testnet",
             ),
         ]
         .iter()
