@@ -4425,6 +4425,7 @@ dependencies = [
  "ic-http",
  "ic-metrics-encoder",
  "ic-stable-structures",
+ "proptest 0.9.6",
  "regex",
  "serde",
  "serde_bytes",

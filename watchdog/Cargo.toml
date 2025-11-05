@@ -31,4 +31,5 @@ ciborium = "0.2.2"
 [dev-dependencies]
 assert-json-diff = "2.0.2"
 candid_parser = { workspace = true }
+proptest = { workspace = true }
 tokio = { workspace = true }

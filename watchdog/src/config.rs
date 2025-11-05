@@ -231,6 +231,7 @@ fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {
 #[cfg(test)]
 mod test {
     use super::*;
+    use proptest::prelude::*;
 
     /// Mainnet bitcoin canister endpoint.
     const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
@@ -323,5 +324,20 @@ mod test {
             config.get_canister_endpoint(),
             MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT
         );
+    }
+
+    proptest! {
+        #[test]
+        fn test_config_encode_decode(canister in prop_oneof![
+            Just(Canister::BitcoinMainnet),
+            Just(Canister::BitcoinTestnet),
+            Just(Canister::DogecoinMainnet),
+            Just(Canister::DogecoinMainnetStaging),
+        ]) {
+            let config = Config::for_target(canister);
+            let encoded = encode(&config);
+            let decoded: Config = decode(&encoded);
+            assert_eq!(config, decoded);
+        }
     }
 }
