@@ -12,7 +12,6 @@ set -Eexuo pipefail
 
 # Constants.
 REFERENCE_CANISTER_NAME="watchdog-upgradability-test"
-ARGUMENT="(variant { bitcoin_mainnet })"
 
 # Source the utility functions.
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -81,7 +80,7 @@ dfx start --background --clean
 
 # Update candid to accept old init argument type for deploying the old release.
 # TODO(mducroux): remove this line in the next release.
-sed -i.bak 's/service : (canister) -> {/service : (bitcoin_network) -> {/' ../candid.did
+sed -i.bak 's/service : (watchdog_arg) -> {/service : (bitcoin_network) -> {/' ../candid.did
 
 # Deploy the latest release.
 # TODO (mducroux): The new watchdog canister currently expects 'bitcoin_mainnet' as its argument, whereas the previous
@@ -94,7 +93,7 @@ dfx canister stop ${REFERENCE_CANISTER_NAME}
 # TODO(mducroux): remove this line in the next release.
 mv ../candid.did.bak ../candid.did
 
-# Update the local dfx configuration to point to the 'watchdog' canister 
+# Update the local dfx configuration to point to the 'watchdog' canister
 # in the current branch, rather than the reference canister.
 sed -i'' -e 's/'${REFERENCE_CANISTER_NAME}'/watchdog/' .dfx/local/canister_ids.json
 
@@ -105,13 +104,14 @@ if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
 fi
 
 # Deploy upgraded canister.
-dfx deploy --no-wallet watchdog --argument "${ARGUMENT}"
+dfx deploy --no-wallet watchdog --argument "(variant {upgrade})"
 
 dfx canister start watchdog
 dfx canister stop watchdog
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged watchdog --argument "${ARGUMENT}"
+# '4449444c0000' decodes to '()'
+dfx deploy --upgrade-unchanged watchdog --argument-type raw --argument '4449444c0000'
 dfx canister start watchdog
 
 echo "SUCCESS"

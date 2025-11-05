@@ -4,7 +4,10 @@ use crate::block_apis::{
 };
 use candid::CandidType;
 use candid::Principal;
+use ic_stable_structures::storable::Bound;
+use ic_stable_structures::Storable;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 /// Mainnet bitcoin canister principal.
 const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
@@ -192,9 +195,43 @@ impl Config {
     }
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Config::for_target(Canister::BitcoinMainnet)
+    }
+}
+
+impl Storable for Config {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        Cow::Owned(encode(self))
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        encode(&self)
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        decode(bytes.as_ref())
+    }
+
+    const BOUND: Bound = Bound::Unbounded;
+}
+
+fn encode(config: &Config) -> Vec<u8> {
+    let mut buf = vec![];
+    ciborium::ser::into_writer(config, &mut buf).expect("failed to encode state");
+    buf
+}
+
+fn decode<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {
+    ciborium::de::from_reader(bytes)
+        .unwrap_or_else(|e| panic!("failed to decode state bytes {}: {e}", hex::encode(bytes)))
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use proptest::prelude::*;
 
     /// Mainnet bitcoin canister endpoint.
     const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
@@ -287,5 +324,20 @@ mod test {
             config.get_canister_endpoint(),
             MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT
         );
+    }
+
+    proptest! {
+        #[test]
+        fn test_config_encode_decode(canister in prop_oneof![
+            Just(Canister::BitcoinMainnet),
+            Just(Canister::BitcoinTestnet),
+            Just(Canister::DogecoinMainnet),
+            Just(Canister::DogecoinMainnetStaging),
+        ]) {
+            let config = Config::for_target(canister);
+            let encoded = encode(&config);
+            let decoded: Config = decode(&encoded);
+            assert_eq!(config, decoded);
+        }
     }
 }
