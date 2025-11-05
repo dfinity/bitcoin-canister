@@ -53,7 +53,7 @@ trait TreeVisitor<'de, T>: Sized {
     // Each instance must implement its own `next` function.
     fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Option<(T, usize)>;
 
-    // Common routine that helps implementing [Desrialize::visit_seq].
+    // Common routine that helps implementing [Deserialize::visit_seq].
     fn visit_sequence<A: SeqAccess<'de>>(self, mut seq: A) -> Result<BlockTree<T>, A::Error> {
         // A stack containing a `BlockTree` along with how many children remain to be added to it.
         let mut stack: Vec<(BlockTree<T>, usize)> = Vec::new();
@@ -89,6 +89,9 @@ trait TreeVisitor<'de, T>: Sized {
     }
 }
 
+/// Visitor for `BlockTree<Block>`
+struct BlockTreeVisitor;
+
 impl<'de> TreeVisitor<'de, Block> for BlockTreeVisitor {
     fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Option<(Block, usize)> {
         seq.next_element::<(bitcoin::Block, usize)>()
@@ -96,9 +99,6 @@ impl<'de> TreeVisitor<'de, Block> for BlockTreeVisitor {
             .map(|(block, size)| (Block::new(block), size))
     }
 }
-
-/// Visitor for `BlockTree<Block>`
-struct BlockTreeVisitor;
 
 impl<'de> Visitor<'de> for BlockTreeVisitor {
     type Value = BlockTree<Block>;
