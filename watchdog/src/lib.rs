@@ -259,6 +259,22 @@ mod test {
     }
 
     #[test]
+    fn test_post_upgrade_with_no_args() {
+        let canister = Canister::DogecoinMainnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+
+        let config_before = get_config();
+
+        post_upgrade(None);
+
+        let config_after = get_config();
+
+        assert_eq!(config_before, config_after);
+        assert_eq!(config_after, Config::for_target(Canister::DogecoinMainnet));
+    }
+
+    #[test]
     fn test_candid_interface_compatibility() {
         use candid_parser::utils::{service_compatible, CandidSource};
         use std::path::PathBuf;
