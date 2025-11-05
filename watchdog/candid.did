@@ -123,6 +123,7 @@ service : (watchdog_arg) -> {
     health_status : () -> (health_status) query;
 
     /// Returns the configuration of the Watchdog canister.
+    /// This is a debug endpoint and may be unstable.
     get_config : () -> (config) query;
 
     /// Returns the API access target for the target canister.
