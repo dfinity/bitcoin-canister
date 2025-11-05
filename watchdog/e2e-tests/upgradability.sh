@@ -110,7 +110,8 @@ dfx canister start watchdog
 dfx canister stop watchdog
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged watchdog --argument "(variant {upgrade})"
+# '4449444c0000' decodes to '()'
+dfx deploy --upgrade-unchanged watchdog --argument-type raw --argument '4449444c0000'
 dfx canister start watchdog
 
 echo "SUCCESS"
