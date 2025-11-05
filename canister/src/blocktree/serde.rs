@@ -34,8 +34,16 @@ impl<T: Serialize> Serialize for FlattenedTree<T> {
 impl Serialize for BlockTree<Block> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut flattened = FlattenedTree(vec![]);
-        flattened.map_from(self, &|block| block.internal_bitcoin_block());
-        flattened.serialize(serializer)
+        {
+            #[cfg(feature = "canbench-rs")]
+            let _p = canbench_rs::bench_scope("serialize_blocktree_flatten");
+            flattened.map_from(self, &|block| block.internal_bitcoin_block());
+        }
+        {
+            #[cfg(feature = "canbench-rs")]
+            let _p = canbench_rs::bench_scope("serialize_blocktree_serialize_seq");
+            flattened.serialize(serializer)
+        }
     }
 }
 
