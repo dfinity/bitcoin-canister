@@ -16,7 +16,7 @@ type height_status = variant {
 };
 
 /// Block API providers.
-type block_api = variant {
+type bitcoin_block_api = variant {
     api_bitaps_com_mainnet;
     api_blockchair_com_mainnet;
     api_blockcypher_com_mainnet;
@@ -36,7 +36,7 @@ type block_api = variant {
 /// Information about a block from a specific API provider.
 type block_info = record {
     /// Block API provider.
-    provider : block_api;
+    provider : bitcoin_block_api;
 
     /// Block height.
     height : opt nat64;
@@ -91,7 +91,7 @@ type config = record {
     interval_between_fetches_sec : nat64;
 
     /// Explorers to use for fetching block data.
-    explorers : vec block_api;
+    explorers : vec bitcoin_block_api;
 };
 
 type flag = variant {
