@@ -17,20 +17,20 @@ type height_status = variant {
 
 /// Block API providers.
 type block_api = variant {
-    bitcoin_api_bitaps_com_mainnet;
-    bitcoin_api_blockchair_com_mainnet;
-    bitcoin_api_blockcypher_com_mainnet;
-    bitcoin_bitcoinexplorer_org_mainnet;
-    bitcoin_blockchain_info_mainnet;
-    bitcoin_blockstream_info_mainnet;
+    api_bitaps_com_mainnet;
+    api_blockchair_com_mainnet;
+    api_blockcypher_com_mainnet;
     bitcoin_canister;
-    bitcoin_chain_api_btc_com_mainnet;
-    bitcoin_mempool_mainnet;
-    bitcoin_mempool_testnet;
+    bitcoinexplorer_org_mainnet;
+    blockchain_info_mainnet;
+    blockstream_info_mainnet;
+    chain_api_btc_com_mainnet;
     dogecoin_api_blockchair_com_mainnet;
     dogecoin_api_blockcypher_com_mainnet;
     dogecoin_canister;
     dogecoin_tokenview_mainnet;
+    mempool_mainnet;
+    mempool_testnet;
 };
 
 /// Information about a block from a specific API provider.

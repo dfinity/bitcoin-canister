@@ -12,29 +12,35 @@ use strum::{EnumIter, IntoEnumIterator};
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum CandidBlockApi {
-    #[serde(rename = "bitcoin_api_bitaps_com_mainnet")]
+    #[serde(rename = "api_bitaps_com_mainnet")]
     BitcoinApiBitapsComMainnet,
 
-    #[serde(rename = "bitcoin_api_blockchair_com_mainnet")]
+    #[serde(rename = "api_blockchair_com_mainnet")]
     BitcoinApiBlockchairComMainnet,
 
-    #[serde(rename = "bitcoin_api_blockcypher_com_mainnet")]
+    #[serde(rename = "api_blockcypher_com_mainnet")]
     BitcoinApiBlockcypherComMainnet,
 
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
-    #[serde(rename = "bitcoin_bitcoinexplorer_org_mainnet")]
+    #[serde(rename = "bitcoinexplorer_org_mainnet")]
     BitcoinBitcoinExplorerOrgMainnet,
 
-    #[serde(rename = "bitcoin_blockchain_info_mainnet")]
+    #[serde(rename = "blockchain_info_mainnet")]
     BitcoinBlockchainInfoMainnet,
 
-    #[serde(rename = "bitcoin_blockstream_info_mainnet")]
+    #[serde(rename = "blockstream_info_mainnet")]
     BitcoinBlockstreamInfoMainnet,
 
-    #[serde(rename = "bitcoin_chain_api_btc_com_mainnet")]
+    #[serde(rename = "chain_api_btc_com_mainnet")]
     BitcoinChainApiBtcComMainnet,
+
+    #[serde(rename = "mempool_mainnet")]
+    BitcoinMempoolMainnet,
+
+    #[serde(rename = "mempool_testnet")]
+    BitcoinMempoolTestnet,
 
     #[serde(rename = "dogecoin_api_blockchair_com_mainnet")]
     DogecoinApiBlockchairComMainnet,
@@ -47,12 +53,6 @@ pub enum CandidBlockApi {
 
     #[serde(rename = "dogecoin_tokenview_mainnet")]
     DogecoinTokenViewMainnet,
-
-    #[serde(rename = "bitcoin_mempool_mainnet")]
-    BitcoinMempoolMainnet,
-
-    #[serde(rename = "bitcoin_mempool_testnet")]
-    BitcoinMempoolTestnet,
 }
 
 impl std::fmt::Display for CandidBlockApi {
@@ -514,27 +514,27 @@ mod test {
         let expected: std::collections::HashMap<CandidBlockApi, &str> = [
             (
                 BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                "bitcoin_api_bitaps_com_mainnet",
+                "api_bitaps_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                "bitcoin_api_blockchair_com_mainnet",
+                "api_blockchair_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                "bitcoin_api_blockcypher_com_mainnet",
+                "api_blockcypher_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                "bitcoin_bitcoinexplorer_org_mainnet",
+                "bitcoinexplorer_org_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                "bitcoin_blockchain_info_mainnet",
+                "blockchain_info_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                "bitcoin_blockstream_info_mainnet",
+                "blockstream_info_mainnet",
             ),
             (
                 BitcoinProviderBlockApi::BitcoinCanister.into(),
@@ -542,15 +542,15 @@ mod test {
             ),
             (
                 BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                "bitcoin_chain_api_btc_com_mainnet",
+                "chain_api_btc_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::Mempool.into(),
-                "bitcoin_mempool_mainnet",
+                "mempool_mainnet",
             ),
             (
                 BitcoinTestnetExplorerBlockApi::Mempool.into(),
-                "bitcoin_mempool_testnet",
+                "mempool_testnet",
             ),
             (
                 DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
