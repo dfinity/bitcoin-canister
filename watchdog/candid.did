@@ -61,16 +61,16 @@ type health_status = record {
 };
 
 /// Network.
-type bitcoin_network = variant {
-    mainnet;
-    testnet;
+type network = variant {
+    bitcoin_mainnet;
+    bitcoin_testnet;
     dogecoin_mainnet;
 };
 
 /// Watchdog canister configuration.
 type config = record {
     /// The network to use.
-    bitcoin_network : bitcoin_network;
+    network : network;
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold : nat64;
@@ -82,7 +82,7 @@ type config = record {
     min_explorers : nat64;
 
     /// Canister principal.
-    bitcoin_canister_principal : principal;
+    canister_principal : principal;
 
     /// The number of seconds to wait before the first data fetch.
     delay_before_first_fetch_sec : nat64;
@@ -123,6 +123,7 @@ service : (watchdog_arg) -> {
     health_status : () -> (health_status) query;
 
     /// Returns the configuration of the Watchdog canister.
+    /// This is a debug endpoint and may be unstable.
     get_config : () -> (config) query;
 
     /// Returns the API access target for the target canister.

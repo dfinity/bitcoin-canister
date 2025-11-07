@@ -47,10 +47,10 @@ pub enum Canister {
 }
 
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BitcoinNetwork {
-    #[serde(rename = "mainnet")]
+pub enum Network {
+    #[serde(rename = "bitcoin_mainnet")]
     BitcoinMainnet,
-    #[serde(rename = "testnet")]
+    #[serde(rename = "bitcoin_testnet")]
     BitcoinTestnet,
     #[serde(rename = "dogecoin_mainnet")]
     DogecoinMainnet,
@@ -67,7 +67,7 @@ enum SubnetType {
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
     /// The network to use.
-    pub bitcoin_network: BitcoinNetwork,
+    pub network: Network,
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold: u64,
@@ -79,7 +79,7 @@ pub struct Config {
     pub min_explorers: u64,
 
     /// Monitored canister principal.
-    pub bitcoin_canister_principal: Principal,
+    pub canister_principal: Principal,
 
     /// The number of seconds to wait before the first data fetch.
     pub delay_before_first_fetch_sec: u64,
@@ -99,14 +99,12 @@ impl Config {
     pub fn for_target(canister: Canister) -> Self {
         match canister {
             Canister::BitcoinMainnet => Self {
-                bitcoin_network: BitcoinNetwork::BitcoinMainnet,
+                network: Network::BitcoinMainnet,
                 blocks_behind_threshold: 2,
                 blocks_ahead_threshold: 2,
                 min_explorers: 3,
-                bitcoin_canister_principal: Principal::from_text(
-                    MAINNET_BITCOIN_CANISTER_PRINCIPAL,
-                )
-                .unwrap(),
+                canister_principal: Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL)
+                    .unwrap(),
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![
@@ -122,28 +120,24 @@ impl Config {
                 subnet_type: SubnetType::System,
             },
             Canister::BitcoinTestnet => Self {
-                bitcoin_network: BitcoinNetwork::BitcoinTestnet,
+                network: Network::BitcoinTestnet,
                 blocks_behind_threshold: 1000,
                 blocks_ahead_threshold: 1000,
                 min_explorers: 1,
-                bitcoin_canister_principal: Principal::from_text(
-                    TESTNET_BITCOIN_CANISTER_PRINCIPAL,
-                )
-                .unwrap(),
+                canister_principal: Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL)
+                    .unwrap(),
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.into()],
                 subnet_type: SubnetType::System,
             },
             Canister::DogecoinMainnet => Self {
-                bitcoin_network: BitcoinNetwork::DogecoinMainnet,
+                network: Network::DogecoinMainnet,
                 blocks_behind_threshold: 2,
                 blocks_ahead_threshold: 2,
                 min_explorers: 2,
-                bitcoin_canister_principal: Principal::from_text(
-                    MAINNET_DOGECOIN_CANISTER_PRINCIPAL,
-                )
-                .unwrap(),
+                canister_principal: Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL)
+                    .unwrap(),
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![
@@ -154,11 +148,11 @@ impl Config {
                 subnet_type: SubnetType::System,
             },
             Canister::DogecoinMainnetStaging => Self {
-                bitcoin_network: BitcoinNetwork::DogecoinMainnet,
+                network: Network::DogecoinMainnet,
                 blocks_behind_threshold: 2,
                 blocks_ahead_threshold: 2,
                 min_explorers: 2,
-                bitcoin_canister_principal: Principal::from_text(
+                canister_principal: Principal::from_text(
                     MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL,
                 )
                 .unwrap(),
@@ -186,7 +180,7 @@ impl Config {
 
     /// Returns the canister metrics endpoint.
     pub fn get_canister_endpoint(&self) -> String {
-        let principal = self.bitcoin_canister_principal.to_text();
+        let principal = self.canister_principal.to_text();
         let suffix = match self.subnet_type {
             SubnetType::System => "raw.ic0.app",
             SubnetType::Application => "raw.icp0.io",
@@ -273,9 +267,9 @@ mod test {
     #[test]
     fn test_config_mainnet() {
         let config = Config::for_target(Canister::BitcoinMainnet);
-        assert_eq!(config.bitcoin_network, BitcoinNetwork::BitcoinMainnet);
+        assert_eq!(config.network, Network::BitcoinMainnet);
         assert_eq!(
-            config.bitcoin_canister_principal,
+            config.canister_principal,
             Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
@@ -287,9 +281,9 @@ mod test {
     #[test]
     fn test_config_testnet() {
         let config = Config::for_target(Canister::BitcoinTestnet);
-        assert_eq!(config.bitcoin_network, BitcoinNetwork::BitcoinTestnet);
+        assert_eq!(config.network, Network::BitcoinTestnet);
         assert_eq!(
-            config.bitcoin_canister_principal,
+            config.canister_principal,
             Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
@@ -301,9 +295,9 @@ mod test {
     #[test]
     fn test_config_dogecoin_mainnet() {
         let config = Config::for_target(Canister::DogecoinMainnet);
-        assert_eq!(config.bitcoin_network, BitcoinNetwork::DogecoinMainnet);
+        assert_eq!(config.network, Network::DogecoinMainnet);
         assert_eq!(
-            config.bitcoin_canister_principal,
+            config.canister_principal,
             Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
@@ -315,9 +309,9 @@ mod test {
     #[test]
     fn test_config_dogecoin_mainnet_staging() {
         let config = Config::for_target(Canister::DogecoinMainnetStaging);
-        assert_eq!(config.bitcoin_network, BitcoinNetwork::DogecoinMainnet);
+        assert_eq!(config.network, Network::DogecoinMainnet);
         assert_eq!(
-            config.bitcoin_canister_principal,
+            config.canister_principal,
             Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
         );
         assert_eq!(
