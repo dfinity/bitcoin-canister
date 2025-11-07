@@ -2,6 +2,9 @@
   "bitcoin": {
     "ic": "g4xu7-jiaaa-aaaan-aaaaq-cai"
   },
+  "bitcoin_staging": {
+    "ic": "ljyeq-zaaaa-aaaad-actaa-cai"
+  },
   "watchdog": {
     "ic": "gjqfs-iaaaa-aaaan-aaada-cai"
   }
