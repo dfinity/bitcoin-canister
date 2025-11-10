@@ -58,7 +58,7 @@ pub enum Network {
 
 /// Type of subnet the canister is deployed on.
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-enum SubnetType {
+pub enum SubnetType {
     System,
     Application,
 }
@@ -91,7 +91,7 @@ pub struct Config {
     pub explorers: Vec<CandidBlockApi>,
 
     /// Type of subnet the target canister is deployed on.
-    subnet_type: SubnetType,
+    pub subnet_type: SubnetType,
 }
 
 impl Config {

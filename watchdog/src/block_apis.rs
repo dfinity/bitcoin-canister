@@ -1,7 +1,8 @@
-use crate::config::Network;
+use crate::config::{Network, SubnetType};
+use crate::storage::get_config;
 use crate::{endpoints::*, print};
 use candid::CandidType;
-use ic_cdk::management_canister::HttpRequestResult;
+use ic_cdk::management_canister::{cost_http_request, HttpRequestResult};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -419,9 +420,15 @@ impl DogecoinProviderBlockApi {
 
 /// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
 async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Value {
-    // Send zero cycles with the request to avoid the canister
-    // to run out of cycles when deployed on a system subnet.
-    let cycles = 0;
+    let watchdog_config = get_config();
+
+    let cycles = match watchdog_config.subnet_type {
+        // Send zero cycles with the request to avoid the canister
+        // to run out of cycles when deployed on a system subnet.
+        SubnetType::System => 0,
+        SubnetType::Application => cost_http_request(&config.request()),
+    };
+
     let result = ic_http::http_request(config.request(), cycles).await;
 
     match result {
