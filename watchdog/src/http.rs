@@ -42,6 +42,7 @@ impl HttpRequestConfig {
     }
 
     /// Returns the HTTP request arguments.
+    #[cfg(test)]
     pub fn request(&self) -> HttpRequestArgs {
         self.request.clone()
     }
