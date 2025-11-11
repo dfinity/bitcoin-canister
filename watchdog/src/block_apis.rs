@@ -1,8 +1,6 @@
-use crate::config::{Network, SubnetType};
-use crate::storage::get_config;
-use crate::{endpoints::*, print};
+use crate::config::Network;
+use crate::endpoints::*;
 use candid::CandidType;
-use ic_cdk::management_canister::{cost_http_request, HttpRequestResult};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeSet;
@@ -226,28 +224,38 @@ impl BlockApi {
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister) => {
-                http_request(endpoint_bitcoin_canister()).await
+                endpoint_bitcoin_canister().send_request_json().await
             }
             Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister) => {
-                http_request(endpoint_dogecoin_canister()).await
+                endpoint_dogecoin_canister().send_request_json().await
             }
             Self::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(api)) => match api {
                 BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
-                    http_request(endpoint_api_bitaps_com_block_mainnet()).await
+                    endpoint_api_bitaps_com_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                    http_request(endpoint_api_blockchair_com_block_mainnet()).await
+                    endpoint_api_blockchair_com_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                    http_request(endpoint_api_blockcypher_com_block_mainnet()).await
+                    endpoint_api_blockcypher_com_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg => {
-                    http_request(endpoint_bitcoinexplorer_org_block_mainnet()).await
+                    endpoint_bitcoinexplorer_org_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
+                    let height_config = endpoint_blockchain_info_height_mainnet();
+                    let hash_config = endpoint_blockchain_info_hash_mainnet();
                     let futures = vec![
-                        http_request(endpoint_blockchain_info_height_mainnet()),
-                        http_request(endpoint_blockchain_info_hash_mainnet()),
+                        height_config.send_request_json(),
+                        hash_config.send_request_json(),
                     ];
                     let results = futures::future::join_all(futures).await;
                     match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
@@ -261,9 +269,11 @@ impl BlockApi {
                     }
                 }
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
+                    let height_config = endpoint_blockstream_info_height_mainnet();
+                    let hash_config = endpoint_blockstream_info_hash_mainnet();
                     let futures = vec![
-                        http_request(endpoint_blockstream_info_height_mainnet()),
-                        http_request(endpoint_blockstream_info_hash_mainnet()),
+                        height_config.send_request_json(),
+                        hash_config.send_request_json(),
                     ];
                     let results = futures::future::join_all(futures).await;
                     match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
@@ -277,26 +287,34 @@ impl BlockApi {
                     }
                 }
                 BitcoinMainnetExplorerBlockApi::ChainApiBtcCom => {
-                    http_request(endpoint_chain_api_btc_com_block_mainnet()).await
+                    endpoint_chain_api_btc_com_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::Mempool => {
-                    http_request(endpoint_mempool_height_mainnet()).await
+                    endpoint_mempool_height_mainnet().send_request_json().await
                 }
             },
             Self::BitcoinProvider(BitcoinProviderBlockApi::Testnet(api)) => match api {
                 BitcoinTestnetExplorerBlockApi::Mempool => {
-                    http_request(endpoint_mempool_height_testnet()).await
+                    endpoint_mempool_height_testnet().send_request_json().await
                 }
             },
             Self::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(api)) => match api {
                 DogecoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                    http_request(endpoint_dogecoin_api_blockchair_com_block_mainnet()).await
+                    endpoint_dogecoin_api_blockchair_com_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                    http_request(endpoint_dogecoin_api_blockcypher_com_block_mainnet()).await
+                    endpoint_dogecoin_api_blockcypher_com_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 DogecoinMainnetExplorerBlockApi::TokenView => {
-                    http_request(endpoint_dogecoin_tokenview_height_mainnet()).await
+                    endpoint_dogecoin_tokenview_height_mainnet()
+                        .send_request_json()
+                        .await
                 }
             },
         }
@@ -415,45 +433,6 @@ impl DogecoinProviderBlockApi {
         explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).into()));
 
         explorers
-    }
-}
-
-/// Makes an HTTP request to the given endpoint and returns the response as a JSON value.
-async fn http_request(config: crate::http::HttpRequestConfig) -> serde_json::Value {
-    let watchdog_config = get_config();
-
-    let cycles = match watchdog_config.subnet_type {
-        // Send zero cycles with the request to avoid the canister
-        // to run out of cycles when deployed on a system subnet.
-        SubnetType::System => 0,
-        SubnetType::Application => cost_http_request(&config.request()),
-    };
-
-    let result = ic_http::http_request(config.request(), cycles).await;
-
-    match result {
-        Ok(response) if response.status == 200u8 => parse_response(response),
-        Ok(_) => json!({}),
-        Err(error) => {
-            print(&format!("HTTP request failed: {:?}", error));
-            json!({})
-        }
-    }
-}
-
-/// Parses the given HTTP response into a JSON value.
-fn parse_response(response: HttpRequestResult) -> serde_json::Value {
-    match String::from_utf8(response.body) {
-        Ok(json_str) => serde_json::from_str(&json_str).unwrap_or_else(|error| {
-            print(&format!(
-                "Failed to parse JSON from string, error: {error:?}, text: {json_str:?}"
-            ));
-            json!({})
-        }),
-        Err(error) => {
-            print(&format!("Raw response is not UTF-8 encoded: {:?}", error));
-            json!({})
-        }
     }
 }
 
