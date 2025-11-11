@@ -100,18 +100,13 @@ impl HttpRequestConfig {
 
     /// Parses the given HTTP response into a JSON value.
     fn parse_json_response(&self, response: HttpRequestResult) -> serde_json::Value {
-        match String::from_utf8(response.body) {
-            Ok(json_str) => serde_json::from_str(&json_str).unwrap_or_else(|error| {
-                crate::print(&format!(
-                    "Failed to parse JSON from string, error: {error:?}, text: {json_str:?}"
-                ));
-                json!({})
-            }),
-            Err(error) => {
-                crate::print(&format!("Raw response is not UTF-8 encoded: {:?}", error));
-                json!({})
-            }
-        }
+        serde_json::from_slice(&response.body).unwrap_or_else(|error| {
+            crate::print(&format!(
+                "Failed to parse JSON, error: {error:?}, body: {}",
+                String::from_utf8_lossy(&response.body)
+            ));
+            json!({})
+        })
     }
 }
 
