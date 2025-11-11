@@ -83,7 +83,14 @@ impl HttpRequestConfig {
     pub async fn send_request_json(&self) -> serde_json::Value {
         match self.send_request().await {
             Ok(response) if response.status == 200u8 => self.parse_json_response(response),
-            Ok(_) => json!({}),
+            Ok(response) => {
+                crate::print(&format!(
+                    "HTTP request returned non-200 status: {}. Response body: {}",
+                    response.status,
+                    String::from_utf8_lossy(&response.body)
+                ));
+                json!({})
+            }
             Err(error) => {
                 crate::print(&format!("HTTP request failed: {:?}", error));
                 json!({})
