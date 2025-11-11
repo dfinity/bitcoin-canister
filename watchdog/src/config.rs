@@ -56,10 +56,12 @@ pub enum Network {
     DogecoinMainnet,
 }
 
-/// Type of subnet the canister is deployed on.
+/// Type of subnet on which the watchdog and target canisters are deployed.
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SubnetType {
+    #[serde(rename = "system")]
     System,
+    #[serde(rename = "application")]
     Application,
 }
 
@@ -90,7 +92,7 @@ pub struct Config {
     /// Explorers to use for fetching block data.
     pub explorers: Vec<CandidBlockApi>,
 
-    /// Type of subnet the target canister is deployed on.
+    /// Type of subnet on which the watchdog and target canisters are deployed.
     pub subnet_type: SubnetType,
 }
 
