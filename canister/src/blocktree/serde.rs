@@ -1,6 +1,6 @@
 use super::{Block, BlockTree};
 use serde::{
-    de::{Deserializer, SeqAccess, Visitor},
+    de::{Deserializer, Error, SeqAccess, Visitor},
     ser::SerializeSeq,
     Deserialize, Serialize, Serializer,
 };
@@ -51,7 +51,7 @@ impl Serialize for BlockTree<Block> {
 /// different visitor type.
 trait TreeVisitor<'de, T>: Sized {
     // Each instance must implement its own `next` function.
-    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Option<(T, usize)>;
+    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Result<(T, usize), A::Error>;
 
     // Common routine that helps implementing [Deserialize::visit_seq].
     fn visit_sequence<A: SeqAccess<'de>>(self, mut seq: A) -> Result<BlockTree<T>, A::Error> {
@@ -59,7 +59,7 @@ trait TreeVisitor<'de, T>: Sized {
         let mut stack: Vec<(BlockTree<T>, usize)> = Vec::new();
 
         // Read the root and add it to the stack.
-        let (root, children_to_add) = self.next(&mut seq).unwrap();
+        let (root, children_to_add) = self.next(&mut seq)?;
         stack.push((BlockTree::new(root), children_to_add));
 
         while let Some((tree, children_to_add)) = stack.pop() {
@@ -70,7 +70,7 @@ trait TreeVisitor<'de, T>: Sized {
                     None => {
                         // There's no parent to this tree. Deserialization is complete.
                         // Assert that there's no more data to deserialize.
-                        assert!(self.next(&mut seq).is_none());
+                        assert!(self.next(&mut seq).is_err());
                         return Ok(tree);
                     }
                 }
@@ -80,7 +80,7 @@ trait TreeVisitor<'de, T>: Sized {
                 stack.push((tree, children_to_add - 1));
 
                 // Add the child to the stack.
-                let (child, grand_children_to_add) = self.next(&mut seq).unwrap();
+                let (child, grand_children_to_add) = self.next(&mut seq)?;
                 stack.push((BlockTree::new(child), grand_children_to_add));
             }
         }
@@ -93,10 +93,10 @@ trait TreeVisitor<'de, T>: Sized {
 struct BlockTreeVisitor;
 
 impl<'de> TreeVisitor<'de, Block> for BlockTreeVisitor {
-    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Option<(Block, usize)> {
-        seq.next_element::<(bitcoin::Block, usize)>()
-            .expect("reading next element must succeed")
+    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Result<(Block, usize), A::Error> {
+        seq.next_element::<(bitcoin::Block, usize)>()?
             .map(|(block, size)| (Block::new(block), size))
+            .ok_or(A::Error::custom("reading next element must succeed"))
     }
 }
 
