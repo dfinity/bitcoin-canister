@@ -3,11 +3,10 @@ use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
     print, transform_api_bitaps_com_block, transform_api_blockchair_com_block,
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
-    transform_bitcoinexplorer_org_block, transform_blockchain_info_hash,
-    transform_blockchain_info_height, transform_blockstream_info_hash,
-    transform_blockstream_info_height, transform_dogecoin_api_blockchair_com_block,
-    transform_dogecoin_api_blockcypher_com_block, transform_dogecoin_canister,
-    transform_dogecoin_tokenview_height, transform_mempool_height,
+    transform_blockchain_info_hash, transform_blockchain_info_height,
+    transform_blockstream_info_hash, transform_blockstream_info_height,
+    transform_dogecoin_api_blockchair_com_block, transform_dogecoin_api_blockcypher_com_block,
+    transform_dogecoin_canister, transform_dogecoin_tokenview_height, transform_mempool_height,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use regex::Regex;
@@ -120,26 +119,6 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
                         .to_string()
                     })
                     .unwrap_or_default()
-            })
-        },
-    )
-}
-
-/// Creates a config for fetching mainnet block data from bitcoinexplorer.org.
-pub fn endpoint_bitcoinexplorer_org_block_mainnet() -> HttpRequestConfig {
-    // TODO(XC-525): does not seem to be responsive, remove.
-    HttpRequestConfig::new(
-        "https://bitcoinexplorer.org/api/blocks/tip",
-        Some(TransformFnWrapper {
-            name: "transform_bitcoinexplorer_org_block",
-            func: transform_bitcoinexplorer_org_block,
-        }),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                json!({
-                    "height": json["height"].as_u64(),
-                    "hash": json["hash"].as_str(),
-                })
             })
         },
     )
@@ -668,7 +647,6 @@ mod test {
                 "transform_api_blockchair_com_block",
                 "transform_api_blockcypher_com_block",
                 "transform_bitcoin_canister",
-                "transform_bitcoinexplorer_org_block",
                 "transform_blockchain_info_hash",
                 "transform_blockchain_info_height",
                 "transform_blockstream_info_hash",

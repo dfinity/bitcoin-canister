@@ -89,9 +89,6 @@ impl From<BlockApi> for CandidBlockApi {
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
                         CandidBlockApi::BitcoinApiBlockcypherComMainnet
                     }
-                    BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg => {
-                        CandidBlockApi::BitcoinBitcoinExplorerOrgMainnet
-                    }
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
                         CandidBlockApi::BitcoinBlockchainInfoMainnet
                     }
@@ -146,7 +143,6 @@ pub enum BitcoinMainnetExplorerBlockApi {
     ApiBitapsCom,
     ApiBlockchairCom,
     ApiBlockcypherCom,
-    BitcoinExplorerOrg,
     BlockchainInfo,
     BlockstreamInfo,
     Mempool,
@@ -238,11 +234,6 @@ impl BlockApi {
                 }
                 BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
                     endpoint_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg => {
-                    endpoint_bitcoinexplorer_org_block_mainnet()
                         .send_request_json()
                         .await
                 }
@@ -502,10 +493,6 @@ mod test {
                 "api_blockcypher_com_mainnet",
             ),
             (
-                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                "bitcoinexplorer_org_mainnet",
-            ),
-            (
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                 "blockchain_info_mainnet",
             ),
@@ -568,22 +555,6 @@ mod test {
                 json!({
                     "height": 700001,
                     "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-                }),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn test_bitcoinexplorer_org_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg,
-                )),
-                vec![(endpoint_bitcoinexplorer_org_block_mainnet(), 1)],
-                json!({
-                    "height": 861687,
-                    "hash": "00000000000000000000fde077ede6f8ea5b0b03631eb7467bd344808998dced",
                 }),
             )
             .await;

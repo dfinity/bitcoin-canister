@@ -21,10 +21,6 @@ pub fn mock_bitcoin_mainnet_outcalls() {
             BITCOIN_CANISTER_MAINNET_RESPONSE,
         ),
         (
-            endpoint_bitcoinexplorer_org_block_mainnet(),
-            BITCOINEXPLORER_ORG_MAINNET_RESPONSE,
-        ),
-        (
             endpoint_blockchain_info_hash_mainnet(),
             BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE,
         ),
@@ -112,7 +108,6 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
         endpoint_api_blockchair_com_block_mainnet(),
         endpoint_api_blockcypher_com_block_mainnet(),
         endpoint_bitcoin_canister(),
-        endpoint_bitcoinexplorer_org_block_mainnet(),
         endpoint_blockchain_info_hash_mainnet(),
         endpoint_blockchain_info_height_mainnet(),
         endpoint_blockstream_info_hash_mainnet(),
@@ -256,12 +251,6 @@ pub const BITCOIN_CANISTER_TESTNET_RESPONSE: &str = r#"{
     # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
     # TYPE address_utxos_length gauge
     address_utxos_length 28388537 1682533330541
-}"#;
-
-// https://bitcoinexplorer.org/api/blocks/tip
-pub const BITCOINEXPLORER_ORG_MAINNET_RESPONSE: &str = r#"{
-    "height": 861687,
-    "hash": "00000000000000000000fde077ede6f8ea5b0b03631eb7467bd344808998dced"
 }"#;
 
 // https://blockchain.info/q/latesthash
