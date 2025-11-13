@@ -67,6 +67,12 @@ type network = variant {
     dogecoin_mainnet;
 };
 
+/// Subnet type.
+type subnet_type = variant {
+    system;
+    application;
+};
+
 /// Watchdog canister configuration.
 type config = record {
     /// The network to use.
@@ -92,6 +98,9 @@ type config = record {
 
     /// Explorers to use for fetching block data.
     explorers : vec bitcoin_block_api;
+
+    /// Type of subnet on which the watchdog and target canisters are deployed.
+    subnet_type : subnet_type;
 };
 
 type flag = variant {
