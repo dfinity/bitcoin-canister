@@ -7,6 +7,8 @@ The canister IDs of the Bitcoin canisters for Bitcoin mainnet and testnet:
 
 Information about Bitcoin and the IC Bitcoin integration can be found in the [Bitcoin developer guides](https://developer.bitcoin.org/devguide/) and the [Bitcoin integration documentation](https://internetcomputer.org/docs/current/references/bitcoin-how-it-works).
 
+The Bitcoin canister exposes the following endpoints.
+
 ### `bitcoin_get_utxos`
 
 ```
@@ -56,7 +58,7 @@ bitcoin_get_utxos : (get_utxos_request) -> (get_utxos_response);
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
-Given a `get_utxos_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet` or `testnet`), the function returns all unspent transaction outputs (UTXOs) associated with the provided address in the specified Bitcoin network based on the current view of the Bitcoin blockchain available to the Bitcoin component. The UTXOs are returned sorted by block height in descending order.
+Given a `get_utxos_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet`, `testnet`, or `regtest`), the function returns all unspent transaction outputs (UTXOs) associated with the provided address in the specified Bitcoin network based on the current view of the Bitcoin blockchain available to the Bitcoin canister. The UTXOs are returned sorted by block height in descending order.
 
 The following address formats are supported:
 
@@ -74,13 +76,14 @@ If the address is malformed, the call is rejected.
 
 The optional `filter` parameter can be used to restrict the set of returned UTXOs, either providing a minimum number of confirmations or a page reference when pagination is used for addresses with many UTXOs. In the first case, only UTXOs with at least the provided number of confirmations are returned, i.e., transactions with fewer than this number of confirmations are not considered. In other words, if the number of confirmations is `c`, an output is returned if it occurred in a transaction with at least `c` confirmations and there is no transaction that spends the same output with at least `c` confirmations.
 
-There is an upper bound of 144 on the minimum number of confirmations. If a larger minimum number of confirmations is specified, the call is rejected. Note that this is not a severe restriction as the minimum number of confirmations is typically set to a value around 6 in practice.
+There is an upper bound on the minimum number of confirmations, which varies with the difficulty target.
+ If a larger minimum number of confirmations is specified, the call is rejected. Note that this is not a severe restriction as the minimum number of confirmations used in practice is around 6, which is approximately an order of magnitude lower than the upper bound under normal operation.
 
-It is important to note that the validity of transactions is not verified in the Bitcoin component. The Bitcoin component relies on the proof of work that goes into the blocks and the verification of the blocks in the Bitcoin network. For a newly discovered block, a regular Bitcoin (full) node therefore provides a higher level of security than the Bitcoin component, which implies that it is advisable to set the number of confirmations to a reasonably large value, such as 6, to gain confidence in the correctness of the returned UTXOs.
+It is important to note that the validity of transactions is not verified in the Bitcoin canister. The Bitcoin canister relies on the proof of work that goes into the blocks and the verification of the blocks in the Bitcoin network. For a newly discovered block, a regular Bitcoin (full) node therefore provides a higher level of security than the Bitcoin canister, which implies that it is advisable to set the number of confirmations to a reasonably large value, such as 6, to gain confidence in the correctness of the returned UTXOs.
 
 There is an upper bound of 10,000 UTXOs that can be returned in a single request. For addresses that contain sufficiently many UTXOs, a partial set of the address's UTXOs are returned along with a page reference.
 
-In the second case, a page reference (a series of bytes) must be provided, which instructs the Bitcoin component to collect UTXOs starting from the corresponding "page".
+In the second case, a page reference (a series of bytes) must be provided, which instructs the Bitcoin canister to collect UTXOs starting from the corresponding "page".
 
 A `get_utxos_request` without the optional `filter` results in a request that considers the full blockchain, which is equivalent to setting `min_confirmations` to 0.
 
@@ -110,7 +113,7 @@ bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
-Given a `get_balance_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet` or `testnet`), the function returns the current balance of this address in `Satoshi` (10^8 Satoshi = 1 Bitcoin) in the specified Bitcoin network. The same address formats as for `bitcoin_get_utxos` are supported.
+Given a `get_balance_request`, which must specify a Bitcoin address and a Bitcoin network (`mainnet`, `testnet`, or `regtest`), the function returns the current balance of this address in `satoshi` (10^8 satoshi = 1 bitcoin) in the specified Bitcoin network. The same address formats as for `bitcoin_get_utxos` are supported.
 
 If the address is malformed, the call is rejected.
 
@@ -168,7 +171,7 @@ bitcoin_get_block_headers : (get_block_headers_request) -> (get_block_headers_re
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
-Given a start height, an optional end height, and a Bitcoin network (`mainnet` or `testnet`), the function returns the block headers in the provided range. The range is inclusive, i.e., the block headers at the start and end heights are returned as well.
+Given a start height, an optional end height, and a Bitcoin network (`mainnet`, `testnet`, or `regtest`), the function returns the block headers in the provided range. The range is inclusive, i.e., the block headers at the start and end heights are returned as well.
 An error is returned when an end height is specified that is greater than the tip height.
 
 If no end height is specified, all blocks until the tip height, i.e., the largest available height, are returned. However, if the range from the start height to the end height or the tip height is large, only a prefix of the requested block headers may be returned in order to bound the size of the response.
@@ -190,17 +193,8 @@ bitcoin_send_transaction : (send_transaction_request) -> ();
 
 This endpoint can only be called by canisters, i.e., it cannot be called by external users via ingress messages.
 
-Given a `send_transaction_request`, which must specify a `blob` of a Bitcoin transaction and a Bitcoin network (`mainnet` or `testnet`), several checks are performed:
-
--   The transaction is well formed.
-
--   The transaction only consumes unspent outputs with respect to the current (longest) blockchain, i.e., there is no block on the (longest) chain that consumes any of these outputs.
-
--   There is a positive transaction fee.
-
-If at least one of these checks fails, the call is rejected.
-
-If the transaction passes these tests, the transaction is forwarded to the specified Bitcoin network. Note that the function does not provide any guarantees that the transaction will make it into the mempool or that the transaction will ever appear in a block.
+Given a `send_transaction_request`, which must specify a `blob` of a Bitcoin transaction and a Bitcoin network (`mainnet`, `testnet`, or `regtest`), the Bitcoin canister verifies that the transaction is well formed.
+If this is the case, the transaction is forwarded to the specified Bitcoin network. Note that the function does not provide any guarantees that the transaction will make it into the mempool or that the transaction will ever appear in a block.
 
 ### `get_config`
 ```
@@ -275,8 +269,7 @@ This endpoint is used to update the configuration. The watchdog canister can onl
 
 Since the Bitcoin canister provides a low-level interface, it uses the [same byte order as Bitcoin uses internally](https://learnmeabitcoin.com/technical/general/byte-order).
 
-A fun quirk of Bitcoin is that transaction hashes and block hashes have their byte orders reversed when you're displaying and searching for them.
-
+A quirk of Bitcoin is that the byte order is reversed for transaction and block hashes when displayed, for example, in logs and blockchain explorers.
 For example, the actual block hash for the block comes out of the hash function like this:
 
 ```
@@ -285,7 +278,7 @@ For example, the actual block hash for the block comes out of the hash function 
 
 It is displayed the same way on [BTC canister public dashboard](https://dashboard.internetcomputer.org/canister/g4xu7-jiaaa-aaaan-aaaaq-cai) if you call `bitcoin_get_utxos_query` for `testnet` and address `tb1q6cvfmeqhl3ckgsv3d9tzxpjlgec7smd32a9a3d`.
 
-But when you're searching for [this address](https://mempool.space/testnet4/address/tb1q6cvfmeqhl3ckgsv3d9tzxpjlgec7smd32a9a3d) or [this transaction](https://mempool.space/testnet4/tx/1e901469c637d10fa6acc22f4a14d344966d60fc7fea2f0a4b1039fffdd46e5e) in mempool or on a block explorer, you'll see this byte order:
+But when searching for [this address](https://mempool.space/testnet4/address/tb1q6cvfmeqhl3ckgsv3d9tzxpjlgec7smd32a9a3d) or [this transaction](https://mempool.space/testnet4/tx/1e901469c637d10fa6acc22f4a14d344966d60fc7fea2f0a4b1039fffdd46e5e) in the mempool or on a block explorer, the following byte order is displayed:
 
 ```
 1e901469c637d10fa6acc22f4a14d344966d60fc7fea2f0a4b1039fffdd46e5e
