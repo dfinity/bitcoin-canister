@@ -41,10 +41,6 @@ pub fn mock_bitcoin_mainnet_outcalls() {
             BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
         ),
         (
-            endpoint_chain_api_btc_com_block_mainnet(),
-            CHAIN_API_BTC_COM_MAINNET_RESPONSE,
-        ),
-        (
             endpoint_mempool_height_mainnet(),
             MEMPOOL_HEIGHT_MAINNET_RESPONSE,
         ),
@@ -121,7 +117,6 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
         endpoint_blockchain_info_height_mainnet(),
         endpoint_blockstream_info_hash_mainnet(),
         endpoint_blockstream_info_height_mainnet(),
-        endpoint_chain_api_btc_com_block_mainnet(),
         endpoint_dogecoin_api_blockchair_com_block_mainnet(),
         endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
         endpoint_dogecoin_canister(),
@@ -282,43 +277,6 @@ pub const BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE: &str =
 
 // https://blockstream.info/api/blocks/tip/height
 pub const BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700005"#;
-
-// https://chain.api.btc.com/v3/block/latest
-pub const CHAIN_API_BTC_COM_MAINNET_RESPONSE: &str = r#"{
-    "data": {
-        "height":700006,
-        "version":538968064,
-        "mrkl_root":"fd7a75292e02050465de1ff8a98ea7e0dbe22f6107a3ee89c9de40e32166ad23",
-        "timestamp":1679733439,
-        "bits":386269758,
-        "nonce":110254631,
-        "hash":"0000000000000000000aaa666666666666666666666666666666666666666666",
-        "prev_block_hash":"0000000000000000000aaa555555555555555555555555555555555555555555",
-        "next_block_hash":"0000000000000000000000000000000000000000000000000000000000000000",
-        "size":1561960,
-        "pool_difficulty":56653058926588,
-        "difficulty":46843400286276,
-        "difficulty_double":46843400286276.55,
-        "tx_count":2957,
-        "reward_block":625000000,
-        "reward_fees":32773177,
-        "confirmations":1,
-        "is_orphan":false,
-        "curr_max_timestamp":1679733439,
-        "is_sw_block":true,
-        "stripped_size":810332,
-        "sigops":14267,
-        "weight":3992956,
-        "extras": {
-            "pool_name":"PEGA Pool",
-            "pool_link":"https://www.pega-pool.com"
-        }
-    },
-    "err_code":0,
-    "err_no":0,
-    "message":"success",
-    "status":"success"
-}"#;
 
 // https://api.blockchair.com/dogecoin/stats
 pub const DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{

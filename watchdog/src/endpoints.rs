@@ -5,9 +5,9 @@ use crate::{
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
     transform_bitcoinexplorer_org_block, transform_blockchain_info_hash,
     transform_blockchain_info_height, transform_blockstream_info_hash,
-    transform_blockstream_info_height, transform_chain_api_btc_com_block,
-    transform_dogecoin_api_blockchair_com_block, transform_dogecoin_api_blockcypher_com_block,
-    transform_dogecoin_canister, transform_dogecoin_tokenview_height, transform_mempool_height,
+    transform_blockstream_info_height, transform_dogecoin_api_blockchair_com_block,
+    transform_dogecoin_api_blockcypher_com_block, transform_dogecoin_canister,
+    transform_dogecoin_tokenview_height, transform_mempool_height,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use regex::Regex;
@@ -224,27 +224,6 @@ pub fn endpoint_blockstream_info_height_mainnet() -> HttpRequestConfig {
                         .to_string()
                     })
                     .unwrap_or_default()
-            })
-        },
-    )
-}
-
-/// Creates a config for fetching mainnet block data from chain.api.btc.com.
-pub fn endpoint_chain_api_btc_com_block_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://chain.api.btc.com/v3/block/latest",
-        Some(TransformFnWrapper {
-            name: "transform_chain_api_btc_com_block",
-            func: transform_chain_api_btc_com_block,
-        }),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["height"].as_u64(),
-                    "hash": data["hash"].as_str(),
-                    "previous_hash": data["prev_block_hash"].as_str(),
-                })
             })
         },
     )
@@ -576,21 +555,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_chain_api_btc_com_block() {
-        run_http_request_test(
-            endpoint_chain_api_btc_com_block_mainnet(),
-            "https://chain.api.btc.com/v3/block/latest",
-            test_utils::CHAIN_API_BTC_COM_MAINNET_RESPONSE,
-            json!({
-                "height": 700006,
-                "hash": "0000000000000000000aaa666666666666666666666666666666666666666666",
-                "previous_hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_dogecoin_api_blockchair_com_block() {
         run_http_request_test(
             endpoint_dogecoin_api_blockchair_com_block_mainnet(),
@@ -709,7 +673,6 @@ mod test {
                 "transform_blockchain_info_height",
                 "transform_blockstream_info_hash",
                 "transform_blockstream_info_height",
-                "transform_chain_api_btc_com_block",
                 "transform_dogecoin_api_blockchair_com_block",
                 "transform_dogecoin_api_blockcypher_com_block",
                 "transform_dogecoin_canister",
@@ -762,7 +725,6 @@ mod test {
             endpoint_blockchain_info_height_mainnet(),
             endpoint_blockstream_info_hash_mainnet(),
             endpoint_blockstream_info_height_mainnet(),
-            endpoint_chain_api_btc_com_block_mainnet(),
             endpoint_dogecoin_api_blockchair_com_block_mainnet(),
             endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
             endpoint_dogecoin_canister(),

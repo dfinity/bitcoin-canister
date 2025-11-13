@@ -116,7 +116,6 @@ impl Config {
                     BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
                     BitcoinMainnetExplorerBlockApi::Mempool.into(),
                 ],
                 subnet_type: SubnetType::System,

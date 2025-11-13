@@ -98,9 +98,6 @@ impl From<BlockApi> for CandidBlockApi {
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         CandidBlockApi::BitcoinBlockstreamInfoMainnet
                     }
-                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom => {
-                        CandidBlockApi::BitcoinChainApiBtcComMainnet
-                    }
                     BitcoinMainnetExplorerBlockApi::Mempool => {
                         CandidBlockApi::BitcoinMempoolMainnet
                     }
@@ -152,7 +149,6 @@ pub enum BitcoinMainnetExplorerBlockApi {
     BitcoinExplorerOrg,
     BlockchainInfo,
     BlockstreamInfo,
-    ChainApiBtcCom,
     Mempool,
 }
 
@@ -285,11 +281,6 @@ impl BlockApi {
                         }
                         _ => json!({}),
                     }
-                }
-                BitcoinMainnetExplorerBlockApi::ChainApiBtcCom => {
-                    endpoint_chain_api_btc_com_block_mainnet()
-                        .send_request_json()
-                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::Mempool => {
                     endpoint_mempool_height_mainnet().send_request_json().await
@@ -527,10 +518,6 @@ mod test {
                 "bitcoin_canister",
             ),
             (
-                BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                "chain_api_btc_com_mainnet",
-            ),
-            (
                 BitcoinMainnetExplorerBlockApi::Mempool.into(),
                 "mempool_mainnet",
             ),
@@ -684,23 +671,6 @@ mod test {
                 }),
             )
             .await;
-        }
-
-        #[tokio::test]
-        async fn test_chain_api_btc_com_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom,
-                )),
-                vec![(endpoint_chain_api_btc_com_block_mainnet(), 1)],
-                json!({
-                "height": 700006,
-                "hash": "0000000000000000000aaa666666666666666666666666666666666666666666",
-                "previous_hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
-            }),
-            )
-                .await;
         }
 
         #[tokio::test]

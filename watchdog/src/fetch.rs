@@ -89,10 +89,6 @@ mod test {
                     height: Some(700005),
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                    height: Some(700006),
-                },
-                BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
                     height: Some(700008),
                 },
@@ -199,10 +195,6 @@ mod test {
                 },
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                    height: None,
-                },
-                BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
                     height: None,
                 },
                 BlockInfo {
