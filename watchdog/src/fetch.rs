@@ -77,20 +77,16 @@ mod test {
                     height: Some(700003),
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                    height: Some(861687),
-                },
-                BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: Some(700004),
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                    height: Some(700005),
+                    provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+                    height: Some(923450),
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                    height: Some(700006),
+                    provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
+                    height: Some(700005),
                 },
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
@@ -190,19 +186,15 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                    height: None,
-                },
-                BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
+                    provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
+                    provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: None,
                 },
                 BlockInfo {

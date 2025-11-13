@@ -21,10 +21,9 @@ type bitcoin_block_api = variant {
     api_blockchair_com_mainnet;
     api_blockcypher_com_mainnet;
     bitcoin_canister;
-    bitcoinexplorer_org_mainnet;
     blockchain_info_mainnet;
+    blockexplorer_one_mainnet;
     blockstream_info_mainnet;
-    chain_api_btc_com_mainnet;
     dogecoin_api_blockchair_com_mainnet;
     dogecoin_api_blockcypher_com_mainnet;
     dogecoin_canister;
