@@ -527,7 +527,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_blockexplorer_info_block() {
+    async fn test_blockexplorer_one_block() {
         run_http_request_test(
             endpoint_blockexplorer_one_block_mainnet(),
             "https://blockexplorer.one/ajax/btc/mainnet/info",

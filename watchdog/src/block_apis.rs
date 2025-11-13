@@ -636,6 +636,21 @@ mod test {
         }
 
         #[tokio::test]
+        async fn test_blockexplorer_one_mainnet() {
+            test_utils::mock_bitcoin_mainnet_outcalls();
+            run_test(
+                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne,
+                )),
+                vec![(endpoint_blockexplorer_one_block_mainnet(), 1)],
+                json!({
+                    "height": 923450,
+                }),
+            )
+            .await;
+        }
+
+        #[tokio::test]
         async fn test_blockstream_info_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
