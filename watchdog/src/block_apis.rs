@@ -23,17 +23,14 @@ pub enum CandidBlockApi {
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
-    #[serde(rename = "bitcoinexplorer_org_mainnet")]
-    BitcoinBitcoinExplorerOrgMainnet,
-
     #[serde(rename = "blockchain_info_mainnet")]
     BitcoinBlockchainInfoMainnet,
 
+    #[serde(rename = "blockexplorer_one_mainnet")]
+    BitcoinBlockexplorerOneMainnet,
+
     #[serde(rename = "blockstream_info_mainnet")]
     BitcoinBlockstreamInfoMainnet,
-
-    #[serde(rename = "chain_api_btc_com_mainnet")]
-    BitcoinChainApiBtcComMainnet,
 
     #[serde(rename = "mempool_mainnet")]
     BitcoinMempoolMainnet,
@@ -92,6 +89,9 @@ impl From<BlockApi> for CandidBlockApi {
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
                         CandidBlockApi::BitcoinBlockchainInfoMainnet
                     }
+                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
+                        CandidBlockApi::BitcoinBlockexplorerOneMainnet
+                    }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         CandidBlockApi::BitcoinBlockstreamInfoMainnet
                     }
@@ -144,6 +144,7 @@ pub enum BitcoinMainnetExplorerBlockApi {
     ApiBlockchairCom,
     ApiBlockcypherCom,
     BlockchainInfo,
+    BlockexplorerOne,
     BlockstreamInfo,
     Mempool,
 }
@@ -254,6 +255,11 @@ impl BlockApi {
                         }
                         _ => json!({}),
                     }
+                }
+                BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
+                    endpoint_blockexplorer_one_block_mainnet()
+                        .send_request_json()
+                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                     let height_config = endpoint_blockstream_info_height_mainnet();
@@ -495,6 +501,10 @@ mod test {
             (
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                 "blockchain_info_mainnet",
+            ),
+            (
+                BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+                "blockexplorer_one_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),

@@ -4,9 +4,10 @@ use crate::{
     print, transform_api_bitaps_com_block, transform_api_blockchair_com_block,
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
     transform_blockchain_info_hash, transform_blockchain_info_height,
-    transform_blockstream_info_hash, transform_blockstream_info_height,
-    transform_dogecoin_api_blockchair_com_block, transform_dogecoin_api_blockcypher_com_block,
-    transform_dogecoin_canister, transform_dogecoin_tokenview_height, transform_mempool_height,
+    transform_blockexplorer_one_block, transform_blockstream_info_hash,
+    transform_blockstream_info_height, transform_dogecoin_api_blockchair_com_block,
+    transform_dogecoin_api_blockcypher_com_block, transform_dogecoin_canister,
+    transform_dogecoin_tokenview_height, transform_mempool_height,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use regex::Regex;
@@ -161,6 +162,24 @@ pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
                         .to_string()
                     })
                     .unwrap_or_default()
+            })
+        },
+    )
+}
+
+/// Creates a config for fetching mainnet block data from blockexplorer.one.
+pub fn endpoint_blockexplorer_one_block_mainnet() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://blockexplorer.one/ajax/btc/mainnet/info",
+        Some(TransformFnWrapper {
+            name: "transform_blockexplorer_one_block",
+            func: transform_blockexplorer_one_block,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                json!({
+                    "height": json["height"].as_u64(),
+                })
             })
         },
     )
@@ -508,6 +527,19 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_blockexplorer_info_block() {
+        run_http_request_test(
+            endpoint_blockexplorer_one_block_mainnet(),
+            "https://blockexplorer.one/ajax/btc/mainnet/info",
+            test_utils::BLOCKEXPLORER_ONE_MAINNET_RESPONSE,
+            json!({
+                "height": 923450,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
     async fn test_blockstream_info_hash() {
         run_http_request_test(
             endpoint_blockstream_info_hash_mainnet(),
@@ -649,6 +681,7 @@ mod test {
                 "transform_bitcoin_canister",
                 "transform_blockchain_info_hash",
                 "transform_blockchain_info_height",
+                "transform_blockexplorer_one_block",
                 "transform_blockstream_info_hash",
                 "transform_blockstream_info_height",
                 "transform_dogecoin_api_blockchair_com_block",
@@ -701,6 +734,7 @@ mod test {
             endpoint_bitcoin_canister(),
             endpoint_blockchain_info_hash_mainnet(),
             endpoint_blockchain_info_height_mainnet(),
+            endpoint_blockexplorer_one_block_mainnet(),
             endpoint_blockstream_info_hash_mainnet(),
             endpoint_blockstream_info_height_mainnet(),
             endpoint_dogecoin_api_blockchair_com_block_mainnet(),

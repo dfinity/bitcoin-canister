@@ -173,6 +173,11 @@ fn transform_blockchain_info_height(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
+fn transform_blockexplorer_one_block(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_blockexplorer_one_block_mainnet().transform(raw)
+}
+
+#[query]
 fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpRequestResult {
     endpoint_blockstream_info_hash_mainnet().transform(raw)
 }

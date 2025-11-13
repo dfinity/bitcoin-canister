@@ -114,6 +114,7 @@ impl Config {
                     BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
+                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     BitcoinMainnetExplorerBlockApi::Mempool.into(),
                 ],
