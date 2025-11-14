@@ -1,0 +1,40 @@
+name: Candid Compatibility Check
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  candid-compatibility:
+    name: Check Candid Compatibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history to compare with base
+
+      - name: Cache didc
+        id: cache-didc
+        uses: actions/cache@v3
+        with:
+          path: ~/.local/bin/didc
+          key: didc-2025-10-16-linux64
+
+      - name: Download didc
+        if: steps.cache-didc.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin
+          curl -fsSL https://github.com/dfinity/candid/releases/download/2025-10-16/didc-linux64 \
+            -o ~/.local/bin/didc
+          chmod +x ~/.local/bin/didc
+
+      - name: Add didc to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run Candid compatibility checks
+        run: |
+          chmod +x scripts/check-candid-compatibility.sh
+          DID_CHECK_REV=${{ github.event.pull_request.base.sha }} \
+            ./scripts/check-candid-compatibility.sh
