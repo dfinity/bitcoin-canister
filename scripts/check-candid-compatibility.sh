@@ -1,47 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configuration
 DID_FILES=("canister/candid.did" "watchdog/candid.did")
 BASE_REV="${DID_CHECK_REV:-origin/master}"
 
 echo "Checking Candid compatibility against: $BASE_REV"
-
-if ! command -v didc &> /dev/null; then
-    echo "Installing didc..."
-    DIDC_VERSION="2025-10-16"
-    OS=$(uname -s)
-    ARCH=$(uname -m)
-
-    if [ "$OS" = "Darwin" ]; then
-        DIDC_BINARY="didc-macos"
-    elif [ "$OS" = "Linux" ]; then
-        if [ "$ARCH" = "armv7l" ] || [ "$ARCH" = "armv6l" ]; then
-            DIDC_BINARY="didc-arm32"
-        else
-            DIDC_BINARY="didc-linux64"
-        fi
-    else
-        echo "❌ Unsupported OS: $OS"
-        exit 1
-    fi
-
-    DIDC_URL="https://github.com/dfinity/candid/releases/download/${DIDC_VERSION}/${DIDC_BINARY}"
-
-    echo "Downloading from: $DIDC_URL"
-    curl -fsSL "$DIDC_URL" -o /tmp/didc
-    chmod +x /tmp/didc
-
-    # Try to install to /usr/local/bin, fallback to ~/.local/bin
-    if sudo mv /tmp/didc /usr/local/bin/didc 2>/dev/null; then
-        echo "Installed to /usr/local/bin/didc"
-    else
-        mkdir -p ~/.local/bin
-        mv /tmp/didc ~/.local/bin/didc
-        export PATH="$HOME/.local/bin:$PATH"
-        echo "Installed to ~/.local/bin/didc (add to PATH if needed)"
-    fi
-fi
 
 didc --version
 
