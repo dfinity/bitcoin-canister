@@ -26,7 +26,7 @@ if ! command -v didc &> /dev/null; then
         exit 1
     fi
 
-    DIDC_URL="https://github.com/dfinity/candid/releases/download/${DIDC_VERSION}/didc-${OS}-${ARCH}"
+    DIDC_URL="https://github.com/dfinity/candid/releases/download/${DIDC_VERSION}/${DIDC_BINARY}"
 
     echo "Downloading from: $DIDC_URL"
     curl -fsSL "$DIDC_URL" -o /tmp/didc
