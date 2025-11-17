@@ -2,6 +2,7 @@
 set -euo pipefail
 
 DID_FILES=("canister/candid.did" "watchdog/candid.did")
+# If DID_CHECK_REV is set, use it as the base revision for comparison. Otherwise, use origin/master.
 BASE_REV="${DID_CHECK_REV:-origin/master}"
 
 echo "Checking Candid compatibility against: $BASE_REV"
