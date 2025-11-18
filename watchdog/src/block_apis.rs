@@ -26,9 +26,6 @@ pub enum CandidBlockApi {
     #[serde(rename = "blockchain_info_mainnet")]
     BitcoinBlockchainInfoMainnet,
 
-    #[serde(rename = "blockexplorer_one_mainnet")]
-    BitcoinBlockexplorerOneMainnet,
-
     #[serde(rename = "blockstream_info_mainnet")]
     BitcoinBlockstreamInfoMainnet,
 
@@ -90,7 +87,7 @@ impl From<BlockApi> for CandidBlockApi {
                         CandidBlockApi::BitcoinBlockchainInfoMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
-                        CandidBlockApi::BitcoinBlockexplorerOneMainnet
+                        todo!("DEFI-2493")
                     }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         CandidBlockApi::BitcoinBlockstreamInfoMainnet
