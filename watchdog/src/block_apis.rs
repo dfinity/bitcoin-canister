@@ -87,7 +87,7 @@ impl From<BlockApi> for CandidBlockApi {
                         CandidBlockApi::BitcoinBlockchainInfoMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
-                        todo!("DEFI-2493")
+                        todo!("DEFI-2493: add BlockexplorerOne")
                     }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         CandidBlockApi::BitcoinBlockstreamInfoMainnet
@@ -376,6 +376,7 @@ impl BitcoinProviderBlockApi {
     /// Returns the list of Bitcoin mainnet explorers only.
     fn explorers_mainnet() -> Vec<Self> {
         let mut explorers: Vec<BitcoinProviderBlockApi> = BitcoinMainnetExplorerBlockApi::iter()
+            .filter(|explorer| *explorer != BitcoinMainnetExplorerBlockApi::BlockexplorerOne) // TODO(DEFI-2493): add BlockexplorerOne
             .map(BitcoinProviderBlockApi::Mainnet)
             .collect();
         // Remove the explorers that are not configured.
