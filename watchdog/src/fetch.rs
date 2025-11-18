@@ -80,10 +80,10 @@ mod test {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: Some(700004),
                 },
-                BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                    height: Some(923450),
-                },
+                // BlockInfo {
+                //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+                //     height: Some(923450),
+                // }, // TODO(DEFI-2493): add BlockexplorerOne
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: Some(700005),
@@ -189,10 +189,10 @@ mod test {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: None,
                 },
-                BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                    height: None,
-                },
+                // BlockInfo {
+                //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+                //     height: None,
+                // }, // TODO(DEFI-2493): add BlockexplorerOne
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: None,

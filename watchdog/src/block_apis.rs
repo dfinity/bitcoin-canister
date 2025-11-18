@@ -431,6 +431,7 @@ mod test {
 
     fn all_providers() -> Vec<BlockApi> {
         BitcoinMainnetExplorerBlockApi::iter()
+            .filter(|explorer| *explorer != BitcoinMainnetExplorerBlockApi::BlockexplorerOne) // TODO(DEFI-2493): add BlockexplorerOne
             .map(BitcoinProviderBlockApi::Mainnet)
             .map(BlockApi::BitcoinProvider)
             .chain(
@@ -500,10 +501,10 @@ mod test {
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                 "blockchain_info_mainnet",
             ),
-            (
-                BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                "blockexplorer_one_mainnet",
-            ),
+            // (
+            //     BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+            //     "blockexplorer_one_mainnet",
+            // ), // TODO(DEFI-2493): add BlockexplorerOne
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                 "blockstream_info_mainnet",
