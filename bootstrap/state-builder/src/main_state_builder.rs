@@ -117,6 +117,10 @@ fn main() {
 
         // Ingest the blocks.
         s.unstable_blocks = UnstableBlocks::new(
+            unstable_blocks::BlocksCacheInStableMem::new(
+                args.network,
+                ic_doge_canister::memory::get_unstable_blocks_memory(),
+            ),
             &s.utxos,
             args.stability_threshold as u32,
             anchor_block,

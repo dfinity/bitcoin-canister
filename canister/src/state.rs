@@ -2,13 +2,14 @@ use crate::validation::ValidationContextError;
 use crate::{
     address_utxoset::AddressUtxoSet,
     block_header_store::BlockHeaderStore,
+    blocktree::{BlockTree, CachedBlock, ChainBlock},
     metrics::Metrics,
     runtime::{duration_since_epoch, inc_performance_counter, performance_counter, print},
     types::{
         into_bitcoin_network, Address, BlockHeaderBlob, GetSuccessorsCompleteResponse,
         GetSuccessorsPartialResponse, Slicing,
     },
-    unstable_blocks::{self, UnstableBlocks},
+    unstable_blocks::{self, BlocksCache, GenericUnstableBlocks, UnstableBlocks},
     validation::ValidationContext,
     UtxoSet,
 };
@@ -24,12 +25,12 @@ use serde::{Deserialize, Serialize};
 // expensive in production.
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct State {
+pub struct GenericState<Tree> {
     /// The UTXOs of all stable blocks since genesis.
     pub utxos: UtxoSet,
 
     /// Blocks inserted, but are not considered stable yet.
-    pub unstable_blocks: UnstableBlocks,
+    pub unstable_blocks: GenericUnstableBlocks<Tree>,
 
     /// State used for syncing new blocks.
     pub syncing_state: SyncingState,
@@ -73,16 +74,23 @@ pub struct State {
     pub lazily_evaluate_fee_percentiles: Flag,
 }
 
+pub type State = GenericState<BlockTree<CachedBlock>>;
+
 impl State {
     /// Create a new blockchain.
     ///
     /// The `stability_threshold` parameter specifies how many confirmations a
     /// block needs before it is considered stable. Stable blocks are assumed
     /// to be final and are never removed.
-    pub fn new(stability_threshold: u32, network: Network, genesis_block: Block) -> Self {
+    pub fn new<Cache: BlocksCache + 'static>(
+        cache: Cache,
+        stability_threshold: u32,
+        network: Network,
+        genesis_block: Block,
+    ) -> Self {
         let utxos = UtxoSet::new(network);
         let unstable_blocks =
-            UnstableBlocks::new(&utxos, stability_threshold, genesis_block, network);
+            UnstableBlocks::new(cache, &utxos, stability_threshold, genesis_block, network);
 
         let fees = match network {
             Network::Mainnet => Fees::mainnet(),
@@ -107,6 +115,17 @@ impl State {
         }
     }
 
+    /// Returns the UTXO set of a given bitcoin address.
+    pub fn get_utxos(&self, address: Address) -> AddressUtxoSet<'_> {
+        AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
+    }
+
+    pub fn replace_unstable_blocks_cache<Cache: BlocksCache + 'static>(&mut self, cache: Cache) {
+        self.unstable_blocks.replace_blocks_cache(cache)
+    }
+}
+
+impl<A> GenericState<A> {
     pub fn network(&self) -> Network {
         self.utxos.network()
     }
@@ -116,9 +135,38 @@ impl State {
         self.utxos.next_height()
     }
 
-    /// Returns the UTXO set of a given bitcoin address.
-    pub fn get_utxos(&self, address: Address) -> AddressUtxoSet<'_> {
-        AddressUtxoSet::new(address, &self.utxos, &self.unstable_blocks)
+    /// Mapping the tree type in unstable blocks to a different type.
+    pub fn map_tree<B, F: FnOnce(A) -> B>(self, f: F) -> GenericState<B> {
+        let GenericState {
+            utxos,
+            unstable_blocks,
+            syncing_state,
+            blocks_source,
+            fee_percentiles_cache,
+            stable_block_headers,
+            fees,
+            metrics,
+            api_access,
+            disable_api_if_not_fully_synced,
+            watchdog_canister,
+            burn_cycles,
+            lazily_evaluate_fee_percentiles,
+        } = self;
+        GenericState {
+            utxos,
+            unstable_blocks: unstable_blocks.map_tree(f),
+            syncing_state,
+            blocks_source,
+            fee_percentiles_cache,
+            stable_block_headers,
+            fees,
+            metrics,
+            api_access,
+            disable_api_if_not_fully_synced,
+            watchdog_canister,
+            burn_cycles,
+            lazily_evaluate_fee_percentiles,
+        }
     }
 }
 
@@ -200,13 +248,13 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
             "Ingesting new stable block {:?}...",
             new_stable_block.block_hash()
         ));
-
+        let block = new_stable_block.block();
         // Store the block's header.
         state
             .stable_block_headers
-            .insert_block(new_stable_block, state.utxos.next_height());
+            .insert_block(&block, state.utxos.next_height());
 
-        match state.utxos.ingest_block(new_stable_block.clone()) {
+        match state.utxos.ingest_block(block) {
             Slicing::Paused(()) => return has_state_changed(state),
             Slicing::Done((ingested_block_hash, stats)) => {
                 state.metrics.block_ingestion_stats = stats;
@@ -483,7 +531,7 @@ pub struct FeePercentilesCache {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::build_chain;
+    use crate::test_utils::{build_chain, TestBlocksCache};
     use proptest::prelude::*;
 
     proptest! {
@@ -497,7 +545,8 @@ mod test {
             let network = Network::Regtest;
             let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
-            let mut state = State::new(stability_threshold, network, blocks[0].clone());
+            let cache = TestBlocksCache::new(network);
+            let mut state = State::new(cache, stability_threshold, network, blocks[0].clone());
 
             for block in blocks[1..].iter() {
                 insert_block(&mut state, block.clone()).unwrap();
@@ -521,7 +570,8 @@ mod test {
         let network = Network::Regtest;
         let blocks = build_chain(network, num_blocks, num_transactions_per_block);
 
-        let mut state = State::new(stability_threshold, network, blocks[0].clone());
+        let cache = TestBlocksCache::new(network);
+        let mut state = State::new(cache, stability_threshold, network, blocks[0].clone());
 
         assert_eq!(state.stable_height(), 0);
         insert_block(&mut state, blocks[1].clone()).unwrap();
@@ -566,11 +616,13 @@ mod test {
         let network = Network::Regtest;
         let blocks = build_chain(network, num_blocks, num_transactions_per_block);
 
-        let mut state = State::new(stability_threshold, network, blocks[0].clone());
+        let cache = TestBlocksCache::new(network);
+        let mut state = State::new(cache, stability_threshold, network, blocks[0].clone());
         insert_block(&mut state, blocks[1].clone()).unwrap();
         insert_block(&mut state, blocks[2].clone()).unwrap();
 
-        let mut other_state = State::new(stability_threshold, network, blocks[0].clone());
+        let cache = TestBlocksCache::new(network);
+        let mut other_state = State::new(cache, stability_threshold, network, blocks[0].clone());
         insert_block(&mut other_state, blocks[1].clone()).unwrap();
         insert_block(&mut other_state, blocks[2].clone()).unwrap();
         assert_eq!(

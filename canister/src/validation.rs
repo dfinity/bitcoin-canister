@@ -1,4 +1,4 @@
-use crate::{state::State, unstable_blocks};
+use crate::{blocktree::ChainBlock, state::State, unstable_blocks};
 use bitcoin::{block::Header, hashes::Hash};
 use ic_btc_types::BlockHash;
 use ic_btc_validation::HeaderStore;
@@ -107,7 +107,7 @@ mod test {
     use super::*;
     use crate::{
         state::{ingest_stable_blocks_into_utxoset, insert_block},
-        test_utils::{build_chain, BlockBuilder},
+        test_utils::{build_chain, BlockBuilder, TestBlocksCache},
     };
     use ic_btc_interface::Network;
     use proptest::prelude::*;
@@ -118,7 +118,8 @@ mod test {
         let genesis = BlockBuilder::genesis().build();
         let network = Network::Mainnet;
 
-        let mut state = State::new(2, network, genesis.clone());
+        let cache = TestBlocksCache::new(network);
+        let mut state = State::new(cache, 2, network, genesis.clone());
         let block_0 = BlockBuilder::with_prev_header(genesis.header()).build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
         let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
@@ -170,7 +171,8 @@ mod test {
             let network = Network::Regtest;
             let blocks = build_chain(network, num_blocks, num_transactions_in_block);
 
-            let mut state = State::new(stability_threshold, network, blocks[0].clone());
+            let cache = TestBlocksCache::new(network);
+            let mut state = State::new(cache, stability_threshold, network, blocks[0].clone());
 
             // Insert all the blocks except the last block.
             for block in blocks[1..blocks.len() - 1].iter() {

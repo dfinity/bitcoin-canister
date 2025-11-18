@@ -1,14 +1,54 @@
-use ic_btc_interface::Network;
+use crate::unstable_blocks::BlocksCache;
+use bitcoin::block::Header;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
 mod serde;
+use std::cell::RefCell;
 use std::ops::{Add, Sub};
+use std::rc::Rc;
+
+type Cache = Rc<RefCell<Box<dyn BlocksCache>>>;
+
+/// Represent a block stored in a shared cache.
+#[derive(Debug)]
+pub struct CachedBlock {
+    cache: Cache,
+    difficulty: u128,
+    block_hash: BlockHash,
+    header: Header,
+}
+
+impl PartialEq for CachedBlock {
+    fn eq(&self, other: &Self) -> bool {
+        self.block_hash == other.block_hash
+    }
+}
+
+impl Eq for CachedBlock {}
+
+impl CachedBlock {
+    fn new_cached(cache: Cache, block: Block) -> CachedBlock {
+        let difficulty = block.difficulty(cache.borrow().network());
+        let block_hash = *block.block_hash();
+        let header = *block.header();
+        cache.borrow_mut().insert(block_hash, block);
+        CachedBlock {
+            cache,
+            difficulty,
+            block_hash,
+            header,
+        }
+    }
+
+    pub fn block(&self) -> Block {
+        self.cache.borrow().get(&self.block_hash).unwrap()
+    }
+}
 
 /// Represents a non-empty block chain as:
 /// * the first block of the chain
 /// * the successors to this block (which can be an empty list)
 #[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(Clone))]
 pub struct BlockChain<'a, Block> {
     // The first block of this `BlockChain`, i.e. the one at the lowest height.
     first: &'a Block,
@@ -60,6 +100,23 @@ impl<'a, Block> BlockChain<'a, Block> {
         let mut chain = vec![self.first];
         chain.extend(self.successors);
         chain
+    }
+
+    /// Return the Block at the given index in the chain if the index is in range.
+    /// Otherwise return None.
+    pub fn get(&self, index: usize) -> Option<&'a Block> {
+        if index == 0 {
+            Some(self.first)
+        } else if index - 1 < self.successors.len() {
+            Some(self.successors[index - 1])
+        } else {
+            None
+        }
+    }
+
+    /// Return an iterator of all blocks in the chain starting from the first one.
+    pub fn iter(&self) -> impl Iterator<Item = &'a Block> + '_ {
+        std::iter::once(self.first).chain(self.successors.iter().copied())
     }
 }
 
@@ -123,10 +180,68 @@ impl Sub for DifficultyBasedDepth {
 }
 
 /// Maintains a tree of connected blocks.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct BlockTree<Block> {
     root: Block,
     children: Vec<BlockTree<Block>>,
+}
+
+impl<A> BlockTree<A> {
+    pub fn map<B, F: Fn(A) -> B>(self, f: &F) -> BlockTree<B> {
+        BlockTree {
+            root: f(self.root),
+            children: self.children.into_iter().map(|t| t.map(f)).collect(),
+        }
+    }
+}
+
+impl BlockTree<Block> {
+    pub fn into_cached<C: BlocksCache + 'static>(self, cache: C) -> BlockTree<CachedBlock> {
+        let cache: Cache = Rc::new(RefCell::new(Box::new(cache)));
+        self.map(&|block| CachedBlock::new_cached(cache.clone(), block))
+    }
+}
+
+/// CachedBlock specific implementation
+impl BlockTree<CachedBlock> {
+    /// Creates a new `BlockTree` with the given block as its root.
+    pub fn new_with_cache<Cache: BlocksCache + 'static>(cache: Cache, root: Block) -> Self {
+        Self::new_with_shared_cache(Rc::new(RefCell::new(Box::new(cache))), root)
+    }
+
+    /// Replace the blocks cache with the given one
+    pub fn replace_blocks_cache<Cache: BlocksCache + 'static>(&mut self, cache: Cache) {
+        self.root.cache.replace(Box::new(cache));
+    }
+
+    fn remove_from_cache(self) {
+        assert!(self.root.cache.borrow_mut().remove(&self.root.block_hash));
+        for child in self.children.into_iter() {
+            child.remove_from_cache()
+        }
+    }
+
+    fn new_with_shared_cache(cache: Cache, root: Block) -> Self {
+        let root = CachedBlock::new_cached(cache, root);
+        Self {
+            root,
+            children: vec![],
+        }
+    }
+
+    fn cache(&self) -> Cache {
+        self.root.cache.clone()
+    }
+
+    pub fn extend_cached(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
+        self.extend(CachedBlock::new_cached(self.cache(), block))
+    }
+
+    pub fn into_root_and_remove_from_cache(self) -> Block {
+        let block = self.root.block();
+        self.remove_from_cache();
+        block
+    }
 }
 
 impl<Block> BlockTree<Block> {
@@ -156,37 +271,6 @@ impl<Block> BlockTree<Block> {
         self.children.swap_remove(index)
     }
 
-    /// Returns all blocks in the tree with their depths
-    /// separated by heights.
-    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
-        let mut blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> = vec![vec![]];
-        self.blocks_with_depths_by_heights_helper(&mut blocks_with_depths_by_heights, 0);
-        blocks_with_depths_by_heights
-    }
-
-    fn blocks_with_depths_by_heights_helper<'a>(
-        &'a self,
-        blocks_with_depth_by_height: &mut Vec<Vec<(&'a Block, u32)>>,
-        height: usize,
-    ) -> u32 {
-        let mut depth: u32 = 0;
-        for child in self.children.iter() {
-            depth = std::cmp::max(
-                depth,
-                child.blocks_with_depths_by_heights_helper(blocks_with_depth_by_height, height + 1),
-            );
-        }
-        depth += 1;
-
-        if height >= blocks_with_depth_by_height.len() {
-            blocks_with_depth_by_height.resize(height + 1, vec![]);
-        }
-
-        blocks_with_depth_by_height[height].push((&self.root, depth));
-
-        depth
-    }
-
     /// Returns the number of tips in the tree.
     pub fn tip_count(&self) -> u32 {
         if self.children.is_empty() {
@@ -212,6 +296,15 @@ impl<Block> BlockTree<Block> {
         self.children.iter().map(|c| &c.root).collect()
     }
 
+    pub fn depth(&self) -> Depth {
+        let mut res = Depth::new(0);
+        for child in self.children.iter() {
+            res = std::cmp::max(res, child.depth());
+        }
+        res = res + Depth::new(1);
+        res
+    }
+
     /// Returns the number of blocks in the tree.
     pub fn blocks_count(&self) -> usize {
         1 + self
@@ -231,20 +324,24 @@ impl<Block> BlockTree<Block> {
 }
 
 pub trait ChainBlock {
+    fn header(&self) -> &Header;
     fn block_hash(&self) -> &BlockHash;
     fn prev_block_hash(&self) -> BlockHash;
-    fn difficulty(&self, network: Network) -> u128;
+    fn difficulty(&self) -> u128;
 }
 
-impl ChainBlock for Block {
+impl ChainBlock for CachedBlock {
+    fn header(&self) -> &Header {
+        &self.header
+    }
     fn block_hash(&self) -> &BlockHash {
-        self.block_hash()
+        &self.block_hash
     }
     fn prev_block_hash(&self) -> BlockHash {
         BlockHash::from(self.header().prev_blockhash)
     }
-    fn difficulty(&self, network: Network) -> u128 {
-        self.difficulty(network)
+    fn difficulty(&self) -> u128 {
+        self.difficulty
     }
 }
 
@@ -325,21 +422,12 @@ impl<Block: ChainBlock> BlockTree<Block> {
     }
 
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
-    pub fn difficulty_based_depth(&self, network: Network) -> DifficultyBasedDepth {
+    pub fn difficulty_based_depth(&self) -> DifficultyBasedDepth {
         let mut res = DifficultyBasedDepth::new(0);
         for child in self.children.iter() {
-            res = std::cmp::max(res, child.difficulty_based_depth(network));
+            res = std::cmp::max(res, child.difficulty_based_depth());
         }
-        res = res + DifficultyBasedDepth::new(self.root.difficulty(network));
-        res
-    }
-
-    pub fn depth(&self) -> Depth {
-        let mut res = Depth::new(0);
-        for child in self.children.iter() {
-            res = std::cmp::max(res, child.depth());
-        }
-        res = res + Depth::new(1);
+        res = res + DifficultyBasedDepth::new(self.root.difficulty());
         res
     }
 
@@ -508,6 +596,40 @@ impl<Block: ChainBlock> BlockTree<Block> {
         hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
         hashes
     }
+
+    /// Returns all blocks in the tree with their depths
+    /// separated by heights.
+    pub fn block_hashes_with_depths_by_heights(&self) -> Vec<Vec<(&BlockHash, u32)>> {
+        let mut blocks_with_depths_by_heights: Vec<Vec<(&BlockHash, u32)>> = vec![vec![]];
+        self.block_hashes_with_depths_by_heights_helper(&mut blocks_with_depths_by_heights, 0);
+        blocks_with_depths_by_heights
+    }
+
+    fn block_hashes_with_depths_by_heights_helper<'a>(
+        &'a self,
+        blocks_with_depth_by_height: &mut Vec<Vec<(&'a BlockHash, u32)>>,
+        height: usize,
+    ) -> u32 {
+        let mut depth: u32 = 0;
+        for child in self.children.iter() {
+            depth = std::cmp::max(
+                depth,
+                child.block_hashes_with_depths_by_heights_helper(
+                    blocks_with_depth_by_height,
+                    height + 1,
+                ),
+            );
+        }
+        depth += 1;
+
+        if height >= blocks_with_depth_by_height.len() {
+            blocks_with_depth_by_height.resize(height + 1, vec![]);
+        }
+
+        blocks_with_depth_by_height[height].push((self.root.block_hash(), depth));
+
+        depth
+    }
 }
 
 /// An error thrown when trying to add a block that isn't a successor
@@ -518,13 +640,27 @@ pub struct BlockDoesNotExtendTree(pub BlockHash);
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{BlockBuilder, BlockChainBuilder};
+    use crate::test_utils::{BlockBuilder, BlockChainBuilder, TestBlocksCache};
+    use ic_btc_interface::Network;
     use proptest::collection::vec as pvec;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
     use test_strategy::proptest;
 
-    type BlockTree = super::BlockTree<Block>;
+    type BlockTree = super::BlockTree<CachedBlock>;
+
+    fn test_tree(root: Block) -> BlockTree {
+        let cache = TestBlocksCache::new(Network::Testnet);
+        BlockTree::new_with_cache(cache, root)
+    }
+
+    fn to_blockchain<'a, T>(blocks: &[&'a T]) -> BlockChain<'a, T> {
+        let mut iter = blocks.iter();
+        BlockChain {
+            first: iter.next().unwrap(),
+            successors: iter.copied().collect(),
+        }
+    }
 
     // For generating arbitrary BlockTrees.
     impl Arbitrary for BlockTree {
@@ -539,9 +675,10 @@ mod test {
                 }
 
                 for _ in 0..num_children[0] {
-                    let mut subtree =
-                        BlockTree::new(BlockBuilder::with_prev_header(tree.root.header()).build());
+                    let mut block_builder = BlockBuilder::with_prev_header(tree.root.header());
 
+                    let mut subtree =
+                        BlockTree::new_with_shared_cache(tree.cache(), block_builder.build());
                     build_block_tree(&mut subtree, &num_children[1..]);
                     tree.children.push(subtree);
                 }
@@ -549,8 +686,10 @@ mod test {
 
             // Each depth can have up to 3 children, up to a depth of 10.
             pvec(1..3u8, 0..10)
-                .prop_map(|num_children| {
-                    let mut tree = BlockTree::new(BlockBuilder::genesis().build());
+                .prop_map(|(num_children)| {
+                    let cache = TestBlocksCache::new(Network::Testnet);
+                    let mut tree =
+                        BlockTree::new_with_cache(cache, BlockBuilder::genesis().build());
                     build_block_tree(&mut tree, &num_children);
                     tree
                 })
@@ -560,14 +699,11 @@ mod test {
 
     #[test]
     fn tree_single_block() {
-        let block_tree = BlockTree::new(BlockBuilder::genesis().build());
-        let expected_chain = BlockChain {
-            first: &block_tree.root,
-            successors: vec![],
-        };
+        let block_tree = test_tree(BlockBuilder::genesis().build());
+        let expected_chain = [&block_tree.root];
 
         assert_eq!(
-            Some((expected_chain, vec![])),
+            Some((to_blockchain(&expected_chain), vec![])),
             block_tree.get_chain_with_tip(block_tree.root.block_hash())
         );
     }
@@ -576,25 +712,22 @@ mod test {
     fn tree_multiple_forks() {
         let genesis_block = BlockBuilder::genesis().build();
         let genesis_block_header = *genesis_block.header();
-        let mut block_tree = BlockTree::new(genesis_block);
+        let mut block_tree = test_tree(genesis_block);
 
         let mut children = vec![];
         for _ in 1..5 {
             // Create different blocks extending the genesis block.
             // Each one of these should be a separate fork.
             let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
-            children.push(block.clone());
-            block_tree.extend(block).unwrap();
+            children.push(CachedBlock::new_cached(block_tree.cache(), block.clone()));
+            block_tree.extend_cached(block).unwrap();
         }
 
         assert_eq!(block_tree.children.len(), 4);
         assert_eq!(
             Some((
-                BlockChain {
-                    first: &block_tree.root,
-                    successors: vec![],
-                },
-                children.iter().collect()
+                to_blockchain(&[&block_tree.root]),
+                children.iter().collect::<Vec<_>>()
             )),
             block_tree.get_chain_with_tip(block_tree.root.block_hash())
         );
@@ -607,10 +740,10 @@ mod test {
             blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
         }
 
-        let mut block_tree = BlockTree::new(blocks[0].clone());
+        let mut block_tree = test_tree(blocks[0].clone());
 
         for block in blocks.iter().skip(1) {
-            block_tree.extend(block.clone()).unwrap();
+            block_tree.extend_cached(block.clone()).unwrap();
         }
 
         for (i, block) in blocks.iter().enumerate() {
@@ -623,9 +756,9 @@ mod test {
                 .into_chain();
 
             // The first block should be the genesis block.
-            assert_eq!(chain[0], &blocks[0]);
+            assert_eq!(chain[0].block(), blocks[0]);
             // The last block should be the expected tip.
-            assert_eq!(chain.last().unwrap(), &block);
+            assert_eq!(chain.last().unwrap().block(), *block);
 
             // The length of the chain should grow as the requested tip gets deeper.
             assert_eq!(chain.len(), i + 1);
@@ -640,7 +773,7 @@ mod test {
     #[test]
     fn chain_with_tip_multiple_forks() {
         let mut blocks = vec![BlockBuilder::genesis().build()];
-        let mut block_tree = BlockTree::new(blocks[0].clone());
+        let mut block_tree = test_tree(blocks[0].clone());
 
         let num_forks = 5;
         for _ in 0..num_forks {
@@ -649,7 +782,7 @@ mod test {
             }
 
             for block in blocks.iter().skip(1) {
-                block_tree.extend(block.clone()).unwrap();
+                block_tree.extend_cached(block.clone()).unwrap();
             }
 
             for (i, block) in blocks.iter().enumerate() {
@@ -662,9 +795,9 @@ mod test {
                     .into_chain();
 
                 // The first block should be the genesis block.
-                assert_eq!(chain[0], &blocks[0]);
+                assert_eq!(chain[0].block(), blocks[0]);
                 // The last block should be the expected tip.
-                assert_eq!(chain.last().unwrap(), &block);
+                assert_eq!(chain.last().unwrap().block(), *block);
 
                 // The length of the chain should grow as the requested tip gets deeper.
                 assert_eq!(chain.len(), i + 1);
@@ -681,10 +814,10 @@ mod test {
 
     #[test]
     fn test_difficulty_based_depth_single_block() {
-        let block_tree = BlockTree::new(BlockBuilder::genesis().build_with_mock_difficulty(5));
+        let block_tree = test_tree(BlockBuilder::genesis().build_with_mock_difficulty(5));
 
         assert_eq!(
-            block_tree.difficulty_based_depth(Network::Mainnet),
+            block_tree.difficulty_based_depth(),
             DifficultyBasedDepth::new(5)
         );
     }
@@ -693,11 +826,11 @@ mod test {
     fn test_difficulty_based_depth_root_with_children() {
         let genesis_block = BlockBuilder::genesis().build_with_mock_difficulty(5);
         let genesis_block_header = *genesis_block.header();
-        let mut block_tree = BlockTree::new(genesis_block);
+        let mut block_tree = test_tree(genesis_block);
 
         for i in 1..11 {
             block_tree
-                .extend(
+                .extend_cached(
                     BlockBuilder::with_prev_header(&genesis_block_header)
                         .build_with_mock_difficulty(i),
                 )
@@ -707,7 +840,7 @@ mod test {
         // The maximum sum of block difficulties from the root to a leaf is the sum
         // of the root and child with the greatest difficulty which is 5 + 10 = 15.
         assert_eq!(
-            block_tree.difficulty_based_depth(Network::Mainnet),
+            block_tree.difficulty_based_depth(),
             DifficultyBasedDepth::new(15)
         );
     }
@@ -724,17 +857,17 @@ mod test {
     #[test]
     fn test_blocks_with_depths_by_heights_only_root() {
         let genesis_block = BlockBuilder::genesis().build();
-        let block_tree = BlockTree::new(genesis_block.clone());
-        let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
+        let block_tree = test_tree(genesis_block.clone());
+        let block_hashes_with_depths_by_heights = block_tree.block_hashes_with_depths_by_heights();
 
         // The number of rows in blocks_with_depths_by_heights should be 1.
         // The row should have only 1 column.
-        assert_eq!(blocks_with_depths_by_heights.len(), 1);
-        assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
+        assert_eq!(block_hashes_with_depths_by_heights.len(), 1);
+        assert_eq!(block_hashes_with_depths_by_heights[0].len(), 1);
 
-        let (block, depth) = blocks_with_depths_by_heights[0][0];
+        let (block_hash, depth) = block_hashes_with_depths_by_heights[0][0];
         // Depth of the genesis block should be 1.
-        assert_eq!(block.block_hash(), genesis_block.block_hash());
+        assert_eq!(block_hash, genesis_block.block_hash());
         assert_eq!(depth, 1);
     }
 
@@ -743,7 +876,7 @@ mod test {
         let chain_len: usize = 10;
         let chain = BlockChainBuilder::new(chain_len as u32).build();
 
-        let mut block_tree = BlockTree::new(chain[0].clone());
+        let mut block_tree = test_tree(chain[0].clone());
 
         let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
             vec![vec![]; chain_len];
@@ -751,19 +884,21 @@ mod test {
 
         for (i, block) in chain.iter().enumerate().skip(1) {
             expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
-            block_tree.extend(block.clone()).unwrap();
+            block_tree.extend_cached(block.clone()).unwrap();
         }
 
-        let actual_blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
+        let actual_block_hashes_with_depths_by_heights =
+            block_tree.block_hashes_with_depths_by_heights();
 
-        assert_eq!(chain_len, actual_blocks_with_depths_by_heights.len());
+        assert_eq!(chain_len, actual_block_hashes_with_depths_by_heights.len());
 
         for i in 0..chain_len {
             // On each height, actual_blocks_with_depths_by_heights should have only 1 block.
-            assert_eq!(actual_blocks_with_depths_by_heights[i].len(), 1);
+            assert_eq!(actual_block_hashes_with_depths_by_heights[i].len(), 1);
             let (expected_block, expected_depth) = expected_blocks_with_depths_by_heights[i][0];
-            let (acutal_block, actual_depth) = actual_blocks_with_depths_by_heights[i][0];
-            assert_eq!(expected_block.block_hash(), acutal_block.block_hash());
+            let (acutal_block_hash, actual_depth) =
+                actual_block_hashes_with_depths_by_heights[i][0];
+            assert_eq!(expected_block.block_hash(), acutal_block_hash);
             assert_eq!(expected_depth, actual_depth);
         }
     }
@@ -774,67 +909,86 @@ mod test {
         // Create a fork from the genesis block with length 2.
         let fork = BlockChainBuilder::fork(&chain[0], 2).build();
 
-        let mut block_tree = BlockTree::new(chain[0].clone());
-        block_tree.extend(chain[1].clone()).unwrap();
-        block_tree.extend(fork[0].clone()).unwrap();
-        block_tree.extend(fork[1].clone()).unwrap();
+        let mut block_tree = test_tree(chain[0].clone());
+        block_tree.extend_cached(chain[1].clone()).unwrap();
+        block_tree.extend_cached(fork[0].clone()).unwrap();
+        block_tree.extend_cached(fork[1].clone()).unwrap();
 
-        let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
+        let block_hashes_with_depths_by_heights = block_tree.block_hashes_with_depths_by_heights();
 
         // blocks_with_depths_by_heights should have 3 heights.
-        assert_eq!(blocks_with_depths_by_heights.len(), 3);
+        assert_eq!(block_hashes_with_depths_by_heights.len(), 3);
 
         // On height 0, blocks_with_depths_by_heights should have only one block.
-        assert_eq!(blocks_with_depths_by_heights[0].len(), 1);
+        assert_eq!(block_hashes_with_depths_by_heights[0].len(), 1);
 
-        let (height_0_block, height_0_depth) = blocks_with_depths_by_heights[0][0];
-        assert_eq!(height_0_block.block_hash(), chain[0].block_hash());
+        let (height_0_block_hash, height_0_depth) = block_hashes_with_depths_by_heights[0][0];
+        assert_eq!(height_0_block_hash, chain[0].block_hash());
         assert_eq!(height_0_depth, 3);
 
         // On height 1, blocks_with_depths_by_heights should have two blocks.
-        assert_eq!(blocks_with_depths_by_heights[1].len(), 2);
+        assert_eq!(block_hashes_with_depths_by_heights[1].len(), 2);
 
-        let (first_block_height_1, _) = blocks_with_depths_by_heights[1][0];
-        let (second_block_height_1, _) = blocks_with_depths_by_heights[1][1];
+        let (first_block_hash_height_1, _) = block_hashes_with_depths_by_heights[1][0];
+        let (second_block_hash_height_1, _) = block_hashes_with_depths_by_heights[1][1];
 
         // Check that blocks are different.
-        assert_ne!(
-            first_block_height_1.block_hash(),
-            second_block_height_1.block_hash()
-        );
+        assert_ne!(first_block_hash_height_1, second_block_hash_height_1);
 
-        for (block, depth) in blocks_with_depths_by_heights[1].iter() {
-            if block.block_hash() == chain[1].block_hash() {
-                assert_eq!(*depth, 1);
-            } else if block.block_hash() == fork[0].block_hash() {
-                assert_eq!(*depth, 2);
+        for &(block_hash, depth) in block_hashes_with_depths_by_heights[1].iter() {
+            if block_hash == chain[1].block_hash() {
+                assert_eq!(depth, 1);
+            } else if block_hash == fork[0].block_hash() {
+                assert_eq!(depth, 2);
             } else {
                 panic!("Unexpected block.");
             }
         }
 
         // On height 2, blocks_with_depths_by_heights should have only one block.
-        assert_eq!(blocks_with_depths_by_heights[2].len(), 1);
+        assert_eq!(block_hashes_with_depths_by_heights[2].len(), 1);
 
-        let (height_2_block, height_2_depth) = blocks_with_depths_by_heights[2][0];
+        let (height_2_block_hash, height_2_depth) = block_hashes_with_depths_by_heights[2][0];
 
-        assert_eq!(height_2_block.block_hash(), fork[1].block_hash());
+        assert_eq!(height_2_block_hash, fork[1].block_hash());
         assert_eq!(height_2_depth, 1);
     }
 
     #[test]
     fn deserialize_very_deep_block_tree() {
-        let chain = BlockChainBuilder::new(5_000).build();
-        let mut tree = BlockTree::new(chain[0].clone());
-
-        for block in chain.into_iter().skip(1) {
-            tree.extend(block).unwrap();
+        fn grow_tree(chain: Vec<Block>) -> BlockTree {
+            let mut tree = test_tree(chain[0].clone());
+            for block in chain.into_iter().skip(1) {
+                tree.extend_cached(block).unwrap();
+            }
+            tree
         }
 
+        let num_blocks = 5_000;
+
+        let tree = grow_tree(BlockChainBuilder::new(num_blocks).build());
+
+        check_roundtrip_deserialization(tree);
+    }
+
+    fn check_roundtrip_deserialization(tree: BlockTree) {
         let mut bytes = vec![];
         ciborium::ser::into_writer(&tree, &mut bytes).unwrap();
         let new_tree: BlockTree = ciborium::de::from_reader(&bytes[..]).unwrap();
         assert_eq!(tree, new_tree);
+    }
+
+    #[proptest]
+    fn test_replace_blocks_cache(mut tree: BlockTree) {
+        tree.get_child_blocks()
+            .iter()
+            .for_each(|block| assert_eq!(block.cache.borrow().network(), Network::Testnet));
+        let blocks = tree.cache().borrow().collect();
+        let new_cache = TestBlocksCache::new_with(Network::Mainnet, blocks);
+        tree.replace_blocks_cache(new_cache);
+        tree.get_child_blocks()
+            .iter()
+            .for_each(|block| assert_eq!(block.cache.borrow().network(), Network::Mainnet));
     }
 
     #[proptest]
@@ -846,8 +1000,35 @@ mod test {
     }
 
     #[proptest]
+    fn serialize_deserialize_old_block_vs_cached_block(tree: BlockTree) {
+        let mut tree_bytes = vec![];
+        ciborium::ser::into_writer(&tree, &mut tree_bytes).unwrap();
+        let old_cache = tree.cache().clone();
+
+        // Create a BlockTree<Block> and test its serialization
+        let tree_of_block = tree.map(&|cached_block| cached_block.block());
+        let mut bytes = vec![];
+        ciborium::ser::into_writer(&tree_of_block, &mut bytes).unwrap();
+        let tree_of_block_1: super::BlockTree<Block> =
+            ciborium::de::from_reader(&bytes[..]).unwrap();
+        assert_eq!(tree_of_block, tree_of_block_1);
+
+        // Map BlockTree<Block> into BlockTree<CachedBlock>
+        let new_cache = TestBlocksCache::new(old_cache.borrow().network());
+        let new_tree = tree_of_block_1.into_cached(new_cache);
+        let mut new_tree_bytes = vec![];
+        ciborium::ser::into_writer(&new_tree, &mut new_tree_bytes).unwrap();
+
+        assert_eq!(tree_bytes, new_tree_bytes);
+        assert_eq!(
+            old_cache.borrow().collect(),
+            new_tree.cache().borrow().collect()
+        );
+    }
+
+    #[proptest]
     fn should_find_chain_from_tip_and_tip_successors(tree: BlockTree, random_index: usize) {
-        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<&'a Block>) {
+        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<&'a CachedBlock>) {
             flattened_tree.push(&tree.root);
 
             for child in &tree.children {

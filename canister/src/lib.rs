@@ -43,6 +43,9 @@ use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
+/// WASM page size is 64KB
+const WASM_PAGE_SIZE: u64 = 1 << 15;
+
 /// The maximum number of blocks the canister can be behind the tip to be considered synced.
 const SYNCED_THRESHOLD: u32 = 2;
 
@@ -92,7 +95,12 @@ pub fn init(init_config: InitConfig) {
     print("Running init...");
 
     let config = Config::from(init_config);
+    let cache = unstable_blocks::BlocksCacheInStableMem::new(
+        config.network,
+        memory::get_unstable_blocks_memory(),
+    );
     set_state(State::new(
+        cache,
         config
             .stability_threshold
             .try_into()
@@ -342,20 +350,27 @@ mod test {
                 ..Default::default()
             });
 
+           let cache = unstable_blocks::BlocksCacheInStableMem::new(
+               network,
+               crate::memory::get_unstable_blocks_memory()
+            );
             with_state(|state| {
                 assert!(
-                    *state == State::new(stability_threshold as u32, network, genesis_block(network))
+                    *state == State::new(cache, stability_threshold as u32, network, genesis_block(network))
                 );
             });
         }
     }
 
-    #[test_strategy::proptest(ProptestConfig::with_cases(1))]
+    #[test_strategy::proptest(ProptestConfig::with_cases(10))]
     fn upgrade(
         #[strategy(1..100u128)] stability_threshold: u128,
         #[strategy(1..250u32)] num_blocks: u32,
         #[strategy(1..100u32)] num_transactions_in_block: u32,
     ) {
+        // Reset stable memory for each test case to avoid errors related to UTXOs being inserted twice
+        memory::set_memory(ic_stable_structures::DefaultMemoryImpl::default());
+
         let network = Network::Regtest;
 
         init(InitConfig {
