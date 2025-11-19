@@ -656,6 +656,33 @@ jobs:
         run: |
           ./e2e-tests/reproducibility.sh Dockerfile
 
+  candid-compatibility:
+    name: Check Candid Compatibility
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI_OVERRIDE_DIDC_CHECK') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history to compare with base
+
+      - name: Download didc
+        if: steps.cache-didc.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin
+          curl -fsSL https://github.com/dfinity/candid/releases/download/2025-10-16/didc-linux64 \
+            -o ~/.local/bin/didc
+          chmod +x ~/.local/bin/didc
+
+      - name: Add didc to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run Candid compatibility checks
+        run: |
+          chmod +x scripts/check-candid-compatibility.sh
+          DID_CHECK_REV=${{ github.event.pull_request.base.sha }} \
+            ./scripts/check-candid-compatibility.sh
   checks-pass:
     # Always run this job!
     if: always()
@@ -680,6 +707,7 @@ jobs:
         #        watchdog_upgradability, TODO(mducroux): re-enable once we have a new watchdog canister release
         canister-build-reproducibility,
         bitcoin_canister_metadata,
+        candid-compatibility,
       ]
     runs-on: ubuntu-latest
     steps:
@@ -739,4 +767,7 @@ jobs:
       #        run: exit 1
       - name: check canister-build-reproducibility result
         if: ${{ needs.canister-build-reproducibility.result != 'success' }}
+        run: exit 1
+      - name: check candid-compatibility result
+        if: ${{ needs.candid-compatibility.result != 'success' && needs.candid-compatibility.result != 'skipped' }}
         run: exit 1
