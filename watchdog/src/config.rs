@@ -15,6 +15,9 @@ const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
 /// Testnet bitcoin canister principal.
 const TESTNET_BITCOIN_CANISTER_PRINCIPAL: &str = "g4xu7-jiaaa-aaaan-aaaaq-cai";
 
+/// Mainnet bitcoin staging canister principal.
+const MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL: &str = "axowo-ciaaa-aaaad-acs7q-cai";
+
 /// Mainnet dogecoin canister principal.
 const MAINNET_DOGECOIN_CANISTER_PRINCIPAL: &str = "gordg-fyaaa-aaaan-aaadq-cai";
 
@@ -35,6 +38,9 @@ const DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 30;
 pub enum Canister {
     #[serde(rename = "bitcoin_mainnet")]
     BitcoinMainnet,
+
+    #[serde(rename = "bitcoin_mainnet_staging")]
+    BitcoinMainnetStaging,
 
     #[serde(rename = "bitcoin_testnet")]
     BitcoinTestnet,
@@ -120,6 +126,29 @@ impl Config {
                     BitcoinMainnetExplorerBlockApi::Mempool.into(),
                 ],
                 subnet_type: SubnetType::System,
+            },
+            Canister::BitcoinMainnetStaging => Self {
+                network: Network::BitcoinMainnet,
+                blocks_behind_threshold: 2,
+                blocks_ahead_threshold: 2,
+                min_explorers: 3,
+                canister_principal: Principal::from_text(
+                    MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL,
+                )
+                    .unwrap(),
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+                explorers: vec![
+                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
+                    BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
+                    BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
+                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
+                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
+                    BitcoinMainnetExplorerBlockApi::Mempool.into(),
+                ],
+                subnet_type: SubnetType::Application,
             },
             Canister::BitcoinTestnet => Self {
                 network: Network::BitcoinTestnet,
@@ -237,6 +266,10 @@ mod test {
     const TESTNET_BITCOIN_CANISTER_ENDPOINT: &str =
         "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics";
 
+    /// Mainnet bitcoin staging canister endpoint.
+    const MAINNET_BITCOIN_STAGING_CANISTER_ENDPOINT: &str =
+        "https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics";
+
     /// Mainnet dogecoin canister endpoint.
     const MAINNET_DOGECOIN_CANISTER_ENDPOINT: &str =
         "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics";
@@ -253,6 +286,12 @@ mod test {
     #[test]
     fn test_bitcoin_canister_endpoint_contains_principal_testnet() {
         assert!(TESTNET_BITCOIN_CANISTER_ENDPOINT.contains(TESTNET_BITCOIN_CANISTER_PRINCIPAL));
+    }
+
+    #[test]
+    fn test_bitcoin_canister_endpoint_contains_principal_mainnet_staging() {
+        assert!(MAINNET_BITCOIN_STAGING_CANISTER_ENDPOINT
+            .contains(MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL));
     }
 
     #[test]
@@ -277,6 +316,20 @@ mod test {
         assert_eq!(
             config.get_canister_endpoint(),
             MAINNET_BITCOIN_CANISTER_ENDPOINT
+        );
+    }
+
+    #[test]
+    fn test_config_mainnet_staging() {
+        let config = Config::for_target(Canister::BitcoinMainnetStaging);
+        assert_eq!(config.network, Network::BitcoinMainnet);
+        assert_eq!(
+            config.canister_principal,
+            Principal::from_text(MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
+        );
+        assert_eq!(
+            config.get_canister_endpoint(),
+            MAINNET_BITCOIN_STAGING_CANISTER_ENDPOINT
         );
     }
 
@@ -326,6 +379,7 @@ mod test {
         #[test]
         fn test_config_encode_decode(canister in prop_oneof![
             Just(Canister::BitcoinMainnet),
+            Just(Canister::BitcoinMainnetStaging),
             Just(Canister::BitcoinTestnet),
             Just(Canister::DogecoinMainnet),
             Just(Canister::DogecoinMainnetStaging),
