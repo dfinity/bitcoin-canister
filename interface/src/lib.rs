@@ -549,11 +549,12 @@ pub struct SetConfigRequest {
     /// if it suspects that there is a problem.
     pub watchdog_canister: Option<Option<Principal>>,
 
-    /// If enabled, continuously burns all cycles in the canister's balance
-    /// to count towards the IC's burn rate.
+    /// If enabled, fee percentiles are only computed when requested.
+    /// Otherwise, they are computed whenever we receive a new block.
     pub lazily_evaluate_fee_percentiles: Option<Flag>,
 
-    /// If enabled, received cycles are burned.
+    /// If enabled, continuously burns all cycles in the canister's balance
+    /// to count towards the IC's burn rate.
     pub burn_cycles: Option<Flag>,
 }
 
