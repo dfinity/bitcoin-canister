@@ -552,6 +552,10 @@ pub struct SetConfigRequest {
     /// If enabled, fee percentiles are only computed when requested.
     /// Otherwise, they are computed whenever we receive a new block.
     pub lazily_evaluate_fee_percentiles: Option<Flag>,
+
+    /// If enabled, continuously burns all cycles in the canister's balance
+    /// to count towards the IC's burn rate.
+    pub burn_cycles: Option<Flag>,
 }
 
 #[derive(CandidType, Serialize, Deserialize, PartialEq, Eq, Copy, Clone, Debug, Default)]
