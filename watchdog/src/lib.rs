@@ -240,6 +240,17 @@ mod test {
     }
 
     #[test]
+    fn init_with_bitcoin_mainnet_staging_uses_mainnet_staging_config() {
+        let canister = Canister::BitcoinMainnetStaging;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+        assert_eq!(
+            get_config(),
+            Config::for_target(Canister::BitcoinMainnetStaging)
+        );
+    }
+
+    #[test]
     fn init_with_dogecoin_mainnet_uses_mainnet_config() {
         let canister = Canister::DogecoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
