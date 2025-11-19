@@ -135,7 +135,7 @@ impl Config {
                 canister_principal: Principal::from_text(
                     MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL,
                 )
-                    .unwrap(),
+                .unwrap(),
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![

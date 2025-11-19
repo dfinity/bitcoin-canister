@@ -511,7 +511,9 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet_staging() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnetStaging));
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::BitcoinMainnetStaging,
+        ));
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics",
@@ -520,7 +522,7 @@ mod test {
                 "height": 700007,
             }),
         )
-            .await;
+        .await;
     }
 
     #[tokio::test]
@@ -534,7 +536,7 @@ mod test {
                 "height": 55001,
             }),
         )
-            .await;
+        .await;
     }
 
     #[tokio::test]
