@@ -113,7 +113,6 @@ type set_config_request = record {
   watchdog_canister : opt opt principal;
   burn_cycles : opt flag;
   lazily_evaluate_fee_percentiles : opt flag;
-  burn_cycles : opt flag;
 };
 
 type get_block_headers_request = record {
