@@ -64,6 +64,10 @@ pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
         if let Some(lazily_evaluate_fee_percentiles) = request.lazily_evaluate_fee_percentiles {
             s.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
         }
+
+        if let Some(burn_cycles) = request.burn_cycles {
+            s.burn_cycles = burn_cycles;
+        }
     });
 }
 
@@ -249,6 +253,20 @@ mod test {
             });
 
             assert_eq!(with_state(|s| s.lazily_evaluate_fee_percentiles), *flag);
+        }
+    }
+
+    #[test]
+    fn test_set_burn_cycles() {
+        init(InitConfig::default());
+
+        for flag in &[Flag::Enabled, Flag::Disabled] {
+            set_config_no_verification(SetConfigRequest {
+                burn_cycles: Some(*flag),
+                ..Default::default()
+            });
+
+            assert_eq!(with_state(|s| s.burn_cycles), *flag);
         }
     }
 }
