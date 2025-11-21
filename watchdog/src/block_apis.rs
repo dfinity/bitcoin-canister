@@ -23,17 +23,11 @@ pub enum CandidBlockApi {
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
-    #[serde(rename = "bitcoinexplorer_org_mainnet")]
-    BitcoinBitcoinExplorerOrgMainnet,
-
     #[serde(rename = "blockchain_info_mainnet")]
     BitcoinBlockchainInfoMainnet,
 
     #[serde(rename = "blockstream_info_mainnet")]
     BitcoinBlockstreamInfoMainnet,
-
-    #[serde(rename = "chain_api_btc_com_mainnet")]
-    BitcoinChainApiBtcComMainnet,
 
     #[serde(rename = "mempool_mainnet")]
     BitcoinMempoolMainnet,
@@ -89,17 +83,14 @@ impl From<BlockApi> for CandidBlockApi {
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
                         CandidBlockApi::BitcoinApiBlockcypherComMainnet
                     }
-                    BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg => {
-                        CandidBlockApi::BitcoinBitcoinExplorerOrgMainnet
-                    }
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
                         CandidBlockApi::BitcoinBlockchainInfoMainnet
                     }
+                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
+                        todo!("DEFI-2493: add BlockexplorerOne")
+                    }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         CandidBlockApi::BitcoinBlockstreamInfoMainnet
-                    }
-                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom => {
-                        CandidBlockApi::BitcoinChainApiBtcComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::Mempool => {
                         CandidBlockApi::BitcoinMempoolMainnet
@@ -149,10 +140,9 @@ pub enum BitcoinMainnetExplorerBlockApi {
     ApiBitapsCom,
     ApiBlockchairCom,
     ApiBlockcypherCom,
-    BitcoinExplorerOrg,
     BlockchainInfo,
+    BlockexplorerOne,
     BlockstreamInfo,
-    ChainApiBtcCom,
     Mempool,
 }
 
@@ -245,11 +235,6 @@ impl BlockApi {
                         .send_request_json()
                         .await
                 }
-                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg => {
-                    endpoint_bitcoinexplorer_org_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
                     let height_config = endpoint_blockchain_info_height_mainnet();
                     let hash_config = endpoint_blockchain_info_hash_mainnet();
@@ -268,6 +253,11 @@ impl BlockApi {
                         _ => json!({}),
                     }
                 }
+                BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
+                    endpoint_blockexplorer_one_block_mainnet()
+                        .send_request_json()
+                        .await
+                }
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                     let height_config = endpoint_blockstream_info_height_mainnet();
                     let hash_config = endpoint_blockstream_info_hash_mainnet();
@@ -285,11 +275,6 @@ impl BlockApi {
                         }
                         _ => json!({}),
                     }
-                }
-                BitcoinMainnetExplorerBlockApi::ChainApiBtcCom => {
-                    endpoint_chain_api_btc_com_block_mainnet()
-                        .send_request_json()
-                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::Mempool => {
                     endpoint_mempool_height_mainnet().send_request_json().await
@@ -391,6 +376,7 @@ impl BitcoinProviderBlockApi {
     /// Returns the list of Bitcoin mainnet explorers only.
     fn explorers_mainnet() -> Vec<Self> {
         let mut explorers: Vec<BitcoinProviderBlockApi> = BitcoinMainnetExplorerBlockApi::iter()
+            .filter(|explorer| *explorer != BitcoinMainnetExplorerBlockApi::BlockexplorerOne) // TODO(DEFI-2493): add BlockexplorerOne
             .map(BitcoinProviderBlockApi::Mainnet)
             .collect();
         // Remove the explorers that are not configured.
@@ -445,6 +431,7 @@ mod test {
 
     fn all_providers() -> Vec<BlockApi> {
         BitcoinMainnetExplorerBlockApi::iter()
+            .filter(|explorer| *explorer != BitcoinMainnetExplorerBlockApi::BlockexplorerOne) // TODO(DEFI-2493): add BlockexplorerOne
             .map(BitcoinProviderBlockApi::Mainnet)
             .map(BlockApi::BitcoinProvider)
             .chain(
@@ -511,13 +498,13 @@ mod test {
                 "api_blockcypher_com_mainnet",
             ),
             (
-                BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                "bitcoinexplorer_org_mainnet",
-            ),
-            (
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                 "blockchain_info_mainnet",
             ),
+            // (
+            //     BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+            //     "blockexplorer_one_mainnet",
+            // ), // TODO(DEFI-2493): add BlockexplorerOne
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                 "blockstream_info_mainnet",
@@ -525,10 +512,6 @@ mod test {
             (
                 BitcoinProviderBlockApi::BitcoinCanister.into(),
                 "bitcoin_canister",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                "chain_api_btc_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::Mempool.into(),
@@ -581,22 +564,6 @@ mod test {
                 json!({
                     "height": 700001,
                     "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-                }),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn test_bitcoinexplorer_org_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg,
-                )),
-                vec![(endpoint_bitcoinexplorer_org_block_mainnet(), 1)],
-                json!({
-                    "height": 861687,
-                    "hash": "00000000000000000000fde077ede6f8ea5b0b03631eb7467bd344808998dced",
                 }),
             )
             .await;
@@ -668,6 +635,21 @@ mod test {
         }
 
         #[tokio::test]
+        async fn test_blockexplorer_one_mainnet() {
+            test_utils::mock_bitcoin_mainnet_outcalls();
+            run_test(
+                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne,
+                )),
+                vec![(endpoint_blockexplorer_one_block_mainnet(), 1)],
+                json!({
+                    "height": 923450,
+                }),
+            )
+            .await;
+        }
+
+        #[tokio::test]
         async fn test_blockstream_info_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
@@ -684,23 +666,6 @@ mod test {
                 }),
             )
             .await;
-        }
-
-        #[tokio::test]
-        async fn test_chain_api_btc_com_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ChainApiBtcCom,
-                )),
-                vec![(endpoint_chain_api_btc_com_block_mainnet(), 1)],
-                json!({
-                "height": 700006,
-                "hash": "0000000000000000000aaa666666666666666666666666666666666666666666",
-                "previous_hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
-            }),
-            )
-                .await;
         }
 
         #[tokio::test]
