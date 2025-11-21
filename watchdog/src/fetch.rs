@@ -60,6 +60,20 @@ mod test {
         crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
         crate::test_utils::mock_bitcoin_mainnet_outcalls();
 
+        verify_bitcoin_mainnet_fetch_results().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_bitcoin_mainnet_staging() {
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::BitcoinMainnetStaging,
+        ));
+        crate::test_utils::mock_bitcoin_mainnet_outcalls();
+
+        verify_bitcoin_mainnet_fetch_results().await;
+    }
+
+    async fn verify_bitcoin_mainnet_fetch_results() {
         let result = fetch_all_data(Network::BitcoinMainnet).await;
         assert_eq!(
             result,
@@ -169,6 +183,20 @@ mod test {
         crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
         crate::test_utils::mock_all_outcalls_404();
 
+        verify_bitcoin_mainnet_fetch_failed_404().await;
+    }
+
+    #[tokio::test]
+    async fn test_fetch_all_data_failed_404_bitcoin_mainnet_staging() {
+        crate::storage::set_config(crate::config::Config::for_target(
+            Canister::BitcoinMainnetStaging,
+        ));
+        crate::test_utils::mock_all_outcalls_404();
+
+        verify_bitcoin_mainnet_fetch_failed_404().await;
+    }
+
+    async fn verify_bitcoin_mainnet_fetch_failed_404() {
         let result = fetch_all_data(Network::BitcoinMainnet).await;
         assert_eq!(
             result,

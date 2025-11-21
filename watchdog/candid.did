@@ -108,6 +108,7 @@ type flag = variant {
 
 type canister = variant {
     bitcoin_mainnet;
+    bitcoin_mainnet_staging;
     bitcoin_testnet;
     dogecoin_mainnet;
     dogecoin_mainnet_staging;
