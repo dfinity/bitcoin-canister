@@ -227,7 +227,7 @@ pub const API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
 }"#;
 
 // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics
+// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics (staging)
 pub const BITCOIN_CANISTER_MAINNET_RESPONSE: &str = r#"{
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
