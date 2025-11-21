@@ -18,4 +18,3 @@ ic-btc-interface = { workspace = true }
 ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true }
 ic-cdk = { workspace = true }
-ic-cdk-macros = { workspace = true }

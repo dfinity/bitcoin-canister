@@ -16,8 +16,7 @@ futures = { workspace = true }
 hex = { workspace = true }
 ic-btc-interface = { workspace = true }
 ic-cdk = { workspace = true }
-ic-cdk-macros = { workspace = true }
-ic-cdk-timers = "0.12"
+ic-cdk-timers = "1.0.0"
 ic-http = { workspace = true }
 ic-metrics-encoder = { workspace = true }
 ic-stable-structures = { workspace = true }

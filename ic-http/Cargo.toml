@@ -9,7 +9,6 @@ edition = "2021"
 [dependencies]
 candid = { workspace = true }
 ic-cdk = { workspace = true }
-ic-cdk-macros = { workspace = true }
 
 # Added to use non-blocking sleep to mock delayed responses.
 # Currently wasm32 does not support tokio, so we need to disable it for wasm32.

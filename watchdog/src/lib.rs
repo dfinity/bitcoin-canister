@@ -12,23 +12,24 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::block_apis::CandidBlockApi;
-use crate::types::WatchdogArg;
 use crate::{
+    block_apis::CandidBlockApi,
     config::Config,
     endpoints::*,
     fetch::BlockInfo,
     health::HealthStatus,
+    types::WatchdogArg,
     types::{CandidHttpRequest, CandidHttpResponse},
 };
 use ic_btc_interface::Flag;
-use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
-use ic_cdk_macros::{init, post_upgrade, query};
+use ic_cdk::{
+    init,
+    management_canister::{HttpRequestResult, TransformArgs},
+    post_upgrade, query,
+};
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::time::Duration;
+use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
@@ -64,12 +65,12 @@ fn post_upgrade(watchdog_arg: Option<WatchdogArg>) {
 fn start_block_info_fetch_loop() {
     set_timer(
         Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
-        || {
+        async {
             ic_cdk::futures::spawn(async {
                 tick().await;
                 ic_cdk_timers::set_timer_interval(
                     Duration::from_secs(storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::futures::spawn(tick()),
+                    || async { ic_cdk::futures::spawn(tick()) },
                 );
             })
         },
@@ -131,7 +132,7 @@ fn print(msg: &str) {
 }
 
 #[allow(unused_variables)]
-fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
+fn set_timer(delay: Duration, func: impl Future<Output = ()> + 'static) -> TimerId {
     #[cfg(target_arch = "wasm32")]
     return ic_cdk_timers::set_timer(delay, func);
 
