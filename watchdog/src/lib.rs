@@ -66,13 +66,11 @@ fn start_block_info_fetch_loop() {
     set_timer(
         Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
         async {
-            ic_cdk::futures::spawn(async {
-                tick().await;
-                ic_cdk_timers::set_timer_interval(
-                    Duration::from_secs(storage::get_config().interval_between_fetches_sec),
-                    || async { ic_cdk::futures::spawn(tick()) },
-                );
-            })
+            tick().await;
+            ic_cdk_timers::set_timer_interval(
+                Duration::from_secs(storage::get_config().interval_between_fetches_sec),
+                || async { tick().await },
+            );
         },
     );
 }
@@ -132,9 +130,9 @@ fn print(msg: &str) {
 }
 
 #[allow(unused_variables)]
-fn set_timer(delay: Duration, func: impl Future<Output = ()> + 'static) -> TimerId {
+fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> TimerId {
     #[cfg(target_arch = "wasm32")]
-    return ic_cdk_timers::set_timer(delay, func);
+    return ic_cdk_timers::set_timer(delay, future);
 
     #[cfg(not(target_arch = "wasm32"))]
     TimerId::default()
