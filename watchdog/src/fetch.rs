@@ -91,20 +91,16 @@ mod test {
                     height: Some(700003),
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                    height: Some(861687),
-                },
-                BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: Some(700004),
                 },
+                // BlockInfo {
+                //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+                //     height: Some(923450),
+                // }, // TODO(DEFI-2493): add BlockexplorerOne
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: Some(700005),
-                },
-                BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
-                    height: Some(700006),
                 },
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
@@ -218,19 +214,15 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::BitcoinExplorerOrg.into(),
-                    height: None,
-                },
-                BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: None,
                 },
+                // BlockInfo {
+                //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
+                //     height: None,
+                // }, // TODO(DEFI-2493): add BlockexplorerOne
                 BlockInfo {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                    height: None,
-                },
-                BlockInfo {
-                    provider: BitcoinMainnetExplorerBlockApi::ChainApiBtcCom.into(),
                     height: None,
                 },
                 BlockInfo {

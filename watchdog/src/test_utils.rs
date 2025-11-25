@@ -21,10 +21,6 @@ pub fn mock_bitcoin_mainnet_outcalls() {
             BITCOIN_CANISTER_MAINNET_RESPONSE,
         ),
         (
-            endpoint_bitcoinexplorer_org_block_mainnet(),
-            BITCOINEXPLORER_ORG_MAINNET_RESPONSE,
-        ),
-        (
             endpoint_blockchain_info_hash_mainnet(),
             BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE,
         ),
@@ -33,16 +29,16 @@ pub fn mock_bitcoin_mainnet_outcalls() {
             BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
         ),
         (
+            endpoint_blockexplorer_one_block_mainnet(),
+            BLOCKEXPLORER_ONE_MAINNET_RESPONSE,
+        ),
+        (
             endpoint_blockstream_info_hash_mainnet(),
             BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE,
         ),
         (
             endpoint_blockstream_info_height_mainnet(),
             BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
-        ),
-        (
-            endpoint_chain_api_btc_com_block_mainnet(),
-            CHAIN_API_BTC_COM_MAINNET_RESPONSE,
         ),
         (
             endpoint_mempool_height_mainnet(),
@@ -116,12 +112,11 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
         endpoint_api_blockchair_com_block_mainnet(),
         endpoint_api_blockcypher_com_block_mainnet(),
         endpoint_bitcoin_canister(),
-        endpoint_bitcoinexplorer_org_block_mainnet(),
         endpoint_blockchain_info_hash_mainnet(),
         endpoint_blockchain_info_height_mainnet(),
+        endpoint_blockexplorer_one_block_mainnet(),
         endpoint_blockstream_info_hash_mainnet(),
         endpoint_blockstream_info_height_mainnet(),
-        endpoint_chain_api_btc_com_block_mainnet(),
         endpoint_dogecoin_api_blockchair_com_block_mainnet(),
         endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
         endpoint_dogecoin_canister(),
@@ -232,7 +227,7 @@ pub const API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
 }"#;
 
 // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics
+// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics (staging)
 pub const BITCOIN_CANISTER_MAINNET_RESPONSE: &str = r#"{
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
@@ -264,12 +259,6 @@ pub const BITCOIN_CANISTER_TESTNET_RESPONSE: &str = r#"{
     address_utxos_length 28388537 1682533330541
 }"#;
 
-// https://bitcoinexplorer.org/api/blocks/tip
-pub const BITCOINEXPLORER_ORG_MAINNET_RESPONSE: &str = r#"{
-    "height": 861687,
-    "hash": "00000000000000000000fde077ede6f8ea5b0b03631eb7467bd344808998dced"
-}"#;
-
 // https://blockchain.info/q/latesthash
 pub const BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE: &str =
     r#"0000000000000000000aaa444444444444444444444444444444444444444444"#;
@@ -277,49 +266,118 @@ pub const BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE: &str =
 // https://blockchain.info/q/getblockcount
 pub const BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700004"#;
 
+// https://blockexplorer.one/ajax/btc/mainnet/info
+pub const BLOCKEXPLORER_ONE_MAINNET_RESPONSE: &str = r#"{
+  "difficulty": "152.27 TH",
+  "difficultyRaw": "152,271,405,447,597",
+  "transactions": 0,
+  "height": 923450,
+  "price": "102,351.72",
+  "key": "currency-chart-btc-mainnet",
+  "chart": {
+    "923436": {
+      "hash": "000000000000000000017daf1c2baf568379e491dbf5ca5044c80102b78472d2",
+      "transactions": 1207,
+      "timestamp": 1763029531
+    },
+    "923437": {
+      "hash": "000000000000000000019a16e16e08b6b33e538def78e9d5ffe94ffae72c6fcf",
+      "transactions": 3804,
+      "timestamp": 1763031360
+    },
+    "923438": {
+      "hash": "00000000000000000000aa0b3161d1f48ec009b6ec34543f2b331e38764f60ff",
+      "transactions": 2628,
+      "timestamp": 1763031932
+    },
+    "923439": {
+      "hash": "00000000000000000000114556ff635ca8667bdc591a2600afc8253869418ee1",
+      "transactions": 4996,
+      "timestamp": 1763032007
+    },
+    "923440": {
+      "hash": "00000000000000000000c521605296ca402a5896eee2c24236ddae9c0ae58922",
+      "transactions": 3853,
+      "timestamp": 1763032492
+    },
+    "923441": {
+      "hash": "00000000000000000000e1bb8dcf4911ff70fa25b0bfc227fb756e7553d38bed",
+      "transactions": 4468,
+      "timestamp": 1763033385
+    },
+    "923442": {
+      "hash": "0000000000000000000197e6957afcc3b6609827f78064f876b739d816c787a8",
+      "transactions": 4425,
+      "timestamp": 1763033455
+    },
+    "923443": {
+      "hash": "00000000000000000000781944a3d88f025149c96aac335bf9c4ec6c60fe9835",
+      "transactions": 1492,
+      "timestamp": 1763033902
+    },
+    "923444": {
+      "hash": "0000000000000000000120be977dea1283f6d443d8a70907629b2854e2e5cfec",
+      "transactions": 4566,
+      "timestamp": 1763034186
+    },
+    "923445": {
+      "hash": "00000000000000000000645ec671e1cd2db0a12d83bf28bacb0658856042d025",
+      "transactions": 4964,
+      "timestamp": 1763034262
+    },
+    "923446": {
+      "hash": "00000000000000000001459d59abb04744ef289a9345435ab09c2b50389a46ab",
+      "transactions": 4272,
+      "timestamp": 1763035312
+    },
+    "923447": {
+      "hash": "00000000000000000000ea644418a0ad8ccbe5346d1dccf197a059dad59eafcb",
+      "transactions": 4218,
+      "timestamp": 1763039460
+    },
+    "923448": {
+      "hash": "000000000000000000015ab337e3b969be45d72039112b393e90cbfea89dab14",
+      "transactions": 1,
+      "timestamp": 1763039063
+    },
+    "923449": {
+      "hash": "00000000000000000001335d50edf78a71581d74d25e83127ae8b8a1d7222dde",
+      "transactions": 3933,
+      "timestamp": 1763040187
+    },
+    "923450": {
+      "hash": "00000000000000000001bce7fc137627fccc431720ee8f91cd61fe62ce3edfd3",
+      "transactions": 4232,
+      "timestamp": 1763040763
+    }
+  },
+  "fees": {
+    "slow": "0.00000001 BTC <span style=\"font-size: 14px; color:#666D7F\"> $0.001024 </span> ",
+    "standard": "0.00000003 BTC <span style=\"font-size: 14px; color:#666D7F\"> $0.003071  </span>",
+    "fast": "0.00000003 BTC <span style=\"font-size: 14px; color:#666D7F\"> $0.003071  </span>"
+  },
+  "market": {
+    "cap": "2057508224677.1309",
+    "cap_formated": "2,057,508,224,677.13",
+    "max_supply": "21000000",
+    "max_supply_formated": "21,000,000.00",
+    "change1Hour": "0.14444565",
+    "change1Hour_formated": "0.14",
+    "supply": "19948012",
+    "supply_formated": "19,948,012.00",
+    "change1Day": "-1.79856191",
+    "change1Day_formated": "-1.80",
+    "change1Week": "0.61469158",
+    "change1Week_formated": "0.61"
+  }
+}"#;
+
 // https://blockstream.info/api/blocks/tip/hash
 pub const BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE: &str =
     r#"0000000000000000000aaa555555555555555555555555555555555555555555"#;
 
 // https://blockstream.info/api/blocks/tip/height
 pub const BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700005"#;
-
-// https://chain.api.btc.com/v3/block/latest
-pub const CHAIN_API_BTC_COM_MAINNET_RESPONSE: &str = r#"{
-    "data": {
-        "height":700006,
-        "version":538968064,
-        "mrkl_root":"fd7a75292e02050465de1ff8a98ea7e0dbe22f6107a3ee89c9de40e32166ad23",
-        "timestamp":1679733439,
-        "bits":386269758,
-        "nonce":110254631,
-        "hash":"0000000000000000000aaa666666666666666666666666666666666666666666",
-        "prev_block_hash":"0000000000000000000aaa555555555555555555555555555555555555555555",
-        "next_block_hash":"0000000000000000000000000000000000000000000000000000000000000000",
-        "size":1561960,
-        "pool_difficulty":56653058926588,
-        "difficulty":46843400286276,
-        "difficulty_double":46843400286276.55,
-        "tx_count":2957,
-        "reward_block":625000000,
-        "reward_fees":32773177,
-        "confirmations":1,
-        "is_orphan":false,
-        "curr_max_timestamp":1679733439,
-        "is_sw_block":true,
-        "stripped_size":810332,
-        "sigops":14267,
-        "weight":3992956,
-        "extras": {
-            "pool_name":"PEGA Pool",
-            "pool_link":"https://www.pega-pool.com"
-        }
-    },
-    "err_code":0,
-    "err_no":0,
-    "message":"success",
-    "status":"success"
-}"#;
 
 // https://api.blockchair.com/dogecoin/stats
 pub const DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
