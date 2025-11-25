@@ -6,7 +6,7 @@ use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
 use ic_btc_interface::{InitConfig, Network};
 use ic_btc_test_utils::{build_regtest_chain, BlockBuilder, TransactionBuilder};
 use ic_btc_types::Block;
-use ic_cdk_macros::init;
+use ic_cdk::init;
 use std::cell::RefCell;
 use std::str::FromStr;
 
