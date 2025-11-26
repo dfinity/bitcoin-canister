@@ -31,7 +31,7 @@ const DELAY_BEFORE_FIRST_FETCH_SEC: u64 = 1;
 const BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 300;
 
 /// The number of seconds to wait between all the other data fetches for the Dogecoin network.
-const DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 30;
+const DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 60;
 
 /// Canister to monitor.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
@@ -162,8 +162,8 @@ impl Config {
             },
             Canister::DogecoinMainnet => Self {
                 network: Network::DogecoinMainnet,
-                blocks_behind_threshold: 2,
-                blocks_ahead_threshold: 2,
+                blocks_behind_threshold: 4,
+                blocks_ahead_threshold: 4,
                 min_explorers: 2,
                 canister_principal: Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL)
                     .unwrap(),
@@ -178,8 +178,8 @@ impl Config {
             },
             Canister::DogecoinMainnetStaging => Self {
                 network: Network::DogecoinMainnet,
-                blocks_behind_threshold: 2,
-                blocks_ahead_threshold: 2,
+                blocks_behind_threshold: 4,
+                blocks_ahead_threshold: 4,
                 min_explorers: 2,
                 canister_principal: Principal::from_text(
                     MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL,
