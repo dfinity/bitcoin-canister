@@ -24,7 +24,7 @@ pub enum HeightStatus {
     Behind,
 }
 
-/// Health status of the canister.
+/// Health status of the Bitcoin canister.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatus {
     /// Main chain height of the canister.

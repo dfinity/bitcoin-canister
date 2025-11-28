@@ -29,7 +29,7 @@ type bitcoin_block_api = variant {
 
 /// Information about a block from a specific API provider.
 type block_info = record {
-    /// Block API provider.
+    /// Bitcoin block API provider.
     provider : bitcoin_block_api;
 
     /// Block height.
@@ -59,7 +59,7 @@ type health_status = record {
     /// Canister height status.
     height_status : height_status;
 
-    /// Block info from the explorers.
+    /// Block info from the Bitcoin explorers.
     explorers : vec block_info;
 };
 
@@ -150,7 +150,7 @@ type watchdog_arg = variant {
 };
 
 service : (watchdog_arg) -> {
-    /// Returns the health status of the target canister.
+    /// Returns the health status of the target canister (Bitcoin explorers only).
     health_status : () -> (health_status) query;
 
     /// Returns the health status of the target canister.

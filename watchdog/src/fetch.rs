@@ -26,10 +26,10 @@ impl BlockInfoInternal {
     }
 }
 
-/// The data fetched from the external block APIs.
+/// The data fetched from the external Bitcoin block APIs.
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct BlockInfo {
-    /// The provider of the block data.
+    /// The provider of the Bitcoin block data.
     pub provider: BitcoinBlockApi,
 
     /// The height of the block.
@@ -70,7 +70,9 @@ impl From<BlockInfoInternal> for BlockInfo {
                     }
                 },
             },
-            BlockApi::DogecoinProvider(_) => panic!(),
+            BlockApi::DogecoinProvider(_) => {
+                panic!("Block info can only contain Bitcoin providers.")
+            }
         };
         BlockInfo {
             provider,

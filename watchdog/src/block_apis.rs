@@ -439,7 +439,7 @@ mod test {
             ),
             // (
             //     BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-            //     "blockexplorer_one_mainnet",
+            //     "bitcoin_blockexplorer_one_mainnet",
             // ), // TODO(DEFI-2493): add BlockexplorerOne
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),

@@ -90,7 +90,7 @@ async fn tick() {
     crate::api_access::synchronise_api_access().await;
 }
 
-/// Returns the health status of the canister monitored.
+/// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
 fn health_status() -> HealthStatus {
     let network = storage::get_config().network;
