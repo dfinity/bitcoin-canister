@@ -1,30 +1,103 @@
-use crate::block_apis::{BlockApi, CandidBlockApi};
+use crate::block_apis::{
+    BitcoinBlockApi, BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi,
+    BitcoinTestnetExplorerBlockApi, BlockApi,
+};
 use crate::config::Network;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 
 /// The data fetched from the external block APIs.
-#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
-pub struct BlockInfo {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BlockInfoInternal {
     /// The provider of the block data.
-    pub provider: CandidBlockApi,
+    pub provider: BlockApi,
 
     /// The height of the block.
     pub height: Option<u64>,
 }
 
-impl BlockInfo {
+impl BlockInfoInternal {
     #[cfg(test)]
-    pub fn new(provider: impl Into<CandidBlockApi>, height: u64) -> Self {
+    pub fn new(provider: BlockApi, height: u64) -> Self {
         Self {
-            provider: provider.into(),
+            provider,
             height: Some(height),
         }
     }
 }
 
+/// The data fetched from the external Bitcoin block APIs.
+#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
+pub struct BlockInfo {
+    /// The provider of the Bitcoin block data.
+    pub provider: BitcoinBlockApi,
+
+    /// The height of the block.
+    pub height: Option<u64>,
+}
+
+impl From<BlockInfoInternal> for BlockInfo {
+    fn from(block_info: BlockInfoInternal) -> BlockInfo {
+        let provider = match block_info.provider {
+            BlockApi::BitcoinProvider(provider) => match provider {
+                BitcoinProviderBlockApi::BitcoinCanister => BitcoinBlockApi::BitcoinCanister,
+                BitcoinProviderBlockApi::Mainnet(explorer) => match explorer {
+                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
+                        BitcoinBlockApi::ApiBitapsComMainnet
+                    }
+                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
+                        BitcoinBlockApi::ApiBlockchairComMainnet
+                    }
+                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
+                        BitcoinBlockApi::ApiBlockcypherComMainnet
+                    }
+                    BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
+                        BitcoinBlockApi::BlockchainInfoMainnet
+                    }
+                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
+                        todo!("DEFI-2493: add BlockexplorerOne")
+                    }
+                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
+                        BitcoinBlockApi::BlockstreamInfoMainnet
+                    }
+                    BitcoinMainnetExplorerBlockApi::Mempool => BitcoinBlockApi::MempoolMainnet,
+                },
+                BitcoinProviderBlockApi::Testnet(explorer) => match explorer {
+                    BitcoinTestnetExplorerBlockApi::Mempool => BitcoinBlockApi::MempoolTestnet,
+                },
+            },
+            BlockApi::DogecoinProvider(_) => {
+                panic!("Block info can only contain Bitcoin providers.")
+            }
+        };
+        BlockInfo {
+            provider,
+            height: block_info.height,
+        }
+    }
+}
+
+/// The data fetched from the external block APIs.
+#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
+pub struct BlockInfoV2 {
+    /// The provider of the block data.
+    pub provider: String,
+
+    /// The height of the block.
+    pub height: Option<u64>,
+}
+
+impl From<BlockInfoInternal> for BlockInfoV2 {
+    fn from(block_info: BlockInfoInternal) -> BlockInfoV2 {
+        BlockInfoV2 {
+            provider: block_info.provider.to_string(),
+            height: block_info.height,
+        }
+    }
+}
+
 /// Fetches the data from the external APIs.
-pub async fn fetch_all_data(network: Network) -> Vec<BlockInfo> {
+pub async fn fetch_all_data(network: Network) -> Vec<BlockInfoInternal> {
     let api_providers = BlockApi::network_providers(network);
 
     let futures = api_providers
@@ -36,8 +109,8 @@ pub async fn fetch_all_data(network: Network) -> Vec<BlockInfo> {
     let result: Vec<_> = api_providers
         .iter()
         .zip(results.iter())
-        .map(|(api, value)| BlockInfo {
-            provider: CandidBlockApi::from(api.clone()),
+        .map(|(api, value)| BlockInfoInternal {
+            provider: api.clone(),
             height: value["height"].as_u64(),
         })
         .collect();
@@ -53,7 +126,6 @@ mod test {
         DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi,
     };
     use crate::config::Canister;
-    use crate::fetch::BlockInfo;
 
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet() {
@@ -78,19 +150,19 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
                     height: Some(700001),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     height: Some(700002),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     height: Some(700003),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: Some(700004),
                 },
@@ -98,15 +170,15 @@ mod test {
                 //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
                 //     height: Some(923450),
                 // }, // TODO(DEFI-2493): add BlockexplorerOne
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: Some(700005),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
                     height: Some(700008),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: Some(700007),
                 },
@@ -123,11 +195,11 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinTestnetExplorerBlockApi::Mempool.into(),
                     height: Some(55002),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: Some(55001),
                 },
@@ -140,19 +212,19 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     height: Some(5926987),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     height: Some(5926989),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
                     height: Some(5931072),
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinProviderBlockApi::DogecoinCanister.into(),
                     height: Some(5931098),
                 },
@@ -201,19 +273,19 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: None,
                 },
@@ -221,15 +293,15 @@ mod test {
                 //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
                 //     height: None,
                 // }, // TODO(DEFI-2493): add BlockexplorerOne
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::Mempool.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
@@ -246,11 +318,11 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinTestnetExplorerBlockApi::Mempool.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
@@ -263,19 +335,19 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinMainnetExplorerBlockApi::TokenView.into(),
                     height: None,
                 },
-                BlockInfo {
+                BlockInfoInternal {
                     provider: DogecoinProviderBlockApi::DogecoinCanister.into(),
                     height: None,
                 },

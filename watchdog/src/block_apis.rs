@@ -4,51 +4,39 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeSet;
-use strum::{EnumIter, IntoEnumIterator};
+use strum::{Display, EnumIter, IntoEnumIterator};
 
-/// APIs that serve block data.
+/// APIs that serve Bitcoin block data.
 #[derive(
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
-pub enum CandidBlockApi {
+pub enum BitcoinBlockApi {
     #[serde(rename = "api_bitaps_com_mainnet")]
-    BitcoinApiBitapsComMainnet,
+    ApiBitapsComMainnet,
 
     #[serde(rename = "api_blockchair_com_mainnet")]
-    BitcoinApiBlockchairComMainnet,
+    ApiBlockchairComMainnet,
 
     #[serde(rename = "api_blockcypher_com_mainnet")]
-    BitcoinApiBlockcypherComMainnet,
+    ApiBlockcypherComMainnet,
 
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
     #[serde(rename = "blockchain_info_mainnet")]
-    BitcoinBlockchainInfoMainnet,
+    BlockchainInfoMainnet,
 
     #[serde(rename = "blockstream_info_mainnet")]
-    BitcoinBlockstreamInfoMainnet,
+    BlockstreamInfoMainnet,
 
     #[serde(rename = "mempool_mainnet")]
-    BitcoinMempoolMainnet,
+    MempoolMainnet,
 
     #[serde(rename = "mempool_testnet")]
-    BitcoinMempoolTestnet,
-
-    #[serde(rename = "dogecoin_api_blockchair_com_mainnet")]
-    DogecoinApiBlockchairComMainnet,
-
-    #[serde(rename = "dogecoin_api_blockcypher_com_mainnet")]
-    DogecoinApiBlockcypherComMainnet,
-
-    #[serde(rename = "dogecoin_canister")]
-    DogecoinCanister, // Not an explorer.
-
-    #[serde(rename = "dogecoin_tokenview_mainnet")]
-    DogecoinTokenViewMainnet,
+    MempoolTestnet,
 }
 
-impl std::fmt::Display for CandidBlockApi {
+impl std::fmt::Display for BitcoinBlockApi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Extract the name from the JSON representation provided by serde-rename.
         let s = serde_json::to_string(&json!(self)).unwrap();
@@ -62,114 +50,80 @@ impl std::fmt::Display for CandidBlockApi {
 }
 
 /// APIs that serve block data.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Display)]
 pub enum BlockApi {
+    #[strum(transparent)]
     BitcoinProvider(BitcoinProviderBlockApi),
+    #[strum(transparent)]
     DogecoinProvider(DogecoinProviderBlockApi),
 }
 
-impl From<BlockApi> for CandidBlockApi {
-    fn from(api: BlockApi) -> Self {
-        match api {
-            BlockApi::BitcoinProvider(provider) => match provider {
-                BitcoinProviderBlockApi::BitcoinCanister => CandidBlockApi::BitcoinCanister,
-                BitcoinProviderBlockApi::Mainnet(explorer) => match explorer {
-                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
-                        CandidBlockApi::BitcoinApiBitapsComMainnet
-                    }
-                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                        CandidBlockApi::BitcoinApiBlockchairComMainnet
-                    }
-                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                        CandidBlockApi::BitcoinApiBlockcypherComMainnet
-                    }
-                    BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
-                        CandidBlockApi::BitcoinBlockchainInfoMainnet
-                    }
-                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
-                        todo!("DEFI-2493: add BlockexplorerOne")
-                    }
-                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
-                        CandidBlockApi::BitcoinBlockstreamInfoMainnet
-                    }
-                    BitcoinMainnetExplorerBlockApi::Mempool => {
-                        CandidBlockApi::BitcoinMempoolMainnet
-                    }
-                },
-                BitcoinProviderBlockApi::Testnet(explorer) => match explorer {
-                    BitcoinTestnetExplorerBlockApi::Mempool => {
-                        CandidBlockApi::BitcoinMempoolTestnet
-                    }
-                },
-            },
-            BlockApi::DogecoinProvider(provider) => match provider {
-                DogecoinProviderBlockApi::DogecoinCanister => CandidBlockApi::DogecoinCanister,
-                DogecoinProviderBlockApi::Mainnet(explorer) => match explorer {
-                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                        CandidBlockApi::DogecoinApiBlockchairComMainnet
-                    }
-                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                        CandidBlockApi::DogecoinApiBlockcypherComMainnet
-                    }
-                    DogecoinMainnetExplorerBlockApi::TokenView => {
-                        CandidBlockApi::DogecoinTokenViewMainnet
-                    }
-                },
-            },
-        }
-    }
-}
-
 /// Providers that serve Bitcoin block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display)]
 pub enum BitcoinProviderBlockApi {
+    #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
+    #[strum(transparent)]
     Mainnet(BitcoinMainnetExplorerBlockApi),
+    #[strum(transparent)]
     Testnet(BitcoinTestnetExplorerBlockApi),
 }
 
-impl From<BitcoinProviderBlockApi> for CandidBlockApi {
+impl From<BitcoinProviderBlockApi> for BlockApi {
     fn from(api: BitcoinProviderBlockApi) -> Self {
-        CandidBlockApi::from(BlockApi::BitcoinProvider(api))
+        BlockApi::BitcoinProvider(api)
     }
 }
 
 /// Explorers that serve Bitcoin mainnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter, Display)]
 pub enum BitcoinMainnetExplorerBlockApi {
+    #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
     ApiBitapsCom,
+    #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
+    #[strum(serialize = "bitcoin_api_blockcypher_com_mainnet")]
     ApiBlockcypherCom,
+    #[strum(serialize = "bitcoin_blockchain_info_mainnet")]
     BlockchainInfo,
+    #[strum(serialize = "bitcoin_block_explorer_one_mainnet")]
     BlockexplorerOne,
+    #[strum(serialize = "bitcoin_blockstream_info_mainnet")]
     BlockstreamInfo,
+    #[strum(serialize = "bitcoin_mempool_mainnet")]
     Mempool,
 }
 
 /// Explorers that serve Bitcoin testnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter, Display)]
 pub enum BitcoinTestnetExplorerBlockApi {
+    #[strum(serialize = "bitcoin_mempool_testnet")]
     Mempool,
 }
 
 /// Providers that serve Dogecoin block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display)]
 pub enum DogecoinProviderBlockApi {
+    #[strum(serialize = "dogecoin_canister")]
     DogecoinCanister,
+    #[strum(transparent)]
     Mainnet(DogecoinMainnetExplorerBlockApi),
 }
 
-impl From<DogecoinProviderBlockApi> for CandidBlockApi {
+impl From<DogecoinProviderBlockApi> for BlockApi {
     fn from(api: DogecoinProviderBlockApi) -> Self {
-        CandidBlockApi::from(BlockApi::DogecoinProvider(api))
+        BlockApi::DogecoinProvider(api)
     }
 }
 
 /// Explorers that serve Dogecoin mainnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter, Display)]
 pub enum DogecoinMainnetExplorerBlockApi {
+    #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
+    #[strum(serialize = "dogecoin_api_blockcypher_com_mainnet")]
     ApiBlockcypherCom,
+    #[strum(serialize = "dogecoin_tokenview_mainnet")]
     TokenView,
 }
 
@@ -188,24 +142,6 @@ impl From<BitcoinTestnetExplorerBlockApi> for BlockApi {
 impl From<DogecoinMainnetExplorerBlockApi> for BlockApi {
     fn from(api: DogecoinMainnetExplorerBlockApi) -> Self {
         BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(api))
-    }
-}
-
-impl From<BitcoinMainnetExplorerBlockApi> for CandidBlockApi {
-    fn from(api: BitcoinMainnetExplorerBlockApi) -> Self {
-        CandidBlockApi::from(BlockApi::from(api))
-    }
-}
-
-impl From<BitcoinTestnetExplorerBlockApi> for CandidBlockApi {
-    fn from(api: BitcoinTestnetExplorerBlockApi) -> Self {
-        CandidBlockApi::from(BlockApi::from(api))
-    }
-}
-
-impl From<DogecoinMainnetExplorerBlockApi> for CandidBlockApi {
-    fn from(api: DogecoinMainnetExplorerBlockApi) -> Self {
-        CandidBlockApi::from(BlockApi::from(api))
     }
 }
 
@@ -381,7 +317,7 @@ impl BitcoinProviderBlockApi {
             .collect();
         // Remove the explorers that are not configured.
         let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).into()));
+        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).to_string()));
 
         explorers
     }
@@ -393,7 +329,7 @@ impl BitcoinProviderBlockApi {
             .collect();
         // Remove the explorers that are not configured.
         let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).into()));
+        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).to_string()));
 
         explorers
     }
@@ -416,7 +352,7 @@ impl DogecoinProviderBlockApi {
             .collect();
         // Remove the explorers that are not configured.
         let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).into()));
+        explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).to_string()));
 
         explorers
     }
@@ -484,30 +420,30 @@ mod test {
 
     #[test]
     fn test_names() {
-        let expected: std::collections::HashMap<CandidBlockApi, &str> = [
+        let expected: std::collections::HashMap<BlockApi, &str> = [
             (
                 BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                "api_bitaps_com_mainnet",
+                "bitcoin_api_bitaps_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                "api_blockchair_com_mainnet",
+                "bitcoin_api_blockchair_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                "api_blockcypher_com_mainnet",
+                "bitcoin_api_blockcypher_com_mainnet",
             ),
             (
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                "blockchain_info_mainnet",
+                "bitcoin_blockchain_info_mainnet",
             ),
             // (
             //     BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-            //     "blockexplorer_one_mainnet",
+            //     "bitcoin_blockexplorer_one_mainnet",
             // ), // TODO(DEFI-2493): add BlockexplorerOne
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                "blockstream_info_mainnet",
+                "bitcoin_blockstream_info_mainnet",
             ),
             (
                 BitcoinProviderBlockApi::BitcoinCanister.into(),
@@ -515,11 +451,11 @@ mod test {
             ),
             (
                 BitcoinMainnetExplorerBlockApi::Mempool.into(),
-                "mempool_mainnet",
+                "bitcoin_mempool_mainnet",
             ),
             (
                 BitcoinTestnetExplorerBlockApi::Mempool.into(),
-                "mempool_testnet",
+                "bitcoin_mempool_testnet",
             ),
             (
                 DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
@@ -541,11 +477,7 @@ mod test {
         .iter()
         .cloned()
         .collect();
-        let all_candid_providers = all_providers()
-            .into_iter()
-            .map(Into::into)
-            .collect::<Vec<CandidBlockApi>>();
-        for provider in all_candid_providers {
+        for provider in all_providers() {
             assert_eq!(provider.to_string(), expected[&provider].to_string());
         }
     }
