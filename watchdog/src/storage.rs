@@ -1,7 +1,7 @@
 use crate::block_apis::BlockApi;
 use crate::config::Config;
 use crate::fetch::BlockInfoInternal;
-use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA};
+use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA, HEALTH_STATUS_CALLS};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{Cell, DefaultMemoryImpl};
@@ -47,4 +47,16 @@ pub fn set_api_access_target(flag: Option<Flag>) {
 /// Returns the API access from the local storage.
 pub fn get_api_access_target() -> Option<Flag> {
     API_ACCESS_TARGET.with(|cell| *cell.borrow())
+}
+
+/// Increments the health_status endpoint call counter.
+pub fn increment_health_status_calls() {
+    HEALTH_STATUS_CALLS.with(|cell| {
+        *cell.borrow_mut() += 1;
+    });
+}
+
+/// Returns the number of health_status endpoint calls.
+pub fn get_health_status_calls() -> u64 {
+    HEALTH_STATUS_CALLS.with(|cell| *cell.borrow())
 }

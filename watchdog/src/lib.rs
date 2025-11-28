@@ -39,6 +39,9 @@ thread_local! {
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
+
+    /// Counter for health_status endpoint calls.
+    static HEALTH_STATUS_CALLS: RefCell<u64> = const { RefCell::new(0) };
 }
 
 /// This function is called when the canister is created.
@@ -93,6 +96,7 @@ async fn tick() {
 /// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
 fn health_status() -> HealthStatus {
+    storage::increment_health_status_calls();
     let network = storage::get_config().network;
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
