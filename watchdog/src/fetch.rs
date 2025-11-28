@@ -43,31 +43,27 @@ impl From<BlockInfoInternal> for BlockInfo {
                 BitcoinProviderBlockApi::BitcoinCanister => BitcoinBlockApi::BitcoinCanister,
                 BitcoinProviderBlockApi::Mainnet(explorer) => match explorer {
                     BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
-                        BitcoinBlockApi::BitcoinApiBitapsComMainnet
+                        BitcoinBlockApi::ApiBitapsComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                        BitcoinBlockApi::BitcoinApiBlockchairComMainnet
+                        BitcoinBlockApi::ApiBlockchairComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                        BitcoinBlockApi::BitcoinApiBlockcypherComMainnet
+                        BitcoinBlockApi::ApiBlockcypherComMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
-                        BitcoinBlockApi::BitcoinBlockchainInfoMainnet
+                        BitcoinBlockApi::BlockchainInfoMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
                         todo!("DEFI-2493: add BlockexplorerOne")
                     }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
-                        BitcoinBlockApi::BitcoinBlockstreamInfoMainnet
+                        BitcoinBlockApi::BlockstreamInfoMainnet
                     }
-                    BitcoinMainnetExplorerBlockApi::Mempool => {
-                        BitcoinBlockApi::BitcoinMempoolMainnet
-                    }
+                    BitcoinMainnetExplorerBlockApi::Mempool => BitcoinBlockApi::MempoolMainnet,
                 },
                 BitcoinProviderBlockApi::Testnet(explorer) => match explorer {
-                    BitcoinTestnetExplorerBlockApi::Mempool => {
-                        BitcoinBlockApi::BitcoinMempoolTestnet
-                    }
+                    BitcoinTestnetExplorerBlockApi::Mempool => BitcoinBlockApi::MempoolTestnet,
                 },
             },
             BlockApi::DogecoinProvider(_) => {
@@ -114,7 +110,7 @@ pub async fn fetch_all_data(network: Network) -> Vec<BlockInfoInternal> {
         .iter()
         .zip(results.iter())
         .map(|(api, value)| BlockInfoInternal {
-            provider: BlockApi::from(api.clone()),
+            provider: api.clone(),
             height: value["height"].as_u64(),
         })
         .collect();

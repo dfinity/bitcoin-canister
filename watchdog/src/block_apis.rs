@@ -6,34 +6,34 @@ use serde_json::json;
 use std::collections::BTreeSet;
 use strum::{Display, EnumIter, IntoEnumIterator};
 
-/// Bitcoin APIs that serve block data.
+/// APIs that serve Bitcoin block data.
 #[derive(
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum BitcoinBlockApi {
     #[serde(rename = "api_bitaps_com_mainnet")]
-    BitcoinApiBitapsComMainnet,
+    ApiBitapsComMainnet,
 
     #[serde(rename = "api_blockchair_com_mainnet")]
-    BitcoinApiBlockchairComMainnet,
+    ApiBlockchairComMainnet,
 
     #[serde(rename = "api_blockcypher_com_mainnet")]
-    BitcoinApiBlockcypherComMainnet,
+    ApiBlockcypherComMainnet,
 
     #[serde(rename = "bitcoin_canister")]
     BitcoinCanister, // Not an explorer.
 
     #[serde(rename = "blockchain_info_mainnet")]
-    BitcoinBlockchainInfoMainnet,
+    BlockchainInfoMainnet,
 
     #[serde(rename = "blockstream_info_mainnet")]
-    BitcoinBlockstreamInfoMainnet,
+    BlockstreamInfoMainnet,
 
     #[serde(rename = "mempool_mainnet")]
-    BitcoinMempoolMainnet,
+    MempoolMainnet,
 
     #[serde(rename = "mempool_testnet")]
-    BitcoinMempoolTestnet,
+    MempoolTestnet,
 }
 
 impl std::fmt::Display for BitcoinBlockApi {

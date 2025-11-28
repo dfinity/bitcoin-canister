@@ -113,7 +113,7 @@ pub fn health_status_internal() -> HealthStatusInternal {
         crate::storage::get_block_info(&block_api),
         BlockApi::network_explorers(config.network)
             .iter()
-            .filter_map(|api| crate::storage::get_block_info(api))
+            .filter_map(crate::storage::get_block_info)
             .collect::<Vec<_>>(),
         config,
     )
