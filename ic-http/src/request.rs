@@ -97,6 +97,7 @@ impl HttpRequestBuilder {
             headers: self.headers,
             body: self.body,
             transform: self.transform,
+            is_replicated: None,
         }
     }
 }

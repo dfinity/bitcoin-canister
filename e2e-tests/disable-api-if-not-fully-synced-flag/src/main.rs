@@ -4,7 +4,7 @@ use bitcoin::{
 };
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
-use ic_cdk_macros::{init, update};
+use ic_cdk::{init, update};
 use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
