@@ -1,4 +1,4 @@
-use crate::block_apis::{BlockApi, CandidBlockApi};
+use crate::block_apis::BlockApi;
 use crate::config::Network;
 use crate::{health::HeightStatus, types::CandidHttpResponse};
 use ic_btc_interface::Flag;
@@ -63,7 +63,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         "The minimum number of explorers to compare against.",
     )?;
 
-    let health = crate::health::health_status();
+    let health = crate::health::health_status_internal();
     w.encode_gauge(
         "canister_height",
         health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),
@@ -112,16 +112,15 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     let mut available_explorers_count: u64 = 0;
     for explorer in BlockApi::network_explorers(config.network) {
-        let candid_explorer: CandidBlockApi = explorer.clone().into();
         let height = available_explorers
-            .get(&candid_explorer)
+            .get(&explorer)
             .map_or(NO_VALUE, |block_info| {
                 block_info.height.map_or(NO_VALUE, |x| x as f64)
             });
         if !height.is_nan() {
             available_explorers_count += 1;
         }
-        gauge = gauge.value(&[("explorer", &candid_explorer.to_string())], height)?;
+        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
     }
     w.encode_gauge(
         "available_explorers",

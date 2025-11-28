@@ -1,6 +1,7 @@
-use crate::block_apis::CandidBlockApi;
+use crate::block_apis::BlockApi;
 use crate::config::Config;
-use crate::{fetch::BlockInfo, API_ACCESS_TARGET, BLOCK_INFO_DATA};
+use crate::fetch::BlockInfoInternal;
+use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{Cell, DefaultMemoryImpl};
@@ -27,14 +28,14 @@ pub fn set_config(config: Config) {
 }
 
 /// Inserts the data into the local storage.
-pub fn insert_block_info(info: BlockInfo) {
+pub fn insert_block_info(info: BlockInfoInternal) {
     BLOCK_INFO_DATA.with(|cell| {
         cell.borrow_mut().insert(info.provider.clone(), info);
     });
 }
 
 /// Returns the data from the local storage.
-pub fn get_block_info(provider: &CandidBlockApi) -> Option<BlockInfo> {
+pub fn get_block_info(provider: &BlockApi) -> Option<BlockInfoInternal> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }
 

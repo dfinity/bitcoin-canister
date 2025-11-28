@@ -1,4 +1,5 @@
-use crate::block_apis::{BlockApi, CandidBlockApi};
+use crate::block_apis::BlockApi;
+use crate::fetch::{BlockInfoInternal, BlockInfoV2};
 use crate::{config::Config, fetch::BlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -42,19 +43,77 @@ pub struct HealthStatus {
     pub explorers: Vec<BlockInfo>,
 }
 
+/// Health status of the canister.
+#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
+pub struct HealthStatusV2 {
+    /// Main chain height of the canister.
+    pub height_source: Option<u64>,
+
+    /// Height target derived from explorer heights.
+    pub height_target: Option<u64>,
+
+    /// Difference between canister height and target height.
+    pub height_diff: Option<i64>,
+
+    /// Canister height status.
+    pub height_status: HeightStatus,
+
+    /// Block info from the explorers.
+    pub explorers: Vec<BlockInfoV2>,
+}
+
+/// Health status of the canister.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HealthStatusInternal {
+    /// Main chain height of the canister.
+    pub height_source: Option<u64>,
+
+    /// Height target derived from explorer heights.
+    pub height_target: Option<u64>,
+
+    /// Difference between canister height and target height.
+    pub height_diff: Option<i64>,
+
+    /// Canister height status.
+    pub height_status: HeightStatus,
+
+    /// Block info from the explorers.
+    pub explorers: Vec<BlockInfoInternal>,
+}
+
+impl From<HealthStatusInternal> for HealthStatus {
+    fn from(status: HealthStatusInternal) -> HealthStatus {
+        HealthStatus {
+            height_source: status.height_source,
+            height_target: status.height_target,
+            height_diff: status.height_diff,
+            height_status: status.height_status,
+            explorers: status.explorers.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl From<HealthStatusInternal> for HealthStatusV2 {
+    fn from(status: HealthStatusInternal) -> HealthStatusV2 {
+        HealthStatusV2 {
+            height_source: status.height_source,
+            height_target: status.height_target,
+            height_diff: status.height_diff,
+            height_status: status.height_status,
+            explorers: status.explorers.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 /// Calculates the health status of a canister.
-pub fn health_status() -> HealthStatus {
+pub fn health_status_internal() -> HealthStatusInternal {
     let config = crate::storage::get_config();
     let block_api = BlockApi::network_canister(config.network);
     compare(
-        crate::storage::get_block_info(&block_api.into()),
+        crate::storage::get_block_info(&block_api),
         BlockApi::network_explorers(config.network)
             .iter()
-            .filter_map(|api| {
-                crate::storage::get_block_info(&<BlockApi as Into<CandidBlockApi>>::into(
-                    api.clone(),
-                ))
-            })
+            .filter_map(|api| crate::storage::get_block_info(api))
             .collect::<Vec<_>>(),
         config,
     )
@@ -86,7 +145,11 @@ fn calculate_height_target(
 }
 
 /// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
+fn compare(
+    source: Option<BlockInfoInternal>,
+    explorers: Vec<BlockInfoInternal>,
+    config: Config,
+) -> HealthStatusInternal {
     let height_source = source.and_then(|block| block.height);
     let heights = explorers
         .iter()
@@ -111,7 +174,7 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
         }
     });
 
-    HealthStatus {
+    HealthStatusInternal {
         height_source,
         height_target,
         height_diff,
@@ -243,7 +306,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatus {
+            HealthStatusInternal {
                 height_source: None,
                 height_target: None,
                 height_diff: None,
@@ -256,8 +319,8 @@ mod test {
     #[test]
     fn test_compare_no_explorers() {
         // Arrange
-        let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister,
+        let source = Some(BlockInfoInternal::new(
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![];
@@ -265,7 +328,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatus {
+            HealthStatusInternal {
                 height_source: Some(1_000),
                 height_target: None,
                 height_diff: None,
@@ -278,26 +341,38 @@ mod test {
     #[test]
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
-        let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister,
+        let source = Some(BlockInfoInternal::new(
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
+            BlockInfoInternal::new(
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                1_006,
+            ),
+            BlockInfoInternal::new(
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                1_005,
+            ),
         ];
 
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatus {
+            HealthStatusInternal {
                 height_source: Some(1_000),
                 height_target: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        1_006
+                    ),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        1_005
+                    ),
                 ],
             }
         );
@@ -306,28 +381,46 @@ mod test {
     #[test]
     fn test_compare_behind() {
         // Arrange
-        let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister,
+        let source = Some(BlockInfoInternal::new(
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_004),
+            BlockInfoInternal::new(
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                1_006,
+            ),
+            BlockInfoInternal::new(
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                1_005,
+            ),
+            BlockInfoInternal::new(
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                1_004,
+            ),
         ];
 
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatus {
+            HealthStatusInternal {
                 height_source: Some(1_000),
                 height_target: Some(1_005),
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_006),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_005),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 1_004),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        1_006
+                    ),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        1_005
+                    ),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        1_004
+                    ),
                 ],
             }
         );
@@ -336,28 +429,37 @@ mod test {
     #[test]
     fn test_compare_ahead() {
         // Arrange
-        let source = Some(BlockInfo::new(
-            BitcoinProviderBlockApi::BitcoinCanister,
+        let source = Some(BlockInfoInternal::new(
+            BitcoinProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 996),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 995),
-            BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 994),
+            BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 996),
+            BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 995),
+            BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 994),
         ];
 
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatus {
+            HealthStatusInternal {
                 height_source: Some(1_000),
                 height_target: Some(995),
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 996),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 995),
-                    BlockInfo::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom, 994),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        996
+                    ),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        995
+                    ),
+                    BlockInfoInternal::new(
+                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
+                        994
+                    ),
                 ],
             }
         );

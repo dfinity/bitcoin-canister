@@ -12,11 +12,13 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
+use crate::block_apis::BlockApi;
+use crate::config::Network;
+use crate::fetch::BlockInfoInternal;
+use crate::health::HealthStatusV2;
 use crate::{
-    block_apis::CandidBlockApi,
     config::Config,
     endpoints::*,
-    fetch::BlockInfo,
     health::HealthStatus,
     types::WatchdogArg,
     types::{CandidHttpRequest, CandidHttpResponse},
@@ -33,7 +35,7 @@ use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RefCell<HashMap<CandidBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<BlockApi, BlockInfoInternal>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
@@ -91,7 +93,19 @@ async fn tick() {
 /// Returns the health status of the canister monitored.
 #[query]
 fn health_status() -> HealthStatus {
-    crate::health::health_status()
+    let network = storage::get_config().network;
+    match network {
+        Network::BitcoinMainnet | Network::BitcoinTestnet => {
+            health::health_status_internal().into()
+        }
+        _ => panic!("health_status can only be called for Bitcoin networks"),
+    }
+}
+
+/// Returns the health status of the canister monitored.
+#[query]
+fn health_status_v2() -> HealthStatusV2 {
+    health::health_status_internal().into()
 }
 
 /// Returns the configuration of the watchdog canister.
