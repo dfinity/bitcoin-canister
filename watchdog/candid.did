@@ -150,7 +150,7 @@ type watchdog_arg = variant {
 };
 
 service : (watchdog_arg) -> {
-    /// Returns the health status of the target canister (Bitcoin explorers only).
+    /// Returns the health status of the target canister (Bitcoin only).
     health_status : () -> (health_status) query;
 
     /// Returns the health status of the target canister.
