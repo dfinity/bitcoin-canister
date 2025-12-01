@@ -288,25 +288,11 @@ pub struct OutPoint {
 }
 
 /// An unspent transaction output.
-#[derive(CandidType, Debug, Deserialize, PartialEq, Serialize, Clone, Hash, Eq)]
+#[derive(CandidType, Debug, Deserialize, Ord, PartialOrd, PartialEq, Serialize, Clone, Hash, Eq)]
 pub struct Utxo {
     pub outpoint: OutPoint,
     pub value: Satoshi,
     pub height: Height,
-}
-
-impl std::cmp::PartialOrd for Utxo {
-    fn partial_cmp(&self, other: &Utxo) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl std::cmp::Ord for Utxo {
-    fn cmp(&self, other: &Utxo) -> std::cmp::Ordering {
-        // The output point uniquely identifies an UTXO; there is no point in
-        // comparing the other fields.
-        self.outpoint.cmp(&other.outpoint)
-    }
 }
 
 /// A filter used when requesting UTXOs.
