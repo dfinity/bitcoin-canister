@@ -288,7 +288,9 @@ pub struct OutPoint {
 }
 
 /// An unspent transaction output.
-#[derive(CandidType, Debug, Deserialize, Ord, PartialOrd, PartialEq, Serialize, Clone, Hash, Eq)]
+#[derive(
+    CandidType, Debug, Deserialize, Ord, PartialOrd, PartialEq, Serialize, Clone, Hash, Eq,
+)]
 pub struct Utxo {
     pub outpoint: OutPoint,
     pub value: Satoshi,
