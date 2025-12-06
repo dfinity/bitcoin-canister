@@ -1,7 +1,5 @@
 use crate::block_apis::BitcoinTestnetExplorerBlockApi;
-use crate::block_apis::{
-    BitcoinMainnetExplorerBlockApi, CandidBlockApi, DogecoinMainnetExplorerBlockApi,
-};
+use crate::block_apis::{BitcoinMainnetExplorerBlockApi, DogecoinMainnetExplorerBlockApi};
 use candid::CandidType;
 use candid::Principal;
 use ic_stable_structures::storable::Bound;
@@ -96,7 +94,7 @@ pub struct Config {
     pub interval_between_fetches_sec: u64,
 
     /// Explorers to use for fetching block data.
-    pub explorers: Vec<CandidBlockApi>,
+    pub explorers: Vec<String>,
 
     /// Type of subnet on which the watchdog and target canisters are deployed.
     pub subnet_type: SubnetType,
@@ -116,13 +114,13 @@ impl Config {
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![
-                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                    BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                    // BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                    BitcoinMainnetExplorerBlockApi::Mempool.into(),
+                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom.to_string(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.to_string(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.to_string(),
+                    BitcoinMainnetExplorerBlockApi::BlockchainInfo.to_string(),
+                    // BitcoinMainnetExplorerBlockApi::BlockexplorerOne.to_string(),
+                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo.to_string(),
+                    BitcoinMainnetExplorerBlockApi::Mempool.to_string(),
                 ],
                 subnet_type: SubnetType::System,
             },
@@ -138,13 +136,13 @@ impl Config {
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![
-                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                    BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                    // BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                    BitcoinMainnetExplorerBlockApi::Mempool.into(),
+                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom.to_string(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.to_string(),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.to_string(),
+                    BitcoinMainnetExplorerBlockApi::BlockchainInfo.to_string(),
+                    // BitcoinMainnetExplorerBlockApi::BlockexplorerOne.to_string(),
+                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo.to_string(),
+                    BitcoinMainnetExplorerBlockApi::Mempool.to_string(),
                 ],
                 subnet_type: SubnetType::Application,
             },
@@ -157,7 +155,7 @@ impl Config {
                     .unwrap(),
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-                explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.into()],
+                explorers: vec![BitcoinTestnetExplorerBlockApi::Mempool.to_string()],
                 subnet_type: SubnetType::System,
             },
             Canister::DogecoinMainnet => Self {
@@ -170,9 +168,9 @@ impl Config {
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![
-                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                    DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.to_string(),
+                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.to_string(),
+                    DogecoinMainnetExplorerBlockApi::TokenView.to_string(),
                 ],
                 subnet_type: SubnetType::System,
             },
@@ -188,9 +186,9 @@ impl Config {
                 delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
                 interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
                 explorers: vec![
-                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                    DogecoinMainnetExplorerBlockApi::TokenView.into(),
+                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.to_string(),
+                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.to_string(),
+                    DogecoinMainnetExplorerBlockApi::TokenView.to_string(),
                 ],
                 subnet_type: SubnetType::Application,
             },
