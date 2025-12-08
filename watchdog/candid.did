@@ -71,9 +71,6 @@ type health_status_v2 = record {
     /// Height target derived from explorer heights.
     height_target : opt nat64;
 
-    /// Difference between canister height and target height.
-    height_diff : opt int64;
-
     /// Canister height status.
     height_status : height_status;
 

@@ -52,9 +52,6 @@ pub struct HealthStatusV2 {
     /// Height target derived from explorer heights.
     pub height_target: Option<u64>,
 
-    /// Difference between canister height and target height.
-    pub height_diff: Option<i64>,
-
     /// Canister height status.
     pub height_status: HeightStatus,
 
@@ -98,7 +95,6 @@ impl From<HealthStatusInternal> for HealthStatusV2 {
         HealthStatusV2 {
             height_source: status.height_source,
             height_target: status.height_target,
-            height_diff: status.height_diff,
             height_status: status.height_status,
             explorers: status.explorers.into_iter().map(Into::into).collect(),
         }
