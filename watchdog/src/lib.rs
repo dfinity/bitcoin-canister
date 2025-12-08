@@ -100,7 +100,7 @@ fn health_status() -> HealthStatus {
     let network = storage::get_config().network;
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
-            health::health_status_internal().into()
+            HealthStatus::from(health::health_status_internal())
         }
         _ => panic!("health_status can only be called for Bitcoin networks"),
     }
