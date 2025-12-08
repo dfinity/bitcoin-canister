@@ -47,10 +47,10 @@ pub struct HealthStatus {
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HealthStatusV2 {
     /// Main chain height of the canister.
-    pub height_source: Option<u64>,
+    pub canister_height: Option<u64>,
 
     /// Height target derived from explorer heights.
-    pub height_target: Option<u64>,
+    pub explorer_height: Option<u64>,
 
     /// Canister height status.
     pub height_status: HeightStatus,
@@ -93,8 +93,8 @@ impl From<HealthStatusInternal> for HealthStatus {
 impl From<HealthStatusInternal> for HealthStatusV2 {
     fn from(status: HealthStatusInternal) -> HealthStatusV2 {
         HealthStatusV2 {
-            height_source: status.height_source,
-            height_target: status.height_target,
+            canister_height: status.height_source,
+            explorer_height: status.height_target,
             height_status: status.height_status,
             explorers: status.explorers.into_iter().map(Into::into).collect(),
         }
