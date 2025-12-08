@@ -148,6 +148,7 @@ type watchdog_arg = variant {
 
 service : (watchdog_arg) -> {
     /// [DEPRECATED] Returns the health status of the target canister (Bitcoin only).
+    /// Please use `health_status_v2` instead.
     health_status : () -> (health_status) query;
 
     /// Returns the health status of the target canister.
