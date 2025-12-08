@@ -33,6 +33,14 @@ use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
+/// Count number of calls made to a deprecated method.
+///
+/// Each field represents a counter for one specific deprecated method.
+#[derive(Default)]
+pub struct DeprecatedMethodCallCounter {
+    health_status: u64,
+}
+
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<BlockApi, BlockInfoInternal>> = RefCell::new(HashMap::new());
@@ -40,8 +48,8 @@ thread_local! {
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
 
-    /// Counter for health_status endpoint calls.
-    static HEALTH_STATUS_CALLS: RefCell<u64> = const { RefCell::new(0) };
+    /// Counter for deprecated endpoint calls.
+    static DEPRECATED_METHOD_CALLS: RefCell<DeprecatedMethodCallCounter> = RefCell::new(DeprecatedMethodCallCounter::default());
 }
 
 /// This function is called when the canister is created.

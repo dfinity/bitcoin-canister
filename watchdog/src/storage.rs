@@ -1,7 +1,7 @@
 use crate::block_apis::BlockApi;
 use crate::config::Config;
 use crate::fetch::BlockInfoInternal;
-use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA, HEALTH_STATUS_CALLS};
+use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA, DEPRECATED_METHOD_CALLS};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{Cell, DefaultMemoryImpl};
@@ -51,12 +51,12 @@ pub fn get_api_access_target() -> Option<Flag> {
 
 /// Increments the health_status endpoint call counter.
 pub fn increment_health_status_calls() {
-    HEALTH_STATUS_CALLS.with(|cell| {
-        *cell.borrow_mut() += 1;
+    DEPRECATED_METHOD_CALLS.with(|cell| {
+        cell.borrow_mut().health_status += 1;
     });
 }
 
 /// Returns the number of health_status endpoint calls.
 pub fn get_health_status_calls() -> u64 {
-    HEALTH_STATUS_CALLS.with(|cell| *cell.borrow())
+    DEPRECATED_METHOD_CALLS.with(|cell| cell.borrow().health_status)
 }
