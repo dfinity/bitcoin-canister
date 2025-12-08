@@ -1,8 +1,9 @@
 use crate::block_apis::BlockApi;
-use crate::fetch::{BlockInfoInternal, BlockInfoV2};
+use crate::fetch::{BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
 use crate::{config::Config, fetch::BlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 /// Canister height status compared to other explorers.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
@@ -78,15 +79,23 @@ pub struct HealthStatusInternal {
     pub explorers: Vec<BlockInfoInternal>,
 }
 
-impl From<HealthStatusInternal> for HealthStatus {
-    fn from(status: HealthStatusInternal) -> HealthStatus {
-        HealthStatus {
+impl TryFrom<HealthStatusInternal> for HealthStatus {
+    type Error = BlockInfoConversionError;
+
+    fn try_from(status: HealthStatusInternal) -> Result<HealthStatus, Self::Error> {
+        let explorers = status
+            .explorers
+            .into_iter()
+            .map(BlockInfo::try_from)
+            .collect::<Result<Vec<BlockInfo>, Self::Error>>()?;
+
+        Ok(HealthStatus {
             height_source: status.height_source,
             height_target: status.height_target,
             height_diff: status.height_diff,
             height_status: status.height_status,
-            explorers: status.explorers.into_iter().map(Into::into).collect(),
-        }
+            explorers,
+        })
     }
 }
 

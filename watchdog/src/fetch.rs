@@ -5,6 +5,7 @@ use crate::block_apis::{
 use crate::config::Network;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
 /// The data fetched from the external block APIs.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -36,8 +37,15 @@ pub struct BlockInfo {
     pub height: Option<u64>,
 }
 
-impl From<BlockInfoInternal> for BlockInfo {
-    fn from(block_info: BlockInfoInternal) -> BlockInfo {
+/// Error type for converting BlockInfoInternal to BlockInfo.
+pub struct BlockInfoConversionError {
+    pub reason: String,
+}
+
+impl TryFrom<BlockInfoInternal> for BlockInfo {
+    type Error = BlockInfoConversionError;
+
+    fn try_from(block_info: BlockInfoInternal) -> Result<BlockInfo, Self::Error> {
         let provider = match block_info.provider {
             BlockApi::BitcoinProvider(provider) => match provider {
                 BitcoinProviderBlockApi::BitcoinCanister => BitcoinBlockApi::BitcoinCanister,
@@ -55,7 +63,9 @@ impl From<BlockInfoInternal> for BlockInfo {
                         BitcoinBlockApi::BlockchainInfoMainnet
                     }
                     BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
-                        todo!("DEFI-2493: add BlockexplorerOne")
+                        return Err(BlockInfoConversionError {
+                            reason: "DEFI-2493: add BlockexplorerOne".to_string(),
+                        });
                     }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         BitcoinBlockApi::BlockstreamInfoMainnet
@@ -67,13 +77,15 @@ impl From<BlockInfoInternal> for BlockInfo {
                 },
             },
             BlockApi::DogecoinProvider(_) => {
-                panic!("Block info can only contain Bitcoin providers.")
+                return Err(BlockInfoConversionError {
+                    reason: "BlockInfo can only contain Bitcoin providers".to_string(),
+                });
             }
         };
-        BlockInfo {
+        Ok(BlockInfo {
             provider,
             height: block_info.height,
-        }
+        })
     }
 }
 

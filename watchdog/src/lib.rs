@@ -31,6 +31,7 @@ use ic_cdk::{
 };
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
+use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 /// Count number of calls made to a deprecated method.
@@ -108,7 +109,12 @@ fn health_status() -> HealthStatus {
     let network = storage::get_config().network;
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
-            HealthStatus::from(health::health_status_internal())
+            HealthStatus::try_from(health::health_status_internal()).unwrap_or_else(|e| {
+                panic!(
+                    "Failed to convert health status for Bitcoin network: {}",
+                    e.reason
+                )
+            })
         }
         _ => panic!("health_status can only be called for Bitcoin networks"),
     }
