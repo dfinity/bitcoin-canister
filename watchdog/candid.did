@@ -38,7 +38,7 @@ type block_info = record {
 
 /// Information about a block from a specific API provider.
 type block_info_v2 = record {
-    /// Block API provider.
+    /// Block API provider name (e.g. bitcoin_mempool_mainnet).
     provider : text;
 
     /// Block height.
