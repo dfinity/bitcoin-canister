@@ -22,3 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add two APIs: `Fees::testnet` and `Fees::mainnet`.
+
+[unreleased]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-interface-0.3.0...HEAD
+[0.3.0]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-interface-0.2.3...ic-btc-interface-0.3.0
+[0.2.3]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-interface-0.2.2...ic-btc-interface-0.2.3
