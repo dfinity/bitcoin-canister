@@ -12,11 +12,13 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
+use crate::block_apis::BlockApi;
+use crate::config::Network;
+use crate::fetch::BlockInfoInternal;
+use crate::health::HealthStatusV2;
 use crate::{
-    block_apis::CandidBlockApi,
     config::Config,
     endpoints::*,
-    fetch::BlockInfo,
     health::HealthStatus,
     types::WatchdogArg,
     types::{CandidHttpRequest, CandidHttpResponse},
@@ -29,14 +31,26 @@ use ic_cdk::{
 };
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
+use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
+
+/// Count number of calls made to a deprecated method.
+///
+/// Each field represents a counter for one specific deprecated method.
+#[derive(Default)]
+pub struct DeprecatedMethodCallCounter {
+    health_status: u64,
+}
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RefCell<HashMap<CandidBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<BlockApi, BlockInfoInternal>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
+
+    /// Counter for deprecated endpoint calls.
+    static DEPRECATED_METHOD_CALLS: RefCell<DeprecatedMethodCallCounter> = RefCell::new(DeprecatedMethodCallCounter::default());
 }
 
 /// This function is called when the canister is created.
@@ -88,10 +102,28 @@ async fn tick() {
     crate::api_access::synchronise_api_access().await;
 }
 
-/// Returns the health status of the canister monitored.
+/// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
 fn health_status() -> HealthStatus {
-    crate::health::health_status()
+    storage::increment_health_status_calls();
+    let network = storage::get_config().network;
+    match network {
+        Network::BitcoinMainnet | Network::BitcoinTestnet => {
+            HealthStatus::try_from(health::health_status_internal()).unwrap_or_else(|e| {
+                panic!(
+                    "Failed to convert health status for Bitcoin network: {}",
+                    e.reason
+                )
+            })
+        }
+        _ => panic!("health_status can only be called for Bitcoin networks"),
+    }
+}
+
+/// Returns the health status of the canister monitored.
+#[query]
+fn health_status_v2() -> HealthStatusV2 {
+    health::health_status_internal().into()
 }
 
 /// Returns the configuration of the watchdog canister.

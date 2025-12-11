@@ -1,6 +1,7 @@
-use crate::block_apis::CandidBlockApi;
+use crate::block_apis::BlockApi;
 use crate::config::Config;
-use crate::{fetch::BlockInfo, API_ACCESS_TARGET, BLOCK_INFO_DATA};
+use crate::fetch::BlockInfoInternal;
+use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA, DEPRECATED_METHOD_CALLS};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{Cell, DefaultMemoryImpl};
@@ -27,14 +28,14 @@ pub fn set_config(config: Config) {
 }
 
 /// Inserts the data into the local storage.
-pub fn insert_block_info(info: BlockInfo) {
+pub fn insert_block_info(info: BlockInfoInternal) {
     BLOCK_INFO_DATA.with(|cell| {
         cell.borrow_mut().insert(info.provider.clone(), info);
     });
 }
 
 /// Returns the data from the local storage.
-pub fn get_block_info(provider: &CandidBlockApi) -> Option<BlockInfo> {
+pub fn get_block_info(provider: &BlockApi) -> Option<BlockInfoInternal> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }
 
@@ -46,4 +47,16 @@ pub fn set_api_access_target(flag: Option<Flag>) {
 /// Returns the API access from the local storage.
 pub fn get_api_access_target() -> Option<Flag> {
     API_ACCESS_TARGET.with(|cell| *cell.borrow())
+}
+
+/// Increments the health_status endpoint call counter.
+pub fn increment_health_status_calls() {
+    DEPRECATED_METHOD_CALLS.with(|cell| {
+        cell.borrow_mut().health_status += 1;
+    });
+}
+
+/// Returns the number of health_status endpoint calls.
+pub fn get_health_status_calls() -> u64 {
+    DEPRECATED_METHOD_CALLS.with(|cell| cell.borrow().health_status)
 }
