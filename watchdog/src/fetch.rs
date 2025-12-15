@@ -62,11 +62,6 @@ impl TryFrom<BlockInfoInternal> for BlockInfo {
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
                         BitcoinBlockApi::BlockchainInfoMainnet
                     }
-                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
-                        return Err(BlockInfoConversionError {
-                            reason: "DEFI-2493: add BlockexplorerOne".to_string(),
-                        });
-                    }
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                         BitcoinBlockApi::BlockstreamInfoMainnet
                     }
@@ -178,10 +173,6 @@ mod test {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: Some(700004),
                 },
-                // BlockInfo {
-                //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                //     height: Some(923450),
-                // }, // TODO(DEFI-2493): add BlockexplorerOne
                 BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: Some(700005),
@@ -301,10 +292,6 @@ mod test {
                     provider: BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                     height: None,
                 },
-                // BlockInfo {
-                //     provider: BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-                //     height: None,
-                // }, // TODO(DEFI-2493): add BlockexplorerOne
                 BlockInfoInternal {
                     provider: BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                     height: None,

@@ -86,8 +86,6 @@ pub enum BitcoinMainnetExplorerBlockApi {
     ApiBlockcypherCom,
     #[strum(serialize = "bitcoin_blockchain_info_mainnet")]
     BlockchainInfo,
-    #[strum(serialize = "bitcoin_block_explorer_one_mainnet")]
-    BlockexplorerOne,
     #[strum(serialize = "bitcoin_blockstream_info_mainnet")]
     BlockstreamInfo,
     #[strum(serialize = "bitcoin_mempool_mainnet")]
@@ -188,11 +186,6 @@ impl BlockApi {
                         }
                         _ => json!({}),
                     }
-                }
-                BitcoinMainnetExplorerBlockApi::BlockexplorerOne => {
-                    endpoint_blockexplorer_one_block_mainnet()
-                        .send_request_json()
-                        .await
                 }
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
                     let height_config = endpoint_blockstream_info_height_mainnet();
@@ -312,7 +305,6 @@ impl BitcoinProviderBlockApi {
     /// Returns the list of Bitcoin mainnet explorers only.
     fn explorers_mainnet() -> Vec<Self> {
         let mut explorers: Vec<BitcoinProviderBlockApi> = BitcoinMainnetExplorerBlockApi::iter()
-            .filter(|explorer| *explorer != BitcoinMainnetExplorerBlockApi::BlockexplorerOne) // TODO(DEFI-2493): add BlockexplorerOne
             .map(BitcoinProviderBlockApi::Mainnet)
             .collect();
         // Remove the explorers that are not configured.
@@ -367,7 +359,6 @@ mod test {
 
     fn all_providers() -> Vec<BlockApi> {
         BitcoinMainnetExplorerBlockApi::iter()
-            .filter(|explorer| *explorer != BitcoinMainnetExplorerBlockApi::BlockexplorerOne) // TODO(DEFI-2493): add BlockexplorerOne
             .map(BitcoinProviderBlockApi::Mainnet)
             .map(BlockApi::BitcoinProvider)
             .chain(
@@ -437,10 +428,6 @@ mod test {
                 BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
                 "bitcoin_blockchain_info_mainnet",
             ),
-            // (
-            //     BitcoinMainnetExplorerBlockApi::BlockexplorerOne.into(),
-            //     "bitcoin_blockexplorer_one_mainnet",
-            // ), // TODO(DEFI-2493): add BlockexplorerOne
             (
                 BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
                 "bitcoin_blockstream_info_mainnet",
@@ -561,21 +548,6 @@ mod test {
                 json!({
                     "height": 700004,
                     "hash": "0000000000000000000aaa444444444444444444444444444444444444444444",
-                }),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn test_blockexplorer_one_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BlockexplorerOne,
-                )),
-                vec![(endpoint_blockexplorer_one_block_mainnet(), 1)],
-                json!({
-                    "height": 923450,
                 }),
             )
             .await;
