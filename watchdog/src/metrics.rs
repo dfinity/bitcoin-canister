@@ -128,11 +128,5 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         "The number of available explorers to compare against.",
     )?;
 
-    w.encode_gauge(
-        "health_status_calls_total",
-        crate::storage::get_health_status_calls() as f64,
-        "Total number of calls to the health_status endpoint.",
-    )?;
-
     Ok(())
 }
