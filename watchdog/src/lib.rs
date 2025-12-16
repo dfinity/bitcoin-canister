@@ -39,7 +39,7 @@ thread_local! {
     static BLOCK_INFO_DATA: RefCell<HashMap<BlockApi, BlockInfoInternal>> = RefCell::new(HashMap::new());
 
     /// The local storage for the height fetched from the canister.
-    static BLOCK_INFO_DATA_CANISTER: RefCell<Option<u64>> = RefCell::new(None);
+    static CANISTER_HEIGHT: RefCell<Option<u64>> = RefCell::new(None);
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
