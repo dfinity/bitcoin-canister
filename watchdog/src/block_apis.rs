@@ -7,7 +7,6 @@ use strum::{Display, EnumIter, IntoEnumIterator};
 
 pub trait BlockApiTrait: Clone + Sized {
     async fn fetch_data(&self) -> serde_json::Value;
-    fn network_canister() -> Self;
     /// Returns the list of all API providers.
     fn network_providers() -> Vec<Self>;
     fn network_explorers() -> Vec<Self>;
@@ -68,6 +67,7 @@ pub enum BlockApi {
 }
 
 impl BlockApi {
+    #[cfg(test)]
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             BlockApi::BitcoinMainnetProvider(api) => api.fetch_data().await,
@@ -149,10 +149,6 @@ impl BlockApiTrait for BitcoinMainnetProviderBlockApi {
         }
     }
 
-    fn network_canister() -> Self {
-        Self::BitcoinCanister
-    }
-
     fn network_providers() -> Vec<Self> {
         let mut providers: Vec<BitcoinMainnetProviderBlockApi> = Self::network_explorers();
         // Add the Bitcoin canister, since it's not an explorer.
@@ -223,10 +219,6 @@ impl BlockApiTrait for BitcoinTestnetProviderBlockApi {
                 }
             },
         }
-    }
-
-    fn network_canister() -> Self {
-        Self::BitcoinCanister
     }
 
     fn network_providers() -> Vec<Self> {
@@ -301,10 +293,6 @@ impl BlockApiTrait for DogecoinProviderBlockApi {
                 }
             },
         }
-    }
-
-    fn network_canister() -> Self {
-        Self::DogecoinCanister
     }
 
     fn network_providers() -> Vec<Self> {
