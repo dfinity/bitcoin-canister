@@ -1,4 +1,3 @@
-use crate::config::Network;
 use crate::endpoints::*;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -9,6 +8,7 @@ use strum::{Display, EnumIter, IntoEnumIterator};
 pub trait BlockApiTrait: Clone + Sized {
     async fn fetch_data(&self) -> serde_json::Value;
     fn network_canister() -> Self;
+    /// Returns the list of all API providers.
     fn network_providers() -> Vec<Self>;
     fn network_explorers() -> Vec<Self>;
 }
@@ -154,11 +154,24 @@ impl BlockApiTrait for BitcoinMainnetProviderBlockApi {
     }
 
     fn network_providers() -> Vec<Self> {
-        Self::providers()
+        let mut providers: Vec<BitcoinMainnetProviderBlockApi> = Self::network_explorers();
+        // Add the Bitcoin canister, since it's not an explorer.
+        providers.push(BitcoinMainnetProviderBlockApi::BitcoinCanister);
+
+        providers
     }
 
     fn network_explorers() -> Vec<Self> {
-        Self::explorers()
+        let mut explorers: Vec<BitcoinMainnetProviderBlockApi> =
+            BitcoinMainnetExplorerBlockApi::iter()
+                .map(BitcoinMainnetProviderBlockApi::Mainnet)
+                .collect();
+        // Remove the explorers that are not configured.
+        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        explorers
+            .retain(|&x| configured.contains(&BlockApi::BitcoinMainnetProvider(x).to_string()));
+
+        explorers
     }
 }
 
@@ -217,11 +230,24 @@ impl BlockApiTrait for BitcoinTestnetProviderBlockApi {
     }
 
     fn network_providers() -> Vec<Self> {
-        Self::providers()
+        let mut providers = Self::network_explorers();
+        // Add the Bitcoin canister, since it's not an explorer.
+        providers.push(BitcoinTestnetProviderBlockApi::BitcoinCanister);
+
+        providers
     }
 
     fn network_explorers() -> Vec<Self> {
-        Self::explorers()
+        let mut explorers: Vec<BitcoinTestnetProviderBlockApi> =
+            BitcoinTestnetExplorerBlockApi::iter()
+                .map(BitcoinTestnetProviderBlockApi::Testnet)
+                .collect();
+        // Remove the explorers that are not configured.
+        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        explorers
+            .retain(|&x| configured.contains(&BlockApi::BitcoinTestnetProvider(x).to_string()));
+
+        explorers
     }
 }
 
@@ -282,11 +308,22 @@ impl BlockApiTrait for DogecoinProviderBlockApi {
     }
 
     fn network_providers() -> Vec<Self> {
-        Self::providers()
+        let mut providers: Vec<DogecoinProviderBlockApi> = Self::network_explorers();
+        // Add the Dogecoin canister, since it's not an explorer.
+        providers.push(DogecoinProviderBlockApi::DogecoinCanister);
+
+        providers
     }
 
     fn network_explorers() -> Vec<Self> {
-        Self::explorers()
+        let mut explorers: Vec<DogecoinProviderBlockApi> = DogecoinMainnetExplorerBlockApi::iter()
+            .map(DogecoinProviderBlockApi::Mainnet)
+            .collect();
+        // Remove the explorers that are not configured.
+        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
+        explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).to_string()));
+
+        explorers
     }
 }
 
@@ -310,114 +347,6 @@ pub enum DogecoinMainnetExplorerBlockApi {
 impl From<DogecoinMainnetExplorerBlockApi> for BlockApi {
     fn from(api: DogecoinMainnetExplorerBlockApi) -> Self {
         BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(api))
-    }
-}
-
-impl BlockApi {
-    /// Returns the canister API for the given network.
-    pub fn network_canister(network: Network) -> Self {
-        match network {
-            Network::BitcoinMainnet => {
-                Self::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister)
-            }
-            Network::BitcoinTestnet => {
-                Self::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::BitcoinCanister)
-            }
-            Network::DogecoinMainnet => {
-                Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
-            }
-        }
-    }
-
-    /// Returns the list of explorers only.
-    pub fn network_explorers(network: Network) -> Vec<Self> {
-        match network {
-            Network::BitcoinMainnet => BitcoinMainnetProviderBlockApi::explorers()
-                .iter()
-                .map(|&x| Self::BitcoinMainnetProvider(x))
-                .collect(),
-            Network::BitcoinTestnet => BitcoinTestnetProviderBlockApi::explorers()
-                .iter()
-                .map(|&x| Self::BitcoinTestnetProvider(x))
-                .collect(),
-            Network::DogecoinMainnet => DogecoinProviderBlockApi::explorers()
-                .iter()
-                .map(|&x| Self::DogecoinProvider(x))
-                .collect(),
-        }
-    }
-}
-
-impl BitcoinMainnetProviderBlockApi {
-    /// Returns the list of all Bitcoin mainnet API providers.
-    fn providers() -> Vec<Self> {
-        let mut providers: Vec<BitcoinMainnetProviderBlockApi> = Self::explorers();
-        // Add the Bitcoin canister, since it's not an explorer.
-        providers.push(BitcoinMainnetProviderBlockApi::BitcoinCanister);
-
-        providers
-    }
-
-    /// Returns the list of Bitcoin mainnet explorers only.
-    fn explorers() -> Vec<Self> {
-        let mut explorers: Vec<BitcoinMainnetProviderBlockApi> =
-            BitcoinMainnetExplorerBlockApi::iter()
-                .map(BitcoinMainnetProviderBlockApi::Mainnet)
-                .collect();
-        // Remove the explorers that are not configured.
-        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers
-            .retain(|&x| configured.contains(&BlockApi::BitcoinMainnetProvider(x).to_string()));
-
-        explorers
-    }
-}
-
-impl BitcoinTestnetProviderBlockApi {
-    /// Returns the list of all Bitcoin testnet API providers.
-    fn providers() -> Vec<Self> {
-        let mut providers = Self::explorers();
-        // Add the Bitcoin canister, since it's not an explorer.
-        providers.push(BitcoinTestnetProviderBlockApi::BitcoinCanister);
-
-        providers
-    }
-
-    /// Returns the list of Bitcoin testnet explorers only.
-    fn explorers() -> Vec<Self> {
-        let mut explorers: Vec<BitcoinTestnetProviderBlockApi> =
-            BitcoinTestnetExplorerBlockApi::iter()
-                .map(BitcoinTestnetProviderBlockApi::Testnet)
-                .collect();
-        // Remove the explorers that are not configured.
-        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers
-            .retain(|&x| configured.contains(&BlockApi::BitcoinTestnetProvider(x).to_string()));
-
-        explorers
-    }
-}
-
-impl DogecoinProviderBlockApi {
-    /// Returns the list of all Dogecoin mainnet API providers.
-    fn providers() -> Vec<Self> {
-        let mut providers: Vec<DogecoinProviderBlockApi> = Self::explorers();
-        // Add the Dogecoin canister, since it's not an explorer.
-        providers.push(DogecoinProviderBlockApi::DogecoinCanister);
-
-        providers
-    }
-
-    /// Returns the list of Dogecoin mainnet explorers only.
-    fn explorers() -> Vec<Self> {
-        let mut explorers: Vec<DogecoinProviderBlockApi> = DogecoinMainnetExplorerBlockApi::iter()
-            .map(DogecoinProviderBlockApi::Mainnet)
-            .collect();
-        // Remove the explorers that are not configured.
-        let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).to_string()));
-
-        explorers
     }
 }
 
