@@ -212,7 +212,7 @@ fn median(values: &[u64]) -> Option<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi};
+    use crate::block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi};
 
     #[test]
     fn test_median() {
@@ -325,7 +325,7 @@ mod test {
     fn test_compare_no_explorers() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![];
@@ -347,7 +347,7 @@ mod test {
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
@@ -387,7 +387,7 @@ mod test {
     fn test_compare_behind() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![
@@ -435,7 +435,7 @@ mod test {
     fn test_compare_ahead() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinProviderBlockApi::BitcoinCanister.into(),
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
             1_000,
         ));
         let other = vec![

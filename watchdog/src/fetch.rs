@@ -1,6 +1,6 @@
 use crate::block_apis::{
-    BitcoinBlockApi, BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi,
-    BitcoinTestnetExplorerBlockApi, BlockApi,
+    BitcoinBlockApi, BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi,
+    BitcoinTestnetExplorerBlockApi, BitcoinTestnetProviderBlockApi, BlockApi,
 };
 use crate::config::Network;
 use candid::CandidType;
@@ -47,9 +47,9 @@ impl TryFrom<BlockInfoInternal> for BlockInfo {
 
     fn try_from(block_info: BlockInfoInternal) -> Result<BlockInfo, Self::Error> {
         let provider = match block_info.provider {
-            BlockApi::BitcoinProvider(provider) => match provider {
-                BitcoinProviderBlockApi::BitcoinCanister => BitcoinBlockApi::BitcoinCanister,
-                BitcoinProviderBlockApi::Mainnet(explorer) => match explorer {
+            BlockApi::BitcoinMainnetProvider(provider) => match provider {
+                BitcoinMainnetProviderBlockApi::BitcoinCanister => BitcoinBlockApi::BitcoinCanister,
+                BitcoinMainnetProviderBlockApi::Mainnet(explorer) => match explorer {
                     BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
                         BitcoinBlockApi::ApiBitapsComMainnet
                     }
@@ -67,7 +67,10 @@ impl TryFrom<BlockInfoInternal> for BlockInfo {
                     }
                     BitcoinMainnetExplorerBlockApi::Mempool => BitcoinBlockApi::MempoolMainnet,
                 },
-                BitcoinProviderBlockApi::Testnet(explorer) => match explorer {
+            },
+            BlockApi::BitcoinTestnetProvider(provider) => match provider {
+                BitcoinTestnetProviderBlockApi::BitcoinCanister => BitcoinBlockApi::BitcoinCanister,
+                BitcoinTestnetProviderBlockApi::Testnet(explorer) => match explorer {
                     BitcoinTestnetExplorerBlockApi::Mempool => BitcoinBlockApi::MempoolTestnet,
                 },
             },
@@ -129,7 +132,7 @@ pub async fn fetch_all_data(network: Network) -> Vec<BlockInfoInternal> {
 mod test {
     use super::*;
     use crate::block_apis::{
-        BitcoinMainnetExplorerBlockApi, BitcoinProviderBlockApi, BitcoinTestnetExplorerBlockApi,
+        BitcoinMainnetExplorerBlockApi, BitcoinTestnetExplorerBlockApi,
         DogecoinMainnetExplorerBlockApi, DogecoinProviderBlockApi,
     };
     use crate::config::Canister;
@@ -182,7 +185,7 @@ mod test {
                     height: Some(700008),
                 },
                 BlockInfoInternal {
-                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
+                    provider: BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
                     height: Some(700007),
                 },
             ]
@@ -203,7 +206,7 @@ mod test {
                     height: Some(55002),
                 },
                 BlockInfoInternal {
-                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
+                    provider: BitcoinTestnetProviderBlockApi::BitcoinCanister.into(),
                     height: Some(55001),
                 },
             ]
@@ -301,7 +304,7 @@ mod test {
                     height: None,
                 },
                 BlockInfoInternal {
-                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
+                    provider: BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
             ]
@@ -322,7 +325,7 @@ mod test {
                     height: None,
                 },
                 BlockInfoInternal {
-                    provider: BitcoinProviderBlockApi::BitcoinCanister.into(),
+                    provider: BitcoinTestnetProviderBlockApi::BitcoinCanister.into(),
                     height: None,
                 },
             ]

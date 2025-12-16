@@ -53,25 +53,25 @@ impl std::fmt::Display for BitcoinBlockApi {
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Display)]
 pub enum BlockApi {
     #[strum(transparent)]
-    BitcoinProvider(BitcoinProviderBlockApi),
+    BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi),
+    #[strum(transparent)]
+    BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi),
     #[strum(transparent)]
     DogecoinProvider(DogecoinProviderBlockApi),
 }
 
 /// Providers that serve Bitcoin block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display)]
-pub enum BitcoinProviderBlockApi {
+pub enum BitcoinMainnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
     #[strum(transparent)]
     Mainnet(BitcoinMainnetExplorerBlockApi),
-    #[strum(transparent)]
-    Testnet(BitcoinTestnetExplorerBlockApi),
 }
 
-impl From<BitcoinProviderBlockApi> for BlockApi {
-    fn from(api: BitcoinProviderBlockApi) -> Self {
-        BlockApi::BitcoinProvider(api)
+impl From<BitcoinMainnetProviderBlockApi> for BlockApi {
+    fn from(api: BitcoinMainnetProviderBlockApi) -> Self {
+        BlockApi::BitcoinMainnetProvider(api)
     }
 }
 
@@ -92,11 +92,38 @@ pub enum BitcoinMainnetExplorerBlockApi {
     Mempool,
 }
 
+impl From<BitcoinMainnetExplorerBlockApi> for BlockApi {
+    fn from(api: BitcoinMainnetExplorerBlockApi) -> Self {
+        BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(api))
+    }
+}
+
+/// Providers that serve testnet Bitcoin block data.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display)]
+pub enum BitcoinTestnetProviderBlockApi {
+    #[strum(serialize = "bitcoin_canister")]
+    BitcoinCanister,
+    #[strum(transparent)]
+    Testnet(BitcoinTestnetExplorerBlockApi),
+}
+
+impl From<BitcoinTestnetProviderBlockApi> for BlockApi {
+    fn from(api: BitcoinTestnetProviderBlockApi) -> Self {
+        BlockApi::BitcoinTestnetProvider(api)
+    }
+}
+
 /// Explorers that serve Bitcoin testnet block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, EnumIter, Display)]
 pub enum BitcoinTestnetExplorerBlockApi {
     #[strum(serialize = "bitcoin_mempool_testnet")]
     Mempool,
+}
+
+impl From<BitcoinTestnetExplorerBlockApi> for BlockApi {
+    fn from(api: BitcoinTestnetExplorerBlockApi) -> Self {
+        BlockApi::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::Testnet(api))
+    }
 }
 
 /// Providers that serve Dogecoin block data.
@@ -125,18 +152,6 @@ pub enum DogecoinMainnetExplorerBlockApi {
     TokenView,
 }
 
-impl From<BitcoinMainnetExplorerBlockApi> for BlockApi {
-    fn from(api: BitcoinMainnetExplorerBlockApi) -> Self {
-        BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(api))
-    }
-}
-
-impl From<BitcoinTestnetExplorerBlockApi> for BlockApi {
-    fn from(api: BitcoinTestnetExplorerBlockApi) -> Self {
-        BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Testnet(api))
-    }
-}
-
 impl From<DogecoinMainnetExplorerBlockApi> for BlockApi {
     fn from(api: DogecoinMainnetExplorerBlockApi) -> Self {
         BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(api))
@@ -147,13 +162,17 @@ impl BlockApi {
     /// Fetches the block data from the API.
     pub async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            Self::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister) => {
+            Self::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister) => {
+                endpoint_bitcoin_canister().send_request_json().await
+            }
+            Self::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::BitcoinCanister) => {
                 endpoint_bitcoin_canister().send_request_json().await
             }
             Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister) => {
                 endpoint_dogecoin_canister().send_request_json().await
             }
-            Self::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(api)) => match api {
+            Self::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(api)) => match api
+            {
                 BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
                     endpoint_api_bitaps_com_block_mainnet()
                         .send_request_json()
@@ -209,7 +228,8 @@ impl BlockApi {
                     endpoint_mempool_height_mainnet().send_request_json().await
                 }
             },
-            Self::BitcoinProvider(BitcoinProviderBlockApi::Testnet(api)) => match api {
+            Self::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::Testnet(api)) => match api
+            {
                 BitcoinTestnetExplorerBlockApi::Mempool => {
                     endpoint_mempool_height_testnet().send_request_json().await
                 }
@@ -237,8 +257,11 @@ impl BlockApi {
     /// Returns the canister API for the given network.
     pub fn network_canister(network: Network) -> Self {
         match network {
-            Network::BitcoinMainnet | Network::BitcoinTestnet => {
-                Self::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister)
+            Network::BitcoinMainnet => {
+                Self::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister)
+            }
+            Network::BitcoinTestnet => {
+                Self::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::BitcoinCanister)
             }
             Network::DogecoinMainnet => {
                 Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
@@ -249,15 +272,15 @@ impl BlockApi {
     /// Returns the list of all API providers.
     pub fn network_providers(network: Network) -> Vec<Self> {
         match network {
-            Network::BitcoinMainnet => BitcoinProviderBlockApi::providers_mainnet()
+            Network::BitcoinMainnet => BitcoinMainnetProviderBlockApi::providers()
                 .iter()
-                .map(|&x| Self::BitcoinProvider(x))
+                .map(|&x| Self::BitcoinMainnetProvider(x))
                 .collect(),
-            Network::BitcoinTestnet => BitcoinProviderBlockApi::providers_testnet()
+            Network::BitcoinTestnet => BitcoinTestnetProviderBlockApi::providers()
                 .iter()
-                .map(|&x| Self::BitcoinProvider(x))
+                .map(|&x| Self::BitcoinTestnetProvider(x))
                 .collect(),
-            Network::DogecoinMainnet => DogecoinProviderBlockApi::providers_mainnet()
+            Network::DogecoinMainnet => DogecoinProviderBlockApi::providers()
                 .iter()
                 .map(|&x| Self::DogecoinProvider(x))
                 .collect(),
@@ -267,15 +290,15 @@ impl BlockApi {
     /// Returns the list of explorers only.
     pub fn network_explorers(network: Network) -> Vec<Self> {
         match network {
-            Network::BitcoinMainnet => BitcoinProviderBlockApi::explorers_mainnet()
+            Network::BitcoinMainnet => BitcoinMainnetProviderBlockApi::explorers()
                 .iter()
-                .map(|&x| Self::BitcoinProvider(x))
+                .map(|&x| Self::BitcoinMainnetProvider(x))
                 .collect(),
-            Network::BitcoinTestnet => BitcoinProviderBlockApi::explorers_testnet()
+            Network::BitcoinTestnet => BitcoinTestnetProviderBlockApi::explorers()
                 .iter()
-                .map(|&x| Self::BitcoinProvider(x))
+                .map(|&x| Self::BitcoinTestnetProvider(x))
                 .collect(),
-            Network::DogecoinMainnet => DogecoinProviderBlockApi::explorers_mainnet()
+            Network::DogecoinMainnet => DogecoinProviderBlockApi::explorers()
                 .iter()
                 .map(|&x| Self::DogecoinProvider(x))
                 .collect(),
@@ -283,45 +306,51 @@ impl BlockApi {
     }
 }
 
-impl BitcoinProviderBlockApi {
+impl BitcoinMainnetProviderBlockApi {
     /// Returns the list of all Bitcoin mainnet API providers.
-    fn providers_mainnet() -> Vec<Self> {
-        let mut providers: Vec<BitcoinProviderBlockApi> = Self::explorers_mainnet();
+    fn providers() -> Vec<Self> {
+        let mut providers: Vec<BitcoinMainnetProviderBlockApi> = Self::explorers();
         // Add the Bitcoin canister, since it's not an explorer.
-        providers.push(BitcoinProviderBlockApi::BitcoinCanister);
-
-        providers
-    }
-
-    /// Returns the list of all Bitcoin testnet API providers.
-    fn providers_testnet() -> Vec<Self> {
-        let mut providers = Self::explorers_testnet();
-        // Add the Bitcoin canister, since it's not an explorer.
-        providers.push(BitcoinProviderBlockApi::BitcoinCanister);
+        providers.push(BitcoinMainnetProviderBlockApi::BitcoinCanister);
 
         providers
     }
 
     /// Returns the list of Bitcoin mainnet explorers only.
-    fn explorers_mainnet() -> Vec<Self> {
-        let mut explorers: Vec<BitcoinProviderBlockApi> = BitcoinMainnetExplorerBlockApi::iter()
-            .map(BitcoinProviderBlockApi::Mainnet)
-            .collect();
+    fn explorers() -> Vec<Self> {
+        let mut explorers: Vec<BitcoinMainnetProviderBlockApi> =
+            BitcoinMainnetExplorerBlockApi::iter()
+                .map(BitcoinMainnetProviderBlockApi::Mainnet)
+                .collect();
         // Remove the explorers that are not configured.
         let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).to_string()));
+        explorers
+            .retain(|&x| configured.contains(&BlockApi::BitcoinMainnetProvider(x).to_string()));
 
         explorers
     }
+}
+
+impl BitcoinTestnetProviderBlockApi {
+    /// Returns the list of all Bitcoin testnet API providers.
+    fn providers() -> Vec<Self> {
+        let mut providers = Self::explorers();
+        // Add the Bitcoin canister, since it's not an explorer.
+        providers.push(BitcoinTestnetProviderBlockApi::BitcoinCanister);
+
+        providers
+    }
 
     /// Returns the list of Bitcoin testnet explorers only.
-    fn explorers_testnet() -> Vec<Self> {
-        let mut explorers: Vec<BitcoinProviderBlockApi> = BitcoinTestnetExplorerBlockApi::iter()
-            .map(BitcoinProviderBlockApi::Testnet)
-            .collect();
+    fn explorers() -> Vec<Self> {
+        let mut explorers: Vec<BitcoinTestnetProviderBlockApi> =
+            BitcoinTestnetExplorerBlockApi::iter()
+                .map(BitcoinTestnetProviderBlockApi::Testnet)
+                .collect();
         // Remove the explorers that are not configured.
         let configured: BTreeSet<_> = crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinProvider(x).to_string()));
+        explorers
+            .retain(|&x| configured.contains(&BlockApi::BitcoinTestnetProvider(x).to_string()));
 
         explorers
     }
@@ -329,8 +358,8 @@ impl BitcoinProviderBlockApi {
 
 impl DogecoinProviderBlockApi {
     /// Returns the list of all Dogecoin mainnet API providers.
-    fn providers_mainnet() -> Vec<Self> {
-        let mut providers: Vec<DogecoinProviderBlockApi> = Self::explorers_mainnet();
+    fn providers() -> Vec<Self> {
+        let mut providers: Vec<DogecoinProviderBlockApi> = Self::explorers();
         // Add the Dogecoin canister, since it's not an explorer.
         providers.push(DogecoinProviderBlockApi::DogecoinCanister);
 
@@ -338,7 +367,7 @@ impl DogecoinProviderBlockApi {
     }
 
     /// Returns the list of Dogecoin mainnet explorers only.
-    fn explorers_mainnet() -> Vec<Self> {
+    fn explorers() -> Vec<Self> {
         let mut explorers: Vec<DogecoinProviderBlockApi> = DogecoinMainnetExplorerBlockApi::iter()
             .map(DogecoinProviderBlockApi::Mainnet)
             .collect();
@@ -359,12 +388,12 @@ mod test {
 
     fn all_providers() -> Vec<BlockApi> {
         BitcoinMainnetExplorerBlockApi::iter()
-            .map(BitcoinProviderBlockApi::Mainnet)
-            .map(BlockApi::BitcoinProvider)
+            .map(BitcoinMainnetProviderBlockApi::Mainnet)
+            .map(BlockApi::BitcoinMainnetProvider)
             .chain(
                 BitcoinTestnetExplorerBlockApi::iter()
-                    .map(BitcoinProviderBlockApi::Testnet)
-                    .map(BlockApi::BitcoinProvider),
+                    .map(BitcoinTestnetProviderBlockApi::Testnet)
+                    .map(BlockApi::BitcoinTestnetProvider),
             )
             .chain(
                 DogecoinMainnetExplorerBlockApi::iter()
@@ -433,7 +462,7 @@ mod test {
                 "bitcoin_blockstream_info_mainnet",
             ),
             (
-                BitcoinProviderBlockApi::BitcoinCanister.into(),
+                BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
                 "bitcoin_canister",
             ),
             (
@@ -476,7 +505,7 @@ mod test {
         async fn test_api_bitaps_com_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::ApiBitapsCom,
                 )),
                 vec![(endpoint_api_bitaps_com_block_mainnet(), 1)],
@@ -492,7 +521,7 @@ mod test {
         async fn test_api_blockchair_com_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::ApiBlockchairCom,
                 )),
                 vec![(endpoint_api_blockchair_com_block_mainnet(), 1)],
@@ -508,7 +537,7 @@ mod test {
         async fn test_api_blockcypher_com_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom,
                 )),
                 vec![(endpoint_api_blockcypher_com_block_mainnet(), 1)],
@@ -525,7 +554,7 @@ mod test {
         async fn test_bitcoin_canister_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::BitcoinCanister),
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister),
                 vec![(endpoint_bitcoin_canister(), 1)],
                 json!({
                     "height": 700007,
@@ -538,7 +567,7 @@ mod test {
         async fn test_blockchain_info_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo,
                 )),
                 vec![
@@ -557,7 +586,7 @@ mod test {
         async fn test_blockstream_info_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo,
                 )),
                 vec![
@@ -576,7 +605,7 @@ mod test {
         async fn test_mempool_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Mainnet(
+                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::Mempool,
                 )),
                 vec![(endpoint_mempool_height_mainnet(), 1)],
@@ -591,7 +620,7 @@ mod test {
         async fn test_mempool_testnet() {
             test_utils::mock_bitcoin_testnet_outcalls();
             run_test(
-                BlockApi::BitcoinProvider(BitcoinProviderBlockApi::Testnet(
+                BlockApi::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::Testnet(
                     BitcoinTestnetExplorerBlockApi::Mempool,
                 )),
                 vec![(endpoint_mempool_height_testnet(), 1)],
