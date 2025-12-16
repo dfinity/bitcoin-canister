@@ -1,6 +1,7 @@
 use crate::block_apis::{
     BitcoinBlockApi, BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi,
-    BitcoinTestnetExplorerBlockApi, BitcoinTestnetProviderBlockApi, BlockApi,
+    BitcoinTestnetExplorerBlockApi, BitcoinTestnetProviderBlockApi, BlockApi, BlockApiTrait,
+    DogecoinProviderBlockApi,
 };
 use crate::config::Network;
 use candid::CandidType;
@@ -106,9 +107,23 @@ impl From<BlockInfoInternal> for BlockInfoV2 {
     }
 }
 
-/// Fetches the data from the external APIs.
 pub async fn fetch_all_data(network: Network) -> Vec<BlockInfoInternal> {
-    let api_providers = BlockApi::network_providers(network);
+    match network {
+        Network::BitcoinMainnet => {
+            fetch_all_data_for_providers::<BitcoinMainnetProviderBlockApi>().await
+        }
+        Network::BitcoinTestnet => {
+            fetch_all_data_for_providers::<BitcoinTestnetProviderBlockApi>().await
+        }
+        Network::DogecoinMainnet => {
+            fetch_all_data_for_providers::<DogecoinProviderBlockApi>().await
+        }
+    }
+}
+
+/// Fetches the data from the external APIs.
+pub async fn fetch_all_data_for_providers<P: BlockApiTrait + Into<BlockApi>>() -> Vec<BlockInfoInternal> {
+    let api_providers = P::network_providers();
 
     let futures = api_providers
         .iter()
@@ -120,7 +135,7 @@ pub async fn fetch_all_data(network: Network) -> Vec<BlockInfoInternal> {
         .iter()
         .zip(results.iter())
         .map(|(api, value)| BlockInfoInternal {
-            provider: api.clone(),
+            provider: api.clone().into(),
             height: value["height"].as_u64(),
         })
         .collect();

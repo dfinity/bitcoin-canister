@@ -67,6 +67,16 @@ pub enum BlockApi {
     DogecoinProvider(DogecoinProviderBlockApi),
 }
 
+impl BlockApi {
+    async fn fetch_data(&self) -> serde_json::Value {
+        match self {
+            BlockApi::BitcoinMainnetProvider(api) => api.fetch_data().await,
+            BlockApi::BitcoinTestnetProvider(api) => api.fetch_data().await,
+            BlockApi::DogecoinProvider(api) => api.fetch_data().await,
+        }
+    }
+}
+
 /// Providers that serve Bitcoin block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Display)]
 pub enum BitcoinMainnetProviderBlockApi {
@@ -304,101 +314,6 @@ impl From<DogecoinMainnetExplorerBlockApi> for BlockApi {
 }
 
 impl BlockApi {
-    /// Fetches the block data from the API.
-    pub async fn fetch_data(&self) -> serde_json::Value {
-        match self {
-            Self::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister) => {
-                endpoint_bitcoin_canister().send_request_json().await
-            }
-            Self::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::BitcoinCanister) => {
-                endpoint_bitcoin_canister().send_request_json().await
-            }
-            Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister) => {
-                endpoint_dogecoin_canister().send_request_json().await
-            }
-            Self::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(api)) => match api
-            {
-                BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
-                    endpoint_api_bitaps_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                    endpoint_api_blockchair_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                    endpoint_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
-                    let height_config = endpoint_blockchain_info_height_mainnet();
-                    let hash_config = endpoint_blockchain_info_hash_mainnet();
-                    let futures = vec![
-                        height_config.send_request_json(),
-                        hash_config.send_request_json(),
-                    ];
-                    let results = futures::future::join_all(futures).await;
-                    match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                        (Some(height), Some(hash)) => {
-                            json!({
-                                "height": height,
-                                "hash": hash,
-                            })
-                        }
-                        _ => json!({}),
-                    }
-                }
-                BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
-                    let height_config = endpoint_blockstream_info_height_mainnet();
-                    let hash_config = endpoint_blockstream_info_hash_mainnet();
-                    let futures = vec![
-                        height_config.send_request_json(),
-                        hash_config.send_request_json(),
-                    ];
-                    let results = futures::future::join_all(futures).await;
-                    match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                        (Some(height), Some(hash)) => {
-                            json!({
-                                "height": height,
-                                "hash": hash,
-                            })
-                        }
-                        _ => json!({}),
-                    }
-                }
-                BitcoinMainnetExplorerBlockApi::Mempool => {
-                    endpoint_mempool_height_mainnet().send_request_json().await
-                }
-            },
-            Self::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::Testnet(api)) => match api
-            {
-                BitcoinTestnetExplorerBlockApi::Mempool => {
-                    endpoint_mempool_height_testnet().send_request_json().await
-                }
-            },
-            Self::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(api)) => match api {
-                DogecoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                    endpoint_dogecoin_api_blockchair_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                    endpoint_dogecoin_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                DogecoinMainnetExplorerBlockApi::TokenView => {
-                    endpoint_dogecoin_tokenview_height_mainnet()
-                        .send_request_json()
-                        .await
-                }
-            },
-        }
-    }
-
     /// Returns the canister API for the given network.
     pub fn network_canister(network: Network) -> Self {
         match network {
@@ -411,24 +326,6 @@ impl BlockApi {
             Network::DogecoinMainnet => {
                 Self::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
             }
-        }
-    }
-
-    /// Returns the list of all API providers.
-    pub fn network_providers(network: Network) -> Vec<Self> {
-        match network {
-            Network::BitcoinMainnet => BitcoinMainnetProviderBlockApi::providers()
-                .iter()
-                .map(|&x| Self::BitcoinMainnetProvider(x))
-                .collect(),
-            Network::BitcoinTestnet => BitcoinTestnetProviderBlockApi::providers()
-                .iter()
-                .map(|&x| Self::BitcoinTestnetProvider(x))
-                .collect(),
-            Network::DogecoinMainnet => DogecoinProviderBlockApi::providers()
-                .iter()
-                .map(|&x| Self::DogecoinProvider(x))
-                .collect(),
         }
     }
 
@@ -550,7 +447,7 @@ mod test {
 
     /// Runs a test for the given API.
     async fn run_test(
-        api: BlockApi,
+        api: impl BlockApiTrait,
         times_called: Vec<(crate::http::HttpRequestConfig, u64)>,
         expected: serde_json::Value,
     ) {
@@ -650,9 +547,9 @@ mod test {
         async fn test_api_bitaps_com_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::ApiBitapsCom,
-                )),
+                ),
                 vec![(endpoint_api_bitaps_com_block_mainnet(), 1)],
                 json!({
                     "height": 700001,
@@ -666,9 +563,9 @@ mod test {
         async fn test_api_blockchair_com_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                )),
+                ),
                 vec![(endpoint_api_blockchair_com_block_mainnet(), 1)],
                 json!({
                     "height": 700002,
@@ -682,9 +579,9 @@ mod test {
         async fn test_api_blockcypher_com_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                )),
+                ),
                 vec![(endpoint_api_blockcypher_com_block_mainnet(), 1)],
                 json!({
                 "height": 700003,
@@ -699,7 +596,7 @@ mod test {
         async fn test_bitcoin_canister_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister),
+                BitcoinMainnetProviderBlockApi::BitcoinCanister,
                 vec![(endpoint_bitcoin_canister(), 1)],
                 json!({
                     "height": 700007,
@@ -712,9 +609,9 @@ mod test {
         async fn test_blockchain_info_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::BlockchainInfo,
-                )),
+                ),
                 vec![
                     (endpoint_blockchain_info_hash_mainnet(), 1),
                     (endpoint_blockchain_info_height_mainnet(), 1),
@@ -731,9 +628,9 @@ mod test {
         async fn test_blockstream_info_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetProviderBlockApi::Mainnet(
                     BitcoinMainnetExplorerBlockApi::BlockstreamInfo,
-                )),
+                ),
                 vec![
                     (endpoint_blockstream_info_hash_mainnet(), 1),
                     (endpoint_blockstream_info_height_mainnet(), 1),
@@ -750,9 +647,7 @@ mod test {
         async fn test_mempool_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::Mempool,
-                )),
+                BitcoinMainnetProviderBlockApi::Mainnet(BitcoinMainnetExplorerBlockApi::Mempool),
                 vec![(endpoint_mempool_height_mainnet(), 1)],
                 json!({
                     "height": 700008,
@@ -765,9 +660,7 @@ mod test {
         async fn test_mempool_testnet() {
             test_utils::mock_bitcoin_testnet_outcalls();
             run_test(
-                BlockApi::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::Testnet(
-                    BitcoinTestnetExplorerBlockApi::Mempool,
-                )),
+                BitcoinTestnetProviderBlockApi::Testnet(BitcoinTestnetExplorerBlockApi::Mempool),
                 vec![(endpoint_mempool_height_testnet(), 1)],
                 json!({
                     "height": 55002,
@@ -784,9 +677,9 @@ mod test {
         async fn test_api_blockchair_com_mainnet() {
             test_utils::mock_dogecoin_mainnet_outcalls();
             run_test(
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
+                DogecoinProviderBlockApi::Mainnet(
                     DogecoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                )),
+                ),
                 vec![(endpoint_dogecoin_api_blockchair_com_block_mainnet(), 1)],
                 json!({
                     "height": 5926987,
@@ -800,9 +693,9 @@ mod test {
         async fn test_api_blockcypher_com_mainnet() {
             test_utils::mock_dogecoin_mainnet_outcalls();
             run_test(
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
+                DogecoinProviderBlockApi::Mainnet(
                     DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                )),
+                ),
                 vec![(endpoint_dogecoin_api_blockcypher_com_block_mainnet(), 1)],
                 json!({
                 "height": 5926989,
@@ -817,9 +710,7 @@ mod test {
         async fn test_tokenview_mainnet() {
             test_utils::mock_dogecoin_mainnet_outcalls();
             run_test(
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
-                    DogecoinMainnetExplorerBlockApi::TokenView,
-                )),
+                DogecoinProviderBlockApi::Mainnet(DogecoinMainnetExplorerBlockApi::TokenView),
                 vec![(endpoint_dogecoin_tokenview_height_mainnet(), 1)],
                 json!({
                     "height": 5931072,
@@ -832,7 +723,7 @@ mod test {
         async fn test_dogecoin_canister_mainnet() {
             test_utils::mock_dogecoin_mainnet_outcalls();
             run_test(
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister),
+                DogecoinProviderBlockApi::DogecoinCanister,
                 vec![(endpoint_dogecoin_canister(), 1)],
                 json!({
                     "height": 5931098,
