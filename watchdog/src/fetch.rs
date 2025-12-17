@@ -60,7 +60,7 @@ impl TryFrom<BlockInfo> for BlockInfoDeprecated {
                 return Err(BlockInfoConversionError {
                     reason: "BlockInfo can only contain Bitcoin providers".to_string(),
                 });
-            } // TODO: add bitcoin_canister testnet
+            }
         };
         Ok(BlockInfoDeprecated {
             provider,
