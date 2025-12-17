@@ -337,6 +337,45 @@ impl Canister {
             }
         }
     }
+
+    pub fn explorer_names(&self) -> Vec<String> {
+        match self {
+            Canister::BitcoinMainnet => BitcoinMainnetCanister::explorers()
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+            Canister::BitcoinMainnetStaging => BitcoinMainnetStagingCanister::explorers()
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::explorers()
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+            Canister::DogecoinMainnet => DogecoinMainnetCanister::explorers()
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+            Canister::DogecoinMainnetStaging => DogecoinMainnetStagingCanister::explorers()
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+        }
+    }
+
+    pub fn canister_name(&self) -> String {
+        match self {
+            Canister::BitcoinMainnet => BitcoinMainnetCanister::canister().to_string(),
+            Canister::BitcoinMainnetStaging => {
+                BitcoinMainnetStagingCanister::canister().to_string()
+            }
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::canister().to_string(),
+            Canister::DogecoinMainnet => DogecoinMainnetCanister::canister().to_string(),
+            Canister::DogecoinMainnetStaging => {
+                DogecoinMainnetStagingCanister::canister().to_string()
+            }
+        }
+    }
 }
 
 /// Stored configuration for modifiable values.
@@ -437,25 +476,6 @@ pub struct CandidConfig {
 impl CandidConfig {
     /// Combines configuration values from `Canister` with values from `Config`.
     pub fn from_parts(canister: Canister, config: Config) -> Self {
-        let explorers: Vec<String> = match canister {
-            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
-                BitcoinMainnetCanister::explorers()
-                    .iter()
-                    .map(|e| e.to_string())
-                    .collect()
-            }
-            Canister::BitcoinTestnet => BitcoinTestnetCanister::explorers()
-                .iter()
-                .map(|e| e.to_string())
-                .collect(),
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-                DogecoinMainnetCanister::explorers()
-                    .iter()
-                    .map(|e| e.to_string())
-                    .collect()
-            }
-        };
-
         Self {
             network: canister.network(),
             blocks_behind_threshold: config.blocks_behind_threshold,
@@ -464,7 +484,7 @@ impl CandidConfig {
             canister_principal: canister.canister_principal(),
             delay_before_first_fetch_sec: config.delay_before_first_fetch_sec,
             interval_between_fetches_sec: config.interval_between_fetches_sec,
-            explorers,
+            explorers: canister.explorer_names(),
             subnet_type: canister.subnet_type(),
         }
     }

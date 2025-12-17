@@ -1,7 +1,4 @@
-use crate::config::{
-    BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig, Config,
-    DogecoinMainnetCanister,
-};
+use crate::config::Config;
 use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -90,21 +87,10 @@ impl TryFrom<HealthStatus> for LegacyHealthStatus {
 pub fn health_status() -> HealthStatus {
     let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
-    match canister {
-        Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
-            health_status_for::<BitcoinMainnetCanister>(config)
-        }
-        Canister::BitcoinTestnet => health_status_for::<BitcoinTestnetCanister>(config),
-        Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-            health_status_for::<DogecoinMainnetCanister>(config)
-        }
-    }
-}
-
-fn health_status_for<C: CanisterConfig>(config: Config) -> HealthStatus {
     compare(
-        crate::storage::get_block_info(&C::canister().to_string()),
-        C::explorers()
+        crate::storage::get_block_info(&canister.canister_name()),
+        canister
+            .explorer_names()
             .iter()
             .filter_map(|e| crate::storage::get_block_info(&e.to_string()))
             .collect::<Vec<_>>(),

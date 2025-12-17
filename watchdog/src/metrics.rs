@@ -1,13 +1,9 @@
-use crate::block_apis::{
-    BitcoinMainnetExplorerBlockApi, BitcoinTestnetExplorerBlockApi, DogecoinMainnetExplorerBlockApi,
-};
 use crate::config::Network;
 use crate::{health::HeightStatus, types::CandidHttpResponse};
 use ic_btc_interface::Flag;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
 use std::collections::HashMap;
-use strum::IntoEnumIterator;
 
 const NO_VALUE: f64 = f64::NAN;
 
@@ -115,18 +111,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     let mut available_explorers_count: u64 = 0;
-    let all_explorers: Vec<String> = match canister.network() {
-        Network::BitcoinMainnet => BitcoinMainnetExplorerBlockApi::iter()
-            .map(|e| e.to_string())
-            .collect(),
-        Network::BitcoinTestnet => BitcoinTestnetExplorerBlockApi::iter()
-            .map(|e| e.to_string())
-            .collect(),
-        Network::DogecoinMainnet => DogecoinMainnetExplorerBlockApi::iter()
-            .map(|e| e.to_string())
-            .collect(),
-    };
-    for explorer in all_explorers {
+    for explorer in canister.explorer_names() {
         let height = available_explorers
             .get(&explorer)
             .map_or(NO_VALUE, |block_info| {
