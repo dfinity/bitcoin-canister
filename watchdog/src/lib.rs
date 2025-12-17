@@ -16,7 +16,7 @@ use crate::config::{CandidConfig, Network};
 use crate::fetch::BlockInfoInternal;
 use crate::health::HealthStatusV2;
 use crate::{
-    config::StoredConfig,
+    config::Config,
     endpoints::*,
     health::HealthStatus,
     types::WatchdogArg,
@@ -50,7 +50,7 @@ fn init(watchdog_arg: WatchdogArg) {
     };
 
     storage::set_canister(target);
-    storage::set_config(StoredConfig::for_target(target));
+    storage::set_config(Config::for_target(target));
 
     start_block_info_fetch_loop();
 }
@@ -231,7 +231,7 @@ mod test {
     use crate::types::InitArg;
 
     fn expected_config(canister: Canister) -> CandidConfig {
-        CandidConfig::from_parts(canister, StoredConfig::for_target(canister))
+        CandidConfig::from_parts(canister, Config::for_target(canister))
     }
 
     #[test]

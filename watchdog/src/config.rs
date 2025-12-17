@@ -35,6 +35,25 @@ const BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 300;
 /// The number of seconds to wait between all the other data fetches for the Dogecoin network.
 const DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 60;
 
+#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Network {
+    #[serde(rename = "bitcoin_mainnet")]
+    BitcoinMainnet,
+    #[serde(rename = "bitcoin_testnet")]
+    BitcoinTestnet,
+    #[serde(rename = "dogecoin_mainnet")]
+    DogecoinMainnet,
+}
+
+/// Type of subnet on which the watchdog and target canisters are deployed.
+#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SubnetType {
+    #[serde(rename = "system")]
+    System,
+    #[serde(rename = "application")]
+    Application,
+}
+
 /// Trait for canister configuration with strongly-typed providers.
 pub trait CanisterConfig {
     type Provider: BlockProvider;
@@ -226,8 +245,6 @@ impl CanisterConfig for DogecoinMainnetStagingCanister {
     }
 }
 
-// ==================== Canister Enum (for storage) ====================
-
 /// Canister to monitor (stored in stable memory).
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Canister {
@@ -322,29 +339,9 @@ impl Canister {
     }
 }
 
-#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Network {
-    #[serde(rename = "bitcoin_mainnet")]
-    BitcoinMainnet,
-    #[serde(rename = "bitcoin_testnet")]
-    BitcoinTestnet,
-    #[serde(rename = "dogecoin_mainnet")]
-    DogecoinMainnet,
-}
-
-/// Type of subnet on which the watchdog and target canisters are deployed.
-#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub enum SubnetType {
-    #[serde(rename = "system")]
-    System,
-    #[serde(rename = "application")]
-    Application,
-}
-
-/// Stored configuration for runtime-modifiable values.
-/// Static values (principal, explorers, subnet_type) come from `Canister`.
+/// Stored configuration for modifiable values.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub struct StoredConfig {
+pub struct Config {
     /// Below this threshold, the canister is considered to be behind.
     pub blocks_behind_threshold: u64,
 
@@ -361,7 +358,7 @@ pub struct StoredConfig {
     pub interval_between_fetches_sec: u64,
 }
 
-impl StoredConfig {
+impl Config {
     /// Creates a new configuration with defaults for the given canister.
     pub fn for_target(canister: Canister) -> Self {
         match canister {
@@ -400,14 +397,13 @@ impl StoredConfig {
     }
 }
 
-impl Default for StoredConfig {
+impl Default for Config {
     fn default() -> Self {
-        StoredConfig::for_target(Canister::default())
+        Config::for_target(Canister::default())
     }
 }
 
-/// Combined configuration for the candid API response.
-/// This combines static values from `Canister` with modifiable values from `StoredConfig`.
+/// Configuration for the candid API response.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CandidConfig {
     /// The network to use.
@@ -439,8 +435,8 @@ pub struct CandidConfig {
 }
 
 impl CandidConfig {
-    /// Combines static values from `Canister` with modifiable values from `StoredConfig`.
-    pub fn from_parts(canister: Canister, config: StoredConfig) -> Self {
+    /// Combines configuration values from `Canister` with values from `Config`.
+    pub fn from_parts(canister: Canister, config: Config) -> Self {
         let explorers: Vec<String> = match canister {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
                 BitcoinMainnetCanister::explorers()
@@ -474,7 +470,7 @@ impl CandidConfig {
     }
 }
 
-impl Storable for StoredConfig {
+impl Storable for Config {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Owned(encode(self))
     }
@@ -490,7 +486,7 @@ impl Storable for StoredConfig {
     const BOUND: Bound = Bound::Unbounded;
 }
 
-fn encode(config: &StoredConfig) -> Vec<u8> {
+fn encode(config: &Config) -> Vec<u8> {
     let mut buf = vec![];
     ciborium::ser::into_writer(config, &mut buf).expect("failed to encode state");
     buf
@@ -632,9 +628,9 @@ mod test {
             Just(Canister::DogecoinMainnet),
             Just(Canister::DogecoinMainnetStaging),
         ]) {
-            let config = StoredConfig::for_target(canister);
+            let config = Config::for_target(canister);
             let encoded = encode(&config);
-            let decoded: StoredConfig = decode(&encoded);
+            let decoded: Config = decode(&encoded);
             assert_eq!(config, decoded);
         }
     }

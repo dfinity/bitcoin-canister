@@ -1,6 +1,6 @@
 use crate::config::{
-    BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig,
-    DogecoinMainnetCanister, StoredConfig,
+    BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig, Config,
+    DogecoinMainnetCanister,
 };
 use crate::fetch::{BlockInfo, BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
 use candid::CandidType;
@@ -127,7 +127,7 @@ pub fn health_status_internal() -> HealthStatusInternal {
     }
 }
 
-fn health_status_internal_for<C: CanisterConfig>(config: StoredConfig) -> HealthStatusInternal {
+fn health_status_internal_for<C: CanisterConfig>(config: Config) -> HealthStatusInternal {
     compare(
         crate::storage::get_block_info(&C::canister().to_string()),
         C::explorers()
@@ -167,7 +167,7 @@ fn calculate_height_target(
 fn compare(
     source: Option<BlockInfoInternal>,
     explorers: Vec<BlockInfoInternal>,
-    config: StoredConfig,
+    config: Config,
 ) -> HealthStatusInternal {
     let height_source = source.and_then(|block| block.height);
     let heights = explorers
@@ -226,7 +226,6 @@ fn median(values: &[u64]) -> Option<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi};
 
     #[test]
     fn test_median() {
