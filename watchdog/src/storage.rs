@@ -29,6 +29,12 @@ pub fn set_canister(canister: Canister) {
     CANISTER.with(|cell| cell.borrow_mut().set(canister));
 }
 
+/// Initializes both the target canister and its default config.
+pub fn set_canister_config(canister: Canister) {
+    set_canister(canister);
+    set_config(Config::for_target(canister));
+}
+
 /// Returns the configuration from the stable storage.
 pub fn get_config() -> Config {
     CONFIG.with(|cell| cell.borrow().get().clone())

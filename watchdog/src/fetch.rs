@@ -108,8 +108,7 @@ mod test {
     use crate::config::Canister;
 
     fn setup_canister(canister: Canister) {
-        crate::storage::set_canister(canister);
-        crate::storage::set_config(crate::config::Config::for_target(canister));
+        crate::storage::set_canister_config(canister);
     }
 
     #[tokio::test]

@@ -16,7 +16,6 @@ use crate::config::{CandidConfig, Network};
 use crate::fetch::BlockInfo;
 use crate::health::HealthStatus;
 use crate::{
-    config::Config,
     endpoints::*,
     health::LegacyHealthStatus,
     types::WatchdogArg,
@@ -49,8 +48,7 @@ fn init(watchdog_arg: WatchdogArg) {
         WatchdogArg::Upgrade(_) => panic!("cannot initialize canister during upgrade"),
     };
 
-    storage::set_canister(target);
-    storage::set_config(Config::for_target(target));
+    storage::set_canister_config(target);
 
     start_block_info_fetch_loop();
 }
@@ -227,7 +225,7 @@ fn transform_mempool_height(raw: TransformArgs) -> HttpRequestResult {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::Canister;
+    use crate::config::{Canister, Config};
     use crate::types::InitArg;
 
     fn expected_config(canister: Canister) -> CandidConfig {
