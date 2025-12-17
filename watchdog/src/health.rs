@@ -111,13 +111,14 @@ impl From<HealthStatusInternal> for HealthStatusV2 {
 
 /// Calculates the health status of a canister.
 pub fn health_status_internal() -> HealthStatusInternal {
+    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
     compare(
-        crate::storage::get_block_info(&config.canister),
-        config
-            .explorers
+        crate::storage::get_block_info(&canister.canister_api().to_string()),
+        canister
+            .explorers()
             .iter()
-            .filter_map(|e| crate::storage::get_block_info(e))
+            .filter_map(|e| crate::storage::get_block_info(&e.to_string()))
             .collect::<Vec<_>>(),
         config,
     )
@@ -324,7 +325,7 @@ mod test {
     fn test_compare_no_explorers() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            "bitcoin_canister".to_string(),
             1_000,
         ));
         let other = vec![];
@@ -346,18 +347,12 @@ mod test {
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            "bitcoin_canister".to_string(),
             1_000,
         ));
         let other = vec![
-            BlockInfoInternal::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_006,
-            ),
-            BlockInfoInternal::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_005,
-            ),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
         ];
 
         // Assert
@@ -369,14 +364,8 @@ mod test {
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_006
-                    ),
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_005
-                    ),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
                 ],
             }
         );
@@ -386,22 +375,13 @@ mod test {
     fn test_compare_behind() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            "bitcoin_canister".to_string(),
             1_000,
         ));
         let other = vec![
-            BlockInfoInternal::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_006,
-            ),
-            BlockInfoInternal::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_005,
-            ),
-            BlockInfoInternal::new(
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                1_004,
-            ),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
         ];
 
         // Assert
@@ -413,18 +393,9 @@ mod test {
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_006
-                    ),
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_005
-                    ),
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        1_004
-                    ),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
                 ],
             }
         );
@@ -434,13 +405,13 @@ mod test {
     fn test_compare_ahead() {
         // Arrange
         let source = Some(BlockInfoInternal::new(
-            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            "bitcoin_canister".to_string(),
             1_000,
         ));
         let other = vec![
-            BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 996),
-            BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 995),
-            BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 994),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
+            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
         ];
 
         // Assert
@@ -452,18 +423,9 @@ mod test {
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        996
-                    ),
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        995
-                    ),
-                    BlockInfoInternal::new(
-                        BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                        994
-                    ),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
+                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
                 ],
             }
         );

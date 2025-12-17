@@ -104,7 +104,7 @@ fn parse_dogecoin_canister_height(text: String) -> Result<u64, String> {
 /// Creates a config for fetching block data from bitcoin_canister.
 pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        &crate::storage::get_config().get_canister_endpoint(),
+        &crate::storage::get_canister().get_canister_endpoint(),
         Some(TransformFnWrapper {
             name: "transform_bitcoin_canister",
             func: transform_bitcoin_canister,
@@ -274,7 +274,7 @@ pub fn endpoint_dogecoin_tokenview_height_mainnet() -> HttpRequestConfig {
 /// Creates a config for fetching block data from dogecoin_canister.
 pub fn endpoint_dogecoin_canister() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        &crate::storage::get_config().get_canister_endpoint(),
+        &crate::storage::get_canister().get_canister_endpoint(),
         Some(TransformFnWrapper {
             name: "transform_dogecoin_canister",
             func: transform_dogecoin_canister,
@@ -453,9 +453,14 @@ mod test {
         .await;
     }
 
+    fn setup_canister(canister: Canister) {
+        crate::storage::set_canister(canister);
+        crate::storage::set_config(crate::config::StoredConfig::for_target(canister));
+    }
+
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinMainnet));
+        setup_canister(Canister::BitcoinMainnet);
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
@@ -469,9 +474,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet_staging() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(
-            Canister::BitcoinMainnetStaging,
-        ));
+        setup_canister(Canister::BitcoinMainnetStaging);
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics",
@@ -485,7 +488,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinTestnet));
+        setup_canister(Canister::BitcoinTestnet);
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
@@ -580,7 +583,7 @@ mod test {
 
     #[tokio::test]
     async fn test_dogecoin_canister_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::DogecoinMainnet));
+        setup_canister(Canister::DogecoinMainnet);
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
@@ -594,9 +597,7 @@ mod test {
 
     #[tokio::test]
     async fn test_dogecoin_staging_canister_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(
-            Canister::DogecoinMainnetStaging,
-        ));
+        setup_canister(Canister::DogecoinMainnetStaging);
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics",

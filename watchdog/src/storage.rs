@@ -1,4 +1,4 @@
-use crate::config::StoredConfig;
+use crate::config::{Canister, StoredConfig};
 use crate::fetch::BlockInfoInternal;
 use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA};
 use ic_btc_interface::Flag;
@@ -12,8 +12,21 @@ thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
+    static CANISTER: RefCell<Cell<Canister, Memory>> = RefCell::new(Cell::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))), Canister::default()));
+
     static CONFIG: RefCell<Cell<StoredConfig, Memory>> = RefCell::new(Cell::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))), StoredConfig::default()));
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))), StoredConfig::default()));
+}
+
+/// Returns the target canister from stable storage.
+pub fn get_canister() -> Canister {
+    CANISTER.with(|cell| cell.borrow().get().clone())
+}
+
+/// Sets the target canister in stable storage.
+pub fn set_canister(canister: Canister) {
+    CANISTER.with(|cell| cell.borrow_mut().set(canister));
 }
 
 /// Returns the configuration from the stable storage.

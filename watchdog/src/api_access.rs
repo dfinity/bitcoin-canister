@@ -13,7 +13,7 @@ fn calculate_target(health: HealthStatusInternal) -> Option<Flag> {
 
 /// Fetches the canister config.
 async fn get_target_canister_config() -> Option<CanisterConfig> {
-    let id = crate::storage::get_config().canister_principal;
+    let id = crate::storage::get_canister().canister_principal();
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_config")
         .with_args(&())
         .await
@@ -40,7 +40,7 @@ async fn fetch_actual_api_access() -> Option<Flag> {
 
 /// Updates the API access flag in the canister.
 async fn update_api_access(target: Option<Flag>) {
-    let id = crate::storage::get_config().canister_principal;
+    let id = crate::storage::get_canister().canister_principal();
     let set_config_request = SetConfigRequest {
         api_access: target,
         ..Default::default()

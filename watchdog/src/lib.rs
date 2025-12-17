@@ -12,7 +12,7 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::config::Network;
+use crate::config::{CandidConfig, Network};
 use crate::fetch::BlockInfoInternal;
 use crate::health::HealthStatusV2;
 use crate::{
@@ -49,8 +49,8 @@ fn init(watchdog_arg: WatchdogArg) {
         WatchdogArg::Upgrade(_) => panic!("cannot initialize canister during upgrade"),
     };
 
-    let config = StoredConfig::for_target(target);
-    storage::set_config(config);
+    storage::set_canister(target);
+    storage::set_config(StoredConfig::for_target(target));
 
     start_block_info_fetch_loop();
 }
@@ -92,7 +92,7 @@ async fn tick() {
 /// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
 fn health_status() -> HealthStatus {
-    let network = storage::get_config().network;
+    let network = storage::get_canister().network();
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
             HealthStatus::try_from(health::health_status_internal()).unwrap_or_else(|e| {
@@ -114,8 +114,8 @@ fn health_status_v2() -> HealthStatusV2 {
 
 /// Returns the configuration of the watchdog canister.
 #[query]
-pub fn get_config() -> StoredConfig {
-    crate::storage::get_config()
+pub fn get_config() -> CandidConfig {
+    CandidConfig::from_parts(crate::storage::get_canister(), crate::storage::get_config())
 }
 
 /// Returns the API access target for the canister monitored.
@@ -230,15 +230,16 @@ mod test {
     use crate::config::Canister;
     use crate::types::InitArg;
 
+    fn expected_config(canister: Canister) -> CandidConfig {
+        CandidConfig::from_parts(canister, StoredConfig::for_target(canister))
+    }
+
     #[test]
     fn init_with_bitcoin_testnet_uses_testnet_config() {
         let canister = Canister::BitcoinTestnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(
-            get_config(),
-            StoredConfig::for_target(Canister::BitcoinTestnet)
-        );
+        assert_eq!(get_config(), expected_config(canister));
     }
 
     #[test]
@@ -246,10 +247,7 @@ mod test {
         let canister = Canister::BitcoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(
-            get_config(),
-            StoredConfig::for_target(Canister::BitcoinMainnet)
-        );
+        assert_eq!(get_config(), expected_config(canister));
     }
 
     #[test]
@@ -257,10 +255,7 @@ mod test {
         let canister = Canister::BitcoinMainnetStaging;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(
-            get_config(),
-            StoredConfig::for_target(Canister::BitcoinMainnetStaging)
-        );
+        assert_eq!(get_config(), expected_config(canister));
     }
 
     #[test]
@@ -268,10 +263,7 @@ mod test {
         let canister = Canister::DogecoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(
-            get_config(),
-            StoredConfig::for_target(Canister::DogecoinMainnet)
-        );
+        assert_eq!(get_config(), expected_config(canister));
     }
 
     #[test]
@@ -279,10 +271,7 @@ mod test {
         let canister = Canister::DogecoinMainnetStaging;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(
-            get_config(),
-            StoredConfig::for_target(Canister::DogecoinMainnetStaging)
-        );
+        assert_eq!(get_config(), expected_config(canister));
     }
 
     #[test]
@@ -298,10 +287,7 @@ mod test {
         let config_after = get_config();
 
         assert_eq!(config_before, config_after);
-        assert_eq!(
-            config_after,
-            StoredConfig::for_target(Canister::DogecoinMainnet)
-        );
+        assert_eq!(config_after, expected_config(canister));
     }
 
     #[test]
