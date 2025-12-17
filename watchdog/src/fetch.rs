@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 /// The data fetched from the external block APIs.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct BlockInfoInternal {
+#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
+pub struct BlockInfo {
     /// The provider of the block data.
     pub provider: String,
 
@@ -18,7 +18,7 @@ pub struct BlockInfoInternal {
     pub height: Option<u64>,
 }
 
-impl BlockInfoInternal {
+impl BlockInfo {
     #[cfg(test)]
     pub fn new(provider: String, height: u64) -> Self {
         Self {
@@ -30,7 +30,7 @@ impl BlockInfoInternal {
 
 /// The data fetched from the external Bitcoin block APIs.
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
-pub struct BlockInfo {
+pub struct BlockInfoDeprecated {
     /// The provider of the Bitcoin block data.
     pub provider: BitcoinBlockApi,
 
@@ -43,10 +43,10 @@ pub struct BlockInfoConversionError {
     pub reason: String,
 }
 
-impl TryFrom<BlockInfoInternal> for BlockInfo {
+impl TryFrom<BlockInfo> for BlockInfoDeprecated {
     type Error = BlockInfoConversionError;
 
-    fn try_from(block_info: BlockInfoInternal) -> Result<BlockInfo, Self::Error> {
+    fn try_from(block_info: BlockInfo) -> Result<BlockInfoDeprecated, Self::Error> {
         let provider = match block_info.provider.as_str() {
             "bitcoin_canister" => BitcoinBlockApi::BitcoinCanister,
             "bitcoin_api_bitaps_com_mainnet" => BitcoinBlockApi::ApiBitapsComMainnet,
@@ -62,34 +62,15 @@ impl TryFrom<BlockInfoInternal> for BlockInfo {
                 });
             } // TODO: add bitcoin_canister testnet
         };
-        Ok(BlockInfo {
+        Ok(BlockInfoDeprecated {
             provider,
             height: block_info.height,
         })
     }
 }
 
-/// The data fetched from the external block APIs.
-#[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
-pub struct BlockInfoV2 {
-    /// The provider of the block data.
-    pub provider: String,
-
-    /// The height of the block.
-    pub height: Option<u64>,
-}
-
-impl From<BlockInfoInternal> for BlockInfoV2 {
-    fn from(block_info: BlockInfoInternal) -> BlockInfoV2 {
-        BlockInfoV2 {
-            provider: block_info.provider.to_string(),
-            height: block_info.height,
-        }
-    }
-}
-
 /// Fetches the data from the external APIs and the canister.
-pub async fn fetch_all_data() -> Vec<BlockInfoInternal> {
+pub async fn fetch_all_data() -> Vec<BlockInfo> {
     let canister = storage::get_canister();
     match canister {
         Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
@@ -102,7 +83,7 @@ pub async fn fetch_all_data() -> Vec<BlockInfoInternal> {
     }
 }
 
-async fn fetch_all_data_for<C: CanisterConfig>() -> Vec<BlockInfoInternal> {
+async fn fetch_all_data_for<C: CanisterConfig>() -> Vec<BlockInfo> {
     let providers = C::all_providers();
 
     let futures = providers
@@ -114,7 +95,7 @@ async fn fetch_all_data_for<C: CanisterConfig>() -> Vec<BlockInfoInternal> {
     providers
         .into_iter()
         .zip(results.into_iter())
-        .map(|(provider, value)| BlockInfoInternal {
+        .map(|(provider, value)| BlockInfo {
             provider: provider.to_string(),
             height: value["height"].as_u64(),
         })
@@ -152,31 +133,31 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_api_bitaps_com_mainnet".to_string(),
                     height: Some(700001),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_api_blockchair_com_mainnet".to_string(),
                     height: Some(700002),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_api_blockcypher_com_mainnet".to_string(),
                     height: Some(700003),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_blockchain_info_mainnet".to_string(),
                     height: Some(700004),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_blockstream_info_mainnet".to_string(),
                     height: Some(700005),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_mempool_mainnet".to_string(),
                     height: Some(700008),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_canister".to_string(),
                     height: Some(700007),
                 },
@@ -193,11 +174,11 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_mempool_testnet".to_string(),
                     height: Some(55002),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_canister".to_string(),
                     height: Some(55001),
                 },
@@ -210,19 +191,19 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_api_blockchair_com_mainnet".to_string(),
                     height: Some(5926987),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_api_blockcypher_com_mainnet".to_string(),
                     height: Some(5926989),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_tokenview_mainnet".to_string(),
                     height: Some(5931072),
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_canister".to_string(),
                     height: Some(5931098),
                 },
@@ -267,31 +248,31 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_api_bitaps_com_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_api_blockchair_com_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_api_blockcypher_com_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_blockchain_info_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_blockstream_info_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_mempool_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_canister".to_string(),
                     height: None,
                 },
@@ -308,11 +289,11 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_mempool_testnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "bitcoin_canister".to_string(),
                     height: None,
                 },
@@ -325,19 +306,19 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_api_blockchair_com_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_api_blockcypher_com_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_tokenview_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfoInternal {
+                BlockInfo {
                     provider: "dogecoin_canister".to_string(),
                     height: None,
                 },

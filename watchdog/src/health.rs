@@ -2,7 +2,7 @@ use crate::config::{
     BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig, Config,
     DogecoinMainnetCanister,
 };
-use crate::fetch::{BlockInfo, BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
+use crate::fetch::{BlockInfo, BlockInfoConversionError, BlockInfoDeprecated};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -43,7 +43,7 @@ pub struct HealthStatus {
     pub height_status: HeightStatus,
 
     /// Block info from the explorers.
-    pub explorers: Vec<BlockInfo>,
+    pub explorers: Vec<BlockInfoDeprecated>,
 }
 
 /// Health status of the canister.
@@ -59,7 +59,7 @@ pub struct HealthStatusV2 {
     pub height_status: HeightStatus,
 
     /// Block info from the explorers.
-    pub explorers: Vec<BlockInfoV2>,
+    pub explorers: Vec<BlockInfo>,
 }
 
 /// Health status of the canister.
@@ -78,7 +78,7 @@ pub struct HealthStatusInternal {
     pub height_status: HeightStatus,
 
     /// Block info from the explorers.
-    pub explorers: Vec<BlockInfoInternal>,
+    pub explorers: Vec<BlockInfo>,
 }
 
 impl TryFrom<HealthStatusInternal> for HealthStatus {
@@ -88,8 +88,8 @@ impl TryFrom<HealthStatusInternal> for HealthStatus {
         let explorers = status
             .explorers
             .into_iter()
-            .map(BlockInfo::try_from)
-            .collect::<Result<Vec<BlockInfo>, Self::Error>>()?;
+            .map(BlockInfoDeprecated::try_from)
+            .collect::<Result<Vec<BlockInfoDeprecated>, Self::Error>>()?;
 
         Ok(HealthStatus {
             height_source: status.height_source,
@@ -165,8 +165,8 @@ fn calculate_height_target(
 
 /// Compares the source with the other explorers.
 fn compare(
-    source: Option<BlockInfoInternal>,
-    explorers: Vec<BlockInfoInternal>,
+    source: Option<BlockInfo>,
+    explorers: Vec<BlockInfo>,
     config: Config,
 ) -> HealthStatusInternal {
     let height_source = source.and_then(|block| block.height);
@@ -337,10 +337,7 @@ mod test {
     #[test]
     fn test_compare_no_explorers() {
         // Arrange
-        let source = Some(BlockInfoInternal::new(
-            "bitcoin_canister".to_string(),
-            1_000,
-        ));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![];
 
         // Assert
@@ -359,13 +356,10 @@ mod test {
     #[test]
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
-        let source = Some(BlockInfoInternal::new(
-            "bitcoin_canister".to_string(),
-            1_000,
-        ));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
         ];
 
         // Assert
@@ -377,8 +371,8 @@ mod test {
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
                 ],
             }
         );
@@ -387,14 +381,11 @@ mod test {
     #[test]
     fn test_compare_behind() {
         // Arrange
-        let source = Some(BlockInfoInternal::new(
-            "bitcoin_canister".to_string(),
-            1_000,
-        ));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
         ];
 
         // Assert
@@ -406,9 +397,9 @@ mod test {
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
                 ],
             }
         );
@@ -417,14 +408,11 @@ mod test {
     #[test]
     fn test_compare_ahead() {
         // Arrange
-        let source = Some(BlockInfoInternal::new(
-            "bitcoin_canister".to_string(),
-            1_000,
-        ));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
-            BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
         ];
 
         // Assert
@@ -436,9 +424,9 @@ mod test {
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
-                    BlockInfoInternal::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
                 ],
             }
         );

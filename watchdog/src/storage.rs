@@ -1,5 +1,5 @@
 use crate::config::{Canister, Config};
-use crate::fetch::BlockInfoInternal;
+use crate::fetch::BlockInfo;
 use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
@@ -40,14 +40,14 @@ pub fn set_config(config: Config) {
 }
 
 /// Inserts the data into the local storage.
-pub fn insert_block_info(info: BlockInfoInternal) {
+pub fn insert_block_info(info: BlockInfo) {
     BLOCK_INFO_DATA.with(|cell| {
         cell.borrow_mut().insert(info.provider.to_string(), info);
     });
 }
 
 /// Returns the data from the local storage.
-pub fn get_block_info(provider: &str) -> Option<BlockInfoInternal> {
+pub fn get_block_info(provider: &str) -> Option<BlockInfo> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }
 

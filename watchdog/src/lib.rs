@@ -13,7 +13,7 @@ mod types;
 mod test_utils;
 
 use crate::config::{CandidConfig, Network};
-use crate::fetch::BlockInfoInternal;
+use crate::fetch::BlockInfo;
 use crate::health::HealthStatusV2;
 use crate::{
     config::Config,
@@ -35,7 +35,7 @@ use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfoInternal>> = RefCell::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo >> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
