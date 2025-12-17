@@ -1,9 +1,8 @@
 use crate::block_apis::{
     BitcoinBlockApi, BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi,
-    BitcoinTestnetExplorerBlockApi, BitcoinTestnetProviderBlockApi, BlockApi, BlockApiTrait,
-    DogecoinProviderBlockApi,
+    BitcoinTestnetExplorerBlockApi, BitcoinTestnetProviderBlockApi, BlockApi,
 };
-use crate::config::Network;
+use crate::storage;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -107,40 +106,40 @@ impl From<BlockInfoInternal> for BlockInfoV2 {
     }
 }
 
-pub async fn fetch_all_data(network: Network) -> Vec<BlockInfoInternal> {
-    match network {
-        Network::BitcoinMainnet => {
-            fetch_all_data_for_providers::<BitcoinMainnetProviderBlockApi>().await
-        }
-        Network::BitcoinTestnet => {
-            fetch_all_data_for_providers::<BitcoinTestnetProviderBlockApi>().await
-        }
-        Network::DogecoinMainnet => {
-            fetch_all_data_for_providers::<DogecoinProviderBlockApi>().await
-        }
+/// Fetches the data from the external APIs and the canister.
+pub async fn fetch_all_data() -> Vec<BlockInfoInternal> {
+    let config = storage::get_config();
+    let network = config.network;
+
+    // Parse canister and explorers from strings to BlockApi
+    let canister = BlockApi::from_str_with_network(&config.canister, network);
+    let explorers: Vec<BlockApi> = config
+        .explorers
+        .iter()
+        .filter_map(|s| BlockApi::from_str_with_network(s, network))
+        .collect();
+
+    // Collect all providers (canister + explorers)
+    let mut providers: Vec<BlockApi> = explorers;
+    if let Some(c) = canister {
+        providers.push(c);
     }
-}
 
-/// Fetches the data from the external APIs.
-pub async fn fetch_all_data_for_providers<P: BlockApiTrait + Into<BlockApi>>() -> Vec<BlockInfoInternal> {
-    let api_providers = P::network_providers();
-
-    let futures = api_providers
+    // Fetch data from all providers in parallel
+    let futures = providers
         .iter()
         .map(|api| api.fetch_data())
         .collect::<Vec<_>>();
     let results = futures::future::join_all(futures).await;
 
-    let result: Vec<_> = api_providers
-        .iter()
-        .zip(results.iter())
-        .map(|(api, value)| BlockInfoInternal {
-            provider: api.clone().into(),
+    providers
+        .into_iter()
+        .zip(results.into_iter())
+        .map(|(provider, value)| BlockInfoInternal {
+            provider,
             height: value["height"].as_u64(),
         })
-        .collect();
-
-    result
+        .collect()
 }
 
 #[cfg(test)]
@@ -154,7 +153,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
+            Canister::BitcoinMainnet,
+        ));
         crate::test_utils::mock_bitcoin_mainnet_outcalls();
 
         verify_bitcoin_mainnet_fetch_results().await;
@@ -171,7 +172,7 @@ mod test {
     }
 
     async fn verify_bitcoin_mainnet_fetch_results() {
-        let result = fetch_all_data(Network::BitcoinMainnet).await;
+        let result = fetch_all_data().await;
         assert_eq!(
             result,
             vec![
@@ -209,10 +210,12 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_testnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinTestnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
+            Canister::BitcoinTestnet,
+        ));
         crate::test_utils::mock_bitcoin_testnet_outcalls();
 
-        let result = fetch_all_data(Network::BitcoinTestnet).await;
+        let result = fetch_all_data().await;
         assert_eq!(
             result,
             vec![
@@ -229,7 +232,7 @@ mod test {
     }
 
     async fn verify_dogecoin_mainnet_fetch_results() {
-        let result = fetch_all_data(Network::DogecoinMainnet).await;
+        let result = fetch_all_data().await;
         assert_eq!(
             result,
             vec![
@@ -255,7 +258,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::DogecoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
+            Canister::DogecoinMainnet,
+        ));
         crate::test_utils::mock_dogecoin_mainnet_outcalls();
 
         verify_dogecoin_mainnet_fetch_results().await;
@@ -273,7 +278,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
+            Canister::BitcoinMainnet,
+        ));
         crate::test_utils::mock_all_outcalls_404();
 
         verify_bitcoin_mainnet_fetch_failed_404().await;
@@ -290,7 +297,7 @@ mod test {
     }
 
     async fn verify_bitcoin_mainnet_fetch_failed_404() {
-        let result = fetch_all_data(Network::BitcoinMainnet).await;
+        let result = fetch_all_data().await;
         assert_eq!(
             result,
             vec![
@@ -328,10 +335,12 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_testnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinTestnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
+            Canister::BitcoinTestnet,
+        ));
         crate::test_utils::mock_all_outcalls_404();
 
-        let result = fetch_all_data(Network::BitcoinTestnet).await;
+        let result = fetch_all_data().await;
         assert_eq!(
             result,
             vec![
@@ -348,7 +357,7 @@ mod test {
     }
 
     async fn verify_dogecoin_mainnet_fetch_failed_404() {
-        let result = fetch_all_data(Network::DogecoinMainnet).await;
+        let result = fetch_all_data().await;
         assert_eq!(
             result,
             vec![
@@ -374,7 +383,9 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
-        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::DogecoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
+            Canister::DogecoinMainnet,
+        ));
         crate::test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;
