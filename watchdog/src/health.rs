@@ -27,9 +27,10 @@ pub enum HeightStatus {
     Behind,
 }
 
-/// Health status of the Bitcoin canister.
-#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HealthStatus {
+/// Legacy health status of the Bitcoin canister.
+/// Used in the deprecated health_status endpoint.
+#[derive(Clone, Debug, PartialEq, Eq, CandidType)]
+pub struct LegacyHealthStatus {
     /// Main chain height of the canister.
     pub height_source: Option<u64>,
 
@@ -47,24 +48,8 @@ pub struct HealthStatus {
 }
 
 /// Health status of the canister.
-#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HealthStatusV2 {
-    /// Main chain height of the canister.
-    pub canister_height: Option<u64>,
-
-    /// Height target derived from explorer heights.
-    pub explorer_height: Option<u64>,
-
-    /// Canister height status.
-    pub height_status: HeightStatus,
-
-    /// Block info from the explorers.
-    pub explorers: Vec<BlockInfo>,
-}
-
-/// Health status of the canister.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HealthStatusInternal {
+#[derive(Clone, Debug, PartialEq, Eq, CandidType)]
+pub struct HealthStatus {
     /// Main chain height of the canister.
     pub height_source: Option<u64>,
 
@@ -81,17 +66,17 @@ pub struct HealthStatusInternal {
     pub explorers: Vec<BlockInfo>,
 }
 
-impl TryFrom<HealthStatusInternal> for HealthStatus {
+impl TryFrom<HealthStatus> for LegacyHealthStatus {
     type Error = BlockInfoConversionError;
 
-    fn try_from(status: HealthStatusInternal) -> Result<HealthStatus, Self::Error> {
+    fn try_from(status: HealthStatus) -> Result<LegacyHealthStatus, Self::Error> {
         let explorers = status
             .explorers
             .into_iter()
             .map(LegacyBlockInfo::try_from)
             .collect::<Result<Vec<LegacyBlockInfo>, Self::Error>>()?;
 
-        Ok(HealthStatus {
+        Ok(LegacyHealthStatus {
             height_source: status.height_source,
             height_target: status.height_target,
             height_diff: status.height_diff,
@@ -101,33 +86,22 @@ impl TryFrom<HealthStatusInternal> for HealthStatus {
     }
 }
 
-impl From<HealthStatusInternal> for HealthStatusV2 {
-    fn from(status: HealthStatusInternal) -> HealthStatusV2 {
-        HealthStatusV2 {
-            canister_height: status.height_source,
-            explorer_height: status.height_target,
-            height_status: status.height_status,
-            explorers: status.explorers.into_iter().map(Into::into).collect(),
-        }
-    }
-}
-
 /// Calculates the health status of a canister.
-pub fn health_status_internal() -> HealthStatusInternal {
+pub fn health_status() -> HealthStatus {
     let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
     match canister {
         Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
-            health_status_internal_for::<BitcoinMainnetCanister>(config)
+            health_status_for::<BitcoinMainnetCanister>(config)
         }
-        Canister::BitcoinTestnet => health_status_internal_for::<BitcoinTestnetCanister>(config),
+        Canister::BitcoinTestnet => health_status_for::<BitcoinTestnetCanister>(config),
         Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-            health_status_internal_for::<DogecoinMainnetCanister>(config)
+            health_status_for::<DogecoinMainnetCanister>(config)
         }
     }
 }
 
-fn health_status_internal_for<C: CanisterConfig>(config: Config) -> HealthStatusInternal {
+fn health_status_for<C: CanisterConfig>(config: Config) -> HealthStatus {
     compare(
         crate::storage::get_block_info(&C::canister().to_string()),
         C::explorers()
@@ -164,11 +138,7 @@ fn calculate_height_target(
 }
 
 /// Compares the source with the other explorers.
-fn compare(
-    source: Option<BlockInfo>,
-    explorers: Vec<BlockInfo>,
-    config: Config,
-) -> HealthStatusInternal {
+fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
     let heights = explorers
         .iter()
@@ -193,7 +163,7 @@ fn compare(
         }
     });
 
-    HealthStatusInternal {
+    HealthStatus {
         height_source,
         height_target,
         height_diff,
@@ -324,7 +294,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatusInternal {
+            HealthStatus {
                 height_source: None,
                 height_target: None,
                 height_diff: None,
@@ -343,7 +313,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatusInternal {
+            HealthStatus {
                 height_source: Some(1_000),
                 height_target: None,
                 height_diff: None,
@@ -365,7 +335,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatusInternal {
+            HealthStatus {
                 height_source: Some(1_000),
                 height_target: None,
                 height_diff: None,
@@ -391,7 +361,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatusInternal {
+            HealthStatus {
                 height_source: Some(1_000),
                 height_target: Some(1_005),
                 height_diff: Some(-5),
@@ -418,7 +388,7 @@ mod test {
         // Assert
         assert_eq!(
             compare(source, other, crate::storage::get_config()),
-            HealthStatusInternal {
+            HealthStatus {
                 height_source: Some(1_000),
                 height_target: Some(995),
                 height_diff: Some(5),

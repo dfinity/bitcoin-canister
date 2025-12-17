@@ -14,11 +14,11 @@ mod test_utils;
 
 use crate::config::{CandidConfig, Network};
 use crate::fetch::BlockInfo;
-use crate::health::HealthStatusV2;
+use crate::health::HealthStatus;
 use crate::{
     config::Config,
     endpoints::*,
-    health::HealthStatus,
+    health::LegacyHealthStatus,
     types::WatchdogArg,
     types::{CandidHttpRequest, CandidHttpResponse},
 };
@@ -91,11 +91,11 @@ async fn tick() {
 
 /// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
-fn health_status() -> HealthStatus {
+fn health_status() -> LegacyHealthStatus {
     let network = storage::get_canister().network();
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
-            HealthStatus::try_from(health::health_status_internal()).unwrap_or_else(|e| {
+            LegacyHealthStatus::try_from(health::health_status()).unwrap_or_else(|e| {
                 panic!(
                     "Failed to convert health status for Bitcoin network: {}",
                     e.reason
@@ -108,8 +108,8 @@ fn health_status() -> HealthStatus {
 
 /// Returns the health status of the canister monitored.
 #[query]
-fn health_status_v2() -> HealthStatusV2 {
-    health::health_status_internal().into()
+fn health_status_v2() -> HealthStatus {
+    health::health_status().into()
 }
 
 /// Returns the configuration of the watchdog canister.

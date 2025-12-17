@@ -1,6 +1,5 @@
 use crate::block_apis::{
-    BitcoinMainnetExplorerBlockApi, BitcoinTestnetExplorerBlockApi,
-    DogecoinMainnetExplorerBlockApi,
+    BitcoinMainnetExplorerBlockApi, BitcoinTestnetExplorerBlockApi, DogecoinMainnetExplorerBlockApi,
 };
 use crate::config::Network;
 use crate::{health::HeightStatus, types::CandidHttpResponse};
@@ -68,7 +67,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         "The minimum number of explorers to compare against.",
     )?;
 
-    let health = crate::health::health_status_internal();
+    let health = crate::health::health_status();
     w.encode_gauge(
         "canister_height",
         health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),

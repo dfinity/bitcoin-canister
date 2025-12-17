@@ -1,9 +1,9 @@
-use crate::health::HealthStatusInternal;
+use crate::health::HealthStatus;
 use crate::{health::HeightStatus, print};
 use ic_btc_interface::{Config as CanisterConfig, Flag, SetConfigRequest};
 
 /// Calculates the target value of the canister API access flag.
-fn calculate_target(health: HealthStatusInternal) -> Option<Flag> {
+fn calculate_target(health: HealthStatus) -> Option<Flag> {
     match health.height_status {
         HeightStatus::Ok => Some(Flag::Enabled),
         HeightStatus::Behind | HeightStatus::Ahead => Some(Flag::Disabled),
@@ -54,7 +54,7 @@ async fn update_api_access(target: Option<Flag>) {
 
 /// Synchronizes the API access flag of the canister.
 pub async fn synchronise_api_access() {
-    let target = calculate_target(crate::health::health_status_internal());
+    let target = calculate_target(crate::health::health_status());
     crate::storage::set_api_access_target(target);
 
     if target.is_some() {
