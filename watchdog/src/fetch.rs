@@ -1,4 +1,4 @@
-use crate::block_apis::{BitcoinBlockApi, BlockApiTrait};
+use crate::block_apis::{BitcoinBlockApi, BlockProvider};
 use crate::config::{
     BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig,
     DogecoinMainnetCanister,

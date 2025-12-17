@@ -5,11 +5,12 @@ use serde_json::json;
 use std::fmt::Display;
 use strum::{Display, EnumIter};
 
-pub trait BlockApiTrait: Clone + Sized + Display {
+pub trait BlockProvider: Display {
     async fn fetch_data(&self) -> serde_json::Value;
 }
 
 /// APIs that serve Bitcoin block data.
+/// Only used in the deprecated health_status endpoint.
 #[derive(
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
@@ -52,149 +53,8 @@ impl std::fmt::Display for BitcoinBlockApi {
     }
 }
 
-/// APIs that serve block data.
-#[derive(
-    Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Display, CandidType, Serialize, Deserialize,
-)]
-pub enum BlockApi {
-    #[strum(transparent)]
-    BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi),
-    #[strum(transparent)]
-    BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi),
-    #[strum(transparent)]
-    DogecoinProvider(DogecoinProviderBlockApi),
-}
-
-impl BlockApi {
-    pub async fn fetch_data(&self) -> serde_json::Value {
-        match self {
-            BlockApi::BitcoinMainnetProvider(api) => api.fetch_data().await,
-            BlockApi::BitcoinTestnetProvider(api) => api.fetch_data().await,
-            BlockApi::DogecoinProvider(api) => api.fetch_data().await,
-        }
-    }
-
-    /// Parses a string into a BlockApi using the network to determine ambiguous cases.
-    /// Returns None if the string doesn't match any known provider for the given network.
-    pub fn from_str_with_network(s: &str, network: crate::config::Network) -> Option<Self> {
-        use crate::config::Network;
-
-        match network {
-            Network::BitcoinMainnet => {
-                // Bitcoin mainnet providers
-                if s == "bitcoin_canister" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::BitcoinCanister,
-                    ));
-                }
-                if s == "bitcoin_api_bitaps_com_mainnet" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::Mainnet(
-                            BitcoinMainnetExplorerBlockApi::ApiBitapsCom,
-                        ),
-                    ));
-                }
-                if s == "bitcoin_api_blockchair_com_mainnet" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::Mainnet(
-                            BitcoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                        ),
-                    ));
-                }
-                if s == "bitcoin_api_blockcypher_com_mainnet" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::Mainnet(
-                            BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                        ),
-                    ));
-                }
-                if s == "bitcoin_blockchain_info_mainnet" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::Mainnet(
-                            BitcoinMainnetExplorerBlockApi::BlockchainInfo,
-                        ),
-                    ));
-                }
-                if s == "bitcoin_blockstream_info_mainnet" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::Mainnet(
-                            BitcoinMainnetExplorerBlockApi::BlockstreamInfo,
-                        ),
-                    ));
-                }
-                if s == "bitcoin_mempool_mainnet" {
-                    return Some(BlockApi::BitcoinMainnetProvider(
-                        BitcoinMainnetProviderBlockApi::Mainnet(
-                            BitcoinMainnetExplorerBlockApi::Mempool,
-                        ),
-                    ));
-                }
-            }
-            Network::BitcoinTestnet => {
-                // Bitcoin testnet providers
-                if s == "bitcoin_canister" {
-                    return Some(BlockApi::BitcoinTestnetProvider(
-                        BitcoinTestnetProviderBlockApi::BitcoinCanister,
-                    ));
-                }
-                if s == "bitcoin_mempool_testnet" {
-                    return Some(BlockApi::BitcoinTestnetProvider(
-                        BitcoinTestnetProviderBlockApi::Testnet(
-                            BitcoinTestnetExplorerBlockApi::Mempool,
-                        ),
-                    ));
-                }
-            }
-            Network::DogecoinMainnet => {
-                // Dogecoin providers
-                if s == "dogecoin_canister" {
-                    return Some(BlockApi::DogecoinProvider(
-                        DogecoinProviderBlockApi::DogecoinCanister,
-                    ));
-                }
-                if s == "dogecoin_api_blockchair_com_mainnet" {
-                    return Some(BlockApi::DogecoinProvider(
-                        DogecoinProviderBlockApi::Mainnet(
-                            DogecoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                        ),
-                    ));
-                }
-                if s == "dogecoin_api_blockcypher_com_mainnet" {
-                    return Some(BlockApi::DogecoinProvider(
-                        DogecoinProviderBlockApi::Mainnet(
-                            DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                        ),
-                    ));
-                }
-                if s == "dogecoin_tokenview_mainnet" {
-                    return Some(BlockApi::DogecoinProvider(
-                        DogecoinProviderBlockApi::Mainnet(
-                            DogecoinMainnetExplorerBlockApi::TokenView,
-                        ),
-                    ));
-                }
-            }
-        }
-
-        None
-    }
-}
-
 /// Providers that serve Bitcoin block data.
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Display,
-    CandidType,
-    Serialize,
-    Deserialize,
-)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Display)]
 pub enum BitcoinMainnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
@@ -202,7 +62,24 @@ pub enum BitcoinMainnetProviderBlockApi {
     Mainnet(BitcoinMainnetExplorerBlockApi),
 }
 
-impl BlockApiTrait for BitcoinMainnetProviderBlockApi {
+/// Explorers that serve Bitcoin mainnet block data.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display)]
+pub enum BitcoinMainnetExplorerBlockApi {
+    #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
+    ApiBitapsCom,
+    #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
+    ApiBlockchairCom,
+    #[strum(serialize = "bitcoin_api_blockcypher_com_mainnet")]
+    ApiBlockcypherCom,
+    #[strum(serialize = "bitcoin_blockchain_info_mainnet")]
+    BlockchainInfo,
+    #[strum(serialize = "bitcoin_blockstream_info_mainnet")]
+    BlockstreamInfo,
+    #[strum(serialize = "bitcoin_mempool_mainnet")]
+    Mempool,
+}
+
+impl BlockProvider for BitcoinMainnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
@@ -266,64 +143,8 @@ impl BlockApiTrait for BitcoinMainnetProviderBlockApi {
     }
 }
 
-impl From<BitcoinMainnetProviderBlockApi> for BlockApi {
-    fn from(api: BitcoinMainnetProviderBlockApi) -> Self {
-        BlockApi::BitcoinMainnetProvider(api)
-    }
-}
-
-/// Explorers that serve Bitcoin mainnet block data.
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash,
-    EnumIter,
-    Display,
-    CandidType,
-    Serialize,
-    Deserialize,
-)]
-pub enum BitcoinMainnetExplorerBlockApi {
-    #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
-    ApiBitapsCom,
-    #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
-    ApiBlockchairCom,
-    #[strum(serialize = "bitcoin_api_blockcypher_com_mainnet")]
-    ApiBlockcypherCom,
-    #[strum(serialize = "bitcoin_blockchain_info_mainnet")]
-    BlockchainInfo,
-    #[strum(serialize = "bitcoin_blockstream_info_mainnet")]
-    BlockstreamInfo,
-    #[strum(serialize = "bitcoin_mempool_mainnet")]
-    Mempool,
-}
-
-impl From<BitcoinMainnetExplorerBlockApi> for BlockApi {
-    fn from(api: BitcoinMainnetExplorerBlockApi) -> Self {
-        BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(api))
-    }
-}
-
 /// Providers that serve testnet Bitcoin block data.
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Display,
-    CandidType,
-    Serialize,
-    Deserialize,
-)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Display)]
 pub enum BitcoinTestnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
@@ -331,7 +152,14 @@ pub enum BitcoinTestnetProviderBlockApi {
     Testnet(BitcoinTestnetExplorerBlockApi),
 }
 
-impl BlockApiTrait for BitcoinTestnetProviderBlockApi {
+/// Explorers that serve Bitcoin testnet block data.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display)]
+pub enum BitcoinTestnetExplorerBlockApi {
+    #[strum(serialize = "bitcoin_mempool_testnet")]
+    Mempool,
+}
+
+impl BlockProvider for BitcoinTestnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
@@ -344,54 +172,8 @@ impl BlockApiTrait for BitcoinTestnetProviderBlockApi {
     }
 }
 
-impl From<BitcoinTestnetProviderBlockApi> for BlockApi {
-    fn from(api: BitcoinTestnetProviderBlockApi) -> Self {
-        BlockApi::BitcoinTestnetProvider(api)
-    }
-}
-
-/// Explorers that serve Bitcoin testnet block data.
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash,
-    EnumIter,
-    Display,
-    CandidType,
-    Serialize,
-    Deserialize,
-)]
-pub enum BitcoinTestnetExplorerBlockApi {
-    #[strum(serialize = "bitcoin_mempool_testnet")]
-    Mempool,
-}
-
-impl From<BitcoinTestnetExplorerBlockApi> for BlockApi {
-    fn from(api: BitcoinTestnetExplorerBlockApi) -> Self {
-        BlockApi::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::Testnet(api))
-    }
-}
-
 /// Providers that serve Dogecoin block data.
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Display,
-    CandidType,
-    Serialize,
-    Deserialize,
-)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Display)]
 pub enum DogecoinProviderBlockApi {
     #[strum(serialize = "dogecoin_canister")]
     DogecoinCanister,
@@ -399,7 +181,18 @@ pub enum DogecoinProviderBlockApi {
     Mainnet(DogecoinMainnetExplorerBlockApi),
 }
 
-impl BlockApiTrait for DogecoinProviderBlockApi {
+/// Explorers that serve Dogecoin mainnet block data.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display)]
+pub enum DogecoinMainnetExplorerBlockApi {
+    #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
+    ApiBlockchairCom,
+    #[strum(serialize = "dogecoin_api_blockcypher_com_mainnet")]
+    ApiBlockcypherCom,
+    #[strum(serialize = "dogecoin_tokenview_mainnet")]
+    TokenView,
+}
+
+impl BlockProvider for DogecoinProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
@@ -424,43 +217,6 @@ impl BlockApiTrait for DogecoinProviderBlockApi {
     }
 }
 
-impl From<DogecoinProviderBlockApi> for BlockApi {
-    fn from(api: DogecoinProviderBlockApi) -> Self {
-        BlockApi::DogecoinProvider(api)
-    }
-}
-
-/// Explorers that serve Dogecoin mainnet block data.
-#[derive(
-    Debug,
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    PartialOrd,
-    Ord,
-    Hash,
-    EnumIter,
-    Display,
-    CandidType,
-    Serialize,
-    Deserialize,
-)]
-pub enum DogecoinMainnetExplorerBlockApi {
-    #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
-    ApiBlockchairCom,
-    #[strum(serialize = "dogecoin_api_blockcypher_com_mainnet")]
-    ApiBlockcypherCom,
-    #[strum(serialize = "dogecoin_tokenview_mainnet")]
-    TokenView,
-}
-
-impl From<DogecoinMainnetExplorerBlockApi> for BlockApi {
-    fn from(api: DogecoinMainnetExplorerBlockApi) -> Self {
-        BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(api))
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -469,26 +225,111 @@ mod test {
     use serde_json::json;
     use strum::IntoEnumIterator;
 
-    fn all_providers() -> Vec<BlockApi> {
-        BitcoinMainnetExplorerBlockApi::iter()
-            .map(BitcoinMainnetProviderBlockApi::Mainnet)
-            .map(BlockApi::BitcoinMainnetProvider)
-            .chain(
-                BitcoinTestnetExplorerBlockApi::iter()
-                    .map(BitcoinTestnetProviderBlockApi::Testnet)
-                    .map(BlockApi::BitcoinTestnetProvider),
-            )
-            .chain(
-                DogecoinMainnetExplorerBlockApi::iter()
-                    .map(DogecoinProviderBlockApi::Mainnet)
-                    .map(BlockApi::DogecoinProvider),
-            )
-            .collect()
+    #[tokio::test]
+    async fn test_http_request_abusing_api() {
+        test_utils::mock_all_outcalls_abusing_api();
+
+        for explorer in BitcoinMainnetExplorerBlockApi::iter() {
+            let provider = BitcoinMainnetProviderBlockApi::Mainnet(explorer);
+            let response = provider.fetch_data().await;
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+
+        for explorer in BitcoinTestnetExplorerBlockApi::iter() {
+            let provider = BitcoinTestnetProviderBlockApi::Testnet(explorer);
+            let response = provider.fetch_data().await;
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+
+        for explorer in DogecoinMainnetExplorerBlockApi::iter() {
+            let provider = DogecoinProviderBlockApi::Mainnet(explorer);
+            let response = provider.fetch_data().await;
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_http_request_failed_with_404() {
+        test_utils::mock_all_outcalls_404();
+
+        for explorer in BitcoinMainnetExplorerBlockApi::iter() {
+            let provider = BitcoinMainnetProviderBlockApi::Mainnet(explorer);
+            let response = provider.fetch_data().await;
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+
+        for explorer in BitcoinTestnetExplorerBlockApi::iter() {
+            let provider = BitcoinTestnetProviderBlockApi::Testnet(explorer);
+            let response = provider.fetch_data().await;
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+
+        for explorer in DogecoinMainnetExplorerBlockApi::iter() {
+            let provider = DogecoinProviderBlockApi::Mainnet(explorer);
+            let response = provider.fetch_data().await;
+            assert_eq!(response, json!({}), "provider: {:?}", provider);
+        }
+    }
+
+    #[test]
+    fn test_names() {
+        assert_eq!(
+            BitcoinMainnetExplorerBlockApi::ApiBitapsCom.to_string(),
+            "bitcoin_api_bitaps_com_mainnet"
+        );
+        assert_eq!(
+            BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.to_string(),
+            "bitcoin_api_blockchair_com_mainnet"
+        );
+        assert_eq!(
+            BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.to_string(),
+            "bitcoin_api_blockcypher_com_mainnet"
+        );
+        assert_eq!(
+            BitcoinMainnetExplorerBlockApi::BlockchainInfo.to_string(),
+            "bitcoin_blockchain_info_mainnet"
+        );
+        assert_eq!(
+            BitcoinMainnetExplorerBlockApi::BlockstreamInfo.to_string(),
+            "bitcoin_blockstream_info_mainnet"
+        );
+        assert_eq!(
+            BitcoinMainnetExplorerBlockApi::Mempool.to_string(),
+            "bitcoin_mempool_mainnet"
+        );
+
+        assert_eq!(
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.to_string(),
+            "bitcoin_canister"
+        );
+
+        assert_eq!(
+            BitcoinTestnetExplorerBlockApi::Mempool.to_string(),
+            "bitcoin_mempool_testnet"
+        );
+
+        assert_eq!(
+            DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.to_string(),
+            "dogecoin_api_blockchair_com_mainnet"
+        );
+        assert_eq!(
+            DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.to_string(),
+            "dogecoin_api_blockcypher_com_mainnet"
+        );
+        assert_eq!(
+            DogecoinMainnetExplorerBlockApi::TokenView.to_string(),
+            "dogecoin_tokenview_mainnet"
+        );
+
+        assert_eq!(
+            DogecoinProviderBlockApi::DogecoinCanister.to_string(),
+            "dogecoin_canister"
+        );
     }
 
     /// Runs a test for the given API.
     async fn run_test(
-        api: impl BlockApiTrait,
+        api: impl BlockProvider,
         times_called: Vec<(crate::http::HttpRequestConfig, u64)>,
         expected: serde_json::Value,
     ) {
@@ -498,86 +339,6 @@ mod test {
         for (config, count) in times_called {
             let request = config.request();
             assert_eq!(ic_http::mock::times_called(request), count);
-        }
-    }
-
-    #[tokio::test]
-    async fn test_http_request_abusing_api() {
-        test_utils::mock_all_outcalls_abusing_api();
-        for provider in all_providers() {
-            let response = provider.fetch_data().await;
-
-            assert_eq!(response, json!({}), "provider: {:?}", provider);
-        }
-    }
-
-    #[tokio::test]
-    async fn test_http_request_failed_with_404() {
-        test_utils::mock_all_outcalls_404();
-        for provider in all_providers() {
-            let response = provider.fetch_data().await;
-
-            assert_eq!(response, json!({}), "provider: {:?}", provider);
-        }
-    }
-
-    #[test]
-    fn test_names() {
-        let expected: std::collections::HashMap<BlockApi, &str> = [
-            (
-                BitcoinMainnetExplorerBlockApi::ApiBitapsCom.into(),
-                "bitcoin_api_bitaps_com_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                "bitcoin_api_blockchair_com_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                "bitcoin_api_blockcypher_com_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::BlockchainInfo.into(),
-                "bitcoin_blockchain_info_mainnet",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::BlockstreamInfo.into(),
-                "bitcoin_blockstream_info_mainnet",
-            ),
-            (
-                BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
-                "bitcoin_canister",
-            ),
-            (
-                BitcoinMainnetExplorerBlockApi::Mempool.into(),
-                "bitcoin_mempool_mainnet",
-            ),
-            (
-                BitcoinTestnetExplorerBlockApi::Mempool.into(),
-                "bitcoin_mempool_testnet",
-            ),
-            (
-                DogecoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
-                "dogecoin_api_blockchair_com_mainnet",
-            ),
-            (
-                DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom.into(),
-                "dogecoin_api_blockcypher_com_mainnet",
-            ),
-            (
-                DogecoinProviderBlockApi::DogecoinCanister.into(),
-                "dogecoin_canister",
-            ),
-            (
-                DogecoinMainnetExplorerBlockApi::TokenView.into(),
-                "dogecoin_tokenview_mainnet",
-            ),
-        ]
-        .iter()
-        .cloned()
-        .collect();
-        for provider in all_providers() {
-            assert_eq!(provider.to_string(), expected[&provider].to_string());
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::block_apis::{
     BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi, BitcoinTestnetExplorerBlockApi,
-    BitcoinTestnetProviderBlockApi, BlockApiTrait, DogecoinMainnetExplorerBlockApi,
+    BitcoinTestnetProviderBlockApi, BlockProvider, DogecoinMainnetExplorerBlockApi,
     DogecoinProviderBlockApi,
 };
 use candid::CandidType;
@@ -37,7 +37,7 @@ const DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 60;
 
 /// Trait for canister configuration with strongly-typed providers.
 pub trait CanisterConfig {
-    type Provider: BlockApiTrait;
+    type Provider: BlockProvider;
 
     /// Returns the canister API provider.
     fn canister() -> Self::Provider;
