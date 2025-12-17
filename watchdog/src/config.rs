@@ -442,7 +442,7 @@ impl Default for Config {
     }
 }
 
-/// Configuration for the candid API response.
+/// Configuration for the candid API get_config response.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CandidConfig {
     /// The network to use.
