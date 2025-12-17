@@ -9,8 +9,7 @@ pub trait BlockProvider: Display {
     async fn fetch_data(&self) -> serde_json::Value;
 }
 
-/// APIs that serve Bitcoin block data.
-/// Only used in the deprecated health_status endpoint.
+/// APIs that serve Bitcoin block data, for legacy purpose.
 #[derive(
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]

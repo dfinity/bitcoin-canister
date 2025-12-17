@@ -2,7 +2,7 @@ use crate::config::{
     BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig, Config,
     DogecoinMainnetCanister,
 };
-use crate::fetch::{BlockInfo, BlockInfoConversionError, BlockInfoDeprecated};
+use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -43,7 +43,7 @@ pub struct HealthStatus {
     pub height_status: HeightStatus,
 
     /// Block info from the explorers.
-    pub explorers: Vec<BlockInfoDeprecated>,
+    pub explorers: Vec<LegacyBlockInfo>,
 }
 
 /// Health status of the canister.
@@ -88,8 +88,8 @@ impl TryFrom<HealthStatusInternal> for HealthStatus {
         let explorers = status
             .explorers
             .into_iter()
-            .map(BlockInfoDeprecated::try_from)
-            .collect::<Result<Vec<BlockInfoDeprecated>, Self::Error>>()?;
+            .map(LegacyBlockInfo::try_from)
+            .collect::<Result<Vec<LegacyBlockInfo>, Self::Error>>()?;
 
         Ok(HealthStatus {
             height_source: status.height_source,

@@ -28,9 +28,9 @@ impl BlockInfo {
     }
 }
 
-/// The data fetched from the external Bitcoin block APIs.
+/// The data fetched from the external block APIs, Bitcoin only.
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
-pub struct BlockInfoDeprecated {
+pub struct LegacyBlockInfo {
     /// The provider of the Bitcoin block data.
     pub provider: BitcoinBlockApi,
 
@@ -43,10 +43,10 @@ pub struct BlockInfoConversionError {
     pub reason: String,
 }
 
-impl TryFrom<BlockInfo> for BlockInfoDeprecated {
+impl TryFrom<BlockInfo> for LegacyBlockInfo {
     type Error = BlockInfoConversionError;
 
-    fn try_from(block_info: BlockInfo) -> Result<BlockInfoDeprecated, Self::Error> {
+    fn try_from(block_info: BlockInfo) -> Result<LegacyBlockInfo, Self::Error> {
         let provider = match block_info.provider.as_str() {
             "bitcoin_canister" => BitcoinBlockApi::BitcoinCanister,
             "bitcoin_api_bitaps_com_mainnet" => BitcoinBlockApi::ApiBitapsComMainnet,
@@ -62,7 +62,7 @@ impl TryFrom<BlockInfo> for BlockInfoDeprecated {
                 });
             }
         };
-        Ok(BlockInfoDeprecated {
+        Ok(LegacyBlockInfo {
             provider,
             height: block_info.height,
         })
