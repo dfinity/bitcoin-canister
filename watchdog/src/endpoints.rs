@@ -455,7 +455,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinMainnet));
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
@@ -469,7 +469,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet_staging() {
-        crate::storage::set_config(crate::config::Config::for_target(
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
             Canister::BitcoinMainnetStaging,
         ));
         run_http_request_test(
@@ -485,7 +485,7 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinTestnet));
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
@@ -580,7 +580,7 @@ mod test {
 
     #[tokio::test]
     async fn test_dogecoin_canister_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::DogecoinMainnet));
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
@@ -594,7 +594,7 @@ mod test {
 
     #[tokio::test]
     async fn test_dogecoin_staging_canister_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
             Canister::DogecoinMainnetStaging,
         ));
         run_http_request_test(

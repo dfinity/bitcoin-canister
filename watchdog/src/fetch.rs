@@ -154,7 +154,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinMainnet));
         crate::test_utils::mock_bitcoin_mainnet_outcalls();
 
         verify_bitcoin_mainnet_fetch_results().await;
@@ -162,7 +162,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet_staging() {
-        crate::storage::set_config(crate::config::Config::for_target(
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
             Canister::BitcoinMainnetStaging,
         ));
         crate::test_utils::mock_bitcoin_mainnet_outcalls();
@@ -209,7 +209,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_testnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinTestnet));
         crate::test_utils::mock_bitcoin_testnet_outcalls();
 
         let result = fetch_all_data(Network::BitcoinTestnet).await;
@@ -255,7 +255,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::DogecoinMainnet));
         crate::test_utils::mock_dogecoin_mainnet_outcalls();
 
         verify_dogecoin_mainnet_fetch_results().await;
@@ -263,7 +263,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet_staging() {
-        crate::storage::set_config(crate::config::Config::for_target(
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
             Canister::DogecoinMainnetStaging,
         ));
         crate::test_utils::mock_dogecoin_mainnet_outcalls();
@@ -273,7 +273,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinMainnet));
         crate::test_utils::mock_all_outcalls_404();
 
         verify_bitcoin_mainnet_fetch_failed_404().await;
@@ -281,7 +281,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_mainnet_staging() {
-        crate::storage::set_config(crate::config::Config::for_target(
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
             Canister::BitcoinMainnetStaging,
         ));
         crate::test_utils::mock_all_outcalls_404();
@@ -328,7 +328,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_testnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::BitcoinTestnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::BitcoinTestnet));
         crate::test_utils::mock_all_outcalls_404();
 
         let result = fetch_all_data(Network::BitcoinTestnet).await;
@@ -374,7 +374,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
-        crate::storage::set_config(crate::config::Config::for_target(Canister::DogecoinMainnet));
+        crate::storage::set_config(crate::config::StoredConfig::for_target(Canister::DogecoinMainnet));
         crate::test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;
@@ -382,7 +382,7 @@ mod test {
 
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet_staging() {
-        crate::storage::set_config(crate::config::Config::for_target(
+        crate::storage::set_config(crate::config::StoredConfig::for_target(
             Canister::DogecoinMainnetStaging,
         ));
         crate::test_utils::mock_all_outcalls_404();

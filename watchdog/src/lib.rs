@@ -17,7 +17,7 @@ use crate::config::Network;
 use crate::fetch::BlockInfoInternal;
 use crate::health::HealthStatusV2;
 use crate::{
-    config::Config,
+    config::StoredConfig,
     endpoints::*,
     health::HealthStatus,
     types::WatchdogArg,
@@ -50,7 +50,7 @@ fn init(watchdog_arg: WatchdogArg) {
         WatchdogArg::Upgrade(_) => panic!("cannot initialize canister during upgrade"),
     };
 
-    let config = Config::for_target(target);
+    let config = StoredConfig::for_target(target);
     storage::set_config(config);
 
     start_block_info_fetch_loop();
@@ -116,7 +116,7 @@ fn health_status_v2() -> HealthStatusV2 {
 
 /// Returns the configuration of the watchdog canister.
 #[query]
-pub fn get_config() -> Config {
+pub fn get_config() -> StoredConfig {
     crate::storage::get_config()
 }
 
@@ -237,7 +237,7 @@ mod test {
         let canister = Canister::BitcoinTestnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(get_config(), Config::for_target(Canister::BitcoinTestnet));
+        assert_eq!(get_config(), StoredConfig::for_target(Canister::BitcoinTestnet));
     }
 
     #[test]
@@ -245,7 +245,7 @@ mod test {
         let canister = Canister::BitcoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(get_config(), Config::for_target(Canister::BitcoinMainnet));
+        assert_eq!(get_config(), StoredConfig::for_target(Canister::BitcoinMainnet));
     }
 
     #[test]
@@ -255,7 +255,7 @@ mod test {
         init(init_arg);
         assert_eq!(
             get_config(),
-            Config::for_target(Canister::BitcoinMainnetStaging)
+            StoredConfig::for_target(Canister::BitcoinMainnetStaging)
         );
     }
 
@@ -264,7 +264,7 @@ mod test {
         let canister = Canister::DogecoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(get_config(), Config::for_target(Canister::DogecoinMainnet));
+        assert_eq!(get_config(), StoredConfig::for_target(Canister::DogecoinMainnet));
     }
 
     #[test]
@@ -274,7 +274,7 @@ mod test {
         init(init_arg);
         assert_eq!(
             get_config(),
-            Config::for_target(Canister::DogecoinMainnetStaging)
+            StoredConfig::for_target(Canister::DogecoinMainnetStaging)
         );
     }
 
@@ -291,7 +291,7 @@ mod test {
         let config_after = get_config();
 
         assert_eq!(config_before, config_after);
-        assert_eq!(config_after, Config::for_target(Canister::DogecoinMainnet));
+        assert_eq!(config_after, StoredConfig::for_target(Canister::DogecoinMainnet));
     }
 
     #[test]

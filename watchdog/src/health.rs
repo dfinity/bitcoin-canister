@@ -1,6 +1,5 @@
-use crate::block_apis::BlockApi;
 use crate::fetch::{BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
-use crate::{config::Config, fetch::BlockInfo};
+use crate::{config::StoredConfig, fetch::BlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -113,10 +112,11 @@ impl From<HealthStatusInternal> for HealthStatusV2 {
 /// Calculates the health status of a canister.
 pub fn health_status_internal() -> HealthStatusInternal {
     let config = crate::storage::get_config();
-    let block_api = BlockApi::network_canister(config.network);
+    let canister = config.canister.clone();
     compare(
-        crate::storage::get_block_info(&block_api),
-        BlockApi::network_explorers(config.network)
+        crate::storage::get_block_info(&canister),
+        config
+            .explorers
             .iter()
             .filter_map(crate::storage::get_block_info)
             .collect::<Vec<_>>(),
@@ -153,7 +153,7 @@ fn calculate_height_target(
 fn compare(
     source: Option<BlockInfoInternal>,
     explorers: Vec<BlockInfoInternal>,
-    config: Config,
+    config: StoredConfig,
 ) -> HealthStatusInternal {
     let height_source = source.and_then(|block| block.height);
     let heights = explorers
