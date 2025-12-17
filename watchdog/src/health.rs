@@ -1,8 +1,4 @@
-use crate::block_apis::{
-    BitcoinMainnetProviderBlockApi, BitcoinTestnetProviderBlockApi, BlockApi, BlockApiTrait,
-    DogecoinProviderBlockApi,
-};
-use crate::config::Network;
+use crate::block_apis::BlockApi;
 use crate::fetch::{BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
 use crate::{config::Config, fetch::BlockInfo};
 use candid::CandidType;
@@ -115,30 +111,17 @@ impl From<HealthStatusInternal> for HealthStatusV2 {
 }
 
 /// Calculates the health status of a canister.
-fn health_status_for_provider<P: BlockApiTrait + Into<BlockApi>>(
-    config: Config,
-) -> HealthStatusInternal {
-    let explorers: Vec<BlockApi> = P::network_explorers().into_iter().map(Into::into).collect();
+pub fn health_status_internal() -> HealthStatusInternal {
+    let config = crate::storage::get_config();
+    let block_api = BlockApi::network_canister(config.network);
     compare(
-        crate::storage::get_block_info_canister(),
-        explorers
+        crate::storage::get_block_info(&block_api),
+        BlockApi::network_explorers(config.network)
             .iter()
             .filter_map(crate::storage::get_block_info)
             .collect::<Vec<_>>(),
         config,
     )
-}
-
-pub fn health_status_internal(config: Config) -> HealthStatusInternal {
-    match config.network {
-        Network::BitcoinMainnet => {
-            health_status_for_provider::<BitcoinMainnetProviderBlockApi>(config)
-        }
-        Network::BitcoinTestnet => {
-            health_status_for_provider::<BitcoinTestnetProviderBlockApi>(config)
-        }
-        Network::DogecoinMainnet => health_status_for_provider::<DogecoinProviderBlockApi>(config),
-    }
 }
 
 /// Returns the median if `min_explorers` are within the block range around it.
@@ -168,10 +151,11 @@ fn calculate_height_target(
 
 /// Compares the source with the other explorers.
 fn compare(
-    height_source: Option<u64>,
+    source: Option<BlockInfoInternal>,
     explorers: Vec<BlockInfoInternal>,
     config: Config,
 ) -> HealthStatusInternal {
+    let height_source = source.and_then(|block| block.height);
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
@@ -228,7 +212,7 @@ fn median(values: &[u64]) -> Option<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::block_apis::BitcoinMainnetExplorerBlockApi;
+    use crate::block_apis::{BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi};
 
     #[test]
     fn test_median() {
@@ -340,7 +324,10 @@ mod test {
     #[test]
     fn test_compare_no_explorers() {
         // Arrange
-        let source = Some(1_000);
+        let source = Some(BlockInfoInternal::new(
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            1_000,
+        ));
         let other = vec![];
 
         // Assert
@@ -359,7 +346,10 @@ mod test {
     #[test]
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
-        let source = Some(1_000);
+        let source = Some(BlockInfoInternal::new(
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            1_000,
+        ));
         let other = vec![
             BlockInfoInternal::new(
                 BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
@@ -396,7 +386,10 @@ mod test {
     #[test]
     fn test_compare_behind() {
         // Arrange
-        let source = Some(1_000);
+        let source = Some(BlockInfoInternal::new(
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            1_000,
+        ));
         let other = vec![
             BlockInfoInternal::new(
                 BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(),
@@ -441,7 +434,10 @@ mod test {
     #[test]
     fn test_compare_ahead() {
         // Arrange
-        let source = Some(1_000);
+        let source = Some(BlockInfoInternal::new(
+            BitcoinMainnetProviderBlockApi::BitcoinCanister.into(),
+            1_000,
+        ));
         let other = vec![
             BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 996),
             BlockInfoInternal::new(BitcoinMainnetExplorerBlockApi::ApiBlockchairCom.into(), 995),

@@ -1,4 +1,3 @@
-use crate::config::Config;
 use crate::health::HealthStatusInternal;
 use crate::{health::HeightStatus, print};
 use ic_btc_interface::{Config as CanisterConfig, Flag, SetConfigRequest};
@@ -54,8 +53,8 @@ async fn update_api_access(target: Option<Flag>) {
 }
 
 /// Synchronizes the API access flag of the canister.
-pub async fn synchronise_api_access(config: Config) {
-    let target = calculate_target(crate::health::health_status_internal(config));
+pub async fn synchronise_api_access() {
+    let target = calculate_target(crate::health::health_status_internal());
     crate::storage::set_api_access_target(target);
 
     if target.is_some() {
