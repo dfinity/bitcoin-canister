@@ -1,6 +1,6 @@
 use crate::block_apis::{
     BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi, BitcoinTestnetExplorerBlockApi,
-    BitcoinTestnetProviderBlockApi, BlockApi, BlockApiTrait, DogecoinMainnetExplorerBlockApi,
+    BitcoinTestnetProviderBlockApi, BlockApiTrait, DogecoinMainnetExplorerBlockApi,
     DogecoinProviderBlockApi,
 };
 use candid::CandidType;
@@ -273,7 +273,7 @@ impl DogecoinMainnetConfig {
     }
 }
 
-/// Stored configuration that uses type-erased BlockApi for serialization.
+/// Stored configuration for serialization.
 /// This is used for stable storage since we can't store generic types.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StoredConfig {
@@ -281,7 +281,7 @@ pub struct StoredConfig {
     pub network: Network,
 
     /// The canister to monitor.
-    pub canister: BlockApi,
+    pub canister: String,
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold: u64,
@@ -302,7 +302,7 @@ pub struct StoredConfig {
     pub interval_between_fetches_sec: u64,
 
     /// Explorers to use for fetching block data.
-    pub explorers: Vec<BlockApi>,
+    pub explorers: Vec<String>,
 
     /// Type of subnet on which the watchdog and target canisters are deployed.
     pub subnet_type: SubnetType,
@@ -363,18 +363,22 @@ impl Storable for StoredConfig {
     const BOUND: Bound = Bound::Unbounded;
 }
 
-impl<P: BlockApiTrait + Into<BlockApi>> From<Config<P>> for StoredConfig {
+impl<P: BlockApiTrait> From<Config<P>> for StoredConfig {
     fn from(config: Config<P>) -> Self {
         Self {
             network: config.network,
-            canister: config.canister.into(),
+            canister: config.canister.to_string(),
             blocks_behind_threshold: config.blocks_behind_threshold,
             blocks_ahead_threshold: config.blocks_ahead_threshold,
             min_explorers: config.min_explorers,
             canister_principal: config.canister_principal,
             delay_before_first_fetch_sec: config.delay_before_first_fetch_sec,
             interval_between_fetches_sec: config.interval_between_fetches_sec,
-            explorers: config.explorers.into_iter().map(Into::into).collect(),
+            explorers: config
+                .explorers
+                .into_iter()
+                .map(|e| e.to_string())
+                .collect(),
             subnet_type: config.subnet_type,
         }
     }

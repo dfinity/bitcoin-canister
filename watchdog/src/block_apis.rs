@@ -3,9 +3,10 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::BTreeSet;
+use std::fmt::Display;
 use strum::{Display, EnumIter, IntoEnumIterator};
 
-pub trait BlockApiTrait: Clone + Sized {
+pub trait BlockApiTrait: Clone + Sized + Display {
     async fn fetch_data(&self) -> serde_json::Value;
     fn network_canister() -> Self;
     /// Returns the list of all API providers.
@@ -57,7 +58,9 @@ impl std::fmt::Display for BitcoinBlockApi {
 }
 
 /// APIs that serve block data.
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash, Display, CandidType, Serialize, Deserialize,
+)]
 pub enum BlockApi {
     #[strum(transparent)]
     BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi),
@@ -78,7 +81,20 @@ impl BlockApi {
 }
 
 /// Providers that serve Bitcoin block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Display,
+    CandidType,
+    Serialize,
+    Deserialize,
+)]
 pub enum BitcoinMainnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
@@ -167,9 +183,10 @@ impl BlockApiTrait for BitcoinMainnetProviderBlockApi {
                 .map(BitcoinMainnetProviderBlockApi::Mainnet)
                 .collect();
         // Remove the explorers that are not configured.
-        let configured: BTreeSet<BlockApi> =
+        let configured: BTreeSet<String> =
             crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinMainnetProvider(x)));
+        explorers
+            .retain(|&x| configured.contains(&BlockApi::BitcoinMainnetProvider(x).to_string()));
 
         explorers
     }
@@ -182,7 +199,21 @@ impl From<BitcoinMainnetProviderBlockApi> for BlockApi {
 }
 
 /// Explorers that serve Bitcoin mainnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, EnumIter, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    EnumIter,
+    Display,
+    CandidType,
+    Serialize,
+    Deserialize,
+)]
 pub enum BitcoinMainnetExplorerBlockApi {
     #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
     ApiBitapsCom,
@@ -205,7 +236,20 @@ impl From<BitcoinMainnetExplorerBlockApi> for BlockApi {
 }
 
 /// Providers that serve testnet Bitcoin block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Display,
+    CandidType,
+    Serialize,
+    Deserialize,
+)]
 pub enum BitcoinTestnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
@@ -243,9 +287,10 @@ impl BlockApiTrait for BitcoinTestnetProviderBlockApi {
                 .map(BitcoinTestnetProviderBlockApi::Testnet)
                 .collect();
         // Remove the explorers that are not configured.
-        let configured: BTreeSet<BlockApi> =
+        let configured: BTreeSet<String> =
             crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::BitcoinTestnetProvider(x)));
+        explorers
+            .retain(|&x| configured.contains(&BlockApi::BitcoinTestnetProvider(x).to_string()));
 
         explorers
     }
@@ -258,7 +303,21 @@ impl From<BitcoinTestnetProviderBlockApi> for BlockApi {
 }
 
 /// Explorers that serve Bitcoin testnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, EnumIter, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    EnumIter,
+    Display,
+    CandidType,
+    Serialize,
+    Deserialize,
+)]
 pub enum BitcoinTestnetExplorerBlockApi {
     #[strum(serialize = "bitcoin_mempool_testnet")]
     Mempool,
@@ -271,7 +330,20 @@ impl From<BitcoinTestnetExplorerBlockApi> for BlockApi {
 }
 
 /// Providers that serve Dogecoin block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Display,
+    CandidType,
+    Serialize,
+    Deserialize,
+)]
 pub enum DogecoinProviderBlockApi {
     #[strum(serialize = "dogecoin_canister")]
     DogecoinCanister,
@@ -320,9 +392,9 @@ impl BlockApiTrait for DogecoinProviderBlockApi {
             .map(DogecoinProviderBlockApi::Mainnet)
             .collect();
         // Remove the explorers that are not configured.
-        let configured: BTreeSet<BlockApi> =
+        let configured: BTreeSet<String> =
             crate::storage::get_config().explorers.into_iter().collect();
-        explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x)));
+        explorers.retain(|&x| configured.contains(&BlockApi::DogecoinProvider(x).to_string()));
 
         explorers
     }
@@ -335,7 +407,21 @@ impl From<DogecoinProviderBlockApi> for BlockApi {
 }
 
 /// Explorers that serve Dogecoin mainnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, Hash, EnumIter, Display, CandidType, Serialize, Deserialize)]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    PartialOrd,
+    Ord,
+    Hash,
+    EnumIter,
+    Display,
+    CandidType,
+    Serialize,
+    Deserialize,
+)]
 pub enum DogecoinMainnetExplorerBlockApi {
     #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,

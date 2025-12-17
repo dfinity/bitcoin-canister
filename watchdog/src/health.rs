@@ -112,13 +112,12 @@ impl From<HealthStatusInternal> for HealthStatusV2 {
 /// Calculates the health status of a canister.
 pub fn health_status_internal() -> HealthStatusInternal {
     let config = crate::storage::get_config();
-    let canister = config.canister.clone();
     compare(
-        crate::storage::get_block_info(&canister),
+        crate::storage::get_block_info(&config.canister),
         config
             .explorers
             .iter()
-            .filter_map(crate::storage::get_block_info)
+            .filter_map(|e| crate::storage::get_block_info(e))
             .collect::<Vec<_>>(),
         config,
     )

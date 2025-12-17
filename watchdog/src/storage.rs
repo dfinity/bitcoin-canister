@@ -1,4 +1,3 @@
-use crate::block_apis::BlockApi;
 use crate::config::StoredConfig;
 use crate::fetch::BlockInfoInternal;
 use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA};
@@ -30,12 +29,12 @@ pub fn set_config(config: StoredConfig) {
 /// Inserts the data into the local storage.
 pub fn insert_block_info(info: BlockInfoInternal) {
     BLOCK_INFO_DATA.with(|cell| {
-        cell.borrow_mut().insert(info.provider.clone(), info);
+        cell.borrow_mut().insert(info.provider.to_string(), info);
     });
 }
 
 /// Returns the data from the local storage.
-pub fn get_block_info(provider: &BlockApi) -> Option<BlockInfoInternal> {
+pub fn get_block_info(provider: &str) -> Option<BlockInfoInternal> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }
 

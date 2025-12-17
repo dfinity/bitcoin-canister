@@ -12,7 +12,6 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
-use crate::block_apis::BlockApi;
 use crate::config::Network;
 use crate::fetch::BlockInfoInternal;
 use crate::health::HealthStatusV2;
@@ -36,7 +35,7 @@ use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RefCell<HashMap<BlockApi, BlockInfoInternal>> = RefCell::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfoInternal>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
@@ -237,7 +236,10 @@ mod test {
         let canister = Canister::BitcoinTestnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(get_config(), StoredConfig::for_target(Canister::BitcoinTestnet));
+        assert_eq!(
+            get_config(),
+            StoredConfig::for_target(Canister::BitcoinTestnet)
+        );
     }
 
     #[test]
@@ -245,7 +247,10 @@ mod test {
         let canister = Canister::BitcoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(get_config(), StoredConfig::for_target(Canister::BitcoinMainnet));
+        assert_eq!(
+            get_config(),
+            StoredConfig::for_target(Canister::BitcoinMainnet)
+        );
     }
 
     #[test]
@@ -264,7 +269,10 @@ mod test {
         let canister = Canister::DogecoinMainnet;
         let init_arg = WatchdogArg::Init(InitArg { target: canister });
         init(init_arg);
-        assert_eq!(get_config(), StoredConfig::for_target(Canister::DogecoinMainnet));
+        assert_eq!(
+            get_config(),
+            StoredConfig::for_target(Canister::DogecoinMainnet)
+        );
     }
 
     #[test]
@@ -291,7 +299,10 @@ mod test {
         let config_after = get_config();
 
         assert_eq!(config_before, config_after);
-        assert_eq!(config_after, StoredConfig::for_target(Canister::DogecoinMainnet));
+        assert_eq!(
+            config_after,
+            StoredConfig::for_target(Canister::DogecoinMainnet)
+        );
     }
 
     #[test]
