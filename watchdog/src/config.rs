@@ -1,6 +1,6 @@
 use crate::block_apis::{
     BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi, BitcoinTestnetExplorerBlockApi,
-    BitcoinTestnetProviderBlockApi, BlockApi, DogecoinMainnetExplorerBlockApi,
+    BitcoinTestnetProviderBlockApi, BlockApiTrait, DogecoinMainnetExplorerBlockApi,
     DogecoinProviderBlockApi,
 };
 use candid::CandidType;
@@ -35,7 +35,200 @@ const BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 300;
 /// The number of seconds to wait between all the other data fetches for the Dogecoin network.
 const DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC: u64 = 60;
 
-/// Canister to monitor.
+/// Trait for canister configuration with strongly-typed providers.
+pub trait CanisterConfig {
+    type Provider: BlockApiTrait;
+
+    /// Returns the canister API provider.
+    fn canister() -> Self::Provider;
+
+    /// Returns the list of explorer providers.
+    fn explorers() -> Vec<Self::Provider>;
+
+    /// Returns all providers (explorers + canister).
+    fn all_providers() -> Vec<Self::Provider> {
+        let mut providers = Self::explorers();
+        providers.push(Self::canister());
+        providers
+    }
+
+    /// Returns the network.
+    fn network() -> Network;
+
+    /// Returns the canister principal.
+    fn canister_principal() -> Principal;
+
+    /// Returns the subnet type.
+    fn subnet_type() -> SubnetType;
+
+    /// Returns the canister metrics endpoint.
+    fn get_canister_endpoint() -> String {
+        let principal = Self::canister_principal().to_text();
+        let suffix = match Self::subnet_type() {
+            SubnetType::System => "raw.ic0.app",
+            SubnetType::Application => "raw.icp0.io",
+        };
+        format!("https://{principal}.{suffix}/metrics")
+    }
+}
+
+/// Bitcoin mainnet canister configuration.
+pub struct BitcoinMainnetCanister;
+
+impl CanisterConfig for BitcoinMainnetCanister {
+    type Provider = BitcoinMainnetProviderBlockApi;
+
+    fn canister() -> Self::Provider {
+        BitcoinMainnetProviderBlockApi::BitcoinCanister
+    }
+
+    fn explorers() -> Vec<Self::Provider> {
+        vec![
+            BitcoinMainnetProviderBlockApi::Mainnet(BitcoinMainnetExplorerBlockApi::ApiBitapsCom),
+            BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom,
+            ),
+            BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom,
+            ),
+            BitcoinMainnetProviderBlockApi::Mainnet(BitcoinMainnetExplorerBlockApi::BlockchainInfo),
+            BitcoinMainnetProviderBlockApi::Mainnet(
+                BitcoinMainnetExplorerBlockApi::BlockstreamInfo,
+            ),
+            BitcoinMainnetProviderBlockApi::Mainnet(BitcoinMainnetExplorerBlockApi::Mempool),
+        ]
+    }
+
+    fn network() -> Network {
+        Network::BitcoinMainnet
+    }
+
+    fn canister_principal() -> Principal {
+        Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
+    }
+
+    fn subnet_type() -> SubnetType {
+        SubnetType::System
+    }
+}
+
+/// Bitcoin mainnet staging canister configuration.
+pub struct BitcoinMainnetStagingCanister;
+
+impl CanisterConfig for BitcoinMainnetStagingCanister {
+    type Provider = BitcoinMainnetProviderBlockApi;
+
+    fn canister() -> Self::Provider {
+        BitcoinMainnetProviderBlockApi::BitcoinCanister
+    }
+
+    fn explorers() -> Vec<Self::Provider> {
+        BitcoinMainnetCanister::explorers()
+    }
+
+    fn network() -> Network {
+        Network::BitcoinMainnet
+    }
+
+    fn canister_principal() -> Principal {
+        Principal::from_text(MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
+    }
+
+    fn subnet_type() -> SubnetType {
+        SubnetType::Application
+    }
+}
+
+/// Bitcoin testnet canister configuration.
+pub struct BitcoinTestnetCanister;
+
+impl CanisterConfig for BitcoinTestnetCanister {
+    type Provider = BitcoinTestnetProviderBlockApi;
+
+    fn canister() -> Self::Provider {
+        BitcoinTestnetProviderBlockApi::BitcoinCanister
+    }
+
+    fn explorers() -> Vec<Self::Provider> {
+        vec![BitcoinTestnetProviderBlockApi::Testnet(
+            BitcoinTestnetExplorerBlockApi::Mempool,
+        )]
+    }
+
+    fn network() -> Network {
+        Network::BitcoinTestnet
+    }
+
+    fn canister_principal() -> Principal {
+        Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
+    }
+
+    fn subnet_type() -> SubnetType {
+        SubnetType::System
+    }
+}
+
+/// Dogecoin mainnet canister configuration.
+pub struct DogecoinMainnetCanister;
+
+impl CanisterConfig for DogecoinMainnetCanister {
+    type Provider = DogecoinProviderBlockApi;
+
+    fn canister() -> Self::Provider {
+        DogecoinProviderBlockApi::DogecoinCanister
+    }
+
+    fn explorers() -> Vec<Self::Provider> {
+        vec![
+            DogecoinProviderBlockApi::Mainnet(DogecoinMainnetExplorerBlockApi::ApiBlockchairCom),
+            DogecoinProviderBlockApi::Mainnet(DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom),
+            DogecoinProviderBlockApi::Mainnet(DogecoinMainnetExplorerBlockApi::TokenView),
+        ]
+    }
+
+    fn network() -> Network {
+        Network::DogecoinMainnet
+    }
+
+    fn canister_principal() -> Principal {
+        Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
+    }
+
+    fn subnet_type() -> SubnetType {
+        SubnetType::System
+    }
+}
+
+/// Dogecoin mainnet staging canister configuration.
+pub struct DogecoinMainnetStagingCanister;
+
+impl CanisterConfig for DogecoinMainnetStagingCanister {
+    type Provider = DogecoinProviderBlockApi;
+
+    fn canister() -> Self::Provider {
+        DogecoinProviderBlockApi::DogecoinCanister
+    }
+
+    fn explorers() -> Vec<Self::Provider> {
+        DogecoinMainnetCanister::explorers()
+    }
+
+    fn network() -> Network {
+        Network::DogecoinMainnet
+    }
+
+    fn canister_principal() -> Principal {
+        Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
+    }
+
+    fn subnet_type() -> SubnetType {
+        SubnetType::Application
+    }
+}
+
+// ==================== Canister Enum (for storage) ====================
+
+/// Canister to monitor (stored in stable memory).
 #[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Canister {
     #[serde(rename = "bitcoin_mainnet")]
@@ -84,100 +277,48 @@ impl Storable for Canister {
 impl Canister {
     pub fn network(&self) -> Network {
         match self {
-            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => Network::BitcoinMainnet,
-            Canister::BitcoinTestnet => Network::BitcoinTestnet,
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => Network::DogecoinMainnet,
+            Canister::BitcoinMainnet => BitcoinMainnetCanister::network(),
+            Canister::BitcoinMainnetStaging => BitcoinMainnetStagingCanister::network(),
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::network(),
+            Canister::DogecoinMainnet => DogecoinMainnetCanister::network(),
+            Canister::DogecoinMainnetStaging => DogecoinMainnetStagingCanister::network(),
         }
     }
 
     pub fn canister_principal(&self) -> Principal {
-        Principal::from_text(match self {
-            Canister::BitcoinMainnet => MAINNET_BITCOIN_CANISTER_PRINCIPAL,
-            Canister::BitcoinMainnetStaging => MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL,
-            Canister::BitcoinTestnet => TESTNET_BITCOIN_CANISTER_PRINCIPAL,
-            Canister::DogecoinMainnet => MAINNET_DOGECOIN_CANISTER_PRINCIPAL,
-            Canister::DogecoinMainnetStaging => MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL,
-        })
-        .unwrap()
+        match self {
+            Canister::BitcoinMainnet => BitcoinMainnetCanister::canister_principal(),
+            Canister::BitcoinMainnetStaging => BitcoinMainnetStagingCanister::canister_principal(),
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::canister_principal(),
+            Canister::DogecoinMainnet => DogecoinMainnetCanister::canister_principal(),
+            Canister::DogecoinMainnetStaging => {
+                DogecoinMainnetStagingCanister::canister_principal()
+            }
+        }
     }
 
     pub fn subnet_type(&self) -> SubnetType {
         match self {
-            Canister::BitcoinMainnet | Canister::BitcoinTestnet | Canister::DogecoinMainnet => {
-                SubnetType::System
-            }
-            Canister::BitcoinMainnetStaging | Canister::DogecoinMainnetStaging => {
-                SubnetType::Application
-            }
+            Canister::BitcoinMainnet => BitcoinMainnetCanister::subnet_type(),
+            Canister::BitcoinMainnetStaging => BitcoinMainnetStagingCanister::subnet_type(),
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::subnet_type(),
+            Canister::DogecoinMainnet => DogecoinMainnetCanister::subnet_type(),
+            Canister::DogecoinMainnetStaging => DogecoinMainnetStagingCanister::subnet_type(),
         }
-    }
-
-    pub fn canister_api(&self) -> BlockApi {
-        match self {
-            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::BitcoinCanister)
-            }
-            Canister::BitcoinTestnet => {
-                BlockApi::BitcoinTestnetProvider(BitcoinTestnetProviderBlockApi::BitcoinCanister)
-            }
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::DogecoinCanister)
-            }
-        }
-    }
-
-    pub fn explorers(&self) -> Vec<BlockApi> {
-        match self {
-            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => vec![
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom,
-                )),
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                )),
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                )),
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BlockchainInfo,
-                )),
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo,
-                )),
-                BlockApi::BitcoinMainnetProvider(BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::Mempool,
-                )),
-            ],
-            Canister::BitcoinTestnet => vec![BlockApi::BitcoinTestnetProvider(
-                BitcoinTestnetProviderBlockApi::Testnet(BitcoinTestnetExplorerBlockApi::Mempool),
-            )],
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => vec![
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
-                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                )),
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
-                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                )),
-                BlockApi::DogecoinProvider(DogecoinProviderBlockApi::Mainnet(
-                    DogecoinMainnetExplorerBlockApi::TokenView,
-                )),
-            ],
-        }
-    }
-
-    pub fn all_providers(&self) -> Vec<BlockApi> {
-        let mut providers = self.explorers();
-        providers.push(self.canister_api());
-        providers
     }
 
     pub fn get_canister_endpoint(&self) -> String {
-        let principal = self.canister_principal().to_text();
-        let suffix = match self.subnet_type() {
-            SubnetType::System => "raw.ic0.app",
-            SubnetType::Application => "raw.icp0.io",
-        };
-        format!("https://{principal}.{suffix}/metrics")
+        match self {
+            Canister::BitcoinMainnet => BitcoinMainnetCanister::get_canister_endpoint(),
+            Canister::BitcoinMainnetStaging => {
+                BitcoinMainnetStagingCanister::get_canister_endpoint()
+            }
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::get_canister_endpoint(),
+            Canister::DogecoinMainnet => DogecoinMainnetCanister::get_canister_endpoint(),
+            Canister::DogecoinMainnetStaging => {
+                DogecoinMainnetStagingCanister::get_canister_endpoint()
+            }
+        }
     }
 }
 
@@ -300,6 +441,25 @@ pub struct CandidConfig {
 impl CandidConfig {
     /// Combines static values from `Canister` with modifiable values from `StoredConfig`.
     pub fn from_parts(canister: Canister, config: StoredConfig) -> Self {
+        let explorers: Vec<String> = match canister {
+            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
+                BitcoinMainnetCanister::explorers()
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect()
+            }
+            Canister::BitcoinTestnet => BitcoinTestnetCanister::explorers()
+                .iter()
+                .map(|e| e.to_string())
+                .collect(),
+            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
+                DogecoinMainnetCanister::explorers()
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect()
+            }
+        };
+
         Self {
             network: canister.network(),
             blocks_behind_threshold: config.blocks_behind_threshold,
@@ -308,7 +468,7 @@ impl CandidConfig {
             canister_principal: canister.canister_principal(),
             delay_before_first_fetch_sec: config.delay_before_first_fetch_sec,
             interval_between_fetches_sec: config.interval_between_fetches_sec,
-            explorers: canister.explorers().iter().map(|e| e.to_string()).collect(),
+            explorers,
             subnet_type: canister.subnet_type(),
         }
     }

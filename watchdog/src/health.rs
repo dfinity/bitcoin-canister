@@ -1,5 +1,8 @@
-use crate::fetch::{BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
-use crate::{config::StoredConfig, fetch::BlockInfo};
+use crate::config::{
+    BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig,
+    DogecoinMainnetCanister, StoredConfig,
+};
+use crate::fetch::{BlockInfo, BlockInfoConversionError, BlockInfoInternal, BlockInfoV2};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -113,10 +116,21 @@ impl From<HealthStatusInternal> for HealthStatusV2 {
 pub fn health_status_internal() -> HealthStatusInternal {
     let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
+    match canister {
+        Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
+            health_status_internal_for::<BitcoinMainnetCanister>(config)
+        }
+        Canister::BitcoinTestnet => health_status_internal_for::<BitcoinTestnetCanister>(config),
+        Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
+            health_status_internal_for::<DogecoinMainnetCanister>(config)
+        }
+    }
+}
+
+fn health_status_internal_for<C: CanisterConfig>(config: StoredConfig) -> HealthStatusInternal {
     compare(
-        crate::storage::get_block_info(&canister.canister_api().to_string()),
-        canister
-            .explorers()
+        crate::storage::get_block_info(&C::canister().to_string()),
+        C::explorers()
             .iter()
             .filter_map(|e| crate::storage::get_block_info(&e.to_string()))
             .collect::<Vec<_>>(),

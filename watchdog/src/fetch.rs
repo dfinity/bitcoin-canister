@@ -1,4 +1,8 @@
-use crate::block_apis::BitcoinBlockApi;
+use crate::block_apis::{BitcoinBlockApi, BlockApiTrait};
+use crate::config::{
+    BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig,
+    DogecoinMainnetCanister,
+};
 use crate::storage;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -87,7 +91,19 @@ impl From<BlockInfoInternal> for BlockInfoV2 {
 /// Fetches the data from the external APIs and the canister.
 pub async fn fetch_all_data() -> Vec<BlockInfoInternal> {
     let canister = storage::get_canister();
-    let providers = canister.all_providers();
+    match canister {
+        Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
+            fetch_all_data_for::<BitcoinMainnetCanister>().await
+        }
+        Canister::BitcoinTestnet => fetch_all_data_for::<BitcoinTestnetCanister>().await,
+        Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
+            fetch_all_data_for::<DogecoinMainnetCanister>().await
+        }
+    }
+}
+
+async fn fetch_all_data_for<C: CanisterConfig>() -> Vec<BlockInfoInternal> {
+    let providers = C::all_providers();
 
     let futures = providers
         .iter()
