@@ -88,7 +88,7 @@ pub fn health_status() -> HealthStatus {
     let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
     compare(
-        crate::storage::get_block_info(canister.provider_name()),
+        crate::storage::get_block_info(&canister.provider().to_string()),
         config
             .explorers
             .iter()

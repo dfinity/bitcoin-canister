@@ -135,13 +135,16 @@ impl Canister {
         format!("https://{principal}.{suffix}/metrics")
     }
 
-    /// Returns the provider name string for the canister.
-    pub fn provider_name(&self) -> &'static str {
+    /// Returns the canister provider.
+    pub fn provider(&self) -> Box<dyn BlockProvider> {
         match self {
-            Canister::BitcoinMainnet
-            | Canister::BitcoinMainnetStaging
-            | Canister::BitcoinTestnet => "bitcoin_canister",
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => "dogecoin_canister",
+            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
+                Box::new(BitcoinMainnetProviderBlockApi::BitcoinCanister)
+            }
+            Canister::BitcoinTestnet => Box::new(BitcoinTestnetProviderBlockApi::BitcoinCanister),
+            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
+                Box::new(DogecoinProviderBlockApi::DogecoinCanister)
+            }
         }
     }
 }
@@ -309,7 +312,7 @@ impl Config {
 
     /// Returns all providers (explorers + canister) parsed from stored strings.
     pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
-        let canister_provider_name = canister.provider_name().to_string();
+        let canister_provider_name = canister.provider().to_string();
         let all_names = self
             .explorers
             .iter()
