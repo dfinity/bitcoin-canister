@@ -1,6 +1,5 @@
 use crate::block_apis::{
-    BitcoinMainnetExplorerBlockApi, BitcoinMainnetProviderBlockApi, BitcoinTestnetExplorerBlockApi,
-    BitcoinTestnetProviderBlockApi, BlockProvider, DogecoinMainnetExplorerBlockApi,
+    BitcoinMainnetProviderBlockApi, BitcoinTestnetProviderBlockApi, BlockProvider,
     DogecoinProviderBlockApi,
 };
 use candid::CandidType;
@@ -189,22 +188,12 @@ impl Config<BitcoinMainnetProviderBlockApi> {
         Self {
             canister: BitcoinMainnetProviderBlockApi::BitcoinCanister,
             explorers: vec![
-                BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom,
-                ),
-                BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                ),
-                BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                ),
-                BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BlockchainInfo,
-                ),
-                BitcoinMainnetProviderBlockApi::Mainnet(
-                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo,
-                ),
-                BitcoinMainnetProviderBlockApi::Mainnet(BitcoinMainnetExplorerBlockApi::Mempool),
+                BitcoinMainnetProviderBlockApi::ApiBitapsCom,
+                BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
+                BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
+                BitcoinMainnetProviderBlockApi::BlockchainInfo,
+                BitcoinMainnetProviderBlockApi::BlockstreamInfo,
+                BitcoinMainnetProviderBlockApi::Mempool,
             ],
             blocks_behind_threshold: 2,
             blocks_ahead_threshold: 2,
@@ -231,9 +220,7 @@ impl Config<BitcoinTestnetProviderBlockApi> {
     pub fn bitcoin_testnet() -> Self {
         Self {
             canister: BitcoinTestnetProviderBlockApi::BitcoinCanister,
-            explorers: vec![BitcoinTestnetProviderBlockApi::Testnet(
-                BitcoinTestnetExplorerBlockApi::Mempool,
-            )],
+            explorers: vec![BitcoinTestnetProviderBlockApi::Mempool],
             blocks_behind_threshold: 1000,
             blocks_ahead_threshold: 1000,
             min_explorers: 1,
@@ -248,13 +235,9 @@ impl Config<DogecoinProviderBlockApi> {
         Self {
             canister: DogecoinProviderBlockApi::DogecoinCanister,
             explorers: vec![
-                DogecoinProviderBlockApi::Mainnet(
-                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom,
-                ),
-                DogecoinProviderBlockApi::Mainnet(
-                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom,
-                ),
-                DogecoinProviderBlockApi::Mainnet(DogecoinMainnetExplorerBlockApi::TokenView),
+                DogecoinProviderBlockApi::ApiBlockchairCom,
+                DogecoinProviderBlockApi::ApiBlockcypherCom,
+                DogecoinProviderBlockApi::TokenView,
             ],
             blocks_behind_threshold: 4,
             blocks_ahead_threshold: 4,
@@ -330,7 +313,6 @@ impl StoredConfig {
 
     /// Returns all providers (explorers + canister) parsed from stored strings.
     pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
-        // Explorers first, then canister (to match original all_providers order)
         let all_names = self.explorers.iter().chain(std::iter::once(&self.canister));
 
         match canister {
