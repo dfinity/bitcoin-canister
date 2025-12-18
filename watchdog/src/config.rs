@@ -328,6 +328,27 @@ impl StoredConfig {
         }
     }
 
+    /// Returns all providers (explorers + canister) parsed from stored strings.
+    pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
+        // Explorers first, then canister (to match original all_providers order)
+        let all_names = self.explorers.iter().chain(std::iter::once(&self.canister));
+
+        match canister {
+            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => all_names
+                .filter_map(|s| s.parse::<BitcoinMainnetProviderBlockApi>().ok())
+                .map(|p| Box::new(p) as Box<dyn BlockProvider>)
+                .collect(),
+            Canister::BitcoinTestnet => all_names
+                .filter_map(|s| s.parse::<BitcoinTestnetProviderBlockApi>().ok())
+                .map(|p| Box::new(p) as Box<dyn BlockProvider>)
+                .collect(),
+            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => all_names
+                .filter_map(|s| s.parse::<DogecoinProviderBlockApi>().ok())
+                .map(|p| Box::new(p) as Box<dyn BlockProvider>)
+                .collect(),
+        }
+    }
+
     /// Returns the number of blocks behind threshold as a negative number.
     pub fn get_blocks_behind_threshold(&self) -> i64 {
         -(self.blocks_behind_threshold as i64)

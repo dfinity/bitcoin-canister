@@ -3,10 +3,14 @@ use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fmt::Display;
-use strum::{Display, EnumIter};
+use std::future::Future;
+use std::pin::Pin;
+use strum::{Display, EnumIter, EnumString};
+
+pub type FetchFuture<'a> = Pin<Box<dyn Future<Output = serde_json::Value> + Send + 'a>>;
 
 pub trait BlockProvider: Display {
-    async fn fetch_data(&self) -> serde_json::Value;
+    fn fetch_data(&self) -> FetchFuture<'_>;
 }
 
 /// APIs that serve Bitcoin block data, for legacy purpose.
@@ -61,8 +65,22 @@ pub enum BitcoinMainnetProviderBlockApi {
     Mainnet(BitcoinMainnetExplorerBlockApi),
 }
 
+impl std::str::FromStr for BitcoinMainnetProviderBlockApi {
+    type Err = strum::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "bitcoin_canister" {
+            Ok(Self::BitcoinCanister)
+        } else if let Ok(explorer) = s.parse::<BitcoinMainnetExplorerBlockApi>() {
+            Ok(Self::Mainnet(explorer))
+        } else {
+            Err(strum::ParseError::VariantNotFound)
+        }
+    }
+}
+
 /// Explorers that serve Bitcoin mainnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display, EnumString)]
 pub enum BitcoinMainnetExplorerBlockApi {
     #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
     ApiBitapsCom,
@@ -79,66 +97,68 @@ pub enum BitcoinMainnetExplorerBlockApi {
 }
 
 impl BlockProvider for BitcoinMainnetProviderBlockApi {
-    async fn fetch_data(&self) -> serde_json::Value {
-        match self {
-            Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
-            Self::Mainnet(api) => match api {
-                BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
-                    endpoint_api_bitaps_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                    endpoint_api_blockchair_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                    endpoint_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
-                    let height_config = endpoint_blockchain_info_height_mainnet();
-                    let hash_config = endpoint_blockchain_info_hash_mainnet();
-                    let futures = vec![
-                        height_config.send_request_json(),
-                        hash_config.send_request_json(),
-                    ];
-                    let results = futures::future::join_all(futures).await;
-                    match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                        (Some(height), Some(hash)) => {
-                            json!({
-                                "height": height,
-                                "hash": hash,
-                            })
-                        }
-                        _ => json!({}),
+    fn fetch_data(&self) -> FetchFuture<'_> {
+        Box::pin(async move {
+            match self {
+                Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
+                Self::Mainnet(api) => match api {
+                    BitcoinMainnetExplorerBlockApi::ApiBitapsCom => {
+                        endpoint_api_bitaps_com_block_mainnet()
+                            .send_request_json()
+                            .await
                     }
-                }
-                BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
-                    let height_config = endpoint_blockstream_info_height_mainnet();
-                    let hash_config = endpoint_blockstream_info_hash_mainnet();
-                    let futures = vec![
-                        height_config.send_request_json(),
-                        hash_config.send_request_json(),
-                    ];
-                    let results = futures::future::join_all(futures).await;
-                    match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                        (Some(height), Some(hash)) => {
-                            json!({
-                                "height": height,
-                                "hash": hash,
-                            })
-                        }
-                        _ => json!({}),
+                    BitcoinMainnetExplorerBlockApi::ApiBlockchairCom => {
+                        endpoint_api_blockchair_com_block_mainnet()
+                            .send_request_json()
+                            .await
                     }
-                }
-                BitcoinMainnetExplorerBlockApi::Mempool => {
-                    endpoint_mempool_height_mainnet().send_request_json().await
-                }
-            },
-        }
+                    BitcoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
+                        endpoint_api_blockcypher_com_block_mainnet()
+                            .send_request_json()
+                            .await
+                    }
+                    BitcoinMainnetExplorerBlockApi::BlockchainInfo => {
+                        let height_config = endpoint_blockchain_info_height_mainnet();
+                        let hash_config = endpoint_blockchain_info_hash_mainnet();
+                        let futures = vec![
+                            height_config.send_request_json(),
+                            hash_config.send_request_json(),
+                        ];
+                        let results = futures::future::join_all(futures).await;
+                        match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                            (Some(height), Some(hash)) => {
+                                json!({
+                                    "height": height,
+                                    "hash": hash,
+                                })
+                            }
+                            _ => json!({}),
+                        }
+                    }
+                    BitcoinMainnetExplorerBlockApi::BlockstreamInfo => {
+                        let height_config = endpoint_blockstream_info_height_mainnet();
+                        let hash_config = endpoint_blockstream_info_hash_mainnet();
+                        let futures = vec![
+                            height_config.send_request_json(),
+                            hash_config.send_request_json(),
+                        ];
+                        let results = futures::future::join_all(futures).await;
+                        match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                            (Some(height), Some(hash)) => {
+                                json!({
+                                    "height": height,
+                                    "hash": hash,
+                                })
+                            }
+                            _ => json!({}),
+                        }
+                    }
+                    BitcoinMainnetExplorerBlockApi::Mempool => {
+                        endpoint_mempool_height_mainnet().send_request_json().await
+                    }
+                },
+            }
+        })
     }
 }
 
@@ -151,23 +171,39 @@ pub enum BitcoinTestnetProviderBlockApi {
     Testnet(BitcoinTestnetExplorerBlockApi),
 }
 
+impl std::str::FromStr for BitcoinTestnetProviderBlockApi {
+    type Err = strum::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "bitcoin_canister" {
+            Ok(Self::BitcoinCanister)
+        } else if let Ok(explorer) = s.parse::<BitcoinTestnetExplorerBlockApi>() {
+            Ok(Self::Testnet(explorer))
+        } else {
+            Err(strum::ParseError::VariantNotFound)
+        }
+    }
+}
+
 /// Explorers that serve Bitcoin testnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display, EnumString)]
 pub enum BitcoinTestnetExplorerBlockApi {
     #[strum(serialize = "bitcoin_mempool_testnet")]
     Mempool,
 }
 
 impl BlockProvider for BitcoinTestnetProviderBlockApi {
-    async fn fetch_data(&self) -> serde_json::Value {
-        match self {
-            Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
-            Self::Testnet(api) => match api {
-                BitcoinTestnetExplorerBlockApi::Mempool => {
-                    endpoint_mempool_height_testnet().send_request_json().await
-                }
-            },
-        }
+    fn fetch_data(&self) -> FetchFuture<'_> {
+        Box::pin(async move {
+            match self {
+                Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
+                Self::Testnet(api) => match api {
+                    BitcoinTestnetExplorerBlockApi::Mempool => {
+                        endpoint_mempool_height_testnet().send_request_json().await
+                    }
+                },
+            }
+        })
     }
 }
 
@@ -180,8 +216,22 @@ pub enum DogecoinProviderBlockApi {
     Mainnet(DogecoinMainnetExplorerBlockApi),
 }
 
+impl std::str::FromStr for DogecoinProviderBlockApi {
+    type Err = strum::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "dogecoin_canister" {
+            Ok(Self::DogecoinCanister)
+        } else if let Ok(explorer) = s.parse::<DogecoinMainnetExplorerBlockApi>() {
+            Ok(Self::Mainnet(explorer))
+        } else {
+            Err(strum::ParseError::VariantNotFound)
+        }
+    }
+}
+
 /// Explorers that serve Dogecoin mainnet block data.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, EnumIter, Display, EnumString)]
 pub enum DogecoinMainnetExplorerBlockApi {
     #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
@@ -192,27 +242,29 @@ pub enum DogecoinMainnetExplorerBlockApi {
 }
 
 impl BlockProvider for DogecoinProviderBlockApi {
-    async fn fetch_data(&self) -> serde_json::Value {
-        match self {
-            Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
-            Self::Mainnet(api) => match api {
-                DogecoinMainnetExplorerBlockApi::ApiBlockchairCom => {
-                    endpoint_dogecoin_api_blockchair_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
-                    endpoint_dogecoin_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                DogecoinMainnetExplorerBlockApi::TokenView => {
-                    endpoint_dogecoin_tokenview_height_mainnet()
-                        .send_request_json()
-                        .await
-                }
-            },
-        }
+    fn fetch_data(&self) -> FetchFuture<'_> {
+        Box::pin(async move {
+            match self {
+                Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
+                Self::Mainnet(api) => match api {
+                    DogecoinMainnetExplorerBlockApi::ApiBlockchairCom => {
+                        endpoint_dogecoin_api_blockchair_com_block_mainnet()
+                            .send_request_json()
+                            .await
+                    }
+                    DogecoinMainnetExplorerBlockApi::ApiBlockcypherCom => {
+                        endpoint_dogecoin_api_blockcypher_com_block_mainnet()
+                            .send_request_json()
+                            .await
+                    }
+                    DogecoinMainnetExplorerBlockApi::TokenView => {
+                        endpoint_dogecoin_tokenview_height_mainnet()
+                            .send_request_json()
+                            .await
+                    }
+                },
+            }
+        })
     }
 }
 

@@ -1,8 +1,4 @@
-use crate::block_apis::{
-    BitcoinBlockApi, BitcoinMainnetProviderBlockApi, BitcoinTestnetProviderBlockApi,
-    BlockProvider, DogecoinProviderBlockApi,
-};
-use crate::config::{Canister, Config};
+use crate::block_apis::{BitcoinBlockApi, BlockProvider};
 use crate::storage;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -72,36 +68,18 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
 /// Fetches the data from the external APIs and the canister.
 pub async fn fetch_all_data() -> Vec<BlockInfo> {
     let canister = storage::get_canister();
-    match canister {
-        Canister::BitcoinMainnet => {
-            fetch_providers(Config::<BitcoinMainnetProviderBlockApi>::bitcoin_mainnet()).await
-        }
-        Canister::BitcoinMainnetStaging => {
-            fetch_providers(Config::<BitcoinMainnetProviderBlockApi>::bitcoin_mainnet_staging())
-                .await
-        }
-        Canister::BitcoinTestnet => {
-            fetch_providers(Config::<BitcoinTestnetProviderBlockApi>::bitcoin_testnet()).await
-        }
-        Canister::DogecoinMainnet => {
-            fetch_providers(Config::<DogecoinProviderBlockApi>::dogecoin_mainnet()).await
-        }
-        Canister::DogecoinMainnetStaging => {
-            fetch_providers(Config::<DogecoinProviderBlockApi>::dogecoin_mainnet_staging()).await
-        }
-    }
+    let config = storage::get_config();
+    fetch_providers(config.get_providers(canister)).await
 }
 
-async fn fetch_providers<P: BlockProvider + Clone>(config: Config<P>) -> Vec<BlockInfo> {
-    let providers = config.all_providers();
-
-    let futures = providers
+async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInfo> {
+    let futures = explorers
         .iter()
         .map(|api| api.fetch_data())
         .collect::<Vec<_>>();
     let results = futures::future::join_all(futures).await;
 
-    providers
+    explorers
         .into_iter()
         .zip(results.into_iter())
         .map(|(provider, value)| BlockInfo {
