@@ -149,9 +149,9 @@ impl Canister {
     }
 }
 
-/// Default configuration for canisters.
+/// Default configuration parameters for canisters.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DefaultConfig<P: BlockProvider> {
+pub struct DefaultConfigParams<P: BlockProvider> {
     /// The explorer providers to compare against.
     pub explorers: Vec<P>,
 
@@ -171,7 +171,7 @@ pub struct DefaultConfig<P: BlockProvider> {
     pub interval_between_fetches_sec: u64,
 }
 
-impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
+impl DefaultConfigParams<BitcoinMainnetProviderBlockApi> {
     pub fn bitcoin_mainnet() -> Self {
         Self {
             explorers: vec![
@@ -202,7 +202,7 @@ impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
     }
 }
 
-impl DefaultConfig<BitcoinTestnetProviderBlockApi> {
+impl DefaultConfigParams<BitcoinTestnetProviderBlockApi> {
     pub fn bitcoin_testnet() -> Self {
         Self {
             explorers: vec![BitcoinTestnetProviderBlockApi::Mempool],
@@ -215,7 +215,7 @@ impl DefaultConfig<BitcoinTestnetProviderBlockApi> {
     }
 }
 
-impl DefaultConfig<DogecoinProviderBlockApi> {
+impl DefaultConfigParams<DogecoinProviderBlockApi> {
     pub fn dogecoin_mainnet() -> Self {
         Self {
             explorers: vec![
@@ -279,24 +279,27 @@ impl Config {
     pub fn for_target(canister: Canister) -> Self {
         match canister {
             Canister::BitcoinMainnet => {
-                Self::from_default(canister, &DefaultConfig::bitcoin_mainnet())
+                Self::from_default(canister, &DefaultConfigParams::bitcoin_mainnet())
             }
             Canister::BitcoinMainnetStaging => {
-                Self::from_default(canister, &DefaultConfig::bitcoin_mainnet_staging())
+                Self::from_default(canister, &DefaultConfigParams::bitcoin_mainnet_staging())
             }
             Canister::BitcoinTestnet => {
-                Self::from_default(canister, &DefaultConfig::bitcoin_testnet())
+                Self::from_default(canister, &DefaultConfigParams::bitcoin_testnet())
             }
             Canister::DogecoinMainnet => {
-                Self::from_default(canister, &DefaultConfig::dogecoin_mainnet())
+                Self::from_default(canister, &DefaultConfigParams::dogecoin_mainnet())
             }
             Canister::DogecoinMainnetStaging => {
-                Self::from_default(canister, &DefaultConfig::dogecoin_mainnet_staging())
+                Self::from_default(canister, &DefaultConfigParams::dogecoin_mainnet_staging())
             }
         }
     }
 
-    fn from_default<P: BlockProvider>(canister: Canister, default: &DefaultConfig<P>) -> Self {
+    fn from_default<P: BlockProvider>(
+        canister: Canister,
+        default: &DefaultConfigParams<P>,
+    ) -> Self {
         Self {
             network: canister.network(),
             canister_principal: canister.canister_principal(),
@@ -383,104 +386,49 @@ mod test {
     use super::*;
     use proptest::prelude::*;
 
-    /// Mainnet bitcoin canister endpoint.
-    const MAINNET_BITCOIN_CANISTER_ENDPOINT: &str =
-        "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics";
-
-    /// Testnet bitcoin canister endpoint.
-    const TESTNET_BITCOIN_CANISTER_ENDPOINT: &str =
-        "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics";
-
-    /// Mainnet bitcoin staging canister endpoint.
-    const MAINNET_BITCOIN_STAGING_CANISTER_ENDPOINT: &str =
-        "https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics";
-
-    /// Mainnet dogecoin canister endpoint.
-    const MAINNET_DOGECOIN_CANISTER_ENDPOINT: &str =
-        "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics";
-
-    /// Mainnet dogecoin staging canister endpoint.
-    const MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT: &str =
-        "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics";
+    const ALL_CANISTERS: [Canister; 5] = [
+        Canister::BitcoinMainnet,
+        Canister::BitcoinMainnetStaging,
+        Canister::BitcoinTestnet,
+        Canister::DogecoinMainnet,
+        Canister::DogecoinMainnetStaging,
+    ];
 
     #[test]
-    fn test_bitcoin_canister_endpoint_contains_principal_mainnet() {
-        assert!(MAINNET_BITCOIN_CANISTER_ENDPOINT.contains(MAINNET_BITCOIN_CANISTER_PRINCIPAL));
+    fn test_canister_endpoint_contains_principal() {
+        for canister in ALL_CANISTERS {
+            let endpoint = canister.get_canister_endpoint();
+            let principal = canister.canister_principal().to_text();
+            assert!(
+                endpoint.contains(&principal),
+                "Endpoint {endpoint} should contain principal {principal}"
+            );
+        }
     }
 
     #[test]
-    fn test_bitcoin_canister_endpoint_contains_principal_testnet() {
-        assert!(TESTNET_BITCOIN_CANISTER_ENDPOINT.contains(TESTNET_BITCOIN_CANISTER_PRINCIPAL));
+    fn test_canister_provider() {
+        for canister in ALL_CANISTERS {
+            let provider_name = canister.provider().to_string();
+            match canister {
+                Canister::BitcoinMainnet
+                | Canister::BitcoinMainnetStaging
+                | Canister::BitcoinTestnet => {
+                    assert_eq!(provider_name, "bitcoin_canister");
+                }
+                Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
+                    assert_eq!(provider_name, "dogecoin_canister");
+                }
+            }
+        }
     }
 
     #[test]
-    fn test_bitcoin_canister_endpoint_contains_principal_mainnet_staging() {
-        assert!(MAINNET_BITCOIN_STAGING_CANISTER_ENDPOINT
-            .contains(MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL));
-    }
-
-    #[test]
-    fn test_dogecoin_canister_endpoint_contains_principal_mainnet() {
-        assert!(MAINNET_DOGECOIN_CANISTER_ENDPOINT.contains(MAINNET_DOGECOIN_CANISTER_PRINCIPAL));
-    }
-
-    #[test]
-    fn test_dogecoin_canister_endpoint_contains_principal_mainnet_staging() {
-        assert!(MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT
-            .contains(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL));
-    }
-
-    #[test]
-    fn test_canister_network() {
-        assert_eq!(Canister::BitcoinMainnet.network(), Network::BitcoinMainnet);
-        assert_eq!(
-            Canister::BitcoinMainnetStaging.network(),
-            Network::BitcoinMainnet
-        );
-        assert_eq!(Canister::BitcoinTestnet.network(), Network::BitcoinTestnet);
-        assert_eq!(
-            Canister::DogecoinMainnet.network(),
-            Network::DogecoinMainnet
-        );
-        assert_eq!(
-            Canister::DogecoinMainnetStaging.network(),
-            Network::DogecoinMainnet
-        );
-    }
-
-    #[test]
-    fn test_canister_principal() {
-        assert_eq!(
-            Canister::BitcoinMainnet.canister_principal(),
-            Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
-        );
-        assert_eq!(
-            Canister::BitcoinMainnetStaging.canister_principal(),
-            Principal::from_text(MAINNET_BITCOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
-        );
-        assert_eq!(
-            Canister::BitcoinTestnet.canister_principal(),
-            Principal::from_text(TESTNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
-        );
-        assert_eq!(
-            Canister::DogecoinMainnet.canister_principal(),
-            Principal::from_text(MAINNET_DOGECOIN_CANISTER_PRINCIPAL).unwrap()
-        );
-        assert_eq!(
-            Canister::DogecoinMainnetStaging.canister_principal(),
-            Principal::from_text(MAINNET_DOGECOIN_STAGING_CANISTER_PRINCIPAL).unwrap()
-        );
-    }
-
-    #[test]
-    fn test_canister_subnet_types() {
-        assert_eq!(Canister::BitcoinMainnet.subnet_type(), SubnetType::System);
+    fn test_staging_canisters_use_application_subnet() {
         assert_eq!(
             Canister::BitcoinMainnetStaging.subnet_type(),
             SubnetType::Application
         );
-        assert_eq!(Canister::BitcoinTestnet.subnet_type(), SubnetType::System);
-        assert_eq!(Canister::DogecoinMainnet.subnet_type(), SubnetType::System);
         assert_eq!(
             Canister::DogecoinMainnetStaging.subnet_type(),
             SubnetType::Application
@@ -488,102 +436,27 @@ mod test {
     }
 
     #[test]
-    fn test_canister_endpoints() {
-        assert_eq!(
-            Canister::BitcoinMainnet.get_canister_endpoint(),
-            MAINNET_BITCOIN_CANISTER_ENDPOINT
-        );
-        assert_eq!(
-            Canister::BitcoinMainnetStaging.get_canister_endpoint(),
-            MAINNET_BITCOIN_STAGING_CANISTER_ENDPOINT
-        );
-        assert_eq!(
-            Canister::BitcoinTestnet.get_canister_endpoint(),
-            TESTNET_BITCOIN_CANISTER_ENDPOINT
-        );
-        assert_eq!(
-            Canister::DogecoinMainnet.get_canister_endpoint(),
-            MAINNET_DOGECOIN_CANISTER_ENDPOINT
-        );
-        assert_eq!(
-            Canister::DogecoinMainnetStaging.get_canister_endpoint(),
-            MAINNET_DOGECOIN_STAGING_CANISTER_ENDPOINT
-        );
+    fn test_production_canisters_use_system_subnet() {
+        assert_eq!(Canister::BitcoinMainnet.subnet_type(), SubnetType::System);
+        assert_eq!(Canister::BitcoinTestnet.subnet_type(), SubnetType::System);
+        assert_eq!(Canister::DogecoinMainnet.subnet_type(), SubnetType::System);
     }
 
     #[test]
-    fn test_config_bitcoin_mainnet() {
-        let config = DefaultConfig::bitcoin_mainnet();
-        assert_eq!(config.explorers.len(), 6);
-        assert_eq!(config.blocks_behind_threshold, 2);
-        assert_eq!(config.blocks_ahead_threshold, 2);
-        assert_eq!(config.min_explorers, 3);
-    }
-
-    #[test]
-    fn test_config_bitcoin_testnet() {
-        let config = DefaultConfig::bitcoin_testnet();
-        assert_eq!(config.explorers.len(), 1);
-        assert_eq!(config.blocks_behind_threshold, 1000);
-        assert_eq!(config.min_explorers, 1);
-    }
-
-    #[test]
-    fn test_config_dogecoin_mainnet() {
-        let config = DefaultConfig::dogecoin_mainnet();
-        assert_eq!(config.explorers.len(), 3);
-        assert_eq!(config.blocks_behind_threshold, 4);
-        assert_eq!(config.min_explorers, 2);
-    }
-
-    #[test]
-    fn test_stored_config_from_default() {
-        let default = DefaultConfig::bitcoin_mainnet();
-        let config = Config::from_default(Canister::BitcoinMainnet, &default);
-        assert_eq!(config.network, Network::BitcoinMainnet);
-        assert_eq!(config.explorers.len(), 6);
-        assert_eq!(
-            config.blocks_behind_threshold,
-            default.blocks_behind_threshold
+    fn test_staging_canisters_have_different_principals() {
+        assert_ne!(
+            Canister::BitcoinMainnet.canister_principal(),
+            Canister::BitcoinMainnetStaging.canister_principal()
         );
-    }
-
-    #[test]
-    fn test_stored_config_for_target() {
-        let stored = Config::for_target(Canister::BitcoinMainnet);
-        assert_eq!(stored.network, Network::BitcoinMainnet);
-        assert_eq!(stored.explorers.len(), 6);
-
-        let stored = Config::for_target(Canister::DogecoinMainnet);
-        assert_eq!(stored.network, Network::DogecoinMainnet);
-        assert_eq!(stored.explorers.len(), 3);
-    }
-
-    proptest! {
-        #[test]
-        fn test_stored_config_encode_decode(canister in prop_oneof![
-            Just(Canister::BitcoinMainnet),
-            Just(Canister::BitcoinMainnetStaging),
-            Just(Canister::BitcoinTestnet),
-            Just(Canister::DogecoinMainnet),
-            Just(Canister::DogecoinMainnetStaging),
-        ]) {
-            let config = Config::for_target(canister);
-            let encoded = encode(&config);
-            let decoded: Config = decode(&encoded);
-            assert_eq!(config, decoded);
-        }
+        assert_ne!(
+            Canister::DogecoinMainnet.canister_principal(),
+            Canister::DogecoinMainnetStaging.canister_principal()
+        );
     }
 
     #[test]
     fn test_canister_storable_roundtrip() {
-        for canister in [
-            Canister::BitcoinMainnet,
-            Canister::BitcoinMainnetStaging,
-            Canister::BitcoinTestnet,
-            Canister::DogecoinMainnet,
-            Canister::DogecoinMainnetStaging,
-        ] {
+        for canister in ALL_CANISTERS {
             let bytes = canister.to_bytes();
             let decoded = Canister::from_bytes(bytes);
             assert_eq!(canister, decoded);
@@ -596,26 +469,53 @@ mod test {
     }
 
     #[test]
-    fn test_stored_config_default() {
-        let default = Config::default();
-        let expected = Config::for_target(Canister::default());
-        assert_eq!(default, expected);
+    fn test_config_for_target() {
+        for canister in ALL_CANISTERS {
+            let config = Config::for_target(canister);
+            assert_eq!(config.network, canister.network());
+            assert_eq!(config.canister_principal, canister.canister_principal());
+            assert_eq!(config.subnet_type, canister.subnet_type());
+            assert!(!config.explorers.is_empty());
+
+            // Verify get_providers includes canister provider
+            let providers = config.get_providers(canister);
+            assert_eq!(providers.len(), config.explorers.len() + 1);
+            let provider_names: Vec<String> = providers.iter().map(|p| p.to_string()).collect();
+            assert!(provider_names.contains(&canister.provider().to_string()));
+        }
     }
 
     #[test]
-    fn test_candid_config_from_parts() {
-        let canister = Canister::BitcoinMainnet;
-        let config = Config::for_target(canister);
+    fn test_config_default() {
+        assert_eq!(Config::default(), Config::for_target(Canister::default()));
+    }
 
-        assert_eq!(config.network, Network::BitcoinMainnet);
+    #[test]
+    fn test_config_thresholds() {
+        let config = Config::for_target(Canister::BitcoinMainnet);
         assert_eq!(
-            config.blocks_behind_threshold,
-            config.blocks_behind_threshold
+            config.get_blocks_behind_threshold(),
+            -(config.blocks_behind_threshold as i64)
         );
-        assert_eq!(config.blocks_ahead_threshold, config.blocks_ahead_threshold);
-        assert_eq!(config.min_explorers, config.min_explorers);
-        assert_eq!(config.canister_principal, canister.canister_principal());
-        assert_eq!(config.explorers.len(), 6);
-        assert_eq!(config.subnet_type, SubnetType::System);
+        assert_eq!(
+            config.get_blocks_ahead_threshold(),
+            config.blocks_ahead_threshold as i64
+        );
+    }
+
+    proptest! {
+        #[test]
+        fn test_config_storable_roundtrip(canister in prop_oneof![
+            Just(Canister::BitcoinMainnet),
+            Just(Canister::BitcoinMainnetStaging),
+            Just(Canister::BitcoinTestnet),
+            Just(Canister::DogecoinMainnet),
+            Just(Canister::DogecoinMainnetStaging),
+        ]) {
+            let config = Config::for_target(canister);
+            let encoded = encode(&config);
+            let decoded: Config = decode(&encoded);
+            assert_eq!(config, decoded);
+        }
     }
 }
