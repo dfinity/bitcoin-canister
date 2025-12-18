@@ -315,26 +315,30 @@ impl Config {
 
     /// Returns all providers (explorers + canister) parsed from stored strings.
     pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
-        let canister_provider_name = canister.provider().to_string();
-        let all_names = self
-            .explorers
-            .iter()
-            .chain(std::iter::once(&canister_provider_name));
-
-        match canister {
-            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => all_names
+        let explorers: Vec<Box<dyn BlockProvider>> = match canister {
+            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => self
+                .explorers
+                .iter()
                 .filter_map(|s| s.parse::<BitcoinMainnetProviderBlockApi>().ok())
                 .map(|p| Box::new(p) as Box<dyn BlockProvider>)
                 .collect(),
-            Canister::BitcoinTestnet => all_names
+            Canister::BitcoinTestnet => self
+                .explorers
+                .iter()
                 .filter_map(|s| s.parse::<BitcoinTestnetProviderBlockApi>().ok())
                 .map(|p| Box::new(p) as Box<dyn BlockProvider>)
                 .collect(),
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => all_names
+            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => self
+                .explorers
+                .iter()
                 .filter_map(|s| s.parse::<DogecoinProviderBlockApi>().ok())
                 .map(|p| Box::new(p) as Box<dyn BlockProvider>)
                 .collect(),
-        }
+        };
+        explorers
+            .into_iter()
+            .chain(std::iter::once(canister.provider()))
+            .collect()
     }
 
     /// Returns the number of blocks behind threshold as a negative number.
