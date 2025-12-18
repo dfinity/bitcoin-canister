@@ -21,7 +21,7 @@ thread_local! {
 
 /// Returns the target canister from stable storage.
 pub fn get_canister() -> Canister {
-    CANISTER.with(|cell| cell.borrow().get().clone())
+    CANISTER.with(|cell| *cell.borrow().get())
 }
 
 /// Sets the target canister in stable storage.

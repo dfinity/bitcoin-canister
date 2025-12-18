@@ -9,7 +9,6 @@ use ic_stable_structures::storable::Bound;
 use ic_stable_structures::Storable;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::fmt::Debug;
 
 /// Mainnet bitcoin canister principal.
 const MAINNET_BITCOIN_CANISTER_PRINCIPAL: &str = "ghsi2-tqaaa-aaaan-aaaca-cai";
@@ -246,9 +245,10 @@ impl CanisterConfig for DogecoinMainnetStagingCanister {
 }
 
 /// Canister to monitor (stored in stable memory).
-#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Canister {
     #[serde(rename = "bitcoin_mainnet")]
+    #[default]
     BitcoinMainnet,
 
     #[serde(rename = "bitcoin_mainnet_staging")]
@@ -262,12 +262,6 @@ pub enum Canister {
 
     #[serde(rename = "dogecoin_mainnet_staging")]
     DogecoinMainnetStaging,
-}
-
-impl Default for Canister {
-    fn default() -> Self {
-        Canister::BitcoinMainnet
-    }
 }
 
 impl Storable for Canister {
@@ -653,5 +647,203 @@ mod test {
             let decoded: Config = decode(&encoded);
             assert_eq!(config, decoded);
         }
+    }
+
+    #[test]
+    fn test_bitcoin_mainnet_canister_config() {
+        assert_eq!(
+            BitcoinMainnetCanister::canister(),
+            BitcoinMainnetProviderBlockApi::BitcoinCanister
+        );
+        assert_eq!(BitcoinMainnetCanister::explorers().len(), 6);
+        assert_eq!(BitcoinMainnetCanister::all_providers().len(), 7);
+        assert_eq!(BitcoinMainnetCanister::network(), Network::BitcoinMainnet);
+        assert_eq!(BitcoinMainnetCanister::subnet_type(), SubnetType::System);
+    }
+
+    #[test]
+    fn test_bitcoin_mainnet_staging_canister_config() {
+        assert_eq!(
+            BitcoinMainnetStagingCanister::canister(),
+            BitcoinMainnetProviderBlockApi::BitcoinCanister
+        );
+        // Staging uses same explorers as mainnet
+        assert_eq!(
+            BitcoinMainnetStagingCanister::explorers(),
+            BitcoinMainnetCanister::explorers()
+        );
+        assert_eq!(
+            BitcoinMainnetStagingCanister::network(),
+            Network::BitcoinMainnet
+        );
+        assert_eq!(
+            BitcoinMainnetStagingCanister::subnet_type(),
+            SubnetType::Application
+        );
+    }
+
+    #[test]
+    fn test_bitcoin_testnet_canister_config() {
+        assert_eq!(
+            BitcoinTestnetCanister::canister(),
+            BitcoinTestnetProviderBlockApi::BitcoinCanister
+        );
+        assert_eq!(BitcoinTestnetCanister::explorers().len(), 1);
+        assert_eq!(BitcoinTestnetCanister::all_providers().len(), 2);
+        assert_eq!(BitcoinTestnetCanister::network(), Network::BitcoinTestnet);
+        assert_eq!(BitcoinTestnetCanister::subnet_type(), SubnetType::System);
+    }
+
+    #[test]
+    fn test_dogecoin_mainnet_canister_config() {
+        assert_eq!(
+            DogecoinMainnetCanister::canister(),
+            DogecoinProviderBlockApi::DogecoinCanister
+        );
+        assert_eq!(DogecoinMainnetCanister::explorers().len(), 3);
+        assert_eq!(DogecoinMainnetCanister::all_providers().len(), 4);
+        assert_eq!(DogecoinMainnetCanister::network(), Network::DogecoinMainnet);
+        assert_eq!(DogecoinMainnetCanister::subnet_type(), SubnetType::System);
+    }
+
+    #[test]
+    fn test_dogecoin_mainnet_staging_canister_config() {
+        assert_eq!(
+            DogecoinMainnetStagingCanister::canister(),
+            DogecoinProviderBlockApi::DogecoinCanister
+        );
+        // Staging uses same explorers as mainnet
+        assert_eq!(
+            DogecoinMainnetStagingCanister::explorers(),
+            DogecoinMainnetCanister::explorers()
+        );
+        assert_eq!(
+            DogecoinMainnetStagingCanister::network(),
+            Network::DogecoinMainnet
+        );
+        assert_eq!(
+            DogecoinMainnetStagingCanister::subnet_type(),
+            SubnetType::Application
+        );
+    }
+
+    #[test]
+    fn test_canister_explorer_names() {
+        let expected_bitcoin_mainnet = vec![
+            "bitcoin_api_bitaps_com_mainnet",
+            "bitcoin_api_blockchair_com_mainnet",
+            "bitcoin_api_blockcypher_com_mainnet",
+            "bitcoin_blockchain_info_mainnet",
+            "bitcoin_blockstream_info_mainnet",
+            "bitcoin_mempool_mainnet",
+        ];
+        assert_eq!(
+            Canister::BitcoinMainnet.explorer_names(),
+            expected_bitcoin_mainnet
+        );
+        assert_eq!(
+            Canister::BitcoinMainnetStaging.explorer_names(),
+            expected_bitcoin_mainnet
+        );
+
+        assert_eq!(
+            Canister::BitcoinTestnet.explorer_names(),
+            vec!["bitcoin_mempool_testnet"]
+        );
+
+        let expected_dogecoin = vec![
+            "dogecoin_api_blockchair_com_mainnet",
+            "dogecoin_api_blockcypher_com_mainnet",
+            "dogecoin_tokenview_mainnet",
+        ];
+        assert_eq!(
+            Canister::DogecoinMainnet.explorer_names(),
+            expected_dogecoin
+        );
+        assert_eq!(
+            Canister::DogecoinMainnetStaging.explorer_names(),
+            expected_dogecoin
+        );
+    }
+
+    #[test]
+    fn test_canister_names() {
+        assert_eq!(Canister::BitcoinMainnet.canister_name(), "bitcoin_canister");
+        assert_eq!(
+            Canister::BitcoinMainnetStaging.canister_name(),
+            "bitcoin_canister"
+        );
+        assert_eq!(Canister::BitcoinTestnet.canister_name(), "bitcoin_canister");
+        assert_eq!(
+            Canister::DogecoinMainnet.canister_name(),
+            "dogecoin_canister"
+        );
+        assert_eq!(
+            Canister::DogecoinMainnetStaging.canister_name(),
+            "dogecoin_canister"
+        );
+    }
+
+    #[test]
+    fn test_canister_subnet_types() {
+        assert_eq!(Canister::BitcoinMainnet.subnet_type(), SubnetType::System);
+        assert_eq!(
+            Canister::BitcoinMainnetStaging.subnet_type(),
+            SubnetType::Application
+        );
+        assert_eq!(Canister::BitcoinTestnet.subnet_type(), SubnetType::System);
+        assert_eq!(Canister::DogecoinMainnet.subnet_type(), SubnetType::System);
+        assert_eq!(
+            Canister::DogecoinMainnetStaging.subnet_type(),
+            SubnetType::Application
+        );
+    }
+
+    #[test]
+    fn test_candid_config_from_parts() {
+        let canister = Canister::BitcoinMainnet;
+        let config = Config::for_target(canister);
+        let candid = CandidConfig::from_parts(canister, config.clone());
+
+        assert_eq!(candid.network, Network::BitcoinMainnet);
+        assert_eq!(
+            candid.blocks_behind_threshold,
+            config.blocks_behind_threshold
+        );
+        assert_eq!(candid.blocks_ahead_threshold, config.blocks_ahead_threshold);
+        assert_eq!(candid.min_explorers, config.min_explorers);
+        assert_eq!(
+            candid.canister_principal,
+            Principal::from_text(MAINNET_BITCOIN_CANISTER_PRINCIPAL).unwrap()
+        );
+        assert_eq!(candid.explorers.len(), 6);
+        assert_eq!(candid.subnet_type, SubnetType::System);
+    }
+
+    #[test]
+    fn test_canister_storable_roundtrip() {
+        for canister in [
+            Canister::BitcoinMainnet,
+            Canister::BitcoinMainnetStaging,
+            Canister::BitcoinTestnet,
+            Canister::DogecoinMainnet,
+            Canister::DogecoinMainnetStaging,
+        ] {
+            let bytes = canister.to_bytes();
+            let decoded = Canister::from_bytes(bytes);
+            assert_eq!(canister, decoded);
+        }
+    }
+
+    #[test]
+    fn test_canister_default() {
+        assert_eq!(Canister::default(), Canister::BitcoinMainnet);
+    }
+
+    #[test]
+    fn test_config_default() {
+        let default = Config::default();
+        let expected = Config::for_target(Canister::default());
+        assert_eq!(default, expected);
     }
 }

@@ -107,7 +107,7 @@ fn health_status() -> LegacyHealthStatus {
 /// Returns the health status of the canister monitored.
 #[query]
 fn health_status_v2() -> HealthStatus {
-    health::health_status().into()
+    health::health_status()
 }
 
 /// Returns the configuration of the watchdog canister.
