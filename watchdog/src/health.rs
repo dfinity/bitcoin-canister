@@ -1,4 +1,4 @@
-use crate::config::StoredConfig;
+use crate::config::Config;
 use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -123,11 +123,7 @@ fn calculate_height_target(
 }
 
 /// Compares the source with the other explorers.
-fn compare(
-    source: Option<BlockInfo>,
-    explorers: Vec<BlockInfo>,
-    config: StoredConfig,
-) -> HealthStatus {
+fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
     let heights = explorers
         .iter()

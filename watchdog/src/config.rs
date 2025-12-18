@@ -136,9 +136,9 @@ impl Canister {
     }
 }
 
-/// Typed configuration with compile-time provider safety.
+/// Default configuration for canisters.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Config<P: BlockProvider> {
+pub struct DefaultConfig<P: BlockProvider> {
     /// The canister provider to monitor.
     pub canister: P,
 
@@ -161,7 +161,7 @@ pub struct Config<P: BlockProvider> {
     pub interval_between_fetches_sec: u64,
 }
 
-impl<P: BlockProvider> Config<P> {
+impl<P: BlockProvider> DefaultConfig<P> {
     /// Returns all providers (explorers + canister).
     pub fn all_providers(&self) -> Vec<P>
     where
@@ -183,7 +183,7 @@ impl<P: BlockProvider> Config<P> {
     }
 }
 
-impl Config<BitcoinMainnetProviderBlockApi> {
+impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
     pub fn bitcoin_mainnet() -> Self {
         Self {
             canister: BitcoinMainnetProviderBlockApi::BitcoinCanister,
@@ -216,7 +216,7 @@ impl Config<BitcoinMainnetProviderBlockApi> {
     }
 }
 
-impl Config<BitcoinTestnetProviderBlockApi> {
+impl DefaultConfig<BitcoinTestnetProviderBlockApi> {
     pub fn bitcoin_testnet() -> Self {
         Self {
             canister: BitcoinTestnetProviderBlockApi::BitcoinCanister,
@@ -230,7 +230,7 @@ impl Config<BitcoinTestnetProviderBlockApi> {
     }
 }
 
-impl Config<DogecoinProviderBlockApi> {
+impl DefaultConfig<DogecoinProviderBlockApi> {
     pub fn dogecoin_mainnet() -> Self {
         Self {
             canister: DogecoinProviderBlockApi::DogecoinCanister,
@@ -260,9 +260,9 @@ impl Config<DogecoinProviderBlockApi> {
     }
 }
 
-/// Stored configuration (serializable form with strings).
+/// Stored configuration.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub struct StoredConfig {
+pub struct Config {
     /// The canister provider name.
     pub canister: String,
 
@@ -285,8 +285,8 @@ pub struct StoredConfig {
     pub interval_between_fetches_sec: u64,
 }
 
-impl<P: BlockProvider + Clone> From<&Config<P>> for StoredConfig {
-    fn from(config: &Config<P>) -> Self {
+impl<P: BlockProvider + Clone> From<&DefaultConfig<P>> for Config {
+    fn from(config: &DefaultConfig<P>) -> Self {
         Self {
             canister: config.canister.to_string(),
             explorers: config.explorers.iter().map(|p| p.to_string()).collect(),
@@ -299,15 +299,15 @@ impl<P: BlockProvider + Clone> From<&Config<P>> for StoredConfig {
     }
 }
 
-impl StoredConfig {
+impl Config {
     /// Creates a default stored config for the given canister target.
     pub fn for_target(canister: Canister) -> Self {
         match canister {
-            Canister::BitcoinMainnet => (&Config::bitcoin_mainnet()).into(),
-            Canister::BitcoinMainnetStaging => (&Config::bitcoin_mainnet_staging()).into(),
-            Canister::BitcoinTestnet => (&Config::bitcoin_testnet()).into(),
-            Canister::DogecoinMainnet => (&Config::dogecoin_mainnet()).into(),
-            Canister::DogecoinMainnetStaging => (&Config::dogecoin_mainnet_staging()).into(),
+            Canister::BitcoinMainnet => (&DefaultConfig::bitcoin_mainnet()).into(),
+            Canister::BitcoinMainnetStaging => (&DefaultConfig::bitcoin_mainnet_staging()).into(),
+            Canister::BitcoinTestnet => (&DefaultConfig::bitcoin_testnet()).into(),
+            Canister::DogecoinMainnet => (&DefaultConfig::dogecoin_mainnet()).into(),
+            Canister::DogecoinMainnetStaging => (&DefaultConfig::dogecoin_mainnet_staging()).into(),
         }
     }
 
@@ -342,13 +342,13 @@ impl StoredConfig {
     }
 }
 
-impl Default for StoredConfig {
+impl Default for Config {
     fn default() -> Self {
-        StoredConfig::for_target(Canister::default())
+        Config::for_target(Canister::default())
     }
 }
 
-impl Storable for StoredConfig {
+impl Storable for Config {
     fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Owned(encode(self))
     }
@@ -397,7 +397,7 @@ pub struct CandidConfig {
 
 impl CandidConfig {
     /// Combines configuration values from `Canister` with values from `StoredConfig`.
-    pub fn from_parts(canister: Canister, config: StoredConfig) -> Self {
+    pub fn from_parts(canister: Canister, config: Config) -> Self {
         Self {
             network: canister.network(),
             blocks_behind_threshold: config.blocks_behind_threshold,
@@ -558,7 +558,7 @@ mod test {
 
     #[test]
     fn test_config_bitcoin_mainnet() {
-        let config = Config::bitcoin_mainnet();
+        let config = DefaultConfig::bitcoin_mainnet();
         assert_eq!(
             config.canister,
             BitcoinMainnetProviderBlockApi::BitcoinCanister
@@ -572,7 +572,7 @@ mod test {
 
     #[test]
     fn test_config_bitcoin_testnet() {
-        let config = Config::bitcoin_testnet();
+        let config = DefaultConfig::bitcoin_testnet();
         assert_eq!(
             config.canister,
             BitcoinTestnetProviderBlockApi::BitcoinCanister
@@ -585,7 +585,7 @@ mod test {
 
     #[test]
     fn test_config_dogecoin_mainnet() {
-        let config = Config::dogecoin_mainnet();
+        let config = DefaultConfig::dogecoin_mainnet();
         assert_eq!(config.canister, DogecoinProviderBlockApi::DogecoinCanister);
         assert_eq!(config.explorers.len(), 3);
         assert_eq!(config.all_providers().len(), 4);
@@ -595,8 +595,8 @@ mod test {
 
     #[test]
     fn test_stored_config_from_typed() {
-        let typed = Config::bitcoin_mainnet();
-        let stored: StoredConfig = (&typed).into();
+        let typed = DefaultConfig::bitcoin_mainnet();
+        let stored: Config = (&typed).into();
         assert_eq!(stored.canister, "bitcoin_canister");
         assert_eq!(stored.explorers.len(), 6);
         assert_eq!(
@@ -607,11 +607,11 @@ mod test {
 
     #[test]
     fn test_stored_config_for_target() {
-        let stored = StoredConfig::for_target(Canister::BitcoinMainnet);
+        let stored = Config::for_target(Canister::BitcoinMainnet);
         assert_eq!(stored.canister, "bitcoin_canister");
         assert_eq!(stored.explorers.len(), 6);
 
-        let stored = StoredConfig::for_target(Canister::DogecoinMainnet);
+        let stored = Config::for_target(Canister::DogecoinMainnet);
         assert_eq!(stored.canister, "dogecoin_canister");
         assert_eq!(stored.explorers.len(), 3);
     }
@@ -625,9 +625,9 @@ mod test {
             Just(Canister::DogecoinMainnet),
             Just(Canister::DogecoinMainnetStaging),
         ]) {
-            let config = StoredConfig::for_target(canister);
+            let config = Config::for_target(canister);
             let encoded = encode(&config);
-            let decoded: StoredConfig = decode(&encoded);
+            let decoded: Config = decode(&encoded);
             assert_eq!(config, decoded);
         }
     }
@@ -654,15 +654,15 @@ mod test {
 
     #[test]
     fn test_stored_config_default() {
-        let default = StoredConfig::default();
-        let expected = StoredConfig::for_target(Canister::default());
+        let default = Config::default();
+        let expected = Config::for_target(Canister::default());
         assert_eq!(default, expected);
     }
 
     #[test]
     fn test_candid_config_from_parts() {
         let canister = Canister::BitcoinMainnet;
-        let stored = StoredConfig::for_target(canister);
+        let stored = Config::for_target(canister);
         let candid = CandidConfig::from_parts(canister, stored.clone());
 
         assert_eq!(candid.network, Network::BitcoinMainnet);
