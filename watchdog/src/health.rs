@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::StoredConfig;
 use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -85,14 +85,13 @@ impl TryFrom<HealthStatus> for LegacyHealthStatus {
 
 /// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
-    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
     compare(
-        crate::storage::get_block_info(&canister.canister_name()),
-        canister
-            .explorer_names()
+        crate::storage::get_block_info(&config.canister),
+        config
+            .explorers
             .iter()
-            .filter_map(|e| crate::storage::get_block_info(&e.to_string()))
+            .filter_map(|e| crate::storage::get_block_info(e))
             .collect::<Vec<_>>(),
         config,
     )
@@ -124,7 +123,11 @@ fn calculate_height_target(
 }
 
 /// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
+fn compare(
+    source: Option<BlockInfo>,
+    explorers: Vec<BlockInfo>,
+    config: StoredConfig,
+) -> HealthStatus {
     let height_source = source.and_then(|block| block.height);
     let heights = explorers
         .iter()

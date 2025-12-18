@@ -225,11 +225,11 @@ fn transform_mempool_height(raw: TransformArgs) -> HttpRequestResult {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::{Canister, Config};
+    use crate::config::{Canister, StoredConfig};
     use crate::types::InitArg;
 
     fn expected_config(canister: Canister) -> CandidConfig {
-        CandidConfig::from_parts(canister, Config::for_target(canister))
+        CandidConfig::from_parts(canister, StoredConfig::for_target(canister))
     }
 
     #[test]

@@ -1,8 +1,8 @@
-use crate::block_apis::{BitcoinBlockApi, BlockProvider};
-use crate::config::{
-    BitcoinMainnetCanister, BitcoinTestnetCanister, Canister, CanisterConfig,
-    DogecoinMainnetCanister,
+use crate::block_apis::{
+    BitcoinBlockApi, BitcoinMainnetProviderBlockApi, BitcoinTestnetProviderBlockApi,
+    BlockProvider, DogecoinProviderBlockApi,
 };
+use crate::config::{Canister, Config};
 use crate::storage;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
@@ -38,7 +38,7 @@ pub struct LegacyBlockInfo {
     pub height: Option<u64>,
 }
 
-/// Error type for converting BlockInfoInternal to BlockInfo.
+/// Error type for converting BlockInfo to LegacyBlockInfo.
 pub struct BlockInfoConversionError {
     pub reason: String,
 }
@@ -73,18 +73,27 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
 pub async fn fetch_all_data() -> Vec<BlockInfo> {
     let canister = storage::get_canister();
     match canister {
-        Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
-            fetch_all_data_for::<BitcoinMainnetCanister>().await
+        Canister::BitcoinMainnet => {
+            fetch_providers(Config::<BitcoinMainnetProviderBlockApi>::bitcoin_mainnet()).await
         }
-        Canister::BitcoinTestnet => fetch_all_data_for::<BitcoinTestnetCanister>().await,
-        Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-            fetch_all_data_for::<DogecoinMainnetCanister>().await
+        Canister::BitcoinMainnetStaging => {
+            fetch_providers(Config::<BitcoinMainnetProviderBlockApi>::bitcoin_mainnet_staging())
+                .await
+        }
+        Canister::BitcoinTestnet => {
+            fetch_providers(Config::<BitcoinTestnetProviderBlockApi>::bitcoin_testnet()).await
+        }
+        Canister::DogecoinMainnet => {
+            fetch_providers(Config::<DogecoinProviderBlockApi>::dogecoin_mainnet()).await
+        }
+        Canister::DogecoinMainnetStaging => {
+            fetch_providers(Config::<DogecoinProviderBlockApi>::dogecoin_mainnet_staging()).await
         }
     }
 }
 
-async fn fetch_all_data_for<C: CanisterConfig>() -> Vec<BlockInfo> {
-    let providers = C::all_providers();
+async fn fetch_providers<P: BlockProvider + Clone>(config: Config<P>) -> Vec<BlockInfo> {
+    let providers = config.all_providers();
 
     let futures = providers
         .iter()
