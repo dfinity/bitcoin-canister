@@ -134,14 +134,21 @@ impl Canister {
         };
         format!("https://{principal}.{suffix}/metrics")
     }
+
+    /// Returns the provider name string for the canister.
+    pub fn provider_name(&self) -> &'static str {
+        match self {
+            Canister::BitcoinMainnet
+            | Canister::BitcoinMainnetStaging
+            | Canister::BitcoinTestnet => "bitcoin_canister",
+            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => "dogecoin_canister",
+        }
+    }
 }
 
 /// Default configuration for canisters.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DefaultConfig<P: BlockProvider> {
-    /// The canister provider to monitor.
-    pub canister: P,
-
     /// The explorer providers to compare against.
     pub explorers: Vec<P>,
 
@@ -162,16 +169,6 @@ pub struct DefaultConfig<P: BlockProvider> {
 }
 
 impl<P: BlockProvider> DefaultConfig<P> {
-    /// Returns all providers (explorers + canister).
-    pub fn all_providers(&self) -> Vec<P>
-    where
-        P: Clone,
-    {
-        let mut providers = self.explorers.clone();
-        providers.push(self.canister.clone());
-        providers
-    }
-
     /// Returns the number of blocks behind threshold as a negative number.
     pub fn get_blocks_behind_threshold(&self) -> i64 {
         -(self.blocks_behind_threshold as i64)
@@ -186,7 +183,6 @@ impl<P: BlockProvider> DefaultConfig<P> {
 impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
     pub fn bitcoin_mainnet() -> Self {
         Self {
-            canister: BitcoinMainnetProviderBlockApi::BitcoinCanister,
             explorers: vec![
                 BitcoinMainnetProviderBlockApi::ApiBitapsCom,
                 BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
@@ -205,7 +201,6 @@ impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
 
     pub fn bitcoin_mainnet_staging() -> Self {
         Self {
-            canister: BitcoinMainnetProviderBlockApi::BitcoinCanister,
             explorers: Self::bitcoin_mainnet().explorers,
             blocks_behind_threshold: 2,
             blocks_ahead_threshold: 2,
@@ -219,7 +214,6 @@ impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
 impl DefaultConfig<BitcoinTestnetProviderBlockApi> {
     pub fn bitcoin_testnet() -> Self {
         Self {
-            canister: BitcoinTestnetProviderBlockApi::BitcoinCanister,
             explorers: vec![BitcoinTestnetProviderBlockApi::Mempool],
             blocks_behind_threshold: 1000,
             blocks_ahead_threshold: 1000,
@@ -233,7 +227,6 @@ impl DefaultConfig<BitcoinTestnetProviderBlockApi> {
 impl DefaultConfig<DogecoinProviderBlockApi> {
     pub fn dogecoin_mainnet() -> Self {
         Self {
-            canister: DogecoinProviderBlockApi::DogecoinCanister,
             explorers: vec![
                 DogecoinProviderBlockApi::ApiBlockchairCom,
                 DogecoinProviderBlockApi::ApiBlockcypherCom,
@@ -249,7 +242,6 @@ impl DefaultConfig<DogecoinProviderBlockApi> {
 
     pub fn dogecoin_mainnet_staging() -> Self {
         Self {
-            canister: DogecoinProviderBlockApi::DogecoinCanister,
             explorers: Self::dogecoin_mainnet().explorers,
             blocks_behind_threshold: 4,
             blocks_ahead_threshold: 4,
@@ -263,11 +255,8 @@ impl DefaultConfig<DogecoinProviderBlockApi> {
 /// Stored configuration.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
-    /// The canister provider name.
-    pub canister: String,
-
-    /// The explorer provider names.
-    pub explorers: Vec<String>,
+    /// The network to use.
+    pub network: Network,
 
     /// Below this threshold, the canister is considered to be behind.
     pub blocks_behind_threshold: u64,
@@ -278,42 +267,55 @@ pub struct Config {
     /// The minimum number of explorers to compare against.
     pub min_explorers: u64,
 
+    /// Monitored canister principal.
+    pub canister_principal: Principal,
+
     /// The number of seconds to wait before the first data fetch.
     pub delay_before_first_fetch_sec: u64,
 
     /// The number of seconds to wait between all the other data fetches.
     pub interval_between_fetches_sec: u64,
-}
 
-impl<P: BlockProvider + Clone> From<&DefaultConfig<P>> for Config {
-    fn from(config: &DefaultConfig<P>) -> Self {
-        Self {
-            canister: config.canister.to_string(),
-            explorers: config.explorers.iter().map(|p| p.to_string()).collect(),
-            blocks_behind_threshold: config.blocks_behind_threshold,
-            blocks_ahead_threshold: config.blocks_ahead_threshold,
-            min_explorers: config.min_explorers,
-            delay_before_first_fetch_sec: config.delay_before_first_fetch_sec,
-            interval_between_fetches_sec: config.interval_between_fetches_sec,
-        }
-    }
+    /// Explorers to use for fetching block data.
+    pub explorers: Vec<String>,
+
+    /// Type of subnet on which the watchdog and target canisters are deployed.
+    pub subnet_type: SubnetType,
 }
 
 impl Config {
-    /// Creates a default stored config for the given canister target.
+    /// Creates a default config for the given canister target.
     pub fn for_target(canister: Canister) -> Self {
         match canister {
-            Canister::BitcoinMainnet => (&DefaultConfig::bitcoin_mainnet()).into(),
-            Canister::BitcoinMainnetStaging => (&DefaultConfig::bitcoin_mainnet_staging()).into(),
-            Canister::BitcoinTestnet => (&DefaultConfig::bitcoin_testnet()).into(),
-            Canister::DogecoinMainnet => (&DefaultConfig::dogecoin_mainnet()).into(),
-            Canister::DogecoinMainnetStaging => (&DefaultConfig::dogecoin_mainnet_staging()).into(),
+            Canister::BitcoinMainnet => Self::from_default(canister, &DefaultConfig::bitcoin_mainnet()),
+            Canister::BitcoinMainnetStaging => Self::from_default(canister, &DefaultConfig::bitcoin_mainnet_staging()),
+            Canister::BitcoinTestnet => Self::from_default(canister, &DefaultConfig::bitcoin_testnet()),
+            Canister::DogecoinMainnet => Self::from_default(canister, &DefaultConfig::dogecoin_mainnet()),
+            Canister::DogecoinMainnetStaging => Self::from_default(canister, &DefaultConfig::dogecoin_mainnet_staging()),
+        }
+    }
+
+    fn from_default<P: BlockProvider>(canister: Canister, default: &DefaultConfig<P>) -> Self {
+        Self {
+            network: canister.network(),
+            canister_principal: canister.canister_principal(),
+            subnet_type: canister.subnet_type(),
+            explorers: default.explorers.iter().map(|p| p.to_string()).collect(),
+            blocks_behind_threshold: default.blocks_behind_threshold,
+            blocks_ahead_threshold: default.blocks_ahead_threshold,
+            min_explorers: default.min_explorers,
+            delay_before_first_fetch_sec: default.delay_before_first_fetch_sec,
+            interval_between_fetches_sec: default.interval_between_fetches_sec,
         }
     }
 
     /// Returns all providers (explorers + canister) parsed from stored strings.
     pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
-        let all_names = self.explorers.iter().chain(std::iter::once(&self.canister));
+        let canister_provider_name = canister.provider_name().to_string();
+        let all_names = self
+            .explorers
+            .iter()
+            .chain(std::iter::once(&canister_provider_name));
 
         match canister {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => all_names
@@ -362,54 +364,6 @@ impl Storable for Config {
     }
 
     const BOUND: Bound = Bound::Unbounded;
-}
-
-/// Configuration for the candid API get_config response.
-#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CandidConfig {
-    /// The network to use.
-    pub network: Network,
-
-    /// Below this threshold, the canister is considered to be behind.
-    pub blocks_behind_threshold: u64,
-
-    /// Above this threshold, the canister is considered to be ahead.
-    pub blocks_ahead_threshold: u64,
-
-    /// The minimum number of explorers to compare against.
-    pub min_explorers: u64,
-
-    /// Monitored canister principal.
-    pub canister_principal: Principal,
-
-    /// The number of seconds to wait before the first data fetch.
-    pub delay_before_first_fetch_sec: u64,
-
-    /// The number of seconds to wait between all the other data fetches.
-    pub interval_between_fetches_sec: u64,
-
-    /// Explorers to use for fetching block data.
-    pub explorers: Vec<String>,
-
-    /// Type of subnet on which the watchdog and target canisters are deployed.
-    pub subnet_type: SubnetType,
-}
-
-impl CandidConfig {
-    /// Combines configuration values from `Canister` with values from `StoredConfig`.
-    pub fn from_parts(canister: Canister, config: Config) -> Self {
-        Self {
-            network: canister.network(),
-            blocks_behind_threshold: config.blocks_behind_threshold,
-            blocks_ahead_threshold: config.blocks_ahead_threshold,
-            min_explorers: config.min_explorers,
-            canister_principal: canister.canister_principal(),
-            delay_before_first_fetch_sec: config.delay_before_first_fetch_sec,
-            interval_between_fetches_sec: config.interval_between_fetches_sec,
-            explorers: config.explorers,
-            subnet_type: canister.subnet_type(),
-        }
-    }
 }
 
 fn encode<T: Serialize>(value: &T) -> Vec<u8> {
@@ -559,12 +513,7 @@ mod test {
     #[test]
     fn test_config_bitcoin_mainnet() {
         let config = DefaultConfig::bitcoin_mainnet();
-        assert_eq!(
-            config.canister,
-            BitcoinMainnetProviderBlockApi::BitcoinCanister
-        );
         assert_eq!(config.explorers.len(), 6);
-        assert_eq!(config.all_providers().len(), 7);
         assert_eq!(config.blocks_behind_threshold, 2);
         assert_eq!(config.blocks_ahead_threshold, 2);
         assert_eq!(config.min_explorers, 3);
@@ -573,12 +522,7 @@ mod test {
     #[test]
     fn test_config_bitcoin_testnet() {
         let config = DefaultConfig::bitcoin_testnet();
-        assert_eq!(
-            config.canister,
-            BitcoinTestnetProviderBlockApi::BitcoinCanister
-        );
         assert_eq!(config.explorers.len(), 1);
-        assert_eq!(config.all_providers().len(), 2);
         assert_eq!(config.blocks_behind_threshold, 1000);
         assert_eq!(config.min_explorers, 1);
     }
@@ -586,33 +530,31 @@ mod test {
     #[test]
     fn test_config_dogecoin_mainnet() {
         let config = DefaultConfig::dogecoin_mainnet();
-        assert_eq!(config.canister, DogecoinProviderBlockApi::DogecoinCanister);
         assert_eq!(config.explorers.len(), 3);
-        assert_eq!(config.all_providers().len(), 4);
         assert_eq!(config.blocks_behind_threshold, 4);
         assert_eq!(config.min_explorers, 2);
     }
 
     #[test]
-    fn test_stored_config_from_typed() {
-        let typed = DefaultConfig::bitcoin_mainnet();
-        let stored: Config = (&typed).into();
-        assert_eq!(stored.canister, "bitcoin_canister");
-        assert_eq!(stored.explorers.len(), 6);
+    fn test_stored_config_from_default() {
+        let default = DefaultConfig::bitcoin_mainnet();
+        let config = Config::from_default(Canister::BitcoinMainnet, &default);
+        assert_eq!(config.network, Network::BitcoinMainnet);
+        assert_eq!(config.explorers.len(), 6);
         assert_eq!(
-            stored.blocks_behind_threshold,
-            typed.blocks_behind_threshold
+            config.blocks_behind_threshold,
+            default.blocks_behind_threshold
         );
     }
 
     #[test]
     fn test_stored_config_for_target() {
         let stored = Config::for_target(Canister::BitcoinMainnet);
-        assert_eq!(stored.canister, "bitcoin_canister");
+        assert_eq!(stored.network, Network::BitcoinMainnet);
         assert_eq!(stored.explorers.len(), 6);
 
         let stored = Config::for_target(Canister::DogecoinMainnet);
-        assert_eq!(stored.canister, "dogecoin_canister");
+        assert_eq!(stored.network, Network::DogecoinMainnet);
         assert_eq!(stored.explorers.len(), 3);
     }
 
@@ -662,18 +604,17 @@ mod test {
     #[test]
     fn test_candid_config_from_parts() {
         let canister = Canister::BitcoinMainnet;
-        let stored = Config::for_target(canister);
-        let candid = CandidConfig::from_parts(canister, stored.clone());
+        let config = Config::for_target(canister);
 
-        assert_eq!(candid.network, Network::BitcoinMainnet);
+        assert_eq!(config.network, Network::BitcoinMainnet);
         assert_eq!(
-            candid.blocks_behind_threshold,
-            stored.blocks_behind_threshold
+            config.blocks_behind_threshold,
+            config.blocks_behind_threshold
         );
-        assert_eq!(candid.blocks_ahead_threshold, stored.blocks_ahead_threshold);
-        assert_eq!(candid.min_explorers, stored.min_explorers);
-        assert_eq!(candid.canister_principal, canister.canister_principal());
-        assert_eq!(candid.explorers.len(), 6);
-        assert_eq!(candid.subnet_type, SubnetType::System);
+        assert_eq!(config.blocks_ahead_threshold, config.blocks_ahead_threshold);
+        assert_eq!(config.min_explorers, config.min_explorers);
+        assert_eq!(config.canister_principal, canister.canister_principal());
+        assert_eq!(config.explorers.len(), 6);
+        assert_eq!(config.subnet_type, SubnetType::System);
     }
 }
