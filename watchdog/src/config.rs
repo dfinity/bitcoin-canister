@@ -401,7 +401,9 @@ mod test {
             let principal = canister.canister_principal().to_text();
             assert!(
                 endpoint.contains(&principal),
-                "Endpoint {endpoint} should contain principal {principal}"
+                "Endpoint {} should contain principal {}",
+                endpoint,
+                principal
             );
         }
     }
