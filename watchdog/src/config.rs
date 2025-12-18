@@ -188,7 +188,7 @@ impl Config {
                 network: canister.network(),
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
-                explorers: vec![
+                explorers: [
                     BitcoinMainnetProviderBlockApi::ApiBitapsCom,
                     BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
                     BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
@@ -209,7 +209,7 @@ impl Config {
                 network: canister.network(),
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
-                explorers: vec![BitcoinTestnetProviderBlockApi::Mempool]
+                explorers: [BitcoinTestnetProviderBlockApi::Mempool]
                     .iter()
                     .map(|p| p.to_string())
                     .collect(),
@@ -223,7 +223,7 @@ impl Config {
                 network: canister.network(),
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
-                explorers: vec![
+                explorers: [
                     DogecoinProviderBlockApi::ApiBlockchairCom,
                     DogecoinProviderBlockApi::ApiBlockcypherCom,
                     DogecoinProviderBlockApi::TokenView,
