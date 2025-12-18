@@ -168,18 +168,6 @@ pub struct DefaultConfig<P: BlockProvider> {
     pub interval_between_fetches_sec: u64,
 }
 
-impl<P: BlockProvider> DefaultConfig<P> {
-    /// Returns the number of blocks behind threshold as a negative number.
-    pub fn get_blocks_behind_threshold(&self) -> i64 {
-        -(self.blocks_behind_threshold as i64)
-    }
-
-    /// Returns the number of blocks ahead threshold as a positive number.
-    pub fn get_blocks_ahead_threshold(&self) -> i64 {
-        self.blocks_ahead_threshold as i64
-    }
-}
-
 impl DefaultConfig<BitcoinMainnetProviderBlockApi> {
     pub fn bitcoin_mainnet() -> Self {
         Self {
@@ -287,11 +275,21 @@ impl Config {
     /// Creates a default config for the given canister target.
     pub fn for_target(canister: Canister) -> Self {
         match canister {
-            Canister::BitcoinMainnet => Self::from_default(canister, &DefaultConfig::bitcoin_mainnet()),
-            Canister::BitcoinMainnetStaging => Self::from_default(canister, &DefaultConfig::bitcoin_mainnet_staging()),
-            Canister::BitcoinTestnet => Self::from_default(canister, &DefaultConfig::bitcoin_testnet()),
-            Canister::DogecoinMainnet => Self::from_default(canister, &DefaultConfig::dogecoin_mainnet()),
-            Canister::DogecoinMainnetStaging => Self::from_default(canister, &DefaultConfig::dogecoin_mainnet_staging()),
+            Canister::BitcoinMainnet => {
+                Self::from_default(canister, &DefaultConfig::bitcoin_mainnet())
+            }
+            Canister::BitcoinMainnetStaging => {
+                Self::from_default(canister, &DefaultConfig::bitcoin_mainnet_staging())
+            }
+            Canister::BitcoinTestnet => {
+                Self::from_default(canister, &DefaultConfig::bitcoin_testnet())
+            }
+            Canister::DogecoinMainnet => {
+                Self::from_default(canister, &DefaultConfig::dogecoin_mainnet())
+            }
+            Canister::DogecoinMainnetStaging => {
+                Self::from_default(canister, &DefaultConfig::dogecoin_mainnet_staging())
+            }
         }
     }
 
