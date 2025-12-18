@@ -149,100 +149,6 @@ impl Canister {
     }
 }
 
-/// Default configuration parameters for canisters.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DefaultConfigParams<P: BlockProvider> {
-    /// The explorer providers to compare against.
-    pub explorers: Vec<P>,
-
-    /// Below this threshold, the canister is considered to be behind.
-    pub blocks_behind_threshold: u64,
-
-    /// Above this threshold, the canister is considered to be ahead.
-    pub blocks_ahead_threshold: u64,
-
-    /// The minimum number of explorers to compare against.
-    pub min_explorers: u64,
-
-    /// The number of seconds to wait before the first data fetch.
-    pub delay_before_first_fetch_sec: u64,
-
-    /// The number of seconds to wait between all the other data fetches.
-    pub interval_between_fetches_sec: u64,
-}
-
-impl DefaultConfigParams<BitcoinMainnetProviderBlockApi> {
-    pub fn bitcoin_mainnet() -> Self {
-        Self {
-            explorers: vec![
-                BitcoinMainnetProviderBlockApi::ApiBitapsCom,
-                BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
-                BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
-                BitcoinMainnetProviderBlockApi::BlockchainInfo,
-                BitcoinMainnetProviderBlockApi::BlockstreamInfo,
-                BitcoinMainnetProviderBlockApi::Mempool,
-            ],
-            blocks_behind_threshold: 2,
-            blocks_ahead_threshold: 2,
-            min_explorers: 3,
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-        }
-    }
-
-    pub fn bitcoin_mainnet_staging() -> Self {
-        Self {
-            explorers: Self::bitcoin_mainnet().explorers,
-            blocks_behind_threshold: 2,
-            blocks_ahead_threshold: 2,
-            min_explorers: 3,
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-        }
-    }
-}
-
-impl DefaultConfigParams<BitcoinTestnetProviderBlockApi> {
-    pub fn bitcoin_testnet() -> Self {
-        Self {
-            explorers: vec![BitcoinTestnetProviderBlockApi::Mempool],
-            blocks_behind_threshold: 1000,
-            blocks_ahead_threshold: 1000,
-            min_explorers: 1,
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-        }
-    }
-}
-
-impl DefaultConfigParams<DogecoinProviderBlockApi> {
-    pub fn dogecoin_mainnet() -> Self {
-        Self {
-            explorers: vec![
-                DogecoinProviderBlockApi::ApiBlockchairCom,
-                DogecoinProviderBlockApi::ApiBlockcypherCom,
-                DogecoinProviderBlockApi::TokenView,
-            ],
-            blocks_behind_threshold: 4,
-            blocks_ahead_threshold: 4,
-            min_explorers: 2,
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-        }
-    }
-
-    pub fn dogecoin_mainnet_staging() -> Self {
-        Self {
-            explorers: Self::dogecoin_mainnet().explorers,
-            blocks_behind_threshold: 4,
-            blocks_ahead_threshold: 4,
-            min_explorers: 2,
-            delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
-            interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
-        }
-    }
-}
-
 /// Stored configuration.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
@@ -278,38 +184,59 @@ impl Config {
     /// Creates a default config for the given canister target.
     pub fn for_target(canister: Canister) -> Self {
         match canister {
-            Canister::BitcoinMainnet => {
-                Self::from_default(canister, &DefaultConfigParams::bitcoin_mainnet())
-            }
-            Canister::BitcoinMainnetStaging => {
-                Self::from_default(canister, &DefaultConfigParams::bitcoin_mainnet_staging())
-            }
-            Canister::BitcoinTestnet => {
-                Self::from_default(canister, &DefaultConfigParams::bitcoin_testnet())
-            }
-            Canister::DogecoinMainnet => {
-                Self::from_default(canister, &DefaultConfigParams::dogecoin_mainnet())
-            }
-            Canister::DogecoinMainnetStaging => {
-                Self::from_default(canister, &DefaultConfigParams::dogecoin_mainnet_staging())
-            }
-        }
-    }
-
-    fn from_default<P: BlockProvider>(
-        canister: Canister,
-        default: &DefaultConfigParams<P>,
-    ) -> Self {
-        Self {
-            network: canister.network(),
-            canister_principal: canister.canister_principal(),
-            subnet_type: canister.subnet_type(),
-            explorers: default.explorers.iter().map(|p| p.to_string()).collect(),
-            blocks_behind_threshold: default.blocks_behind_threshold,
-            blocks_ahead_threshold: default.blocks_ahead_threshold,
-            min_explorers: default.min_explorers,
-            delay_before_first_fetch_sec: default.delay_before_first_fetch_sec,
-            interval_between_fetches_sec: default.interval_between_fetches_sec,
+            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => Self {
+                network: canister.network(),
+                canister_principal: canister.canister_principal(),
+                subnet_type: canister.subnet_type(),
+                explorers: vec![
+                    BitcoinMainnetProviderBlockApi::ApiBitapsCom,
+                    BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
+                    BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
+                    BitcoinMainnetProviderBlockApi::BlockchainInfo,
+                    BitcoinMainnetProviderBlockApi::BlockstreamInfo,
+                    BitcoinMainnetProviderBlockApi::Mempool,
+                ]
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+                blocks_behind_threshold: 2,
+                blocks_ahead_threshold: 2,
+                min_explorers: 3,
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+            },
+            Canister::BitcoinTestnet => Self {
+                network: canister.network(),
+                canister_principal: canister.canister_principal(),
+                subnet_type: canister.subnet_type(),
+                explorers: vec![BitcoinTestnetProviderBlockApi::Mempool]
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect(),
+                blocks_behind_threshold: 1000,
+                blocks_ahead_threshold: 1000,
+                min_explorers: 1,
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: BITCOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+            },
+            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => Self {
+                network: canister.network(),
+                canister_principal: canister.canister_principal(),
+                subnet_type: canister.subnet_type(),
+                explorers: vec![
+                    DogecoinProviderBlockApi::ApiBlockchairCom,
+                    DogecoinProviderBlockApi::ApiBlockcypherCom,
+                    DogecoinProviderBlockApi::TokenView,
+                ]
+                .iter()
+                .map(|p| p.to_string())
+                .collect(),
+                blocks_behind_threshold: 4,
+                blocks_ahead_threshold: 4,
+                min_explorers: 2,
+                delay_before_first_fetch_sec: DELAY_BEFORE_FIRST_FETCH_SEC,
+                interval_between_fetches_sec: DOGECOIN_INTERVAL_BETWEEN_FETCHES_SEC,
+            },
         }
     }
 
