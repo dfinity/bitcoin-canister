@@ -17,7 +17,7 @@ dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 # And enabling 'disable_api_if_not_fully_synced'. 
-dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
+dfx deploy --no-wallet bitcoin --argument "(opt variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
@@ -116,7 +116,7 @@ dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 # And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make 
 # influence behaviour of the canister. 
-dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
+dfx deploy --no-wallet bitcoin --argument "(opt variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
