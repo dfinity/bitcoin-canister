@@ -184,11 +184,11 @@ mod test {
     use proptest::prelude::*;
 
     fn get_block_headers_helper(network: Network) {
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         let block1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
         let block2 = BlockBuilder::with_prev_header(block1.clone().header()).build();
@@ -276,11 +276,11 @@ mod test {
     #[test]
     fn genesis_block_only() {
         let network = Network::Regtest;
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         let mut genesis_header_blob = vec![];
         genesis_block(network)
@@ -326,11 +326,11 @@ mod test {
     #[test]
     fn single_block() {
         let network = Network::Regtest;
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
@@ -427,11 +427,11 @@ mod test {
         block_num: u32,
         network: Network,
     ) -> Vec<Vec<u8>> {
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(stability_threshold),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
         let genesis_block = genesis_block(network);
 
         let mut prev_block_header = *genesis_block.header();
@@ -596,7 +596,7 @@ mod test {
     #[test]
     fn charges_cycles() {
         let network = Network::Regtest;
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_block_headers_base: 10,
                 get_block_headers_maximum: 100,
@@ -604,7 +604,7 @@ mod test {
             }),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
@@ -619,7 +619,7 @@ mod test {
     #[test]
     fn charges_cycles_capped_at_maximum() {
         let network = Network::Regtest;
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_block_headers_base: 10,
                 get_block_headers_cycles_per_ten_instructions: 10,
@@ -628,7 +628,7 @@ mod test {
             }),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         runtime::set_performance_counter_step(1000);
         runtime::inc_performance_counter();
@@ -647,7 +647,7 @@ mod test {
     #[test]
     fn charges_cycles_per_instructions() {
         let network = Network::Regtest;
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_block_headers_base: 10,
                 get_block_headers_cycles_per_ten_instructions: 10,
@@ -656,7 +656,7 @@ mod test {
             }),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         // Set the number of instructions consumed.
         runtime::set_performance_counter_step(1000);

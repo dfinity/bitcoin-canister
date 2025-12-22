@@ -63,7 +63,7 @@ mod test {
 
     #[async_std::test]
     async fn charges_cycles() {
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 send_transaction_base: 13,
                 send_transaction_per_byte: 27,
@@ -71,7 +71,7 @@ mod test {
             }),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
 
         let transaction = empty_transaction();
         let transaction_len = transaction.len();
@@ -97,7 +97,7 @@ mod test {
 
     #[async_std::test]
     async fn invalid_tx_error() {
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 send_transaction_base: 13,
                 send_transaction_per_byte: 27,
@@ -105,7 +105,7 @@ mod test {
             }),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
 
         let result = send_transaction(SendTransactionRequest {
             network: NetworkInRequest::Mainnet,
@@ -118,7 +118,7 @@ mod test {
     #[async_std::test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     async fn send_transaction_access_disabled() {
-        crate::init(CanisterArg::Init(InitConfig {
+        crate::init(Some(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 send_transaction_base: 13,
                 send_transaction_per_byte: 27,
@@ -127,7 +127,7 @@ mod test {
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
 
         send_transaction(SendTransactionRequest {
             network: NetworkInRequest::Mainnet,
