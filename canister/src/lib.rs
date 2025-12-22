@@ -96,40 +96,41 @@ pub enum CanisterArg {
 }
 
 /// Initializes the state of the Bitcoin canister.
-pub fn init(canister_arg: CanisterArg) {
-    match canister_arg {
-        CanisterArg::Init(args) => {
-            print("Running init...");
-
-            let config = Config::from(args);
-            set_state(State::new(
-                config
-                    .stability_threshold
-                    .try_into()
-                    .expect("stability threshold too large"),
-                config.network,
-                genesis_block(config.network),
-            ));
-
-            with_state_mut(|s| s.blocks_source = config.blocks_source);
-            with_state_mut(|s| s.api_access = config.api_access);
-            with_state_mut(|s| s.syncing_state.syncing = config.syncing);
-            with_state_mut(|s| {
-                s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced
-            });
-            with_state_mut(|s| s.watchdog_canister = config.watchdog_canister);
-            with_state_mut(|s| s.burn_cycles = config.burn_cycles);
-            with_state_mut(|s| {
-                s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles
-            });
-            with_state_mut(|s| s.fees = config.fees);
-
-            print("...init completed!");
-        }
-        CanisterArg::Upgrade(_) => {
+pub fn init(canister_arg: Option<CanisterArg>) {
+    let args = match canister_arg {
+        Some(CanisterArg::Init(args)) => args,
+        Some(CanisterArg::Upgrade(_)) => {
             panic!("expected InitArgs got UpgradeArgs");
         }
-    }
+        None => InitConfig::default(),
+    };
+
+    print("Running init...");
+
+    let config = Config::from(args);
+    set_state(State::new(
+        config
+            .stability_threshold
+            .try_into()
+            .expect("stability threshold too large"),
+        config.network,
+        genesis_block(config.network),
+    ));
+
+    with_state_mut(|s| s.blocks_source = config.blocks_source);
+    with_state_mut(|s| s.api_access = config.api_access);
+    with_state_mut(|s| s.syncing_state.syncing = config.syncing);
+    with_state_mut(|s| {
+        s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced
+    });
+    with_state_mut(|s| s.watchdog_canister = config.watchdog_canister);
+    with_state_mut(|s| s.burn_cycles = config.burn_cycles);
+    with_state_mut(|s| {
+        s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles
+    });
+    with_state_mut(|s| s.fees = config.fees);
+
+    print("...init completed!");
 }
 
 pub fn get_current_fee_percentiles(
@@ -358,11 +359,11 @@ mod test {
                 Just(Network::Regtest),
             ],
         ) {
-            init(CanisterArg::Init(InitConfig {
+            init(Some(CanisterArg::Init(InitConfig {
                 stability_threshold: Some(stability_threshold),
                 network: Some(network),
                 ..Default::default()
-            }));
+            })));
 
             with_state(|state| {
                 assert!(
@@ -380,11 +381,11 @@ mod test {
     ) {
         let network = Network::Regtest;
 
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(stability_threshold),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         let blocks = build_regtest_chain(num_blocks, num_transactions_in_block);
 
@@ -414,11 +415,11 @@ mod test {
     fn upgrade_with_config(#[strategy(1..100u128)] stability_threshold: u128) {
         let network = Network::Regtest;
 
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         // Run the preupgrade hook.
         pre_upgrade();
@@ -436,11 +437,11 @@ mod test {
     #[test]
     fn test_upgrade_resets_sync_state() {
         let network = Network::Regtest;
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(144),
             network: Some(network),
             ..Default::default()
-        }));
+        })));
 
         // Simulate a state where the canister is fetching blocks.
         with_state_mut(|state| {
@@ -463,11 +464,11 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_balance_incorrect_network() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
         get_balance(GetBalanceRequest {
             address: String::from(""),
             network: NetworkInRequest::Testnet,
@@ -479,11 +480,11 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_balance_query_incorrect_network() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
         get_balance_query(GetBalanceRequest {
             address: String::from(""),
             network: NetworkInRequest::Testnet,
@@ -495,11 +496,11 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_utxos_incorrect_network() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
         get_utxos(GetUtxosRequest {
             address: String::from(""),
             network: NetworkInRequest::Testnet,
@@ -511,11 +512,11 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_utxos_query_incorrect_network() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
         get_utxos_query(GetUtxosRequest {
             address: String::from(""),
             network: NetworkInRequest::Testnet,
@@ -527,11 +528,11 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_current_fee_percentiles_incorrect_network() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
             network: NetworkInRequest::Testnet,
         });
@@ -540,11 +541,11 @@ mod test {
     #[test]
     #[should_panic(expected = "Network must be mainnet. Found testnet")]
     fn get_block_headers_incorrect_network() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             ..Default::default()
-        }));
+        })));
         get_block_headers(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
@@ -569,12 +570,12 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_balance_access_disabled() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
         get_balance(GetBalanceRequest {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
@@ -586,12 +587,12 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_balance_query_access_disabled() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
         get_balance_query(GetBalanceRequest {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
@@ -603,12 +604,12 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_access_disabled() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
         get_utxos(GetUtxosRequest {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
@@ -620,12 +621,12 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_block_headers_access_disabled() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
         get_block_headers(GetBlockHeadersRequest {
             start_height: 3,
             end_height: None,
@@ -637,12 +638,12 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_utxos_query_access_disabled() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
         get_utxos_query(GetUtxosRequest {
             address: String::from(""),
             network: NetworkInRequest::Mainnet,
@@ -654,12 +655,12 @@ mod test {
     #[test]
     #[should_panic(expected = "Bitcoin API is disabled")]
     fn get_current_fee_percentiles_access_disabled() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(Network::Mainnet),
             api_access: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
         get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
             network: NetworkInRequest::Mainnet,
         });
@@ -667,19 +668,19 @@ mod test {
 
     #[test]
     fn init_sets_syncing_flag() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             syncing: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
 
         with_state(|s| {
             assert_eq!(s.syncing_state.syncing, Flag::Disabled);
         });
 
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             syncing: Some(Flag::Enabled),
             ..Default::default()
-        }));
+        })));
 
         with_state(|s| {
             assert_eq!(s.syncing_state.syncing, Flag::Enabled);
@@ -688,19 +689,19 @@ mod test {
 
     #[test]
     fn init_sets_disable_api_if_not_fully_synced() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             disable_api_if_not_fully_synced: Some(Flag::Disabled),
             ..Default::default()
-        }));
+        })));
 
         with_state(|s| {
             assert_eq!(s.disable_api_if_not_fully_synced, Flag::Disabled);
         });
 
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             disable_api_if_not_fully_synced: Some(Flag::Enabled),
             ..Default::default()
-        }));
+        })));
 
         with_state(|s| {
             assert_eq!(s.disable_api_if_not_fully_synced, Flag::Enabled);
@@ -710,16 +711,28 @@ mod test {
     #[test]
     #[should_panic]
     fn init_panics_with_upgrade_args() {
-        init(CanisterArg::Upgrade(SetConfigRequest::default()));
+        init(Some(CanisterArg::Upgrade(SetConfigRequest::default())));
+    }
+
+    #[test]
+    fn init_with_none_uses_defaults() {
+        init(None);
+
+        let config = get_config();
+        let default_config = Config::from(InitConfig::default());
+        assert_eq!(config.stability_threshold, default_config.stability_threshold);
+        assert_eq!(config.network, default_config.network);
+        assert_eq!(config.syncing, default_config.syncing);
+        assert_eq!(config.api_access, default_config.api_access);
     }
 
     #[test]
     fn post_upgrade_ignores_init_args() {
-        init(CanisterArg::Init(InitConfig {
+        init(Some(CanisterArg::Init(InitConfig {
             stability_threshold: Some(100),
             network: Some(Network::Regtest),
             ..Default::default()
-        }));
+        })));
 
         pre_upgrade();
 
@@ -747,11 +760,11 @@ mod test {
             (Network::Regtest, Some(custom.clone()), custom),
         ];
         for (network, provided_fees, expected_fees) in test_cases {
-            init(CanisterArg::Init(InitConfig {
+            init(Some(CanisterArg::Init(InitConfig {
                 network: Some(network),
                 fees: provided_fees.clone(),
                 ..Default::default()
-            }));
+            })));
 
             with_state(|s| assert_eq!(s.fees, expected_fees));
         }

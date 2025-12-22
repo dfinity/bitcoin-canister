@@ -91,7 +91,7 @@ mod test {
     #[test]
     fn test_set_api_access_updates_state() {
         // Arrange
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
         assert_eq!(with_state(|s| s.api_access), Flag::Enabled);
 
         // Act
@@ -107,7 +107,7 @@ mod test {
     #[test]
     fn test_set_api_access_does_not_update_state() {
         // Arrange
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
         assert_eq!(with_state(|s| s.syncing_state.syncing), Flag::Enabled);
 
         // Act
@@ -122,7 +122,7 @@ mod test {
 
     #[test]
     fn test_set_stability_threshold() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         proptest!(|(
             stability_threshold in 0..150u128,
@@ -141,7 +141,7 @@ mod test {
 
     #[test]
     fn test_set_syncing() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -155,7 +155,7 @@ mod test {
 
     #[test]
     fn test_set_fees() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         proptest!(|(
             get_utxos_base in 0..1_000_000_000_000u128,
@@ -197,7 +197,7 @@ mod test {
 
     #[test]
     fn test_set_config_no_verification_for_setting_api_access() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -211,7 +211,7 @@ mod test {
 
     #[test]
     fn test_set_disable_api_if_not_fully_synced() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -225,7 +225,7 @@ mod test {
 
     #[test]
     fn test_set_watchdog_canister() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         for watchdog_canister in [
             None,
@@ -244,7 +244,7 @@ mod test {
 
     #[test]
     fn test_set_lazily_evaluate_fee_percentiles() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {
@@ -258,7 +258,7 @@ mod test {
 
     #[test]
     fn test_set_burn_cycles() {
-        init(CanisterArg::Init(InitConfig::default()));
+        init(None);
 
         for flag in &[Flag::Enabled, Flag::Disabled] {
             set_config_no_verification(SetConfigRequest {

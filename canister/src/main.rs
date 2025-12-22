@@ -20,7 +20,7 @@ fn hook() {
 }
 
 #[init]
-fn init(init_config: CanisterArg) {
+fn init(init_config: Option<CanisterArg>) {
     hook();
     ic_btc_canister::init(init_config);
 }

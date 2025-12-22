@@ -1358,7 +1358,7 @@ mod test {
         let chain = BlockChainBuilder::new(6).build();
         let fork = BlockChainBuilder::fork(&chain[0], 5).build();
 
-        crate::init(CanisterArg::Init(InitConfig::default()));
+        crate::init(None);
 
         // Insert the blocks.
         with_state_mut(|state| {
