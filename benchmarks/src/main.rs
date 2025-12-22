@@ -2,7 +2,7 @@ use bitcoin::consensus::Decodable;
 use bitcoin::constants::genesis_block;
 use bitcoin::{block::Header, consensus::Encodable, Block as BitcoinBlock};
 use canbench_rs::{bench, bench_fn, BenchResult};
-use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
+use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut, CanisterArg};
 use ic_btc_interface::{InitConfig, Network};
 use ic_btc_test_utils::{build_regtest_chain, BlockBuilder, TransactionBuilder};
 use ic_btc_types::Block;
@@ -39,11 +39,11 @@ fn init() {
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
 #[bench(raw)]
 fn insert_300_blocks() -> BenchResult {
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(Network::Testnet),
         stability_threshold: Some(144),
         ..Default::default()
-    });
+    }));
 
     bench_fn(|| {
         with_state_mut(|s| {
@@ -61,11 +61,11 @@ fn insert_300_blocks() -> BenchResult {
 // Benchmarks gettings the metrics when there are many unstable blocks..
 #[bench(raw)]
 fn get_metrics() -> BenchResult {
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(Network::Testnet),
         stability_threshold: Some(3000),
         ..Default::default()
-    });
+    }));
 
     with_state_mut(|s| {
         for i in 0..3000 {
@@ -88,10 +88,10 @@ fn insert_block_headers() -> BenchResult {
     let blocks_to_insert = 1000;
     let block_headers_to_insert = 100;
 
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(Network::Testnet),
         ..Default::default()
-    });
+    }));
 
     // Insert the blocks.
     with_state_mut(|s| {
@@ -128,10 +128,10 @@ fn insert_block_headers() -> BenchResult {
 // Inserts the same block headers multiple times.
 #[bench(raw)]
 fn insert_block_headers_multiple_times() -> BenchResult {
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(Network::Testnet),
         ..Default::default()
-    });
+    }));
 
     // Compute the next block headers.
     let next_block_headers = TESTNET_BLOCKS.with(|b| {
@@ -170,10 +170,10 @@ fn insert_block_with_1k_transactions() -> BenchResult {
 fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
     let blocks = build_regtest_chain(3000, 100);
 
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(Network::Regtest),
         ..Default::default()
-    });
+    }));
 
     // Insert the blocks.
     with_state_mut(|s| {
@@ -244,10 +244,10 @@ fn bench_insert_block(num_transactions: u32) -> BenchResult {
     }
     let [block_1, block_2] = mini_chain(num_transactions);
 
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(Network::Regtest),
         ..Default::default()
-    });
+    }));
 
     with_state_mut(|s| {
         ic_btc_canister::state::insert_block(s, block_1).unwrap();
