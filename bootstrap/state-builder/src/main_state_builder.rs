@@ -13,7 +13,7 @@ use ic_btc_canister::{
     pre_upgrade,
     types::{BlockHeaderBlob, TxOut},
     unstable_blocks::{self, UnstableBlocks},
-    with_state, with_state_mut,
+    with_state, with_state_mut, CanisterArg,
 };
 use ic_btc_interface::{Flag, Height, InitConfig, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
@@ -76,14 +76,14 @@ fn main() {
             .expect("canister state file must be available"),
     ));
 
-    ic_btc_canister::init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(args.network),
         stability_threshold: Some(args.stability_threshold),
         api_access: Some(Flag::Enabled),
         burn_cycles: Some(Flag::Enabled),
         lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
         ..Default::default()
-    });
+    }));
 
     // Load large UTXOs.
     let mut p = args.canister_state_dir.clone();
