@@ -14,11 +14,11 @@ dfx start --background --clean
 dfx deploy --no-wallet e2e-scenario-1
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
-dfx deploy --no-wallet bitcoin --argument "(record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
-})"
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_stable_height 3 60
