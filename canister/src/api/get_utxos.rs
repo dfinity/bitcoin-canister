@@ -300,11 +300,11 @@ mod test {
 
     #[test]
     fn get_utxos_malformed_address() {
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(Network::Mainnet),
             ..Default::default()
-        })));
+        }));
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: String::from("not an address"),
@@ -316,11 +316,11 @@ mod test {
 
     #[test]
     fn get_utxos_query_malformed_address() {
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(Network::Mainnet),
             ..Default::default()
-        })));
+        }));
         assert_eq!(
             get_utxos_query(GetUtxosRequest {
                 address: String::from("not an address"),
@@ -334,11 +334,11 @@ mod test {
     fn genesis_block_only() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         assert_eq!(
             get_utxos(GetUtxosRequest {
@@ -359,11 +359,11 @@ mod test {
     fn single_block() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         // Generate an address.
         let address = random_p2pkh_address(btc_network).into();
@@ -408,11 +408,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         // Generate addresses.
         let address_1 = random_p2tr_address(btc_network).into();
@@ -523,10 +523,10 @@ mod test {
 
     // Tests that the provided address is supported and its UTXOs can be fetched.
     fn supports_address(network: Network, address: Address) {
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         // Create a genesis block where 1000 satoshis are given to the address.
         let coinbase_tx = TransactionBuilder::coinbase()
@@ -570,11 +570,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         // Generate addresses.
         let address_1 = random_p2pkh_address(btc_network).into();
@@ -684,11 +684,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         let address: Address = random_p2pkh_address(btc_network).into();
 
@@ -739,11 +739,11 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(2),
             network: Some(Network::Regtest),
             ..Default::default()
-        })));
+        }));
 
         with_state_mut(|state| {
             state::insert_block(state, block_0.clone()).unwrap();
@@ -965,11 +965,11 @@ mod test {
             .with_transaction(tx.clone())
             .build();
 
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(network),
             ..Default::default()
-        })));
+        }));
 
         with_state_mut(|state| {
             state::insert_block(state, block_0.clone()).unwrap();
@@ -1242,14 +1242,14 @@ mod test {
 
     #[test]
     fn charges_cycles() {
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_utxos_base: 10,
                 get_utxos_maximum: 100,
                 ..Default::default()
             }),
             ..Default::default()
-        })));
+        }));
 
         get_utxos(GetUtxosRequest {
             address: random_p2pkh_address(bitcoin::Network::Regtest).to_string(),
@@ -1262,7 +1262,7 @@ mod test {
 
     #[test]
     fn charges_cycles_capped_at_maximum() {
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_utxos_base: 10,
                 get_utxos_cycles_per_ten_instructions: 10,
@@ -1270,7 +1270,7 @@ mod test {
                 ..Default::default()
             }),
             ..Default::default()
-        })));
+        }));
 
         runtime::set_performance_counter_step(1000);
         runtime::inc_performance_counter();
@@ -1287,7 +1287,7 @@ mod test {
 
     #[test]
     fn charges_cycles_per_instructions() {
-        crate::init(Some(CanisterArg::Init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_utxos_base: 10,
                 get_utxos_cycles_per_ten_instructions: 10,
@@ -1295,7 +1295,7 @@ mod test {
                 ..Default::default()
             }),
             ..Default::default()
-        })));
+        }));
 
         // Set the number of instructions consumed.
         runtime::set_performance_counter_step(1000);

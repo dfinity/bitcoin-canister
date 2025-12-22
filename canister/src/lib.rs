@@ -120,10 +120,14 @@ pub fn init(canister_arg: Option<CanisterArg>) {
     with_state_mut(|s| s.blocks_source = config.blocks_source);
     with_state_mut(|s| s.api_access = config.api_access);
     with_state_mut(|s| s.syncing_state.syncing = config.syncing);
-    with_state_mut(|s| s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced);
+    with_state_mut(|s| {
+        s.disable_api_if_not_fully_synced = config.disable_api_if_not_fully_synced
+    });
     with_state_mut(|s| s.watchdog_canister = config.watchdog_canister);
     with_state_mut(|s| s.burn_cycles = config.burn_cycles);
-    with_state_mut(|s| s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles);
+    with_state_mut(|s| {
+        s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles
+    });
     with_state_mut(|s| s.fees = config.fees);
 
     print("...init completed!");
@@ -716,10 +720,7 @@ mod test {
 
         let config = get_config();
         let default_config = Config::from(InitConfig::default());
-        assert_eq!(
-            config.stability_threshold,
-            default_config.stability_threshold
-        );
+        assert_eq!(config.stability_threshold, default_config.stability_threshold);
         assert_eq!(config.network, default_config.network);
         assert_eq!(config.syncing, default_config.syncing);
         assert_eq!(config.api_access, default_config.api_access);
