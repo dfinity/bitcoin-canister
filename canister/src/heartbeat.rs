@@ -336,6 +336,7 @@ mod test {
             GetSuccessorsPartialResponse,
         },
         utxo_set::IngestingBlock,
+        CanisterArg,
     };
     use bitcoin::block::Header;
     use ic_btc_interface::{InitConfig, Network};
@@ -362,11 +363,11 @@ mod test {
     async fn fetches_blocks_and_processes_response() {
         let network = Network::Regtest;
 
-        init(InitConfig {
+        init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         let block = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
@@ -406,11 +407,11 @@ mod test {
     async fn does_not_fetch_blocks_if_syncing_is_disabled() {
         let network = Network::Regtest;
 
-        init(InitConfig {
+        init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         with_state_mut(|s| {
             s.syncing_state.syncing = Flag::Disabled;
@@ -441,11 +442,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        init(InitConfig {
+        init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         // Setup a chain of two blocks.
         let address: Address = random_p2pkh_address(btc_network).into();
@@ -530,11 +531,11 @@ mod test {
         // The number of inputs/outputs in a transaction.
         let tx_cardinality = 6;
 
-        init(InitConfig {
+        init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         let address_1 = random_p2pkh_address(btc_network).into();
         let address_2 = random_p2pkh_address(btc_network).into();
@@ -701,11 +702,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        init(InitConfig {
+        init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(0),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         let address = random_p2pkh_address(btc_network).into();
         let block = BlockBuilder::with_prev_header(genesis_block(network).header())
@@ -769,7 +770,7 @@ mod test {
 
     #[async_std::test]
     async fn handles_block_deserialize_errors() {
-        init(InitConfig::default());
+        init(CanisterArg::Init(InitConfig::default()));
 
         runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
@@ -802,7 +803,7 @@ mod test {
 
     #[async_std::test]
     async fn handles_blocks_that_dont_extend_tree() {
-        init(InitConfig::default());
+        init(CanisterArg::Init(InitConfig::default()));
 
         let mut block_bytes = vec![];
         genesis_block(Network::Regtest)
@@ -839,10 +840,10 @@ mod test {
     async fn block_headers_are_not_inserted_above_instructions_threshold() {
         let network = Network::Regtest;
 
-        init(InitConfig {
+        init(CanisterArg::Init(InitConfig {
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         let next_block_headers = BlockChainBuilder::new(50)
             .build()

@@ -168,7 +168,7 @@ mod test {
         genesis_block, heartbeat, state,
         test_utils::{BlockBuilder, TransactionBuilder},
         types::into_bitcoin_network,
-        with_state,
+        with_state, CanisterArg,
     };
     use async_std::task::block_on;
     use bitcoin::Witness;
@@ -301,11 +301,11 @@ mod test {
     }
 
     fn init_state(blocks: Vec<Block>, stability_threshold: u128) {
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(stability_threshold),
             network: Some(Network::Regtest),
             ..Default::default()
-        });
+        }));
 
         with_state_mut(|state| {
             for (i, block) in blocks.into_iter().enumerate() {
@@ -393,11 +393,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(stability_threshold),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         // Create a block with a transaction that has fees.
         let block_0 = {
@@ -585,13 +585,13 @@ mod test {
 
     #[test]
     fn charges_cycles() {
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_current_fee_percentiles: 10,
                 ..Default::default()
             }),
             ..Default::default()
-        });
+        }));
 
         get_current_fee_percentiles();
 

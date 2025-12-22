@@ -1,7 +1,8 @@
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
+use ic_btc_canister::CanisterArg;
 use ic_btc_interface::{
     Config, GetBalanceRequest, GetBlockHeadersRequest, GetBlockHeadersResponse,
-    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse, InitConfig,
+    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
     MillisatoshiPerByte, Satoshi, SendTransactionRequest, SetConfigRequest,
 };
 use ic_cdk::{
@@ -19,7 +20,7 @@ fn hook() {
 }
 
 #[init]
-fn init(init_config: InitConfig) {
+fn init(init_config: CanisterArg) {
     hook();
     ic_btc_canister::init(init_config);
 }
@@ -30,7 +31,7 @@ fn pre_upgrade() {
 }
 
 #[post_upgrade]
-fn post_upgrade(config_update: Option<SetConfigRequest>) {
+fn post_upgrade(config_update: Option<CanisterArg>) {
     hook();
     ic_btc_canister::post_upgrade(config_update);
 }

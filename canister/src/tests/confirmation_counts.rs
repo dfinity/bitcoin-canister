@@ -4,6 +4,7 @@ use crate::{
     runtime::{set_successors_responses, GetSuccessorsReply},
     test_utils::BlockChainBuilder,
     types::{GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest},
+    CanisterArg,
 };
 use async_std::task::block_on;
 use ic_btc_interface::{Network, UtxosFilter};
@@ -18,11 +19,11 @@ proptest! {
     fn single_chain(
         chain_len in 1..10u32,
     ) {
-        crate::init(crate::InitConfig {
+        crate::init(CanisterArg::Init(crate::InitConfig {
             stability_threshold: Some(10),
             network: Some(Network::Regtest),
             ..Default::default()
-        });
+        }));
 
         // Creates a single chain.
         let chain = BlockChainBuilder::new(chain_len).build();
@@ -68,11 +69,11 @@ proptest! {
         // The height of the block present in the fork.
         let fork_height: u32 = fork_idx as u32 + fork_len;
 
-        crate::init(crate::InitConfig {
+        crate::init(CanisterArg::Init(crate::InitConfig {
             stability_threshold: Some(10),
             network: Some(Network::Regtest),
             ..Default::default()
-        });
+        }));
 
         // Creates a chain with the fork.
         let chain = BlockChainBuilder::new(chain_len).build();
@@ -114,11 +115,11 @@ proptest! {
 
 #[async_std::test]
 async fn multiple_forks() {
-    crate::init(crate::InitConfig {
+    crate::init(CanisterArg::Init(crate::InitConfig {
         stability_threshold: Some(10),
         network: Some(Network::Regtest),
         ..Default::default()
-    });
+    }));
 
     // Create a main chain that has two forks.
     let a = BlockChainBuilder::new(7).build();

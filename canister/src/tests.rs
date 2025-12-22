@@ -9,7 +9,7 @@ use crate::{
         GetSuccessorsCompleteResponse, GetSuccessorsResponse, GetUtxosRequest,
     },
     utxo_set::{IngestingBlock, DUPLICATE_TX_IDS},
-    verify_synced, with_state, SYNCED_THRESHOLD,
+    verify_synced, with_state, CanisterArg, SYNCED_THRESHOLD,
 };
 use bitcoin::{
     block::Header,
@@ -156,11 +156,11 @@ fn verify_block_header(state: &crate::State, height: u32, block_hash: &str) {
 
 #[async_std::test]
 async fn mainnet_100k_blocks() {
-    crate::init(crate::InitConfig {
+    crate::init(CanisterArg::Init(crate::InitConfig {
         stability_threshold: Some(10),
         network: Some(Network::Mainnet),
         ..Default::default()
-    });
+    }));
 
     // Set a reasonable performance counter step to trigger time-slicing.
     runtime::set_performance_counter_step(100_000);
@@ -399,11 +399,11 @@ async fn mainnet_100k_blocks() {
 
 #[async_std::test]
 async fn testnet_10k_blocks() {
-    crate::init(crate::InitConfig {
+    crate::init(CanisterArg::Init(crate::InitConfig {
         stability_threshold: Some(2),
         network: Some(Network::Testnet),
         ..Default::default()
-    });
+    }));
 
     // Set a reasonable performance counter step to trigger time-slicing.
     runtime::set_performance_counter_step(100_000);
@@ -457,11 +457,11 @@ async fn testnet_10k_blocks() {
 async fn time_slices_large_block_with_multiple_transactions() {
     let network = Network::Regtest;
     let btc_network = into_bitcoin_network(network);
-    init(InitConfig {
+    init(CanisterArg::Init(InitConfig {
         stability_threshold: Some(0),
         network: Some(network),
         ..Default::default()
-    });
+    }));
 
     let address_1 = random_p2pkh_address(btc_network).into();
     let address_2 = random_p2pkh_address(btc_network).into();
@@ -565,7 +565,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
 #[async_std::test]
 async fn test_rejections_counting() {
-    crate::init(InitConfig::default());
+    crate::init(CanisterArg::Init(InitConfig::default()));
 
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
@@ -606,11 +606,11 @@ fn get_chain_with_n_block_and_header_blobs(
 async fn test_syncing_with_next_block_headers() {
     let network = Network::Regtest;
 
-    init(InitConfig {
+    init(CanisterArg::Init(InitConfig {
         stability_threshold: Some(2),
         network: Some(network),
         ..Default::default()
-    });
+    }));
 
     let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
 
@@ -761,10 +761,10 @@ async fn test_syncing_with_next_block_headers() {
 
 #[async_std::test]
 async fn cycles_burnt_are_tracked_in_metrics() {
-    crate::init(InitConfig {
+    crate::init(CanisterArg::Init(InitConfig {
         burn_cycles: Some(Flag::Enabled),
         ..Default::default()
-    });
+    }));
 
     let cycles_burnt_0 = crate::with_state(|state| state.metrics.cycles_burnt);
 
@@ -796,10 +796,10 @@ async fn cycles_burnt_are_tracked_in_metrics() {
 
 #[async_std::test]
 async fn cycles_are_not_burnt_when_flag_is_disabled() {
-    crate::init(InitConfig {
+    crate::init(CanisterArg::Init(InitConfig {
         burn_cycles: Some(Flag::Disabled),
         ..Default::default()
-    });
+    }));
 
     assert_eq!(
         crate::with_state(|state| state.metrics.cycles_burnt),
@@ -881,11 +881,11 @@ async fn fee_percentiles_evaluation_helper() {
 
 #[async_std::test]
 async fn fee_percentiles_are_evaluated_lazily() {
-    crate::init(InitConfig {
+    crate::init(CanisterArg::Init(InitConfig {
         lazily_evaluate_fee_percentiles: Some(Flag::Enabled),
         stability_threshold: Some(0),
         ..Default::default()
-    });
+    }));
 
     fee_percentiles_evaluation_helper().await;
 
@@ -896,11 +896,11 @@ async fn fee_percentiles_are_evaluated_lazily() {
 
 #[async_std::test]
 async fn fee_percentiles_are_evaluated_eagerly() {
-    crate::init(InitConfig {
+    crate::init(CanisterArg::Init(InitConfig {
         lazily_evaluate_fee_percentiles: Some(Flag::Disabled),
         stability_threshold: Some(0),
         ..Default::default()
-    });
+    }));
 
     fee_percentiles_evaluation_helper().await;
 

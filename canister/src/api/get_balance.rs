@@ -110,7 +110,7 @@ mod test {
         genesis_block, state,
         test_utils::{BlockBuilder, TransactionBuilder},
         types::into_bitcoin_network,
-        with_state_mut,
+        with_state_mut, CanisterArg,
     };
     use ic_btc_interface::{Fees, InitConfig, Network};
     use ic_btc_test_utils::random_p2pkh_address;
@@ -118,11 +118,11 @@ mod test {
 
     #[test]
     fn get_balance_error_on_malformed_address() {
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(Network::Mainnet),
             ..Default::default()
-        });
+        }));
 
         assert_eq!(
             get_balance(GetBalanceRequest {
@@ -135,11 +135,11 @@ mod test {
 
     #[test]
     fn get_balance_query_error_on_malformed_address() {
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(1),
             network: Some(Network::Mainnet),
             ..Default::default()
-        });
+        }));
 
         assert_eq!(
             get_balance_query(GetBalanceRequest {
@@ -154,11 +154,11 @@ mod test {
     fn retrieves_the_balance_of_address() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         // Create a block where 1000 satoshis are given to an address.
         let address = random_p2pkh_address(btc_network).into();
@@ -200,11 +200,11 @@ mod test {
     fn error_on_very_large_confirmations() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         let address: Address = random_p2pkh_address(btc_network).into();
 
@@ -235,11 +235,11 @@ mod test {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             stability_threshold: Some(2),
             network: Some(network),
             ..Default::default()
-        });
+        }));
 
         // Generate addresses.
         let address_1 = random_p2pkh_address(btc_network).into();
@@ -315,13 +315,13 @@ mod test {
     fn charges_cycles() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
-        crate::init(InitConfig {
+        crate::init(CanisterArg::Init(InitConfig {
             fees: Some(Fees {
                 get_balance: 10,
                 ..Default::default()
             }),
             ..Default::default()
-        });
+        }));
 
         get_balance(GetBalanceRequest {
             address: random_p2pkh_address(btc_network).to_string(),
