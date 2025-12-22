@@ -17,12 +17,12 @@ dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 # And enabling 'disable_api_if_not_fully_synced'. 
-dfx deploy --no-wallet bitcoin --argument "(record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
   disable_api_if_not_fully_synced = opt variant { enabled };
-})"
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 # The number of next block headers should be 3, the canister

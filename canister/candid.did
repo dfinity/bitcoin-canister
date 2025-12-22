@@ -128,10 +128,10 @@ type init_config = record {
 
 type canister_arg = variant {
     init : init_config;
-    upgrade : opt set_config_request;
+    upgrade : set_config_request;
 };
 
-service bitcoin : (canister_arg) -> {
+service bitcoin : (opt canister_arg) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
   bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
