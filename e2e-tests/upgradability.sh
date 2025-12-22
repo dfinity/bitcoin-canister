@@ -61,9 +61,6 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
-# Update candid to make the post_upgrade accept a set_config_request.
-sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ../canister/candid.did
-
 echo "Deploy new version of canister..."
 dfx deploy --no-wallet bitcoin --argument "(null)"
 
@@ -75,8 +72,5 @@ echo "Upgrade canister to own version..."
 # Redeploy the canister to test the pre-upgrade hook.
 dfx deploy --upgrade-unchanged bitcoin --argument "(null)"
 dfx canister start bitcoin
-
-# Reset candid init args
-sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ../canister/candid.did
 
 echo "SUCCESS"
