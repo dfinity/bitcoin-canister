@@ -40,9 +40,9 @@ FEES="record {
   get_block_headers_maximum = 0 : nat;
 }";
 
-dfx deploy --upgrade-unchanged bitcoin --argument "opt (record {
+dfx deploy --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
   fees = opt $FEES;
-})"
+}})"
 
 # Verify the fees have been updated.
 CONFIG=$(dfx canister call bitcoin get_config --query)
