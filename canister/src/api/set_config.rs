@@ -83,9 +83,9 @@ fn verify_caller() {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{init, with_state, CanisterArg};
+    use crate::{init, with_state};
     use candid::Principal;
-    use ic_btc_interface::{Fees, Flag, InitConfig};
+    use ic_btc_interface::{Fees, Flag};
     use proptest::prelude::*;
 
     #[test]
