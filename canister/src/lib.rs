@@ -708,6 +708,31 @@ mod test {
     }
 
     #[test]
+    #[should_panic]
+    fn init_panics_with_upgrade_args() {
+        init(CanisterArg::Upgrade(SetConfigRequest::default()));
+    }
+
+    #[test]
+    fn post_upgrade_ignores_init_args() {
+        init(CanisterArg::Init(InitConfig {
+            stability_threshold: Some(100),
+            network: Some(Network::Regtest),
+            ..Default::default()
+        }));
+
+        pre_upgrade();
+
+        post_upgrade(Some(CanisterArg::Init(InitConfig {
+            stability_threshold: Some(200), // Different value
+            network: Some(Network::Regtest),
+            ..Default::default()
+        })));
+
+        assert_eq!(get_config().stability_threshold, 100);
+    }
+
+    #[test]
     fn init_applies_default_fees_when_not_explicitly_provided() {
         let custom = Fees {
             get_utxos_base: 123,
