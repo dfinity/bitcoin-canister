@@ -2,8 +2,8 @@ use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_canister::CanisterArg;
 use ic_btc_interface::{
     Config, GetBalanceRequest, GetBlockHeadersRequest, GetBlockHeadersResponse,
-    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
-    MillisatoshiPerByte, Satoshi, SendTransactionRequest, SetConfigRequest,
+    GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse, MillisatoshiPerByte,
+    Satoshi, SendTransactionRequest, SetConfigRequest,
 };
 use ic_cdk::{
     api::{msg_reject, msg_reply},
