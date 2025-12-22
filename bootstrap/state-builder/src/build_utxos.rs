@@ -76,11 +76,11 @@ fn main() {
     let utxos_file = File::open(args.utxos_dump_path).unwrap();
     let reader = BufReader::new(utxos_file);
 
-    ic_btc_canister::init(Some(CanisterArg::Init(InitConfig {
+    ic_btc_canister::init(CanisterArg::Init(InitConfig {
         network: Some(args.network),
         api_access: Some(Flag::Disabled),
         ..Default::default()
-    })));
+    }));
 
     with_state_mut(|s| {
         for (i, line) in reader.lines().enumerate() {

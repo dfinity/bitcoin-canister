@@ -770,7 +770,7 @@ mod test {
 
     #[async_std::test]
     async fn handles_block_deserialize_errors() {
-        init(None);
+        init(CanisterArg::Init(InitConfig::default()));
 
         runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
             GetSuccessorsCompleteResponse {
@@ -803,7 +803,7 @@ mod test {
 
     #[async_std::test]
     async fn handles_blocks_that_dont_extend_tree() {
-        init(None);
+        init(CanisterArg::Init(InitConfig::default()));
 
         let mut block_bytes = vec![];
         genesis_block(Network::Regtest)

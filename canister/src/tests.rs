@@ -565,7 +565,7 @@ async fn time_slices_large_block_with_multiple_transactions() {
 
 #[async_std::test]
 async fn test_rejections_counting() {
-    crate::init(None);
+    crate::init(CanisterArg::Init(InitConfig::default()));
 
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
