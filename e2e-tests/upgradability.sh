@@ -47,7 +47,7 @@ download_latest_release
 dfx start --background --clean
 
 # Deploy the latest release.
-dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(record {})"
+dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "()"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
 
@@ -62,7 +62,7 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
 fi
 
 echo "Deploy new version of canister..."
-dfx deploy --no-wallet bitcoin --argument "(variant {init})"
+dfx deploy --no-wallet bitcoin --argument "()"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
@@ -70,7 +70,7 @@ dfx canister stop bitcoin
 echo "Upgrade canister to own version..."
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
+dfx deploy --upgrade-unchanged bitcoin --argument "()"
 dfx canister start bitcoin
 
 echo "SUCCESS"
