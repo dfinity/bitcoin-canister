@@ -18,7 +18,7 @@ dfx start --background --clean
 dfx deploy --no-wallet e2e-scenario-2
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
-dfx deploy --no-wallet bitcoin --argument "(opt variant {init = record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-scenario-2)\";
