@@ -1,3 +1,4 @@
+use ic_btc_canister::runtime::print;
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_canister::CanisterArg;
 use ic_btc_interface::{
@@ -20,9 +21,16 @@ fn hook() {
 }
 
 #[init]
-fn init(init_config: CanisterArg) {
+fn init(canister_arg: CanisterArg) {
     hook();
-    ic_btc_canister::init(init_config);
+    match canister_arg {
+        CanisterArg::Init(init_config) => {
+            ic_btc_canister::init(init_config);
+        }
+        CanisterArg::Upgrade(_) => {
+            panic!("expected Init arguments got Upgrade arguments");
+        }
+    }
 }
 
 #[pre_upgrade]
@@ -31,8 +39,18 @@ fn pre_upgrade() {
 }
 
 #[post_upgrade]
-fn post_upgrade(config_update: Option<CanisterArg>) {
+fn post_upgrade(canister_arg: Option<CanisterArg>) {
     hook();
+    let mut config_update: Option<SetConfigRequest> = None;
+    if let Some(canister_arg) = canister_arg {
+        config_update = match canister_arg {
+            CanisterArg::Init(_) => {
+                print("Trying to upgrade the canister with init args, ignoring...");
+                None
+            }
+            CanisterArg::Upgrade(args) => args,
+        }
+    }
     ic_btc_canister::post_upgrade(config_update);
 }
 
@@ -152,6 +170,9 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{init, post_upgrade, pre_upgrade};
+    use ic_btc_canister::CanisterArg;
+    use ic_btc_interface::{InitConfig, Network, SetConfigRequest};
 
     #[test]
     fn test_candid_interface_compatibility() {
@@ -169,5 +190,30 @@ mod tests {
             CandidSource::File(candid_interface.as_path()),
         )
         .expect("The canister implementation is not compatible with the candid.did file");
+    }
+
+    #[test]
+    #[should_panic]
+    fn init_panics_with_upgrade_args() {
+        init(CanisterArg::Upgrade(Some(SetConfigRequest::default())));
+    }
+
+    #[test]
+    fn post_upgrade_ignores_init_args() {
+        init(CanisterArg::Init(InitConfig {
+            stability_threshold: Some(100),
+            network: Some(Network::Regtest),
+            ..Default::default()
+        }));
+
+        pre_upgrade();
+
+        post_upgrade(Some(CanisterArg::Init(InitConfig {
+            stability_threshold: Some(200), // Different value
+            network: Some(Network::Regtest),
+            ..Default::default()
+        })));
+
+        assert_eq!(ic_btc_canister::get_config().stability_threshold, 100);
     }
 }
