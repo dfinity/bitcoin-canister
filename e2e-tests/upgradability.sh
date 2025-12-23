@@ -62,7 +62,7 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
 fi
 
 echo "Deploy new version of canister..."
-dfx deploy --no-wallet bitcoin --argument "(variant {init})"
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin

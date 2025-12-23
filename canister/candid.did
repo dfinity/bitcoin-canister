@@ -127,8 +127,8 @@ type init_config = record {
 };
 
 type canister_arg = variant {
-    init : init_config;
-    upgrade : opt set_config_request;
+  init : init_config;
+  upgrade : opt set_config_request;
 };
 
 service bitcoin : (canister_arg) -> {
