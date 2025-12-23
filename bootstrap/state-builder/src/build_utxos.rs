@@ -9,7 +9,7 @@
 use bitcoin::{hashes::Hash, Address, Txid as BitcoinTxid};
 use clap::Parser;
 use ic_btc_canister::types::into_bitcoin_network;
-use ic_btc_canister::{types::TxOut, with_state, with_state_mut, CanisterArg};
+use ic_btc_canister::{types::TxOut, with_state, with_state_mut};
 use ic_btc_interface::{Flag, InitConfig, Network};
 use ic_btc_types::{OutPoint, Txid};
 use ic_stable_structures::{
@@ -76,11 +76,11 @@ fn main() {
     let utxos_file = File::open(args.utxos_dump_path).unwrap();
     let reader = BufReader::new(utxos_file);
 
-    ic_btc_canister::init(CanisterArg::Init(InitConfig {
+    ic_btc_canister::init(InitConfig {
         network: Some(args.network),
         api_access: Some(Flag::Disabled),
         ..Default::default()
-    }));
+    });
 
     with_state_mut(|s| {
         for (i, line) in reader.lines().enumerate() {
