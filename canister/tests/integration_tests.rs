@@ -1,4 +1,5 @@
 use candid::{encode_one, Encode, Principal};
+use ic_btc_canister::CanisterArg;
 use ic_btc_interface::InitConfig;
 use ic_cdk::management_canister::CanisterId;
 use pocket_ic::{ErrorCode, PocketIc, PocketIcBuilder, RejectResponse};
@@ -40,7 +41,7 @@ fn with_bitcoin_canister<F: Fn(PocketIc, CanisterId)>(test: F) {
     pic.install_canister(
         canister_id,
         wasm_bytes,
-        Encode!(&InitConfig::default()).unwrap(),
+        Encode!(&CanisterArg::Init(InitConfig::default())).unwrap(),
         None,
     );
 
