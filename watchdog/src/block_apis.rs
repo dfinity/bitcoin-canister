@@ -2,15 +2,15 @@ use crate::endpoints::*;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::fmt::Display;
 use std::future::Future;
 use std::pin::Pin;
 use strum::{Display, EnumIter, EnumString};
 
 pub type FetchFuture<'a> = Pin<Box<dyn Future<Output = serde_json::Value> + Send + 'a>>;
 
-pub trait BlockProvider: Display {
+pub trait BlockProvider {
     fn fetch_data(&self) -> FetchFuture<'_>;
+    fn name(&self) -> String;
 }
 
 /// APIs that serve Bitcoin block data, for legacy purpose.
@@ -135,6 +135,10 @@ impl BlockProvider for BitcoinMainnetProviderBlockApi {
             }
         })
     }
+
+    fn name(&self) -> String {
+        self.to_string()
+    }
 }
 
 /// Providers that serve testnet Bitcoin block data.
@@ -154,6 +158,10 @@ impl BlockProvider for BitcoinTestnetProviderBlockApi {
                 Self::Mempool => endpoint_mempool_height_testnet().send_request_json().await,
             }
         })
+    }
+
+    fn name(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -192,6 +200,10 @@ impl BlockProvider for DogecoinProviderBlockApi {
                 }
             }
         })
+    }
+
+    fn name(&self) -> String {
+        self.to_string()
     }
 }
 

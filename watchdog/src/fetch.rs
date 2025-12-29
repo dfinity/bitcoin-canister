@@ -83,7 +83,7 @@ async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInf
         .into_iter()
         .zip(results.into_iter())
         .map(|(provider, value)| BlockInfo {
-            provider: provider.to_string(),
+            provider: provider.name(),
             height: value["height"].as_u64(),
         })
         .collect()
