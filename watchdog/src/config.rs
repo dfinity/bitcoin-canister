@@ -342,7 +342,7 @@ mod test {
     #[test]
     fn test_canister_provider() {
         for canister in ALL_CANISTERS {
-            let provider_name = canister.provider().to_string();
+            let provider_name = canister.provider().name();
             match canister {
                 Canister::BitcoinMainnet
                 | Canister::BitcoinMainnetStaging
@@ -413,8 +413,8 @@ mod test {
             // Verify get_providers includes canister provider
             let providers = config.get_providers(canister);
             assert_eq!(providers.len(), config.explorers.len() + 1);
-            let provider_names: Vec<String> = providers.iter().map(|p| p.to_string()).collect();
-            assert!(provider_names.contains(&canister.provider().to_string()));
+            let provider_names: Vec<String> = providers.iter().map(|p| p.name()).collect();
+            assert!(provider_names.contains(&canister.provider().name()));
         }
     }
 
