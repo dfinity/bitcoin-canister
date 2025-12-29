@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use crate::endpoints::*;
+use async_trait::async_trait;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
