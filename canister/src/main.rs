@@ -1,4 +1,3 @@
-use ic_btc_canister::runtime::print;
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_canister::CanisterArg;
 use ic_btc_interface::{
@@ -45,8 +44,7 @@ fn post_upgrade(canister_arg: Option<CanisterArg>) {
     if let Some(canister_arg) = canister_arg {
         config_update = match canister_arg {
             CanisterArg::Init(_) => {
-                print("Trying to upgrade the canister with init args, ignoring...");
-                None
+                panic!("expected Upgrade arguments got Init arguments");
             }
             CanisterArg::Upgrade(args) => args,
         }
@@ -170,9 +168,9 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{init, post_upgrade, pre_upgrade};
+    use crate::{init, post_upgrade};
     use ic_btc_canister::CanisterArg;
-    use ic_btc_interface::{InitConfig, Network, SetConfigRequest};
+    use ic_btc_interface::{InitConfig, SetConfigRequest};
 
     #[test]
     fn test_candid_interface_compatibility() {
@@ -199,21 +197,8 @@ mod tests {
     }
 
     #[test]
-    fn post_upgrade_ignores_init_args() {
-        init(CanisterArg::Init(InitConfig {
-            stability_threshold: Some(100),
-            network: Some(Network::Regtest),
-            ..Default::default()
-        }));
-
-        pre_upgrade();
-
-        post_upgrade(Some(CanisterArg::Init(InitConfig {
-            stability_threshold: Some(200), // Different value
-            network: Some(Network::Regtest),
-            ..Default::default()
-        })));
-
-        assert_eq!(ic_btc_canister::get_config().stability_threshold, 100);
+    #[should_panic]
+    fn upgrade_panics_with_init_args() {
+        post_upgrade(Some(CanisterArg::Init(InitConfig::default())));
     }
 }
