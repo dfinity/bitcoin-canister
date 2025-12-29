@@ -1,15 +1,13 @@
+use async_trait::async_trait;
 use crate::endpoints::*;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::future::Future;
-use std::pin::Pin;
 use strum::{Display, EnumIter, EnumString};
 
-pub type FetchFuture<'a> = Pin<Box<dyn Future<Output = serde_json::Value> + Send + 'a>>;
-
+#[async_trait]
 pub trait BlockProvider {
-    fn fetch_data(&self) -> FetchFuture<'_>;
+    async fn fetch_data(&self) -> serde_json::Value;
     fn name(&self) -> String;
 }
 
@@ -75,65 +73,64 @@ pub enum BitcoinMainnetProviderBlockApi {
     Mempool,
 }
 
+#[async_trait]
 impl BlockProvider for BitcoinMainnetProviderBlockApi {
-    fn fetch_data(&self) -> FetchFuture<'_> {
-        Box::pin(async move {
-            match self {
-                Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
-                Self::ApiBitapsCom => {
-                    endpoint_api_bitaps_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                Self::ApiBlockchairCom => {
-                    endpoint_api_blockchair_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                Self::ApiBlockcypherCom => {
-                    endpoint_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                Self::BlockchainInfo => {
-                    let height_config = endpoint_blockchain_info_height_mainnet();
-                    let hash_config = endpoint_blockchain_info_hash_mainnet();
-                    let futures = vec![
-                        height_config.send_request_json(),
-                        hash_config.send_request_json(),
-                    ];
-                    let results = futures::future::join_all(futures).await;
-                    match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                        (Some(height), Some(hash)) => {
-                            json!({
-                                "height": height,
-                                "hash": hash,
-                            })
-                        }
-                        _ => json!({}),
-                    }
-                }
-                Self::BlockstreamInfo => {
-                    let height_config = endpoint_blockstream_info_height_mainnet();
-                    let hash_config = endpoint_blockstream_info_hash_mainnet();
-                    let futures = vec![
-                        height_config.send_request_json(),
-                        hash_config.send_request_json(),
-                    ];
-                    let results = futures::future::join_all(futures).await;
-                    match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                        (Some(height), Some(hash)) => {
-                            json!({
-                                "height": height,
-                                "hash": hash,
-                            })
-                        }
-                        _ => json!({}),
-                    }
-                }
-                Self::Mempool => endpoint_mempool_height_mainnet().send_request_json().await,
+    async fn fetch_data(&self) -> serde_json::Value {
+        match self {
+            Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
+            Self::ApiBitapsCom => {
+                endpoint_api_bitaps_com_block_mainnet()
+                    .send_request_json()
+                    .await
             }
-        })
+            Self::ApiBlockchairCom => {
+                endpoint_api_blockchair_com_block_mainnet()
+                    .send_request_json()
+                    .await
+            }
+            Self::ApiBlockcypherCom => {
+                endpoint_api_blockcypher_com_block_mainnet()
+                    .send_request_json()
+                    .await
+            }
+            Self::BlockchainInfo => {
+                let height_config = endpoint_blockchain_info_height_mainnet();
+                let hash_config = endpoint_blockchain_info_hash_mainnet();
+                let futures = vec![
+                    height_config.send_request_json(),
+                    hash_config.send_request_json(),
+                ];
+                let results = futures::future::join_all(futures).await;
+                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                    (Some(height), Some(hash)) => {
+                        json!({
+                            "height": height,
+                            "hash": hash,
+                        })
+                    }
+                    _ => json!({}),
+                }
+            }
+            Self::BlockstreamInfo => {
+                let height_config = endpoint_blockstream_info_height_mainnet();
+                let hash_config = endpoint_blockstream_info_hash_mainnet();
+                let futures = vec![
+                    height_config.send_request_json(),
+                    hash_config.send_request_json(),
+                ];
+                let results = futures::future::join_all(futures).await;
+                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
+                    (Some(height), Some(hash)) => {
+                        json!({
+                            "height": height,
+                            "hash": hash,
+                        })
+                    }
+                    _ => json!({}),
+                }
+            }
+            Self::Mempool => endpoint_mempool_height_mainnet().send_request_json().await,
+        }
     }
 
     fn name(&self) -> String {
@@ -150,14 +147,13 @@ pub enum BitcoinTestnetProviderBlockApi {
     Mempool,
 }
 
+#[async_trait]
 impl BlockProvider for BitcoinTestnetProviderBlockApi {
-    fn fetch_data(&self) -> FetchFuture<'_> {
-        Box::pin(async move {
-            match self {
-                Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
-                Self::Mempool => endpoint_mempool_height_testnet().send_request_json().await,
-            }
-        })
+    async fn fetch_data(&self) -> serde_json::Value {
+        match self {
+            Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
+            Self::Mempool => endpoint_mempool_height_testnet().send_request_json().await,
+        }
     }
 
     fn name(&self) -> String {
@@ -178,28 +174,27 @@ pub enum DogecoinProviderBlockApi {
     TokenView,
 }
 
+#[async_trait]
 impl BlockProvider for DogecoinProviderBlockApi {
-    fn fetch_data(&self) -> FetchFuture<'_> {
-        Box::pin(async move {
-            match self {
-                Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
-                Self::ApiBlockchairCom => {
-                    endpoint_dogecoin_api_blockchair_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                Self::ApiBlockcypherCom => {
-                    endpoint_dogecoin_api_blockcypher_com_block_mainnet()
-                        .send_request_json()
-                        .await
-                }
-                Self::TokenView => {
-                    endpoint_dogecoin_tokenview_height_mainnet()
-                        .send_request_json()
-                        .await
-                }
+    async fn fetch_data(&self) -> serde_json::Value {
+        match self {
+            Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
+            Self::ApiBlockchairCom => {
+                endpoint_dogecoin_api_blockchair_com_block_mainnet()
+                    .send_request_json()
+                    .await
             }
-        })
+            Self::ApiBlockcypherCom => {
+                endpoint_dogecoin_api_blockcypher_com_block_mainnet()
+                    .send_request_json()
+                    .await
+            }
+            Self::TokenView => {
+                endpoint_dogecoin_tokenview_height_mainnet()
+                    .send_request_json()
+                    .await
+            }
+        }
     }
 
     fn name(&self) -> String {
