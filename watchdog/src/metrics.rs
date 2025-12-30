@@ -1,4 +1,3 @@
-use crate::block_apis::BlockApi;
 use crate::config::Network;
 use crate::{health::HeightStatus, types::CandidHttpResponse};
 use ic_btc_interface::Flag;
@@ -37,8 +36,9 @@ pub fn get_metrics() -> CandidHttpResponse {
 
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
+    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
-    let (bitcoin_mainnet, bitcoin_testnet, dogecoin_mainnet) = match config.network {
+    let (bitcoin_mainnet, bitcoin_testnet, dogecoin_mainnet) = match canister.network() {
         Network::BitcoinMainnet => (1.0, 0.0, 0.0),
         Network::BitcoinTestnet => (0.0, 1.0, 0.0),
         Network::DogecoinMainnet => (0.0, 0.0, 1.0),
@@ -63,7 +63,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         "The minimum number of explorers to compare against.",
     )?;
 
-    let health = crate::health::health_status_internal();
+    let health = crate::health::health_status();
     w.encode_gauge(
         "canister_height",
         health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),
@@ -111,16 +111,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     let mut available_explorers_count: u64 = 0;
-    for explorer in BlockApi::network_explorers(config.network) {
+    for explorer in &config.explorers {
         let height = available_explorers
-            .get(&explorer)
+            .get(explorer)
             .map_or(NO_VALUE, |block_info| {
                 block_info.height.map_or(NO_VALUE, |x| x as f64)
             });
         if !height.is_nan() {
             available_explorers_count += 1;
         }
-        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
+        gauge = gauge.value(&[("explorer", explorer)], height)?;
     }
     w.encode_gauge(
         "available_explorers",

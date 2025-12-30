@@ -1,9 +1,9 @@
-use crate::health::HealthStatusInternal;
+use crate::health::HealthStatus;
 use crate::{health::HeightStatus, print};
 use ic_btc_interface::{Config as CanisterConfig, Flag, SetConfigRequest};
 
 /// Calculates the target value of the canister API access flag.
-fn calculate_target(health: HealthStatusInternal) -> Option<Flag> {
+fn calculate_target(health: HealthStatus) -> Option<Flag> {
     match health.height_status {
         HeightStatus::Ok => Some(Flag::Enabled),
         HeightStatus::Behind | HeightStatus::Ahead => Some(Flag::Disabled),
@@ -13,7 +13,7 @@ fn calculate_target(health: HealthStatusInternal) -> Option<Flag> {
 
 /// Fetches the canister config.
 async fn get_target_canister_config() -> Option<CanisterConfig> {
-    let id = crate::storage::get_config().canister_principal;
+    let id = crate::storage::get_canister().canister_principal();
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_config")
         .with_args(&())
         .await
@@ -40,7 +40,7 @@ async fn fetch_actual_api_access() -> Option<Flag> {
 
 /// Updates the API access flag in the canister.
 async fn update_api_access(target: Option<Flag>) {
-    let id = crate::storage::get_config().canister_principal;
+    let id = crate::storage::get_canister().canister_principal();
     let set_config_request = SetConfigRequest {
         api_access: target,
         ..Default::default()
@@ -54,7 +54,7 @@ async fn update_api_access(target: Option<Flag>) {
 
 /// Synchronizes the API access flag of the canister.
 pub async fn synchronise_api_access() {
-    let target = calculate_target(crate::health::health_status_internal());
+    let target = calculate_target(crate::health::health_status());
     crate::storage::set_api_access_target(target);
 
     if target.is_some() {

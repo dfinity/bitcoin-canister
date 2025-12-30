@@ -17,10 +17,10 @@ dfx start --background --clean
 INITIAL_BALANCE=100000000000
 
 # Deploy the bitcoin canister.
-dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(record {
+dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(variant {init = record {
   network = opt variant { regtest };
   burn_cycles = opt variant { enabled };
-})"
+}})"
 
 sleep 3
 

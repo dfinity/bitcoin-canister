@@ -15,7 +15,7 @@ dfx start --background --clean
 dfx deploy e2e-scenario-1
 
 # Deploy the bitcoin canister.
-dfx deploy bitcoin --argument "(record {
+dfx deploy bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
@@ -34,7 +34,7 @@ dfx deploy bitcoin --argument "(record {
     get_block_headers_cycles_per_ten_instructions = 1;
     get_block_headers_maximum = 1;
   };
-})"
+}})"
 
 check_charging()
 {
