@@ -27,6 +27,7 @@ use crate::{
 pub use api::get_metrics;
 pub use api::send_transaction;
 pub use api::set_config;
+use candid::{CandidType, Deserialize};
 pub use heartbeat::heartbeat;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
@@ -84,6 +85,14 @@ fn reset_syncing_state(state: &mut State) {
     print("Resetting syncing state...");
     state.syncing_state.is_fetching_blocks = false;
     state.syncing_state.response_to_process = None;
+}
+
+#[derive(CandidType, Deserialize)]
+pub enum CanisterArg {
+    #[serde(rename = "init")]
+    Init(InitConfig),
+    #[serde(rename = "upgrade")]
+    Upgrade(Option<SetConfigRequest>),
 }
 
 /// Initializes the state of the Bitcoin canister.

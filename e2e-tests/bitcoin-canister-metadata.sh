@@ -11,7 +11,7 @@ trap "dfx stop" EXIT SIGINT
 dfx start --background --clean
 
 # Deploy the bitcoin canister
-dfx deploy --no-wallet bitcoin --argument "(record { })"
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
 
 # Check the canister's metadata section for the Candid interface.
 METADATA=$(dfx canister metadata bitcoin candid:service)

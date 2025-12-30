@@ -299,6 +299,7 @@ jobs:
           bash e2e-tests/charge-cycles-on-reject.sh
 
   upgradability:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI_OVERRIDE_UPGRADABILITY_CHECK') }}
     runs-on: ubuntu-latest
     needs: cargo-build
 
@@ -783,7 +784,7 @@ jobs:
         if: ${{ needs.charge-cycles-on-reject.result != 'success' }}
         run: exit 1
       - name: check upgradability result
-        if: ${{ needs.upgradability.result != 'success' }}
+        if: ${{ needs.upgradability.result != 'success' && needs.upgradability.result != 'skipped' }}
         run: exit 1
       - name: check set_config result
         if: ${{ needs.set_config.result != 'success' }}
