@@ -349,6 +349,7 @@ pub struct GetUtxosResponse {
 #[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
 pub enum GetUtxosError {
     MalformedAddress,
+    AddressForWrongNetwork { expected: Network },
     MinConfirmationsTooLarge { given: u32, max: u32 },
     UnknownTipBlockHash { tip_block_hash: BlockHash },
     MalformedPage { err: String },
@@ -450,6 +451,13 @@ impl fmt::Display for GetUtxosError {
             Self::MalformedPage { err } => {
                 write!(f, "The provided page is malformed {}", err)
             }
+            Self::AddressForWrongNetwork { expected } => {
+                write!(
+                    f,
+                    "Address does not belong to the expected network: {}",
+                    expected
+                )
+            }
         }
     }
 }
@@ -464,6 +472,7 @@ pub struct GetBalanceRequest {
 #[derive(CandidType, Debug, Deserialize, PartialEq, Eq, Clone)]
 pub enum GetBalanceError {
     MalformedAddress,
+    AddressForWrongNetwork { expected: Network },
     MinConfirmationsTooLarge { given: u32, max: u32 },
 }
 
@@ -478,6 +487,13 @@ impl fmt::Display for GetBalanceError {
                     f,
                     "The requested min_confirmations is too large. Given: {}, max supported: {}",
                     given, max
+                )
+            }
+            Self::AddressForWrongNetwork { expected } => {
+                write!(
+                    f,
+                    "Address does not belong to the expected network: {}",
+                    expected
                 )
             }
         }
