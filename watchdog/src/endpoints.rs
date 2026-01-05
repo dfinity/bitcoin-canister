@@ -370,7 +370,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_mainnet_api_bitaps_com(),
             "https://api.bitaps.com/btc/v1/blockchain/block/last",
-            test_utils::API_BITAPS_COM_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE,
             json!({
                 "height": 700001,
             }),
@@ -383,7 +383,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_mainnet_api_blockchair_com(),
             "https://api.blockchair.com/bitcoin/stats",
-            test_utils::API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
             json!({
                 "height": 700002,
             }),
@@ -396,7 +396,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_mainnet_api_blockcypher_com(),
             "https://api.blockcypher.com/v1/btc/main",
-            test_utils::API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
             json!({
                 "height": 700003,
             }),
@@ -414,7 +414,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
-            test_utils::BITCOIN_CANISTER_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_CANISTER_RESPONSE,
             json!({
                 "height": 700007,
             }),
@@ -428,7 +428,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics",
-            test_utils::BITCOIN_CANISTER_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_CANISTER_RESPONSE,
             json!({
                 "height": 700007,
             }),
@@ -442,7 +442,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_canister(),
             "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
-            test_utils::BITCOIN_CANISTER_TESTNET_RESPONSE,
+            test_utils::BITCOIN_TESTNET_CANISTER_RESPONSE,
             json!({
                 "height": 55001,
             }),
@@ -455,7 +455,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_mainnet_blockchain_info(),
             "https://blockchain.info/q/getblockcount",
-            test_utils::BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_BLOCKCHAIN_INFO_RESPONSE,
             json!({
                 "height": 700004,
             }),
@@ -468,7 +468,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_mainnet_blockstream_info(),
             "https://blockstream.info/api/blocks/tip/height",
-            test_utils::BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE,
             json!({
                 "height": 700005,
             }),
@@ -481,7 +481,7 @@ mod test {
         run_http_request_test(
             endpoint_dogecoin_mainnet_api_blockchair_com(),
             "https://api.blockchair.com/dogecoin/stats",
-            test_utils::DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
+            test_utils::DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
             json!({
                 "height": 5926987,
             }),
@@ -494,7 +494,7 @@ mod test {
         run_http_request_test(
             endpoint_dogecoin_mainnet_api_blockcypher_com(),
             "https://api.blockcypher.com/v1/doge/main",
-            test_utils::DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
+            test_utils::DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
             json!({
                 "height": 5926989,
             }),
@@ -508,7 +508,7 @@ mod test {
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
-            test_utils::DOGECOIN_CANISTER_MAINNET_RESPONSE,
+            test_utils::DOGECOIN_MAINNET_CANISTER_RESPONSE,
             json!({
                 "height": 5931098,
             }),
@@ -522,7 +522,7 @@ mod test {
         run_http_request_test(
             endpoint_dogecoin_canister(),
             "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics",
-            test_utils::DOGECOIN_CANISTER_MAINNET_RESPONSE,
+            test_utils::DOGECOIN_MAINNET_CANISTER_RESPONSE,
             json!({
                 "height": 5931098,
             }),
@@ -535,7 +535,7 @@ mod test {
         run_http_request_test(
             endpoint_dogecoin_mainnet_tokenview(),
             "https://doge.tokenview.io/api/chainstat/doge",
-            test_utils::DOGECOIN_TOKENVIEW_HEIGHT_MAINNET_RESPONSE,
+            test_utils::DOGECOIN_MAINNET_TOKENVIEW_RESPONSE,
             json!({
                 "height": 5931072,
             }),
@@ -548,7 +548,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_mainnet_mempool(),
             "https://mempool.space/api/blocks/tip/height",
-            test_utils::MEMPOOL_HEIGHT_MAINNET_RESPONSE,
+            test_utils::BITCOIN_MAINNET_MEMPOOL_RESPONSE,
             json!({
                 "height": 700008,
             }),
@@ -561,7 +561,7 @@ mod test {
         run_http_request_test(
             endpoint_bitcoin_testnet_mempool(),
             "https://mempool.space/testnet4/api/blocks/tip/height",
-            test_utils::MEMPOOL_HEIGHT_TESTNET_RESPONSE,
+            test_utils::BITCOIN_TESTNET_MEMPOOL_RESPONSE,
             json!({
                 "height": 55002,
             }),

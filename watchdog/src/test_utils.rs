@@ -6,31 +6,31 @@ pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
         (
             endpoint_bitcoin_mainnet_api_bitaps_com(),
-            API_BITAPS_COM_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_api_blockchair_com(),
-            API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_api_blockcypher_com(),
-            API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
         ),
         (
             endpoint_bitcoin_canister(),
-            BITCOIN_CANISTER_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_CANISTER_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_blockchain_info(),
-            BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_BLOCKCHAIN_INFO_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_blockstream_info(),
-            BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_mempool(),
-            MEMPOOL_HEIGHT_MAINNET_RESPONSE,
+            BITCOIN_MAINNET_MEMPOOL_RESPONSE,
         ),
     ];
     for (config, response_body) in mocks {
@@ -48,11 +48,11 @@ pub fn mock_bitcoin_testnet_outcalls() {
     let mocks = [
         (
             endpoint_bitcoin_canister(),
-            BITCOIN_CANISTER_TESTNET_RESPONSE,
+            BITCOIN_TESTNET_CANISTER_RESPONSE,
         ),
         (
             endpoint_bitcoin_testnet_mempool(),
-            MEMPOOL_HEIGHT_TESTNET_RESPONSE,
+            BITCOIN_TESTNET_MEMPOOL_RESPONSE,
         ),
     ];
     for (config, response_body) in mocks {
@@ -70,19 +70,19 @@ pub fn mock_dogecoin_mainnet_outcalls() {
     let mocks = [
         (
             endpoint_dogecoin_mainnet_api_blockchair_com(),
-            DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
+            DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
         ),
         (
             endpoint_dogecoin_mainnet_api_blockcypher_com(),
-            DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
+            DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
         ),
         (
             endpoint_dogecoin_canister(),
-            DOGECOIN_CANISTER_MAINNET_RESPONSE,
+            DOGECOIN_MAINNET_CANISTER_RESPONSE,
         ),
         (
             endpoint_dogecoin_mainnet_tokenview(),
-            DOGECOIN_TOKENVIEW_HEIGHT_MAINNET_RESPONSE,
+            DOGECOIN_MAINNET_TOKENVIEW_RESPONSE,
         ),
     ];
     for (config, response_body) in mocks {
@@ -135,7 +135,7 @@ pub fn mock_all_outcalls_abusing_api() {
 pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
 
 // https://api.bitaps.com/btc/v1/blockchain/block/last
-pub const API_BITAPS_COM_MAINNET_RESPONSE: &str = r#"{
+pub const BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE: &str = r#"{
     "data": {
         "height": 700001,
         "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
@@ -146,7 +146,7 @@ pub const API_BITAPS_COM_MAINNET_RESPONSE: &str = r#"{
 }"#;
 
 // https://api.blockchair.com/bitcoin/stats
-pub const API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
+pub const BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
     "data":
     {
         "blocks":783771,
@@ -194,7 +194,7 @@ pub const API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
 }"#;
 
 // https://api.blockcypher.com/v1/btc/main
-pub const API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
+pub const BITCOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE: &str = r#"{
     "name": "BTC.main",
     "height": 700003,
     "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
@@ -211,9 +211,15 @@ pub const API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
     "last_fork_hash": "0000000000000000000388f42000fa901c01f2bfae36042bbae133ee430e6485"
 }"#;
 
+// https://blockchain.info/q/getblockcount
+pub const BITCOIN_MAINNET_BLOCKCHAIN_INFO_RESPONSE: &str = r#"700004"#;
+
+// https://blockstream.info/api/blocks/tip/height
+pub const BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE: &str = r#"700005"#;
+
 // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
 // https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics (staging)
-pub const BITCOIN_CANISTER_MAINNET_RESPONSE: &str = r#"{
+pub const BITCOIN_MAINNET_CANISTER_RESPONSE: &str = r#"{
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
     main_chain_height 700007 1680014894644
@@ -228,8 +234,11 @@ pub const BITCOIN_CANISTER_MAINNET_RESPONSE: &str = r#"{
     address_utxos_length 86294218 1680014894644
 }"#;
 
+// https://mempool.space/api/blocks/tip/height
+pub const BITCOIN_MAINNET_MEMPOOL_RESPONSE: &str = r#"700008"#;
+
 // https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-pub const BITCOIN_CANISTER_TESTNET_RESPONSE: &str = r#"{
+pub const BITCOIN_TESTNET_CANISTER_RESPONSE: &str = r#"{
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
     main_chain_height 55001 1682533330541
@@ -244,14 +253,11 @@ pub const BITCOIN_CANISTER_TESTNET_RESPONSE: &str = r#"{
     address_utxos_length 28388537 1682533330541
 }"#;
 
-// https://blockchain.info/q/getblockcount
-pub const BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700004"#;
-
-// https://blockstream.info/api/blocks/tip/height
-pub const BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700005"#;
+// https://mempool.space/testnet4/api/blocks/tip/height
+pub const BITCOIN_TESTNET_MEMPOOL_RESPONSE: &str = r#"55002"#;
 
 // https://api.blockchair.com/dogecoin/stats
-pub const DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
+pub const DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
     "data": {
         "blocks": 5926988,
         "transactions": 406778945,
@@ -319,7 +325,7 @@ pub const DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE: &str = r#"{
 }"#;
 
 // https://api.blockcypher.com/v1/doge/main
-pub const DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
+pub const DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE: &str = r#"{
     "name": "DOGE.main",
     "height": 5926989,
     "hash": "bfbcae1f6dcc41710caad2f638dbe9b4006f6c4dd456b99a12253b4152e55cf6",
@@ -338,7 +344,7 @@ pub const DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE: &str = r#"{
 
 // https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics
 // https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics
-pub const DOGECOIN_CANISTER_MAINNET_RESPONSE: &str = r#"
+pub const DOGECOIN_MAINNET_CANISTER_RESPONSE: &str = r#"
     # HELP main_chain_height Height of the main chain.
     # TYPE main_chain_height gauge
     main_chain_height 5931098 1761310299589
@@ -354,7 +360,7 @@ pub const DOGECOIN_CANISTER_MAINNET_RESPONSE: &str = r#"
 "#;
 
 // https://doge.tokenview.io/api/chainstat/doge
-pub const DOGECOIN_TOKENVIEW_HEIGHT_MAINNET_RESPONSE: &str = r#"{
+pub const DOGECOIN_MAINNET_TOKENVIEW_RESPONSE: &str = r#"{
     "code": 1,
     "msg": "成功",
     "enMsg": "SUCCESS",
@@ -374,9 +380,3 @@ pub const DOGECOIN_TOKENVIEW_HEIGHT_MAINNET_RESPONSE: &str = r#"{
         "turnoverRate": "3.21"
     }
 }"#;
-
-// https://mempool.space/api/blocks/tip/height
-pub const MEMPOOL_HEIGHT_MAINNET_RESPONSE: &str = r#"700008"#;
-
-// https://mempool.space/testnet4/api/blocks/tip/height
-pub const MEMPOOL_HEIGHT_TESTNET_RESPONSE: &str = r#"55002"#;
