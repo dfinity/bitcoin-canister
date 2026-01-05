@@ -158,48 +158,38 @@ fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> Tim
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_api_bitaps_com_block_mainnet().transform(raw)
-}
-
-#[query]
-fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_api_blockchair_com_block_mainnet().transform(raw)
-}
-
-#[query]
-fn transform_api_blockcypher_com_block(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_api_blockcypher_com_block_mainnet().transform(raw)
-}
-
-#[query]
 fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_canister().transform(raw)
 }
 
 #[query]
-fn transform_blockchain_info_height(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_blockchain_info_height_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
 }
 
 #[query]
-fn transform_blockstream_info_height(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_blockstream_info_height_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_api_blockchair_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_blockchair_com().transform(raw)
 }
 
 #[query]
-fn transform_dogecoin_api_blockchair_com_block(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_api_blockchair_com_block_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_api_blockcypher_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_blockcypher_com().transform(raw)
 }
 
 #[query]
-fn transform_dogecoin_api_blockcypher_com_block(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_api_blockcypher_com_block_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_blockchain_info(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_blockchain_info().transform(raw)
 }
 
 #[query]
-fn transform_dogecoin_tokenview_height(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_tokenview_height_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_blockstream_info(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_blockstream_info().transform(raw)
+}
+
+#[query]
+fn transform_bitcoin_mempool(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_mempool().transform(raw)
 }
 
 #[query]
@@ -208,8 +198,18 @@ fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
-fn transform_mempool_height(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_mempool_height_mainnet().transform(raw)
+fn transform_dogecoin_mainnet_api_blockchair_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_api_blockchair_com().transform(raw)
+}
+
+#[query]
+fn transform_dogecoin_mainnet_api_blockcypher_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_api_blockcypher_com().transform(raw)
+}
+
+#[query]
+fn transform_dogecoin_mainnet_tokenview(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_tokenview().transform(raw)
 }
 
 #[cfg(test)]

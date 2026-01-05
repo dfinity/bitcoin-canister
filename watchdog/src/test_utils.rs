@@ -5,15 +5,15 @@ use crate::http::HttpRequestConfig;
 pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
         (
-            endpoint_api_bitaps_com_block_mainnet(),
+            endpoint_bitcoin_mainnet_api_bitaps_com(),
             API_BITAPS_COM_MAINNET_RESPONSE,
         ),
         (
-            endpoint_api_blockchair_com_block_mainnet(),
+            endpoint_bitcoin_mainnet_api_blockchair_com(),
             API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
         ),
         (
-            endpoint_api_blockcypher_com_block_mainnet(),
+            endpoint_bitcoin_mainnet_api_blockcypher_com(),
             API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
         ),
         (
@@ -21,15 +21,15 @@ pub fn mock_bitcoin_mainnet_outcalls() {
             BITCOIN_CANISTER_MAINNET_RESPONSE,
         ),
         (
-            endpoint_blockchain_info_height_mainnet(),
+            endpoint_bitcoin_mainnet_blockchain_info(),
             BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
         ),
         (
-            endpoint_blockstream_info_height_mainnet(),
+            endpoint_bitcoin_mainnet_blockstream_info(),
             BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE,
         ),
         (
-            endpoint_mempool_height_mainnet(),
+            endpoint_bitcoin_mainnet_mempool(),
             MEMPOOL_HEIGHT_MAINNET_RESPONSE,
         ),
     ];
@@ -51,7 +51,7 @@ pub fn mock_bitcoin_testnet_outcalls() {
             BITCOIN_CANISTER_TESTNET_RESPONSE,
         ),
         (
-            endpoint_mempool_height_testnet(),
+            endpoint_bitcoin_testnet_mempool(),
             MEMPOOL_HEIGHT_TESTNET_RESPONSE,
         ),
     ];
@@ -69,11 +69,11 @@ pub fn mock_bitcoin_testnet_outcalls() {
 pub fn mock_dogecoin_mainnet_outcalls() {
     let mocks = [
         (
-            endpoint_dogecoin_api_blockchair_com_block_mainnet(),
+            endpoint_dogecoin_mainnet_api_blockchair_com(),
             DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
         ),
         (
-            endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
+            endpoint_dogecoin_mainnet_api_blockcypher_com(),
             DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
         ),
         (
@@ -81,7 +81,7 @@ pub fn mock_dogecoin_mainnet_outcalls() {
             DOGECOIN_CANISTER_MAINNET_RESPONSE,
         ),
         (
-            endpoint_dogecoin_tokenview_height_mainnet(),
+            endpoint_dogecoin_mainnet_tokenview(),
             DOGECOIN_TOKENVIEW_HEIGHT_MAINNET_RESPONSE,
         ),
     ];
@@ -97,17 +97,17 @@ pub fn mock_dogecoin_mainnet_outcalls() {
 
 fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
     vec![
-        endpoint_api_blockchair_com_block_mainnet(),
-        endpoint_api_blockcypher_com_block_mainnet(),
+        endpoint_bitcoin_mainnet_api_blockchair_com(),
+        endpoint_bitcoin_mainnet_api_blockcypher_com(),
         endpoint_bitcoin_canister(),
-        endpoint_blockchain_info_height_mainnet(),
-        endpoint_blockstream_info_height_mainnet(),
-        endpoint_dogecoin_api_blockchair_com_block_mainnet(),
-        endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
+        endpoint_bitcoin_mainnet_blockchain_info(),
+        endpoint_bitcoin_mainnet_blockstream_info(),
+        endpoint_dogecoin_mainnet_api_blockchair_com(),
+        endpoint_dogecoin_mainnet_api_blockcypher_com(),
         endpoint_dogecoin_canister(),
-        endpoint_dogecoin_tokenview_height_mainnet(),
-        endpoint_mempool_height_mainnet(),
-        endpoint_mempool_height_testnet(),
+        endpoint_dogecoin_mainnet_tokenview(),
+        endpoint_bitcoin_mainnet_mempool(),
+        endpoint_bitcoin_testnet_mempool(),
     ]
 }
 
