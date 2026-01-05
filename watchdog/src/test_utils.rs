@@ -21,16 +21,8 @@ pub fn mock_bitcoin_mainnet_outcalls() {
             BITCOIN_CANISTER_MAINNET_RESPONSE,
         ),
         (
-            endpoint_blockchain_info_hash_mainnet(),
-            BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE,
-        ),
-        (
             endpoint_blockchain_info_height_mainnet(),
             BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
-        ),
-        (
-            endpoint_blockstream_info_hash_mainnet(),
-            BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE,
         ),
         (
             endpoint_blockstream_info_height_mainnet(),
@@ -108,9 +100,7 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
         endpoint_api_blockchair_com_block_mainnet(),
         endpoint_api_blockcypher_com_block_mainnet(),
         endpoint_bitcoin_canister(),
-        endpoint_blockchain_info_hash_mainnet(),
         endpoint_blockchain_info_height_mainnet(),
-        endpoint_blockstream_info_hash_mainnet(),
         endpoint_blockstream_info_height_mainnet(),
         endpoint_dogecoin_api_blockchair_com_block_mainnet(),
         endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
@@ -254,16 +244,8 @@ pub const BITCOIN_CANISTER_TESTNET_RESPONSE: &str = r#"{
     address_utxos_length 28388537 1682533330541
 }"#;
 
-// https://blockchain.info/q/latesthash
-pub const BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE: &str =
-    r#"0000000000000000000aaa444444444444444444444444444444444444444444"#;
-
 // https://blockchain.info/q/getblockcount
 pub const BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700004"#;
-
-// https://blockstream.info/api/blocks/tip/hash
-pub const BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE: &str =
-    r#"0000000000000000000aaa555555555555555555555555555555555555555555"#;
 
 // https://blockstream.info/api/blocks/tip/height
 pub const BLOCKSTREAM_INFO_HEIGHT_MAINNET_RESPONSE: &str = r#"700005"#;

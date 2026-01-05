@@ -178,18 +178,8 @@ fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
-fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_blockchain_info_hash_mainnet().transform(raw)
-}
-
-#[query]
 fn transform_blockchain_info_height(raw: TransformArgs) -> HttpRequestResult {
     endpoint_blockchain_info_height_mainnet().transform(raw)
-}
-
-#[query]
-fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_blockstream_info_hash_mainnet().transform(raw)
 }
 
 #[query]

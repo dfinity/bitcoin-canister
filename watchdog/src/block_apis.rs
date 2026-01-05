@@ -94,40 +94,14 @@ impl BlockProvider for BitcoinMainnetProviderBlockApi {
                     .await
             }
             Self::BlockchainInfo => {
-                let height_config = endpoint_blockchain_info_height_mainnet();
-                let hash_config = endpoint_blockchain_info_hash_mainnet();
-                let futures = vec![
-                    height_config.send_request_json(),
-                    hash_config.send_request_json(),
-                ];
-                let results = futures::future::join_all(futures).await;
-                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                    (Some(height), Some(hash)) => {
-                        json!({
-                            "height": height,
-                            "hash": hash,
-                        })
-                    }
-                    _ => json!({}),
-                }
+                endpoint_blockchain_info_height_mainnet()
+                    .send_request_json()
+                    .await
             }
             Self::BlockstreamInfo => {
-                let height_config = endpoint_blockstream_info_height_mainnet();
-                let hash_config = endpoint_blockstream_info_hash_mainnet();
-                let futures = vec![
-                    height_config.send_request_json(),
-                    hash_config.send_request_json(),
-                ];
-                let results = futures::future::join_all(futures).await;
-                match (results[0]["height"].as_u64(), results[1]["hash"].as_str()) {
-                    (Some(height), Some(hash)) => {
-                        json!({
-                            "height": height,
-                            "hash": hash,
-                        })
-                    }
-                    _ => json!({}),
-                }
+                endpoint_blockstream_info_height_mainnet()
+                    .send_request_json()
+                    .await
             }
             Self::Mempool => endpoint_mempool_height_mainnet().send_request_json().await,
         }
@@ -332,7 +306,6 @@ mod test {
                 vec![(endpoint_api_bitaps_com_block_mainnet(), 1)],
                 json!({
                     "height": 700001,
-                    "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
                 }),
             )
             .await;
@@ -346,7 +319,6 @@ mod test {
                 vec![(endpoint_api_blockchair_com_block_mainnet(), 1)],
                 json!({
                     "height": 700002,
-                    "hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
                 }),
             )
             .await;
@@ -359,12 +331,10 @@ mod test {
                 BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
                 vec![(endpoint_api_blockcypher_com_block_mainnet(), 1)],
                 json!({
-                "height": 700003,
-                "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
-                "previous_hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
-            }),
+                    "height": 700003,
+                }),
             )
-                .await;
+            .await;
         }
 
         #[tokio::test]
@@ -385,13 +355,9 @@ mod test {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
                 BitcoinMainnetProviderBlockApi::BlockchainInfo,
-                vec![
-                    (endpoint_blockchain_info_hash_mainnet(), 1),
-                    (endpoint_blockchain_info_height_mainnet(), 1),
-                ],
+                vec![(endpoint_blockchain_info_height_mainnet(), 1)],
                 json!({
                     "height": 700004,
-                    "hash": "0000000000000000000aaa444444444444444444444444444444444444444444",
                 }),
             )
             .await;
@@ -402,13 +368,9 @@ mod test {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
                 BitcoinMainnetProviderBlockApi::BlockstreamInfo,
-                vec![
-                    (endpoint_blockstream_info_hash_mainnet(), 1),
-                    (endpoint_blockstream_info_height_mainnet(), 1),
-                ],
+                vec![(endpoint_blockstream_info_height_mainnet(), 1)],
                 json!({
                     "height": 700005,
-                    "hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
                 }),
             )
             .await;
@@ -452,7 +414,6 @@ mod test {
                 vec![(endpoint_dogecoin_api_blockchair_com_block_mainnet(), 1)],
                 json!({
                     "height": 5926987,
-                    "hash": "36134366860560c09a6b216cdb6ef58e4ef73792fba514e6e04d074382d0974c",
                 }),
             )
             .await;
@@ -465,12 +426,10 @@ mod test {
                 DogecoinProviderBlockApi::ApiBlockcypherCom,
                 vec![(endpoint_dogecoin_api_blockcypher_com_block_mainnet(), 1)],
                 json!({
-                "height": 5926989,
-                "hash": "bfbcae1f6dcc41710caad2f638dbe9b4006f6c4dd456b99a12253b4152e55cf6",
-                "previous_hash": "0037287a6dfa3426da3e644da91d00b2d240a829b9b2a30d256b7eef89b78068",
-            }),
+                    "height": 5926989,
+                }),
             )
-                .await;
+            .await;
         }
 
         #[tokio::test]

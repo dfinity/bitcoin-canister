@@ -3,8 +3,7 @@ use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
     print, transform_api_bitaps_com_block, transform_api_blockchair_com_block,
     transform_api_blockcypher_com_block, transform_bitcoin_canister,
-    transform_blockchain_info_hash, transform_blockchain_info_height,
-    transform_blockstream_info_hash, transform_blockstream_info_height,
+    transform_blockchain_info_height, transform_blockstream_info_height,
     transform_dogecoin_api_blockchair_com_block, transform_dogecoin_api_blockcypher_com_block,
     transform_dogecoin_canister, transform_dogecoin_tokenview_height, transform_mempool_height,
 };
@@ -25,7 +24,6 @@ pub fn endpoint_api_bitaps_com_block_mainnet() -> HttpRequestConfig {
                 let data = json["data"].clone();
                 json!({
                     "height": data["height"].as_u64(),
-                    "hash": data["hash"].as_str(),
                 })
             })
         },
@@ -45,7 +43,6 @@ pub fn endpoint_api_blockchair_com_block_mainnet() -> HttpRequestConfig {
                 let data = json["data"].clone();
                 json!({
                     "height": data["best_block_height"].as_u64(),
-                    "hash": data["best_block_hash"].as_str(),
                 })
             })
         },
@@ -64,8 +61,6 @@ pub fn endpoint_api_blockcypher_com_block_mainnet() -> HttpRequestConfig {
             apply_to_body_json(raw, |json| {
                 json!({
                     "height": json["height"].as_u64(),
-                    "hash": json["hash"].as_str(),
-                    "previous_hash": json["previous_hash"].as_str(),
                 })
             })
         },
@@ -124,25 +119,6 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
     )
 }
 
-/// Creates a config for fetching mainnet hash data from blockchain.info.
-pub fn endpoint_blockchain_info_hash_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://blockchain.info/q/latesthash",
-        Some(TransformFnWrapper {
-            name: "transform_blockchain_info_hash",
-            func: transform_blockchain_info_hash,
-        }),
-        |raw| {
-            apply_to_body(raw, |text| {
-                json!({
-                    "hash": text,
-                })
-                .to_string()
-            })
-        },
-    )
-}
-
 /// Creates a config for fetching mainnet height data from blockchain.info.
 pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
     HttpRequestConfig::new(
@@ -161,25 +137,6 @@ pub fn endpoint_blockchain_info_height_mainnet() -> HttpRequestConfig {
                         .to_string()
                     })
                     .unwrap_or_default()
-            })
-        },
-    )
-}
-
-/// Creates a config for fetching mainnet hash data from blockstream.info.
-pub fn endpoint_blockstream_info_hash_mainnet() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://blockstream.info/api/blocks/tip/hash",
-        Some(TransformFnWrapper {
-            name: "transform_blockstream_info_hash",
-            func: transform_blockstream_info_hash,
-        }),
-        |raw| {
-            apply_to_body(raw, |text| {
-                json!({
-                    "hash": text,
-                })
-                .to_string()
             })
         },
     )
@@ -221,7 +178,6 @@ pub fn endpoint_dogecoin_api_blockchair_com_block_mainnet() -> HttpRequestConfig
                 let data = json["data"].clone();
                 json!({
                     "height": data["best_block_height"].as_u64(),
-                    "hash": data["best_block_hash"].as_str(),
                 })
             })
         },
@@ -240,8 +196,6 @@ pub fn endpoint_dogecoin_api_blockcypher_com_block_mainnet() -> HttpRequestConfi
             apply_to_body_json(raw, |json| {
                 json!({
                     "height": json["height"].as_u64(),
-                    "hash": json["hash"].as_str(),
-                    "previous_hash": json["previous_hash"].as_str(),
                 })
             })
         },
@@ -418,7 +372,6 @@ mod test {
             test_utils::API_BITAPS_COM_MAINNET_RESPONSE,
             json!({
                 "height": 700001,
-                "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
             }),
         )
         .await;
@@ -432,7 +385,6 @@ mod test {
             test_utils::API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
             json!({
                 "height": 700002,
-                "hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
             }),
         )
         .await;
@@ -446,8 +398,6 @@ mod test {
             test_utils::API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
             json!({
                 "height": 700003,
-                "hash": "0000000000000000000aaa333333333333333333333333333333333333333333",
-                "previous_hash": "0000000000000000000aaa222222222222222222222222222222222222222222",
             }),
         )
         .await;
@@ -500,19 +450,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_blockchain_info_hash() {
-        run_http_request_test(
-            endpoint_blockchain_info_hash_mainnet(),
-            "https://blockchain.info/q/latesthash",
-            test_utils::BLOCKCHAIN_INFO_HASH_MAINNET_RESPONSE,
-            json!({
-                "hash": "0000000000000000000aaa444444444444444444444444444444444444444444",
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_blockchain_info_height() {
         run_http_request_test(
             endpoint_blockchain_info_height_mainnet(),
@@ -520,19 +457,6 @@ mod test {
             test_utils::BLOCKCHAIN_INFO_HEIGHT_MAINNET_RESPONSE,
             json!({
                 "height": 700004,
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_blockstream_info_hash() {
-        run_http_request_test(
-            endpoint_blockstream_info_hash_mainnet(),
-            "https://blockstream.info/api/blocks/tip/hash",
-            test_utils::BLOCKSTREAM_INFO_HASH_MAINNET_RESPONSE,
-            json!({
-                "hash": "0000000000000000000aaa555555555555555555555555555555555555555555",
             }),
         )
         .await;
@@ -559,7 +483,6 @@ mod test {
             test_utils::DOGECOIN_API_BLOCKCHAIR_COM_MAINNET_RESPONSE,
             json!({
                 "height": 5926987,
-                "hash": "36134366860560c09a6b216cdb6ef58e4ef73792fba514e6e04d074382d0974c",
             }),
         )
         .await;
@@ -573,8 +496,6 @@ mod test {
             test_utils::DOGECOIN_API_BLOCKCYPHER_COM_MAINNET_RESPONSE,
             json!({
                 "height": 5926989,
-                "hash": "bfbcae1f6dcc41710caad2f638dbe9b4006f6c4dd456b99a12253b4152e55cf6",
-                "previous_hash": "0037287a6dfa3426da3e644da91d00b2d240a829b9b2a30d256b7eef89b78068",
             }),
         )
         .await;
@@ -663,9 +584,7 @@ mod test {
                 "transform_api_blockchair_com_block",
                 "transform_api_blockcypher_com_block",
                 "transform_bitcoin_canister",
-                "transform_blockchain_info_hash",
                 "transform_blockchain_info_height",
-                "transform_blockstream_info_hash",
                 "transform_blockstream_info_height",
                 "transform_dogecoin_api_blockchair_com_block",
                 "transform_dogecoin_api_blockcypher_com_block",
@@ -715,9 +634,7 @@ mod test {
             endpoint_api_blockchair_com_block_mainnet(),
             endpoint_api_blockcypher_com_block_mainnet(),
             endpoint_bitcoin_canister(),
-            endpoint_blockchain_info_hash_mainnet(),
             endpoint_blockchain_info_height_mainnet(),
-            endpoint_blockstream_info_hash_mainnet(),
             endpoint_blockstream_info_height_mainnet(),
             endpoint_dogecoin_api_blockchair_com_block_mainnet(),
             endpoint_dogecoin_api_blockcypher_com_block_mainnet(),
