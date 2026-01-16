@@ -7,11 +7,9 @@ members = [
     "types",
     "validation",
     "watchdog",
-
     # Crates for bootstrapping the state
     "bootstrap/state-builder",
     "bootstrap/uploader",
-
     # Crates used for testing only.
     "benchmarks",
     "e2e-tests/scenario-1",
@@ -27,7 +25,7 @@ resolver = "2"
 
 [workspace.dependencies]
 assert_matches = "1.5.0"
-bitcoin = "0.32.7"
+bitcoin = { package = "bitcoin-dogecoin", version = "0.32.7-doge.0" }
 byteorder = "1.4.3"
 canbench-rs = "0.4.0"
 candid = "0.10.6"
