@@ -45,23 +45,3 @@ jobs:
           fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
-
-      - name: Publish ic-btc-types to crates.io
-        run: |
-          if [ "${{ inputs.dryRun }}" = "true" ]; then
-            cargo publish -p ic-btc-types --dry-run
-          else
-            cargo publish -p ic-btc-types
-          fi
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
-
-      - name: Publish ic-btc-test-utils to crates.io
-        run: |
-          if [ "${{ inputs.dryRun }}" = "true" ]; then
-            cargo publish -p ic-btc-test-utils --dry-run
-          else
-            cargo publish -p ic-btc-test-utils
-          fi
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
