@@ -36,7 +36,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // Find all artifacts for the production build, and filter for non-expired main artifacts
+            // Find all artifacts for the production build, and filter for non-expired master artifacts
             const allArtifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -44,13 +44,13 @@ jobs:
             });
             const mainArtifacts = allArtifacts
               .filter(artifact => !artifact.expired)
-              .filter(artifact => artifact.workflow_run.head_branch === "main");
+              .filter(artifact => artifact.workflow_run.head_branch === "master");
             
             // Grab the latest artifact
             mainArtifacts.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
             const latestMainArtifact = mainArtifacts[0];
             if(!latestMainArtifact) {
-              const message = "Could not find 'wasms' artifact from branch main. Are artifacts expired?";
+              const message = "Could not find 'wasms' artifact from branch master. Are artifacts expired?";
               console.error(message);
               throw new Error(message);
             }
