@@ -1,11 +1,21 @@
-name: Release
+name: Release PR
+
 on:
   workflow_dispatch
 
+# This workflow creates a release PR that:
+# 1. Updates CHANGELOGs for all packages:
+#    - canister/CHANGELOG.md (date-based releases)
+#    - watchdog/CHANGELOG.md (date-based releases)
+#    - interface/CHANGELOG.md (semver releases)
+#    - validation/CHANGELOG.md (semver releases)
+# 2. Bumps versions in Cargo.toml files (semver crates only)
+# 
+# After merging the release PR, run the "Release & Publish" workflow (in publish.yml).
+
 jobs:
-  # Create a PR with the new versions and changelog, preparing the next release.
   release-plz-pr:
-    name: Release-plz PR
+    name: Create Release PR
     runs-on: ubuntu-latest
 
     permissions:

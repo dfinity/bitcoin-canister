@@ -1,4 +1,4 @@
-name: Publish bitcoin canister crates to crates.io
+name: Release & Publish
 
 on:
   workflow_dispatch:
@@ -8,10 +8,17 @@ on:
         required: false
         type: boolean
 
+# This workflow handles two types of releases:
+# 1. Canister releases (ic-btc-canister, watchdog): date-based tags (release/YYYY-MM-DD)
+#    - Creates GitHub release with WASM artifacts
+#    - NOT published to crates.io
+# 2. Library crates (ic-btc-interface, ic-btc-validation): semver tags (vX.Y.Z)
+#    - Published to crates.io via release-plz
+#    - NO GitHub release (crate releases only)
+
 jobs:
-  # Release unpublished packages.
-  release-plz-release:
-    name: Publish bitcoin canister crates
+  release:
+    name: Release & Publish
     runs-on: ubuntu-latest
 
     permissions:
@@ -110,7 +117,8 @@ jobs:
             const releaseBody = generatedNotes.body + '\n\n## Proposals\n\n[TO BE ADDED]';
             core.exportVariable('RELEASE_BODY', releaseBody);
 
-      - name: Create GitHub release
+      # ===== Canister Release (date-based: release/YYYY-MM-DD) =====
+      - name: Create GitHub release for canisters
         uses: softprops/action-gh-release@v2
         with:
           draft: true
@@ -123,12 +131,14 @@ jobs:
             canister/candid.did
             watchdog/candid.did
 
+      # ===== Library Crate Publishing (semver: vX.Y.Z) =====
       - name: Authenticate with crates.io
         id: auth
         uses: rust-lang/crates-io-auth-action@v1
 
-      - name: Run release-plz
-        id: release-plz
+      - name: Publish library crates to crates.io
+        # Publishes ic-btc-interface and ic-btc-validation (semver-based)
+        # Configured in release-plz.toml
         uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
         with:
           command: release

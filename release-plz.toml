@@ -1,7 +1,4 @@
 [workspace]
-# path of the git-cliff configuration
-changelog_config = "cliff.toml"
-
 # enable changelog updates
 changelog_update = true
 
@@ -29,24 +26,40 @@ allow_dirty = false
 # disallow packaging with uncommitted changes
 publish_allow_dirty = false
 
-[[package]] # the double square brackets define a TOML table array
+# ----- Date-based releases (release/YYYY-MM-DD) -----
+
+[[package]]
 name = "ic-btc-canister"
+changelog_path = "canister/CHANGELOG.md"
+changelog_config = "canister/cliff.toml"
 semver_check = false # disable API breaking changes checks
 publish = false # disable `cargo publish`
+git_release_enable = false # handled separately in publish.yml
+git_tag_enable = false # tags created manually
 
-[[package]] # the double square brackets define a TOML table array
+[[package]]
 name = "watchdog"
+changelog_path = "watchdog/CHANGELOG.md"
+changelog_config = "watchdog/cliff.toml"
 semver_check = false
 publish = false # disable `cargo publish`
+git_release_enable = false # handled separately in publish.yml
+git_tag_enable = false # tags created manually
 
-[[package]] # the double square brackets define a TOML table array
+# ----- Semver-based releases (v0.x.x) -----
+
+[[package]]
 name = "ic-btc-interface"
+changelog_path = "interface/CHANGELOG.md"
+changelog_config = "interface/cliff.toml"
 semver_check = true
-git_release_enable = false # disable GitHub releases
+git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
 
 [[package]]
 name = "ic-btc-validation"
+changelog_path = "validation/CHANGELOG.md"
+changelog_config = "validation/cliff.toml"
 semver_check = true
-git_release_enable = false # disable GitHub releases
+git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
