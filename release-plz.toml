@@ -40,7 +40,8 @@ git_tag_enable = false # tags created manually
 [[package]]
 name = "watchdog"
 changelog_path = "watchdog/CHANGELOG.md"
-changelog_config = "watchdog/cliff.toml"
+changelog_config = "cliff.toml"
+changelog_include = ["watchdog/**"]
 semver_check = false
 publish = false # disable `cargo publish`
 git_release_enable = false # handled separately in publish.yml
@@ -51,7 +52,8 @@ git_tag_enable = false # tags created manually
 [[package]]
 name = "ic-btc-interface"
 changelog_path = "interface/CHANGELOG.md"
-changelog_config = "interface/cliff.toml"
+changelog_config = "cliff-semver.toml"
+changelog_include = ["interface/**"]
 semver_check = true
 git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
@@ -59,7 +61,8 @@ publish = true # enable `cargo publish`
 [[package]]
 name = "ic-btc-validation"
 changelog_path = "validation/CHANGELOG.md"
-changelog_config = "validation/cliff.toml"
+changelog_config = "cliff-semver.toml"
+changelog_include = ["validation/**"]
 semver_check = true
 git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`

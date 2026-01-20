@@ -1,4 +1,4 @@
-# git-cliff ~ configuration for watchdog (date-based releases)
+# git-cliff ~ configuration for date-based releases (ic-btc-canister, watchdog)
 # https://git-cliff.org/docs/configuration
 
 [changelog]
@@ -64,4 +64,3 @@ filter_commits = false
 topo_order = false
 sort_commits = "newest"
 tag_pattern = "release/[0-9]+-[0-9]+-[0-9]+"
-include_paths = ["watchdog/**"]

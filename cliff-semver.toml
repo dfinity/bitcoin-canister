@@ -1,4 +1,4 @@
-# git-cliff ~ configuration for ic-btc-interface (semver releases)
+# git-cliff ~ configuration for semver-based releases (ic-btc-interface, ic-btc-validation)
 # https://git-cliff.org/docs/configuration
 
 [changelog]
@@ -64,4 +64,3 @@ commit_parsers = [
 filter_commits = false
 topo_order = false
 sort_commits = "newest"
-include_paths = ["interface/**"]
