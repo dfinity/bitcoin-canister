@@ -9,16 +9,25 @@ on:
         type: boolean
 
 jobs:
-  publish:
+  # Release unpublished packages.
+  release-plz-release:
     name: Publish bitcoin canister crates
     runs-on: ubuntu-latest
 
     permissions:
+      pull-requests: write
+      contents: write
       id-token: write # Required for OIDC token exchange
+
+    concurrency:
+      group: publish
+      cancel-in-progress: true
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Authenticate with crates.io
         id: auth
