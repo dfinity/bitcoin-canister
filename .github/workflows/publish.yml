@@ -1,12 +1,7 @@
 name: Release & Publish
 
 on:
-  workflow_dispatch:
-    inputs:
-      dryRun:
-        description: "Run cargo publish with --dry-run"
-        required: false
-        type: boolean
+  pull_request
 
 # This workflow handles two types of releases:
 # 1. Canister releases (ic-btc-canister, watchdog): date-based tags (release/YYYY-MM-DD)
