@@ -1,7 +1,7 @@
 name: Release & Publish
 
 on:
-  pull_request
+  pull_request # TODO(mducroux): temporary, change to workflow_dispatch
 
 # This workflow handles two types of releases:
 # 1. Canister releases (ic-btc-canister, watchdog): date-based tags (release/YYYY-MM-DD)

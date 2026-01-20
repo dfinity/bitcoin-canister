@@ -1,7 +1,7 @@
 name: Release PR
 
 on:
-  pull_request
+  pull_request # TODO(mducroux): temporary, change to workflow_dispatch
 
 # This workflow creates a release PR that:
 # 1. Updates CHANGELOGs for all packages:
@@ -21,7 +21,6 @@ jobs:
     permissions:
       pull-requests: write
       contents: write
-      id-token: write # Required for OIDC token exchange
 
     concurrency:
       group: release-plz-${{ github.ref }}
@@ -33,10 +32,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Authenticate with crates.io
-        id: auth
-        uses: rust-lang/crates-io-auth-action@v1
-
       - name: Run release-plz
         uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
         with:
@@ -44,4 +39,3 @@ jobs:
           version: 0.3.151
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
