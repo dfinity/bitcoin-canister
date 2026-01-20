@@ -31,7 +31,7 @@ publish_allow_dirty = false
 [[package]]
 name = "ic-btc-canister"
 changelog_path = "canister/CHANGELOG.md"
-changelog_config = "canister/cliff.toml"
+changelog_config = "cliff.toml"
 semver_check = false # disable API breaking changes checks
 publish = false # disable `cargo publish`
 git_release_enable = false # handled separately in publish.yml
