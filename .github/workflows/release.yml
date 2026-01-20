@@ -33,9 +33,9 @@ jobs:
           fetch-depth: 0
 
       - name: Run release-plz
-        uses: release-plz/action@v0.5
+        uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
         with:
           command: release-pr
-          # Remove version pin to use latest release-plz (supports per-package changelog_config)
+          version: 0.3.151
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
