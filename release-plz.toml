@@ -1,0 +1,52 @@
+[workspace]
+# path of the git-cliff configuration
+changelog_config = "cliff.toml"
+
+# enable changelog updates
+changelog_update = true
+
+# update dependencies with `cargo update`
+dependencies_update = true
+
+# Enable git releases for all packages by default
+git_release_enable = true
+
+# Enable git tags for all packages by default
+git_tag_enable = true
+
+# creates the git release as draft
+git_release_draft = true
+
+# If true, creates the release PR as a draft.
+pr_draft = true
+
+# labels for the release PR
+pr_labels = ["release"]
+
+# disallow updating repositories with uncommitted changes
+allow_dirty = false
+
+# disallow packaging with uncommitted changes
+publish_allow_dirty = false
+
+[[package]] # the double square brackets define a TOML table array
+name = "ic-btc-canister"
+semver_check = false # disable API breaking changes checks
+publish = false # disable `cargo publish`
+
+[[package]] # the double square brackets define a TOML table array
+name = "watchdog"
+semver_check = false
+publish = false # disable `cargo publish`
+
+[[package]] # the double square brackets define a TOML table array
+name = "ic-btc-interface"
+semver_check = true
+git_release_enable = false # disable GitHub releases
+publish = true # enable `cargo publish`
+
+[[package]]
+name = "ic-btc-validation"
+semver_check = true
+git_release_enable = false # disable GitHub releases
+publish = true # enable `cargo publish`
