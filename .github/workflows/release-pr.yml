@@ -1,17 +1,16 @@
 name: Create Release PR
 
 on:
-  pull_request: # TODO(mducroux): remove this when we're ready to merge PR
-#  workflow_dispatch:
-#    inputs:
-#      package:
-#        description: 'Which package to release'
-#        required: true
-#        type: choice
-#        options:
-#          - ic-btc-canister  # Date-based, uses git-cliff
-#          - watchdog         # Date-based, uses git-cliff
-#          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Which package to release'
+        required: true
+        type: choice
+        options:
+          - ic-btc-canister  # Date-based, uses git-cliff
+          - watchdog         # Date-based, uses git-cliff
+          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
 
 # Creates a Release PR for a specific package:
 # - ic-btc-canister, watchdog: via git-cliff (date-based)
@@ -21,7 +20,7 @@ jobs:
   # ===== ic-btc-canister Release PR (date-based) =====
   canister-pr:
     name: Create Release PR for ic-btc-canister
-    # if: ${{ inputs.package == 'ic-btc-canister' }}
+    if: ${{ inputs.package == 'ic-btc-canister' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -33,7 +32,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -87,7 +85,7 @@ jobs:
   # ===== watchdog Release PR (date-based) =====
   watchdog-pr:
     name: Create Release PR for watchdog
-    # if: ${{ inputs.package == 'watchdog' }}
+    if: ${{ inputs.package == 'watchdog' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -99,7 +97,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -153,7 +150,7 @@ jobs:
   # ===== Library Crates Release PR (semver) =====
   library-crates-pr:
     name: Create Release PR for library crates
-    # if: ${{ inputs.package == 'library-crates' }}
+    if: ${{ inputs.package == 'library-crates' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -165,7 +162,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Create Release PR (release-plz)
         # Creates a single PR for ic-btc-interface and ic-btc-validation

@@ -1,15 +1,16 @@
 name: Create GitHub Releases
 
 on:
-  workflow_dispatch:
-    inputs:
-      release_type:
-        description: 'Which release to create'
-        required: true
-        type: choice
-        options:
-          - ic-btc-canister # Creates ic-btc-canister/release/YYYY-MM-DD
-          - watchdog        # Creates watchdog/release/YYYY-MM-DD
+  pull_request: # TODO(mducroux): remove this when we're ready to merge PR
+#  workflow_dispatch:
+#    inputs:
+#      release_type:
+#        description: 'Which release to create'
+#        required: true
+#        type: choice
+#        options:
+#          - ic-btc-canister # Creates ic-btc-canister/release/YYYY-MM-DD
+#          - watchdog        # Creates watchdog/release/YYYY-MM-DD
 
 # Creates GitHub releases for date-based canisters:
 # - ic-btc-canister: date-based tag with WASM artifact
@@ -22,7 +23,7 @@ jobs:
   # ===== ic-btc-canister Release (date-based) =====
   canister-release:
     name: Release ic-btc-canister
-    if: ${{ inputs.release_type == 'ic-btc-canister' }}
+    # if: ${{ inputs.release_type == 'ic-btc-canister' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -33,6 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Download WASM artifacts
         uses: actions/github-script@v7
@@ -112,7 +114,7 @@ jobs:
   # ===== watchdog Release (date-based) =====
   watchdog-release:
     name: Release watchdog
-    if: ${{ inputs.release_type == 'watchdog' }}
+    # if: ${{ inputs.release_type == 'watchdog' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -123,6 +125,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Download WASM artifacts
         uses: actions/github-script@v7
