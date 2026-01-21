@@ -28,21 +28,15 @@ body = """
 """
 footer = """
 {% for release in releases -%}
-    {% set display_version = release.version | trim_start_matches(pat="ic-btc-canister/") | trim_start_matches(pat="watchdog/") -%}
-    {% if release.version -%}
+    {% if release.version and release.package -%}
         {% if release.previous.version -%}
-            [{{ display_version }}]: \
+            [{{ release.version }}]: \
                 https://github.com/dfinity/bitcoin-canister\
-                    /compare/{{ release.previous.version }}...{{ release.version }}
+                    /compare/{{ release.package }}-{{ release.previous.version }}...{{ release.package }}-{{ release.version }}
         {% else -%}
-            [{{ display_version }}]: \
+            [{{ release.version }}]: \
                 https://github.com/dfinity/bitcoin-canister\
-                    /releases/tag/{{ release.version }}
-        {% endif -%}
-    {% else -%}
-        {% if release.previous.version -%}
-            [Unreleased]: https://github.com/dfinity/bitcoin-canister\
-                /compare/{{ release.previous.version }}...HEAD
+                    /releases/tag/{{ release.package }}-{{ release.version }}
         {% endif -%}
     {% endif -%}
 {% endfor %}
