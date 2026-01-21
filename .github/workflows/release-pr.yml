@@ -49,9 +49,10 @@ jobs:
         run: |
           git-cliff --config cliff.toml \
             --include-path "canister/**" \
+            --tag-pattern "ic-btc-canister/release/.*" \
             --prepend canister/CHANGELOG.md \
             --unreleased \
-            --tag "release/${{ env.RELEASE_DATE }}"
+            --tag "ic-btc-canister/release/${{ env.RELEASE_DATE }}"
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
@@ -100,9 +101,10 @@ jobs:
         run: |
           git-cliff --config cliff.toml \
             --include-path "watchdog/**" \
+            --tag-pattern "watchdog/release/.*" \
             --prepend watchdog/CHANGELOG.md \
             --unreleased \
-            --tag "release/${{ env.RELEASE_DATE }}"
+            --tag "watchdog/release/${{ env.RELEASE_DATE }}"
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
