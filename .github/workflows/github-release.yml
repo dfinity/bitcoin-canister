@@ -85,14 +85,18 @@ jobs:
               per_page: 100,
             });
             const previousRelease = releases.find(r => r.tag_name.startsWith('ic-btc-canister/release/'));
-            const previousTag = previousRelease ? previousRelease.tag_name : null;
             
-            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
+            // Build request - only include previous_tag_name if we have a previous release
+            const notesRequest = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: releaseTag,
-              previous_tag_name: previousTag,
-            });
+            };
+            if (previousRelease) {
+              notesRequest.previous_tag_name = previousRelease.tag_name;
+            }
+            
+            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes(notesRequest);
             
             const checksums = `## SHA256 Checksum\n\n` +
               `- ic-btc-canister.wasm.gz: \`${process.env.WASM_SHA256}\`\n`;
@@ -176,14 +180,18 @@ jobs:
               per_page: 100,
             });
             const previousRelease = releases.find(r => r.tag_name.startsWith('watchdog/release/'));
-            const previousTag = previousRelease ? previousRelease.tag_name : null;
             
-            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
+            // Build request - only include previous_tag_name if we have a previous release
+            const notesRequest = {
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: releaseTag,
-              previous_tag_name: previousTag,
-            });
+            };
+            if (previousRelease) {
+              notesRequest.previous_tag_name = previousRelease.tag_name;
+            }
+            
+            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes(notesRequest);
             
             const checksums = `## SHA256 Checksum\n\n` +
               `- watchdog.wasm.gz: \`${process.env.WASM_SHA256}\`\n`;
