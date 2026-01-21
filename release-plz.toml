@@ -17,8 +17,8 @@ pr_draft = true
 # labels for the release PR
 pr_labels = ["release"]
 
-# allow repositories with uncommitted/ignored files (e.g., generated test data)
-allow_dirty = true
+# disallow updating repositories with uncommitted changes
+allow_dirty = false
 
 # disallow packaging with uncommitted changes
 publish_allow_dirty = false
