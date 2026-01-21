@@ -109,7 +109,7 @@ jobs:
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
-          name: ic-btc-canister release/${{ env.RELEASE_DATE }}
+          name: ic-btc-canister/release/${{ env.RELEASE_DATE }}
           body: ${{ env.RELEASE_BODY }}
           files: |
             wasms/ic-btc-canister.wasm.gz
@@ -204,7 +204,7 @@ jobs:
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
-          name: watchdog release/${{ env.RELEASE_DATE }}
+          name: watchdog/release/${{ env.RELEASE_DATE }}
           body: ${{ env.RELEASE_BODY }}
           files: |
             wasms/watchdog.wasm.gz
