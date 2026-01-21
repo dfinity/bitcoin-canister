@@ -2,7 +2,7 @@
 # enable changelog updates
 changelog_update = true
 
-# Use single cliff.toml for semver-based changelog generation
+# Use cliff.toml for semver-based changelog generation
 changelog_config = "cliff.toml"
 
 # update dependencies with `cargo update`
@@ -17,8 +17,8 @@ pr_draft = true
 # labels for the release PR
 pr_labels = ["release"]
 
-# disallow updating repositories with uncommitted changes
-allow_dirty = false
+# allow repositories with uncommitted/ignored files (e.g., generated test data)
+allow_dirty = true
 
 # disallow packaging with uncommitted changes
 publish_allow_dirty = false
