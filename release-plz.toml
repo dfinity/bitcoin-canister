@@ -1,8 +1,12 @@
 [workspace]
-# enable changelog updates
-changelog_update = true
+# Exclude all packages by default
+release = false
+changelog_update = false
+publish = false
+git_release_enable = false
+git_tag_enable = false
 
-# Use cliff.toml for semver-based changelog generation
+# Use cliff.toml for changelog generation
 changelog_config = "cliff.toml"
 
 # update dependencies with `cargo update`
@@ -29,6 +33,8 @@ publish_allow_dirty = false
 
 [[package]]
 name = "ic-btc-canister"
+release = true
+changelog_update = true
 changelog_path = "canister/CHANGELOG.md"
 semver_check = false # disable API breaking changes checks
 publish = false # disable `cargo publish`
@@ -37,6 +43,8 @@ git_tag_enable = false # tags created manually
 
 [[package]]
 name = "watchdog"
+release = true
+changelog_update = true
 changelog_path = "watchdog/CHANGELOG.md"
 semver_check = false
 publish = false # disable `cargo publish`
@@ -47,6 +55,8 @@ git_tag_enable = false # tags created manually
 
 [[package]]
 name = "ic-btc-interface"
+release = true
+changelog_update = true
 changelog_path = "interface/CHANGELOG.md"
 semver_check = true
 git_release_enable = false # disable GitHub releases (crate only)
@@ -55,6 +65,8 @@ git_tag_enable = true
 
 [[package]]
 name = "ic-btc-validation"
+release = true
+changelog_update = true
 changelog_path = "validation/CHANGELOG.md"
 semver_check = true
 git_release_enable = false # disable GitHub releases (crate only)
