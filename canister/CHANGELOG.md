@@ -250,8 +250,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Initial release of the Bitcoin canister.
 
-[Unreleased]: https://github.com/dfinity/bitcoin-canister/compare/release/2025-12-03...HEAD
-
 [release/2025-12-03]: https://github.com/dfinity/bitcoin-canister/compare/release/2025-10-02...release/2025-12-03
 
 [release/2025-10-02]: https://github.com/dfinity/bitcoin-canister/compare/release/2025-07-02...release/2025-10-02
