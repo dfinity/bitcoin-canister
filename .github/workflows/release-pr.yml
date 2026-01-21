@@ -47,12 +47,26 @@ jobs:
 
       - name: Update canister CHANGELOG
         run: |
+          # Get the previous release tag
+          PREV_TAG=$(git tag --list 'ic-btc-canister/release/*' --sort=-version:refname | head -n1)
+          NEW_TAG="ic-btc-canister/release/${{ env.RELEASE_DATE }}"
+          
+          # Prepend new changelog entry
           git-cliff --config cliff.toml \
             --include-path "canister/**" \
             --tag-pattern "ic-btc-canister/release/.*" \
             --prepend canister/CHANGELOG.md \
             --unreleased \
-            --tag "ic-btc-canister/release/${{ env.RELEASE_DATE }}"
+            --tag "$NEW_TAG"
+          
+          # Append footer link for the new release
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> canister/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> canister/CHANGELOG.md
+          else
+            echo "" >> canister/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> canister/CHANGELOG.md
+          fi
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
@@ -99,12 +113,26 @@ jobs:
 
       - name: Update watchdog CHANGELOG
         run: |
+          # Get the previous release tag
+          PREV_TAG=$(git tag --list 'watchdog/release/*' --sort=-version:refname | head -n1)
+          NEW_TAG="watchdog/release/${{ env.RELEASE_DATE }}"
+          
+          # Prepend new changelog entry
           git-cliff --config cliff.toml \
             --include-path "watchdog/**" \
             --tag-pattern "watchdog/release/.*" \
             --prepend watchdog/CHANGELOG.md \
             --unreleased \
-            --tag "watchdog/release/${{ env.RELEASE_DATE }}"
+            --tag "$NEW_TAG"
+          
+          # Append footer link for the new release
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> watchdog/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> watchdog/CHANGELOG.md
+          else
+            echo "" >> watchdog/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> watchdog/CHANGELOG.md
+          fi
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6

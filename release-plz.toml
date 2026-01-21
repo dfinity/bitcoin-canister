@@ -3,7 +3,7 @@
 release = false
 changelog_update = false
 publish = false
-git_release_enable = false
+git_release_enable = false # disable GitHub releases
 git_tag_enable = false
 
 # Use cliff.toml for changelog generation
@@ -27,7 +27,6 @@ allow_dirty = false
 # disallow packaging with uncommitted changes
 publish_allow_dirty = false
 
-# ----- Semver-based releases (v0.x.x) -----
 # Only these crates are managed by release-plz.
 # ic-btc-canister and watchdog use date-based releases and are managed manually.
 
@@ -37,7 +36,6 @@ release = true
 changelog_update = true
 changelog_path = "interface/CHANGELOG.md"
 semver_check = true
-git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
 git_tag_enable = true
 
@@ -47,6 +45,5 @@ release = true
 changelog_update = true
 changelog_path = "validation/CHANGELOG.md"
 semver_check = true
-git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
 git_tag_enable = true
