@@ -27,31 +27,9 @@ allow_dirty = false
 # disallow packaging with uncommitted changes
 publish_allow_dirty = false
 
-# ----- Date-based releases (release/YYYY-MM-DD) -----
-# Changelogs updated by release-plz, but version must be manually replaced
-# with date format (e.g., release/2024-01-21) before merging the PR
-
-[[package]]
-name = "ic-btc-canister"
-release = true
-changelog_update = true
-changelog_path = "canister/CHANGELOG.md"
-semver_check = false # disable API breaking changes checks
-publish = false # disable `cargo publish`
-git_release_enable = false # handled separately in publish.yml
-git_tag_enable = false # tags created manually
-
-[[package]]
-name = "watchdog"
-release = true
-changelog_update = true
-changelog_path = "watchdog/CHANGELOG.md"
-semver_check = false
-publish = false # disable `cargo publish`
-git_release_enable = false # handled separately in publish.yml
-git_tag_enable = false # tags created manually
-
 # ----- Semver-based releases (v0.x.x) -----
+# Only these crates are managed by release-plz.
+# ic-btc-canister and watchdog use date-based releases and are managed manually.
 
 [[package]]
 name = "ic-btc-interface"
