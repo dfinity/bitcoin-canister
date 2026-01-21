@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [release/2026-01-21] - 2026-01-21
+
+### Added
+
+- Add bitcoin canister changelog (#463)
+
+- Add network validation for addresses in get_balance and get_utxos requests (#458)
+
+- Add canister_arg to initialize and upgrade canister (#457)
+
+
+### Changed
+
+- Use only two cliff.toml for semver and date-based version changelog
+
+- Have separate cliff.toml files for each changelog
+
+- Format according to keep a changelog format
+
+- Create CHANGELOG.md
+
+
+### Removed
+
+- Remove author name
+
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]

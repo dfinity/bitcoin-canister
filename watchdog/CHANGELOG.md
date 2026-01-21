@@ -1,3 +1,35 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [release/2026-01-21] - 2026-01-21
+
+### Added
+
+- Add `health_status_v2` endpoint (#450)
+
+
+### Changed
+
+- Use only two cliff.toml for semver and date-based version changelog
+
+- Have separate cliff.toml files for each changelog
+
+- Refactor explorer logic (#456)
+
+
+### Removed
+
+- Remove retrieving latest block hash (#459)
+
+- Remove deprecated method counter (#455)
+
+- Remove blockexplorer.one from list of providers (#454)
+
+
 # Watchdog canister changelog
 
 ## [2025-07-02 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2025-07-02)
