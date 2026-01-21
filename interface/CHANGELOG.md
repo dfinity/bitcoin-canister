@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.4.0] - 2026-01-21
+
+### Added
+
+- Add network validation for addresses in get_balance and get_utxos requests ([#458](https://github.com/dfinity/bitcoin-canister/pull/458))
+
+
+### Changed
+
+- Use only two cliff.toml for semver and date-based version changelog
+
+- Have separate cliff.toml files for each changelog
+
+
+[0.4.0]: https://github.com/dfinity/bitcoin-canister/compare/0.3.0..0.4.0
+
 ## [0.3.0] - 2025-12-09
 
 ### Added
