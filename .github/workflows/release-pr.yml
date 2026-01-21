@@ -51,7 +51,7 @@ jobs:
             --include-path "canister/**" \
             --prepend canister/CHANGELOG.md \
             --unreleased \
-            --tag "ic-btc-canister/release/${{ env.RELEASE_DATE }}"
+            --tag "release/${{ env.RELEASE_DATE }}"
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
@@ -84,6 +84,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -101,7 +102,7 @@ jobs:
             --include-path "watchdog/**" \
             --prepend watchdog/CHANGELOG.md \
             --unreleased \
-            --tag "watchdog/release/${{ env.RELEASE_DATE }}"
+            --tag "release/${{ env.RELEASE_DATE }}"
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
@@ -134,6 +135,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Create Release PR (release-plz)
         # Creates a single PR for ic-btc-interface and ic-btc-validation
