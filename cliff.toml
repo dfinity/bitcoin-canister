@@ -14,7 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 """
 body = """
 {% if version -%}
-    ## [{{ version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    {% set display_version = version | trim_start_matches(pat="ic-btc-canister/") | trim_start_matches(pat="watchdog/") -%}
+    ## [{{ display_version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
 {% else -%}
     ## [Unreleased]
 {% endif -%}
@@ -27,13 +28,14 @@ body = """
 """
 footer = """
 {% for release in releases -%}
+    {% set display_version = release.version | trim_start_matches(pat="ic-btc-canister/") | trim_start_matches(pat="watchdog/") -%}
     {% if release.version -%}
         {% if release.previous.version -%}
-            [{{ release.version }}]: \
+            [{{ display_version }}]: \
                 https://github.com/dfinity/bitcoin-canister\
                     /compare/{{ release.previous.version }}...{{ release.version }}
         {% else -%}
-            [{{ release.version }}]: \
+            [{{ display_version }}]: \
                 https://github.com/dfinity/bitcoin-canister\
                     /releases/tag/{{ release.version }}
         {% endif -%}
