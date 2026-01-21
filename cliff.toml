@@ -14,8 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 """
 body = """
 {% if version -%}
-    <!-- DEBUG: version={{ version }} -->
-    ## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+    ## [{{ version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
 {% else -%}
     ## [Unreleased]
 {% endif -%}
@@ -26,24 +25,22 @@ body = """
     {% endfor %}
 {% endfor %}\n
 """
-# Footer uses TAG_PREFIX env var (set by workflow) for correct comparison links
-# For release-plz (semver crates), TAG_PREFIX won't be set, so links use bare versions
 footer = """
 {% for release in releases -%}
     {% if release.version -%}
         {% if release.previous.version -%}
-            [{{ release.version | trim_start_matches(pat="v") }}]: \
+            [{{ release.version }}]: \
                 https://github.com/dfinity/bitcoin-canister\
-                    /compare/{{ get_env(name="TAG_PREFIX", default="") }}{{ release.previous.version }}...{{ get_env(name="TAG_PREFIX", default="") }}{{ release.version }}
+                    /compare/{{ release.previous.version }}...{{ release.version }}
         {% else -%}
-            [{{ release.version | trim_start_matches(pat="v") }}]: \
+            [{{ release.version }}]: \
                 https://github.com/dfinity/bitcoin-canister\
-                    /releases/tag/{{ get_env(name="TAG_PREFIX", default="") }}{{ release.version }}
+                    /releases/tag/{{ release.version }}
         {% endif -%}
     {% else -%}
         {% if release.previous.version -%}
             [Unreleased]: https://github.com/dfinity/bitcoin-canister\
-                /compare/{{ get_env(name="TAG_PREFIX", default="") }}{{ release.previous.version }}...HEAD
+                /compare/{{ release.previous.version }}...HEAD
         {% endif -%}
     {% endif -%}
 {% endfor %}

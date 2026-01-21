@@ -46,8 +46,6 @@ jobs:
           echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
 
       - name: Update canister CHANGELOG
-        env:
-          TAG_PREFIX: "ic-btc-canister/"
         run: |
           git-cliff --config cliff.toml \
             --include-path "canister/**" \
@@ -100,8 +98,6 @@ jobs:
           echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
 
       - name: Update watchdog CHANGELOG
-        env:
-          TAG_PREFIX: "watchdog/"
         run: |
           git-cliff --config cliff.toml \
             --include-path "watchdog/**" \
