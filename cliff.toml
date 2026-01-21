@@ -32,11 +32,11 @@ footer = """
         {% if release.previous.version -%}
             [{{ release.version | trim_start_matches(pat="v") }}]: \
                 https://github.com/dfinity/bitcoin-canister\
-                    /compare/{{ release.previous.version }}..{{ release.version }}
+                    /compare/{{ release.previous.version }}...{{ release.version }}
         {% endif -%}
     {% else -%}
         [unreleased]: https://github.com/dfinity/bitcoin-canister\
-            /compare/{{ release.previous.version }}..HEAD
+            /compare/{{ release.previous.version }}...HEAD
     {% endif -%}
 {% endfor %}
 """
