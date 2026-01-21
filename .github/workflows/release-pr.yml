@@ -21,7 +21,7 @@ jobs:
   # ===== ic-btc-canister Release PR (date-based) =====
   canister-pr:
     name: Create Release PR for ic-btc-canister
-    if: ${{ inputs.package == 'ic-btc-canister' }}
+    # if: ${{ inputs.package == 'ic-btc-canister' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -72,7 +72,7 @@ jobs:
   # ===== watchdog Release PR (date-based) =====
   watchdog-pr:
     name: Create Release PR for watchdog
-    if: ${{ inputs.package == 'watchdog' }}
+    # if: ${{ inputs.package == 'watchdog' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -122,7 +122,7 @@ jobs:
   # ===== Library Crates Release PR (semver) =====
   library-crates-pr:
     name: Create Release PR for library crates
-    if: ${{ inputs.package == 'library-crates' }}
+    # if: ${{ inputs.package == 'library-crates' }}
     runs-on: ubuntu-latest
 
     permissions:
