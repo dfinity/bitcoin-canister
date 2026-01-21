@@ -1,12 +1,9 @@
-# git-cliff ~ configuration for changelog generation (used by release-plz)
+# git-cliff ~ configuration for changelog generation
 # https://git-cliff.org/docs/configuration
 #
-# For ic-btc-canister and watchdog:
-#   release-plz will generate a semver version (e.g., [0.2.0])
-#   Before merging the PR, manually replace with date format: [release/YYYY-MM-DD]
-#
-# For ic-btc-interface and ic-btc-validation:
-#   Keep the semver version as-is
+# Used by:
+# - release-plz: for ic-btc-interface and ic-btc-validation (semver)
+# - release-pr.yml workflow: for ic-btc-canister and watchdog (date-based)
 
 [changelog]
 header = """

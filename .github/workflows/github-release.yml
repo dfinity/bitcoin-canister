@@ -1,0 +1,200 @@
+name: Create GitHub Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Which release to create'
+        required: true
+        type: choice
+        options:
+          - ic-btc-canister # Creates ic-btc-canister/release/YYYY-MM-DD
+          - watchdog        # Creates watchdog/release/YYYY-MM-DD
+
+# Creates GitHub releases for date-based canisters:
+# - ic-btc-canister: date-based tag with WASM artifact
+# - watchdog: date-based tag with WASM artifact
+#
+# For semver crates (ic-btc-interface, ic-btc-validation):
+# Tags are created by release-plz when publishing to crates.io (see publish-crates.yml)
+
+jobs:
+  # ===== ic-btc-canister Release (date-based) =====
+  canister-release:
+    name: Release ic-btc-canister
+    if: ${{ inputs.release_type == 'ic-btc-canister' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download WASM artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const allArtifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "wasms",
+            });
+            const mainArtifacts = allArtifacts
+              .filter(artifact => !artifact.expired)
+              .filter(artifact => artifact.workflow_run.head_branch === "master");
+            
+            mainArtifacts.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+            const latestMainArtifact = mainArtifacts[0];
+            if(!latestMainArtifact) {
+              throw new Error("Could not find 'wasms' artifact from branch master");
+            }
+            console.log("Found 'wasms' artifact for commit", latestMainArtifact.workflow_run.head_sha);
+            
+            const { url } = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: latestMainArtifact.id,
+              archive_format: "zip",
+            });
+            await exec.exec('curl', ['-sSL', url, '-o', "wasms.zip"]);
+            await exec.exec('unzip', ["wasms.zip", "-d", "wasms"]);
+            await exec.exec('rm', ["wasms.zip"]);
+
+      - name: SHA256 of WASM artifact
+        run: |
+          echo "WASM_SHA256=$(shasum -a 256 ./wasms/ic-btc-canister.wasm.gz | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Generate release tag and notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().split('T')[0];
+            const releaseTag = `ic-btc-canister/release/${today}`;
+            core.exportVariable('RELEASE_TAG', releaseTag);
+            
+            // Find previous ic-btc-canister release
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const previousRelease = releases.find(r => r.tag_name.startsWith('ic-btc-canister/release/'));
+            const previousTag = previousRelease ? previousRelease.tag_name : null;
+            
+            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: releaseTag,
+              previous_tag_name: previousTag,
+            });
+            
+            const checksums = `## SHA256 Checksum\n\n` +
+              `- ic-btc-canister.wasm.gz: \`${process.env.WASM_SHA256}\`\n`;
+            
+            const releaseBody = generatedNotes.body + '\n\n' + checksums + '\n## Proposals\n\n[TO BE ADDED]';
+            core.exportVariable('RELEASE_BODY', releaseBody);
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ic-btc-canister ${{ env.RELEASE_TAG }}
+          body: ${{ env.RELEASE_BODY }}
+          files: |
+            wasms/ic-btc-canister.wasm.gz
+            canister/candid.did
+
+  # ===== watchdog Release (date-based) =====
+  watchdog-release:
+    name: Release watchdog
+    if: ${{ inputs.release_type == 'watchdog' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download WASM artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const allArtifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "wasms",
+            });
+            const mainArtifacts = allArtifacts
+              .filter(artifact => !artifact.expired)
+              .filter(artifact => artifact.workflow_run.head_branch === "master");
+            
+            mainArtifacts.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+            const latestMainArtifact = mainArtifacts[0];
+            if(!latestMainArtifact) {
+              throw new Error("Could not find 'wasms' artifact from branch master");
+            }
+            console.log("Found 'wasms' artifact for commit", latestMainArtifact.workflow_run.head_sha);
+            
+            const { url } = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: latestMainArtifact.id,
+              archive_format: "zip",
+            });
+            await exec.exec('curl', ['-sSL', url, '-o', "wasms.zip"]);
+            await exec.exec('unzip', ["wasms.zip", "-d", "wasms"]);
+            await exec.exec('rm', ["wasms.zip"]);
+
+      - name: SHA256 of WASM artifact
+        run: |
+          echo "WASM_SHA256=$(shasum -a 256 ./wasms/watchdog.wasm.gz | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Generate release tag and notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().split('T')[0];
+            const releaseTag = `watchdog/release/${today}`;
+            core.exportVariable('RELEASE_TAG', releaseTag);
+            
+            // Find previous watchdog release
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const previousRelease = releases.find(r => r.tag_name.startsWith('watchdog/release/'));
+            const previousTag = previousRelease ? previousRelease.tag_name : null;
+            
+            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: releaseTag,
+              previous_tag_name: previousTag,
+            });
+            
+            const checksums = `## SHA256 Checksum\n\n` +
+              `- watchdog.wasm.gz: \`${process.env.WASM_SHA256}\`\n`;
+            
+            const releaseBody = generatedNotes.body + '\n\n' + checksums;
+            core.exportVariable('RELEASE_BODY', releaseBody);
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: watchdog ${{ env.RELEASE_TAG }}
+          body: ${{ env.RELEASE_BODY }}
+          files: |
+            wasms/watchdog.wasm.gz
+            watchdog/candid.did

@@ -1,0 +1,78 @@
+name: Create Release PR
+
+on:
+  pull_request: # TODO(mducroux): remove this when we're ready to merge PR
+
+# Creates a Release PR that updates CHANGELOGs:
+# - ic-btc-interface, ic-btc-validation: via release-plz (semver)
+# - ic-btc-canister, watchdog: via git-cliff (date-based)
+
+jobs:
+  release-pr:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
+
+      # ===== Semver crates (ic-btc-interface, ic-btc-validation) =====
+      - name: Update changelogs for semver crates (release-plz)
+        uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
+        with:
+          command: release-pr
+          version: 0.3.151
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ===== Date-based crates (ic-btc-canister, watchdog) =====
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release date
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
+
+      - name: Update canister CHANGELOG (git-cliff)
+        run: |
+          git-cliff --config cliff.toml \
+            --include-path "canister/**" \
+            --prepend canister/CHANGELOG.md \
+            --unreleased \
+            --tag "release/${{ env.RELEASE_DATE }}"
+
+      - name: Update watchdog CHANGELOG (git-cliff)
+        run: |
+          git-cliff --config cliff.toml \
+            --include-path "watchdog/**" \
+            --prepend watchdog/CHANGELOG.md \
+            --unreleased \
+            --tag "release/${{ env.RELEASE_DATE }}"
+
+      - name: Create PR for date-based changelogs
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update changelogs for release/${{ env.RELEASE_DATE }}"
+          title: "chore: release/${{ env.RELEASE_DATE }}"
+          body: |
+            ## Release ${{ env.RELEASE_DATE }}
+
+            This PR updates changelogs for:
+            - ic-btc-canister
+            - watchdog
+
+            After merging, run the **GitHub Release** workflow to create the release.
+          branch: release/${{ env.RELEASE_DATE }}
+          labels: release
+          draft: true
