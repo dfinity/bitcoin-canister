@@ -70,38 +70,53 @@ jobs:
         run: |
           echo "WASM_SHA256=$(shasum -a 256 ./wasms/ic-btc-canister.wasm.gz | cut -d ' ' -f1)" >> "$GITHUB_ENV"
 
-      - name: Generate release tag and notes
-        uses: actions/github-script@v7
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
         with:
-          script: |
-            const today = new Date().toISOString().split('T')[0];
-            const releaseTag = `ic-btc-canister/release/${today}`;
-            core.exportVariable('RELEASE_TAG', releaseTag);
-            core.exportVariable('RELEASE_DATE', today);
-            
-            // Find previous ic-btc-canister release
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100,
-            });
-            const previousRelease = releases.find(r => r.tag_name.startsWith('ic-btc-canister/release/'));
-            
-            const notesRequest = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: releaseTag,
-            };
-            if (previousRelease) {
-              notesRequest.previous_tag_name = previousRelease.tag_name;
-            }
-            
-            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes(notesRequest);
-            
-            const checksums = `## SHA-256\n\n\`\`\`\n${process.env.WASM_SHA256}  ic-btc-canister.wasm.gz\n\`\`\`\n`;
-            
-            const releaseBody = generatedNotes.body + '\n\n' + checksums + '\n## Proposals\n\n[TO BE ADDED]';
-            core.exportVariable('RELEASE_BODY', releaseBody);
+          tool: git-cliff
+
+      - name: Generate release tag and notes
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          RELEASE_TAG="ic-btc-canister/release/${RELEASE_DATE}"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
+          
+          # Find previous tag: prefer ic-btc-canister/release/*, fallback to release/*
+          PREV_TAG=$(git tag --list 'ic-btc-canister/release/*' --sort=-version:refname | head -n1)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git tag --list 'release/*' --sort=-version:refname | head -n1)
+          fi
+          
+          # Generate changelog with git-cliff (scoped to canister/ directory)
+          CHANGELOG=$(git-cliff --config cliff.toml \
+            --include-path "canister/**" \
+            --unreleased \
+            --tag "$RELEASE_TAG" \
+            --strip header \
+            "${PREV_TAG}..")
+          
+          # Build release body
+          CHECKSUMS="## SHA-256
+
+          \`\`\`
+          ${WASM_SHA256}  ic-btc-canister.wasm.gz
+          \`\`\`"
+          
+          PROPOSALS="## Proposals
+
+          [TO BE ADDED]"
+          
+          RELEASE_BODY="${CHANGELOG}
+
+          ${CHECKSUMS}
+
+          ${PROPOSALS}"
+          
+          # Export multiline variable
+          echo "RELEASE_BODY<<EOF" >> "$GITHUB_ENV"
+          echo "$RELEASE_BODY" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -164,38 +179,53 @@ jobs:
         run: |
           echo "WASM_SHA256=$(shasum -a 256 ./wasms/watchdog.wasm.gz | cut -d ' ' -f1)" >> "$GITHUB_ENV"
 
-      - name: Generate release tag and notes
-        uses: actions/github-script@v7
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
         with:
-          script: |
-            const today = new Date().toISOString().split('T')[0];
-            const releaseTag = `watchdog/release/${today}`;
-            core.exportVariable('RELEASE_TAG', releaseTag);
-            core.exportVariable('RELEASE_DATE', today);
-            
-            // Find previous watchdog release
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100,
-            });
-            const previousRelease = releases.find(r => r.tag_name.startsWith('watchdog/release/'));
-            
-            const notesRequest = {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: releaseTag,
-            };
-            if (previousRelease) {
-              notesRequest.previous_tag_name = previousRelease.tag_name;
-            }
-            
-            const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes(notesRequest);
-            
-            const checksums = `## SHA-256\n\n\`\`\`\n${process.env.WASM_SHA256}  watchdog.wasm.gz\n\`\`\`\n`;
-            
-            const releaseBody = generatedNotes.body + '\n\n' + checksums + '\n## Proposals\n\n[TO BE ADDED]';
-            core.exportVariable('RELEASE_BODY', releaseBody);
+          tool: git-cliff
+
+      - name: Generate release tag and notes
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          RELEASE_TAG="watchdog/release/${RELEASE_DATE}"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
+          
+          # Find previous tag: prefer watchdog/release/*, fallback to release/*
+          PREV_TAG=$(git tag --list 'watchdog/release/*' --sort=-version:refname | head -n1)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git tag --list 'release/*' --sort=-version:refname | head -n1)
+          fi
+          
+          # Generate changelog with git-cliff (scoped to watchdog/ directory)
+          CHANGELOG=$(git-cliff --config cliff.toml \
+            --include-path "watchdog/**" \
+            --unreleased \
+            --tag "$RELEASE_TAG" \
+            --strip header \
+            "${PREV_TAG}..")
+          
+          # Build release body
+          CHECKSUMS="## SHA-256
+
+          \`\`\`
+          ${WASM_SHA256}  watchdog.wasm.gz
+          \`\`\`"
+          
+          PROPOSALS="## Proposals
+
+          [TO BE ADDED]"
+          
+          RELEASE_BODY="${CHANGELOG}
+
+          ${CHECKSUMS}
+
+          ${PROPOSALS}"
+          
+          # Export multiline variable
+          echo "RELEASE_BODY<<EOF" >> "$GITHUB_ENV"
+          echo "$RELEASE_BODY" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
