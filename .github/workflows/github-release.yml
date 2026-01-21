@@ -95,7 +95,7 @@ jobs:
             --unreleased \
             --tag "$RELEASE_TAG" \
             --strip header \
-            "${PREV_TAG}.." | sed '1,/^## \[/d')
+            "${PREV_TAG}.." | sed '/^## \[.*\] - /d')
           
           # Build release body
           CHECKSUMS="## SHA-256
@@ -205,7 +205,7 @@ jobs:
             --unreleased \
             --tag "$RELEASE_TAG" \
             --strip header \
-            "${PREV_TAG}.." | sed '1,/^## \[/d')
+            "${PREV_TAG}.." | sed '/^## \[.*\] - /d')
           
           # Build release body
           CHECKSUMS="## SHA-256
