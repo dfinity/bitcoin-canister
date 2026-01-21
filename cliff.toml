@@ -25,26 +25,6 @@ body = """
     {% endfor %}
 {% endfor %}\n
 """
-footer = """
-{% for release in releases -%}
-    {% if release.version -%}
-        {% if release.previous.version -%}
-            [{{ release.version | trim_start_matches(pat="v") }}]: \
-                https://github.com/dfinity/bitcoin-canister\
-                    /compare/{{ release.previous.version }}...{{ release.version }}
-        {% else -%}
-            [{{ release.version | trim_start_matches(pat="v") }}]: \
-                https://github.com/dfinity/bitcoin-canister\
-                    /releases/tag/{{ release.version }}
-        {% endif -%}
-    {% else -%}
-        {% if release.previous.version -%}
-            [Unreleased]: https://github.com/dfinity/bitcoin-canister\
-                /compare/{{ release.previous.version }}...HEAD
-        {% endif -%}
-    {% endif -%}
-{% endfor %}
-"""
 trim = true
 
 [git]
