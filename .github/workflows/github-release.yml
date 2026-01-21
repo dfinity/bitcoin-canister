@@ -98,8 +98,7 @@ jobs:
             
             const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes(notesRequest);
             
-            const checksums = `## SHA256 Checksum\n\n` +
-              `- ic-btc-canister.wasm.gz: \`${process.env.WASM_SHA256}\`\n`;
+            const checksums = `## SHA-256\n\n\`\`\`\n${process.env.WASM_SHA256}  ic-btc-canister.wasm.gz\n\`\`\`\n`;
             
             const releaseBody = generatedNotes.body + '\n\n' + checksums + '\n## Proposals\n\n[TO BE ADDED]';
             core.exportVariable('RELEASE_BODY', releaseBody);
@@ -193,10 +192,9 @@ jobs:
             
             const { data: generatedNotes } = await github.rest.repos.generateReleaseNotes(notesRequest);
             
-            const checksums = `## SHA256 Checksum\n\n` +
-              `- watchdog.wasm.gz: \`${process.env.WASM_SHA256}\`\n`;
+            const checksums = `## SHA-256\n\n\`\`\`\n${process.env.WASM_SHA256}  watchdog.wasm.gz\n\`\`\`\n`;
             
-            const releaseBody = generatedNotes.body + '\n\n' + checksums;
+            const releaseBody = generatedNotes.body + '\n\n' + checksums + '\n## Proposals\n\n[TO BE ADDED]';
             core.exportVariable('RELEASE_BODY', releaseBody);
 
       - name: Create GitHub release
