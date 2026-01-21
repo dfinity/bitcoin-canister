@@ -77,6 +77,7 @@ jobs:
             const today = new Date().toISOString().split('T')[0];
             const releaseTag = `ic-btc-canister/release/${today}`;
             core.exportVariable('RELEASE_TAG', releaseTag);
+            core.exportVariable('RELEASE_DATE', today);
             
             // Find previous ic-btc-canister release
             const { data: releases } = await github.rest.repos.listReleases({
@@ -86,7 +87,6 @@ jobs:
             });
             const previousRelease = releases.find(r => r.tag_name.startsWith('ic-btc-canister/release/'));
             
-            // Build request - only include previous_tag_name if we have a previous release
             const notesRequest = {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -109,7 +109,7 @@ jobs:
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
-          name: ic-btc-canister ${{ env.RELEASE_TAG }}
+          name: ic-btc-canister release/${{ env.RELEASE_DATE }}
           body: ${{ env.RELEASE_BODY }}
           files: |
             wasms/ic-btc-canister.wasm.gz
@@ -172,6 +172,7 @@ jobs:
             const today = new Date().toISOString().split('T')[0];
             const releaseTag = `watchdog/release/${today}`;
             core.exportVariable('RELEASE_TAG', releaseTag);
+            core.exportVariable('RELEASE_DATE', today);
             
             // Find previous watchdog release
             const { data: releases } = await github.rest.repos.listReleases({
@@ -181,7 +182,6 @@ jobs:
             });
             const previousRelease = releases.find(r => r.tag_name.startsWith('watchdog/release/'));
             
-            // Build request - only include previous_tag_name if we have a previous release
             const notesRequest = {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -204,7 +204,7 @@ jobs:
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
-          name: watchdog ${{ env.RELEASE_TAG }}
+          name: watchdog release/${{ env.RELEASE_DATE }}
           body: ${{ env.RELEASE_BODY }}
           files: |
             wasms/watchdog.wasm.gz
