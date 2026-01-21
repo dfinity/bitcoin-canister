@@ -89,12 +89,13 @@ jobs:
           fi
           
           # Generate changelog with git-cliff (scoped to canister/ directory)
+          # Strip the version title line (e.g., "## [release/2026-01-21] - 2026-01-21")
           CHANGELOG=$(git-cliff --config cliff.toml \
             --include-path "canister/**" \
             --unreleased \
             --tag "$RELEASE_TAG" \
             --strip header \
-            "${PREV_TAG}..")
+            "${PREV_TAG}.." | sed '1,/^## \[/d')
           
           # Build release body
           CHECKSUMS="## SHA-256
@@ -198,12 +199,13 @@ jobs:
           fi
           
           # Generate changelog with git-cliff (scoped to watchdog/ directory)
+          # Strip the version title line (e.g., "## [release/2026-01-21] - 2026-01-21")
           CHANGELOG=$(git-cliff --config cliff.toml \
             --include-path "watchdog/**" \
             --unreleased \
             --tag "$RELEASE_TAG" \
             --strip header \
-            "${PREV_TAG}..")
+            "${PREV_TAG}.." | sed '1,/^## \[/d')
           
           # Build release body
           CHECKSUMS="## SHA-256
