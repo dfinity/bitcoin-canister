@@ -2,14 +2,11 @@
 # enable changelog updates
 changelog_update = true
 
+# Use single cliff.toml for semver-based changelog generation
+changelog_config = "cliff.toml"
+
 # update dependencies with `cargo update`
 dependencies_update = true
-
-# Enable git releases for all packages by default
-git_release_enable = true
-
-# Enable git tags for all packages by default
-git_tag_enable = true
 
 # creates the git release as draft
 git_release_draft = true
@@ -27,11 +24,12 @@ allow_dirty = false
 publish_allow_dirty = false
 
 # ----- Date-based releases (release/YYYY-MM-DD) -----
+# Changelogs updated by release-plz, but version must be manually replaced
+# with date format (e.g., release/2024-01-21) before merging the PR
 
 [[package]]
 name = "ic-btc-canister"
 changelog_path = "canister/CHANGELOG.md"
-changelog_config = "cliff.toml"
 semver_check = false # disable API breaking changes checks
 publish = false # disable `cargo publish`
 git_release_enable = false # handled separately in publish.yml
@@ -40,8 +38,6 @@ git_tag_enable = false # tags created manually
 [[package]]
 name = "watchdog"
 changelog_path = "watchdog/CHANGELOG.md"
-changelog_config = "cliff.toml"
-changelog_include = ["watchdog/**"]
 semver_check = false
 publish = false # disable `cargo publish`
 git_release_enable = false # handled separately in publish.yml
@@ -52,17 +48,15 @@ git_tag_enable = false # tags created manually
 [[package]]
 name = "ic-btc-interface"
 changelog_path = "interface/CHANGELOG.md"
-changelog_config = "cliff-semver.toml"
-changelog_include = ["interface/**"]
 semver_check = true
 git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
+git_tag_enable = true
 
 [[package]]
 name = "ic-btc-validation"
 changelog_path = "validation/CHANGELOG.md"
-changelog_config = "cliff-semver.toml"
-changelog_include = ["validation/**"]
 semver_check = true
 git_release_enable = false # disable GitHub releases (crate only)
 publish = true # enable `cargo publish`
+git_tag_enable = true
