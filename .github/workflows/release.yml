@@ -31,6 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): temporary, remove after testing
 
       - name: Run release-plz
         uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
