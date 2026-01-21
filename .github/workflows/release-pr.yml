@@ -1,16 +1,17 @@
 name: Create Release PR
 
 on:
-  workflow_dispatch:
-    inputs:
-      package:
-        description: 'Which package to release'
-        required: true
-        type: choice
-        options:
-          - ic-btc-canister  # Date-based, uses git-cliff
-          - watchdog         # Date-based, uses git-cliff
-          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
+  pull_request: # TODO(mducroux): remove this when we're ready to merge PR
+#  workflow_dispatch:
+#    inputs:
+#      package:
+#        description: 'Which package to release'
+#        required: true
+#        type: choice
+#        options:
+#          - ic-btc-canister  # Date-based, uses git-cliff
+#          - watchdog         # Date-based, uses git-cliff
+#          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
 
 # Creates a Release PR for a specific package:
 # - ic-btc-canister, watchdog: via git-cliff (date-based)
@@ -32,6 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }} # TODO(mducroux): remove this when we're ready to merge PR
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
