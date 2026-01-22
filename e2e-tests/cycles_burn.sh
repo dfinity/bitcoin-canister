@@ -17,7 +17,7 @@ dfx start --background --clean
 INITIAL_BALANCE=100000000000
 
 # Create and install the bitcoin canister using pre-built WASM
-dfx canister create bitcoin
+dfx canister create --no-wallet bitcoin
 dfx canister install bitcoin \
   --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
   --argument "(variant {init = record {
