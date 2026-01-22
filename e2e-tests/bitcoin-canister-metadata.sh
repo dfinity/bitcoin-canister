@@ -15,7 +15,7 @@ mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
 cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
    "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
 
-dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {}})"
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
 
 # Check the canister's metadata section for the Candid interface.
 METADATA=$(dfx canister metadata bitcoin candid:service)

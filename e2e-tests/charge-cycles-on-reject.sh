@@ -14,13 +14,13 @@ dfx start --background --clean
 # to the Bitcoin network when calling bitcoin_send_transaction.
 dfx deploy e2e-scenario-1
 
-# Copy pre-built WASM to expected location and use dfx deploy --no-build
+# Copy pre-built WASM to expected location and use dfx deploy
 # (dfx deploy sets up wallet infrastructure needed for cycle charging tests)
 mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
 cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
    "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
 
-dfx deploy --no-build bitcoin --argument "(variant {init = record {
+dfx deploy bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";

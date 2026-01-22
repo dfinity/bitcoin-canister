@@ -67,7 +67,7 @@ cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
    "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
 
 echo "Deploy new version of canister..."
-dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {}})"
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
@@ -75,7 +75,7 @@ dfx canister stop bitcoin
 echo "Upgrade canister to own version..."
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --no-wallet --no-build --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
+dfx deploy --no-wallet --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
 dfx canister start bitcoin
 
 echo "SUCCESS"

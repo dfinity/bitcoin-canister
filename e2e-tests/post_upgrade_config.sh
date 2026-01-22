@@ -16,7 +16,7 @@ mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
 cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
    "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
 
-dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 0;
   network = opt variant { regtest };
 }})"
@@ -44,7 +44,7 @@ FEES="record {
   get_block_headers_maximum = 0 : nat;
 }";
 
-dfx deploy --no-wallet --no-build --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
+dfx deploy --no-wallet --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
   fees = opt $FEES;
 }})"
 

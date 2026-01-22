@@ -21,7 +21,7 @@ mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
 cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
    "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
 
-dfx deploy --no-wallet --no-build --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(variant {init = record {
+dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(variant {init = record {
   network = opt variant { regtest };
   burn_cycles = opt variant { enabled };
 }})"

@@ -20,7 +20,7 @@ mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
 cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
    "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
 
-dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
@@ -117,7 +117,7 @@ dfx start --background --clean
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Copy pre-built WASM to expected location and deploy (WASM already copied earlier)
-dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
