@@ -103,7 +103,10 @@ if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
-# Deploy upgraded canister.
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_watchdog_wasm
+
+# Deploy upgraded canister using pre-built WASM.
 dfx deploy --no-wallet watchdog --argument "(variant {upgrade})"
 
 dfx canister start watchdog
