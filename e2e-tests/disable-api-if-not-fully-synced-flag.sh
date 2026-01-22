@@ -15,16 +15,17 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks.
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
-# Create and install the bitcoin canister using pre-built WASM
-dfx canister create --no-wallet bitcoin
-dfx canister install bitcoin \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {init = record {
-    stability_threshold = opt 1;
-    network = opt variant { regtest };
-    blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
-    disable_api_if_not_fully_synced = opt variant { enabled };
-  }})"
+# Copy pre-built WASM to expected location and deploy
+mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
+cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+
+dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+  stability_threshold = opt 1;
+  network = opt variant { regtest };
+  blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
+  disable_api_if_not_fully_synced = opt variant { enabled };
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 # The number of next block headers should be 3, the canister
@@ -115,16 +116,13 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks.
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
-# Create and install the bitcoin canister using pre-built WASM
-dfx canister create --no-wallet bitcoin
-dfx canister install bitcoin \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {init = record {
-    stability_threshold = opt 1;
-    network = opt variant { regtest };
-    blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
-    disable_api_if_not_fully_synced = opt variant { disabled };
-  }})"
+# Copy pre-built WASM to expected location and deploy (WASM already copied earlier)
+dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+  stability_threshold = opt 1;
+  network = opt variant { regtest };
+  blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
+  disable_api_if_not_fully_synced = opt variant { disabled };
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_main_chain_height 2 60

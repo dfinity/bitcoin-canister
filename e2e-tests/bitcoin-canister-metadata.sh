@@ -10,11 +10,12 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-# Create and install the bitcoin canister using pre-built WASM
-dfx canister create --no-wallet bitcoin
-dfx canister install bitcoin \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {init = record {}})"
+# Copy pre-built WASM to expected location and deploy
+mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
+cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+
+dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {}})"
 
 # Check the canister's metadata section for the Candid interface.
 METADATA=$(dfx canister metadata bitcoin candid:service)

@@ -11,14 +11,15 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-# Create and install the bitcoin canister using pre-built WASM
-dfx canister create --no-wallet bitcoin
-dfx canister install bitcoin \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {init = record {
-    stability_threshold = opt 0;
-    network = opt variant { regtest };
-  }})"
+# Copy pre-built WASM to expected location and deploy
+mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
+cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+
+dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+  stability_threshold = opt 0;
+  network = opt variant { regtest };
+}})"
 
 # The stability threshold is zero
 CONFIG=$(dfx canister call bitcoin get_config --query)

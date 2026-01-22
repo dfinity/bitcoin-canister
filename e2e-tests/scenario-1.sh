@@ -13,15 +13,16 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks for scenario 1.
 dfx deploy --no-wallet e2e-scenario-1
 
-# Create and install the bitcoin canister using pre-built WASM
-dfx canister create --no-wallet bitcoin
-dfx canister install bitcoin \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {init = record {
-    stability_threshold = opt 2;
-    network = opt variant { regtest };
-    blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
-  }})"
+# Copy pre-built WASM to expected location and deploy
+mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
+cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+
+dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {
+  stability_threshold = opt 2;
+  network = opt variant { regtest };
+  blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_stable_height 3 60
