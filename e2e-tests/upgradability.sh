@@ -61,11 +61,13 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
+# Copy pre-built WASM to expected location
+mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
+cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+
 echo "Deploy new version of canister..."
-dfx canister install bitcoin --mode reinstall \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {init = record {}})" \
-  --yes
+dfx deploy --no-wallet --no-build bitcoin --argument "(variant {init = record {}})"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
@@ -73,9 +75,7 @@ dfx canister stop bitcoin
 echo "Upgrade canister to own version..."
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx canister install bitcoin --mode upgrade \
-  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-  --argument "(variant {upgrade})"
+dfx deploy --no-wallet --no-build --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
 dfx canister start bitcoin
 
 echo "SUCCESS"
