@@ -103,7 +103,12 @@ if ! [[ $(dfx canister status watchdog 2>&1) == *"Status: Stopped"* ]]; then
   exit 1
 fi
 
-# Deploy upgraded canister.
+# Copy pre-built WASM to expected location
+mkdir -p "${SCRIPT_DIR}/../../target/wasm32-unknown-unknown/release"
+cp "${SCRIPT_DIR}/../../wasms/watchdog.wasm.gz" \
+   "${SCRIPT_DIR}/../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+
+# Deploy upgraded canister using pre-built WASM.
 dfx deploy --no-wallet watchdog --argument "(variant {upgrade})"
 
 dfx canister start watchdog
@@ -111,7 +116,7 @@ dfx canister stop watchdog
 
 # Redeploy the canister to test the pre-upgrade hook.
 # '4449444c0000' decodes to '()'
-dfx deploy --upgrade-unchanged watchdog --argument-type raw --argument '4449444c0000'
+dfx deploy --no-wallet --upgrade-unchanged watchdog --argument-type raw --argument '4449444c0000'
 dfx canister start watchdog
 
 echo "SUCCESS"

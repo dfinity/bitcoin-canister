@@ -499,23 +499,16 @@ jobs:
 
   watchdog_health_status:
     runs-on: ubuntu-latest
-    needs: cargo-build
+    needs: canister-build-reproducibility
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
+      - name: Download WASMs
+        uses: actions/download-artifact@v4
+        with:
+          name: wasms
+          path: ./wasms
 
       - name: Install dfx
         uses: dfinity/setup-dfx@main
@@ -528,23 +521,16 @@ jobs:
 
   watchdog_get_config:
     runs-on: ubuntu-latest
-    needs: cargo-build
+    needs: canister-build-reproducibility
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
+      - name: Download WASMs
+        uses: actions/download-artifact@v4
+        with:
+          name: wasms
+          path: ./wasms
 
       - name: Install dfx
         uses: dfinity/setup-dfx@main
@@ -557,23 +543,16 @@ jobs:
 
   watchdog_metrics:
     runs-on: ubuntu-latest
-    needs: cargo-build
+    needs: canister-build-reproducibility
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
+      - name: Download WASMs
+        uses: actions/download-artifact@v4
+        with:
+          name: wasms
+          path: ./wasms
 
       - name: Install dfx
         uses: dfinity/setup-dfx@main
@@ -586,23 +565,16 @@ jobs:
 
   #  watchdog_upgradability: TODO(mducroux): re-enable once we have a new watchdog canister release
   #    runs-on: ubuntu-latest
-  #    needs: cargo-build
+  #    needs: canister-build-reproducibility
   #
   #    steps:
   #      - uses: actions/checkout@v4
-  #      - uses: actions/cache@v4
-  #        with:
-  #          path: |
-  #            ~/.cargo/registry
-  #            ~/.cargo/git
-  #            target
-  #          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
   #
-  #      - name: Install Rust
-  #        run: |
-  #          rustup update ${{ matrix.rust }} --no-self-update
-  #          rustup default ${{ matrix.rust }}
-  #          rustup target add wasm32-unknown-unknown
+  #      - name: Download WASMs
+  #        uses: actions/download-artifact@v4
+  #        with:
+  #          name: wasms
+  #          path: ./wasms
   #
   #      - name: Install dfx
   #        uses: dfinity/setup-dfx@main
@@ -615,23 +587,16 @@ jobs:
 
   watchdog_canister_metadata:
     runs-on: ubuntu-latest
-    needs: cargo-build
+    needs: canister-build-reproducibility
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
 
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
+      - name: Download WASMs
+        uses: actions/download-artifact@v4
+        with:
+          name: wasms
+          path: ./wasms
 
       - name: Install dfx
         uses: dfinity/setup-dfx@main

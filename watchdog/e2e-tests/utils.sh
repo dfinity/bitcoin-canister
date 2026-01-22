@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 
-# Function to deploy the watchdog canister for mainnet bitcoin_canister.
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Function to deploy the watchdog canister for mainnet bitcoin_canister using pre-built WASM.
 deploy_watchdog_canister_bitcoin_mainnet() {
+  # Copy pre-built WASM to expected location and deploy
+  mkdir -p "${SCRIPT_DIR}/../../target/wasm32-unknown-unknown/release"
+  cp "${SCRIPT_DIR}/../../wasms/watchdog.wasm.gz" \
+     "${SCRIPT_DIR}/../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"
+
   dfx deploy --no-wallet watchdog --argument "(variant { init = record { target = (variant { bitcoin_mainnet } ) } } )"
 }
 
