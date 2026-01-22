@@ -14,6 +14,9 @@ dfx start --background --clean
 # to the Bitcoin network when calling bitcoin_send_transaction.
 dfx deploy e2e-scenario-1
 
+# Deploy a wallet canister (required for cycle charging tests)
+dfx identity deploy-wallet
+
 # Create and install the bitcoin canister using pre-built WASM
 dfx canister create bitcoin
 dfx canister install bitcoin \
