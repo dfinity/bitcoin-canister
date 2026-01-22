@@ -4,23 +4,23 @@
 
 This repository contains multiple packages with different release strategies:
 
-| Package             | Versioning                        | Published on crates.io? |
-|---------------------|-----------------------------------|-------------------------|
-| `ic-btc-canister`   | Date-based (`release/YYYY-MM-DD`) | No                      |
-| `watchdog`          | Date-based (`release/YYYY-MM-DD`) | No                      |
-| `ic-btc-interface`  | Semver (`X.Y.Z`)                  | Yes                     |
-| `ic-btc-validation` | Semver (`X.Y.Z`)                  | Yes                     |
+| Package             | Versioning                                        | Published on crates.io? |
+|---------------------|---------------------------------------------------|-------------------------|
+| `ic-btc-canister`   | Date-based (`ic-btc-canister/release/YYYY-MM-DD`) | No                      |
+| `watchdog`          | Date-based (`watchdog/release/YYYY-MM-DD`)        | No                      |
+| `ic-btc-interface`  | Semver (`X.Y.Z`)                                  | Yes                     |
+| `ic-btc-validation` | Semver (`X.Y.Z`)                                  | Yes                     |
 
 ### Canister IDs
 
-**ic-btc-canister:**
+**Bitcoin canister:**
 
 | Network         | Production                    | Staging                       |
 |-----------------|-------------------------------|-------------------------------|
 | Bitcoin Mainnet | `ghsi2-tqaaa-aaaan-aaaca-cai` | `axowo-ciaaa-aaaad-acs7q-cai` |
 | Bitcoin Testnet | `g4xu7-jiaaa-aaaan-aaaaq-cai` | -                             |
 
-**watchdog:**
+**Watchdog canister:**
 
 | Network          | Production                    | Staging                       |
 |------------------|-------------------------------|-------------------------------|
@@ -29,27 +29,27 @@ This repository contains multiple packages with different release strategies:
 | Dogecoin Mainnet | `he6b4-hiaaa-aaaan-aaaeq-cai` | `kwqxh-2yaaa-aaaad-acteq-cai` |
 | Dogecoin Testnet | `hn5ka-raaaa-aaaan-aaafa-cai` | -                             |
 
-The canisters (`ic-btc-canister` and `watchdog`) are deployed in production by submitting proposals to the Internet
+The Bitcoin and watchdog canisters are deployed in production by submitting proposals to the Internet
 Computer's [Network Nervous System](https://internetcomputer.org/nns).
 
 ## Releasing Canisters (ic-btc-canister / watchdog)
 
 ### Step 1: Create a Release PR
 
-1. Go to [Actions → Create Release PR](../../actions/workflows/release-pr.yml)
+1. Go to Actions → Create Release PR
 2. Click **Run workflow**
-3. Select the package (`ic-btc-canister` or `watchdog`)
+3. Select the canister (`ic-btc-canister` or `watchdog`)
 4. Click **Run workflow**
 
-This creates a draft PR that updates the package's `CHANGELOG.md` using [git-cliff](https://git-cliff.org/).
+This creates a draft PR that updates the canister's `CHANGELOG.md` using [git-cliff](https://git-cliff.org/).
 
 5. Review and merge the PR
 
 ### Step 2: Create GitHub Release
 
-1. Go to [Actions → Create GitHub Releases](../../actions/workflows/github-release.yml)
+1. Go to Actions → Create GitHub Releases
 2. Click **Run workflow**
-3. Select the release type (`ic-btc-canister` or `watchdog`)
+3. Select the canister (`ic-btc-canister` or `watchdog`)
 4. Click **Run workflow**
 
 This creates a **draft** GitHub release with:
@@ -66,7 +66,7 @@ This creates a **draft** GitHub release with:
 
 After the release is published:
 
-1. Submit an NNS proposal to upgrade the canister
+1. Submit an NNS proposal to upgrade/re-install the canister
 2. Update the release notes with the proposal link
 3. Mark the release as "Latest" once deployed
 
@@ -74,7 +74,7 @@ After the release is published:
 
 ### Step 1: Create a Release PR
 
-1. Go to [Actions → Create Release PR](../../actions/workflows/release-pr.yml)
+1. Go to Actions → Create Release PR
 2. Click **Run workflow**
 3. Select `library-crates`
 4. Click **Run workflow**
@@ -88,9 +88,8 @@ This uses [release-plz](https://release-plz.ieni.dev/) to create a PR that:
 
 ### Step 2: Publish to crates.io
 
-1. Go to [Actions → Publish Crates to crates.io](../../actions/workflows/publish-crates.yml)
+1. Go to Actions → Publish Crates to crates.io
 2. Click **Run workflow**
-3. Click **Run workflow**
 
 This publishes both `ic-btc-interface` and `ic-btc-validation` to crates.io and creates git tags.
 
