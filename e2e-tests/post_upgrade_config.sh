@@ -11,11 +11,14 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-# Deploy the bitcoin canister.
-dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
-  stability_threshold = opt 0;
-  network = opt variant { regtest };
-}})"
+# Create and install the bitcoin canister using pre-built WASM
+dfx canister create bitcoin
+dfx canister install bitcoin \
+  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+  --argument "(variant {init = record {
+    stability_threshold = opt 0;
+    network = opt variant { regtest };
+  }})"
 
 # The stability threshold is zero
 CONFIG=$(dfx canister call bitcoin get_config --query)
@@ -40,9 +43,11 @@ FEES="record {
   get_block_headers_maximum = 0 : nat;
 }";
 
-dfx deploy --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
-  fees = opt $FEES;
-}})"
+dfx canister install bitcoin --mode upgrade \
+  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+  --argument "(variant { upgrade = opt record {
+    fees = opt $FEES;
+  }})"
 
 # Verify the fees have been updated.
 CONFIG=$(dfx canister call bitcoin get_config --query)

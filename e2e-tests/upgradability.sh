@@ -62,7 +62,10 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
 fi
 
 echo "Deploy new version of canister..."
-dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
+dfx canister install bitcoin --mode reinstall \
+  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+  --argument "(variant {init = record {}})" \
+  --yes
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
@@ -70,7 +73,9 @@ dfx canister stop bitcoin
 echo "Upgrade canister to own version..."
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
+dfx canister install bitcoin --mode upgrade \
+  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+  --argument "(variant {upgrade})"
 dfx canister start bitcoin
 
 echo "SUCCESS"

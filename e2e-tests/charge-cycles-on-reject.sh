@@ -14,27 +14,30 @@ dfx start --background --clean
 # to the Bitcoin network when calling bitcoin_send_transaction.
 dfx deploy e2e-scenario-1
 
-# Deploy the bitcoin canister.
-dfx deploy bitcoin --argument "(variant {init = record {
-  stability_threshold = opt 2;
-  network = opt variant { regtest };
-  blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
-  syncing = opt variant { enabled };
-  fees = opt record {
-    get_utxos_base = 1;
-    get_utxos_cycles_per_ten_instructions = 1;
-    get_utxos_maximum = 1;
-    get_balance = 1;
-    get_balance_maximum = 1;
-    get_current_fee_percentiles = 1;
-    get_current_fee_percentiles_maximum = 1;
-    send_transaction_base = 1;
-    send_transaction_per_byte = 1;
-    get_block_headers_base = 1;
-    get_block_headers_cycles_per_ten_instructions = 1;
-    get_block_headers_maximum = 1;
-  };
-}})"
+# Create and install the bitcoin canister using pre-built WASM
+dfx canister create bitcoin
+dfx canister install bitcoin \
+  --wasm "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
+  --argument "(variant {init = record {
+    stability_threshold = opt 2;
+    network = opt variant { regtest };
+    blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
+    syncing = opt variant { enabled };
+    fees = opt record {
+      get_utxos_base = 1;
+      get_utxos_cycles_per_ten_instructions = 1;
+      get_utxos_maximum = 1;
+      get_balance = 1;
+      get_balance_maximum = 1;
+      get_current_fee_percentiles = 1;
+      get_current_fee_percentiles_maximum = 1;
+      send_transaction_base = 1;
+      send_transaction_per_byte = 1;
+      get_block_headers_base = 1;
+      get_block_headers_cycles_per_ten_instructions = 1;
+      get_block_headers_maximum = 1;
+    };
+  }})"
 
 check_charging()
 {
