@@ -4,6 +4,7 @@
 set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/utils.sh"
 pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
@@ -11,10 +12,8 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
-# Copy pre-built WASM to expected location and deploy
-mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
-cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
 
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 0;

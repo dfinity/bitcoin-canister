@@ -15,10 +15,8 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks.
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
-# Copy pre-built WASM to expected location and deploy
-mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
-cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
 
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
@@ -116,7 +114,7 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks.
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
-# Copy pre-built WASM to expected location and deploy (WASM already copied earlier)
+# dfx.json already configured for pre-built WASM
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };

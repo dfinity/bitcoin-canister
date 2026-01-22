@@ -13,10 +13,8 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks for scenario 1.
 dfx deploy --no-wallet e2e-scenario-1
 
-# Copy pre-built WASM to expected location and deploy
-mkdir -p "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release"
-cp "${SCRIPT_DIR}/../wasms/ic-btc-canister.wasm.gz" \
-   "${SCRIPT_DIR}/../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
 
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
