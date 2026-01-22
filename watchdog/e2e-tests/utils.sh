@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-
 # Configure dfx.json to use pre-built WASM from wasms/ directory instead of building.
 # This is used in CI where the WASM is downloaded from the canister-build-reproducibility job.
 use_prebuilt_watchdog_wasm() {
