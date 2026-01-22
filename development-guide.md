@@ -1,41 +1,114 @@
 # Development Guide
 
-## Release Preparation
+## Release Overview
 
-The canisters in this repository are deployed in production by submitting proposals to the Internet Computer's [Network Nervous System](https://internetcomputer.org/nns).
+This repository contains multiple packages with different release strategies:
 
-Due to limitations in GitHub's release handling, we cannot create separate latest releases for the Bitcoin canister and the Watchdog canister. Therefore, we include both artifacts in each latest release. 
+| Package             | Versioning                                        | Published on crates.io? |
+|---------------------|---------------------------------------------------|-------------------------|
+| `ic-btc-canister`   | Date-based (`ic-btc-canister/release/YYYY-MM-DD`) | No                      |
+| `watchdog`          | Date-based (`watchdog/release/YYYY-MM-DD`)        | No                      |
+| `ic-btc-interface`  | Semver (`X.Y.Z`)                                  | Yes                     |
+| `ic-btc-validation` | Semver (`X.Y.Z`)                                  | Yes                     |
 
-Only after all the expected canisters were deployed the `pre-release` can be turned into a proper `latest release`.
+### Canister IDs
 
-## Steps to Cut a Release
+**Bitcoin canister:**
 
-1. Identify the commit for the release, eg. `aff3eef`
-2. Draft a new pre-release
-    - Click on `Draft a new release` at the [releases page](https://github.com/dfinity/bitcoin-canister/releases), make sure the right commit is selected
-    - Create a new tag with the name `release/<yyyy-mm-dd>`
-    - Set the title to be `release/<yyyy-mm-dd>`
-    - Check the `Set as a pre-release` box to indicate that this release has not been deployed to production yet
-    - Add release notes. Github can generate the release notes by clicking on `Generated Release Notes`, modify as needed
-3. Prepare canister WASM files and compute their checksums
-    - **Note**: there is no reproducibility guarantee on Mac M1s, preferably use Ubuntu or Intel Macs
-    ```shell
-    # Checkout the repo with a given commit.
-    $ git clone https://github.com/dfinity/bitcoin-canister &&\
-        cd bitcoin-canister &&\
-        git checkout aff3eef  # <- make sure the right commit is provided.
+| Network         | Production                    | Staging                       |
+|-----------------|-------------------------------|-------------------------------|
+| Bitcoin Mainnet | `ghsi2-tqaaa-aaaan-aaaca-cai` | `axowo-ciaaa-aaaad-acs7q-cai` |
+| Bitcoin Testnet | `g4xu7-jiaaa-aaaan-aaaaq-cai` | -                             |
 
-    # Use docker to reproducibly build ic-btc-canister and watchdog canister WASMs.
-    $ ./scripts/docker-build
+**Watchdog canister:**
 
-    # Compute checksums.
-    $ sha256sum *.wasm.gz
-    09f5647a45ff6d5d05b2b0ed48613fb2365b5fe6573ba0e901509c39fb9564ac  ic-btc-canister.wasm.gz
-    cc58b2a32517f9907f0d3c77bc8c099d0a65d8194a8d9bc0ad7df357ee867a07  watchdog.wasm.gz
-    ```
-4. Attach the Bitcoin Canister's and Watchdog's WASM to the release notes.
-    - Add calculated checksums into release notes
-5. Attach the candid file of the Bitcoin Canister to the release notes.
-6. Finalize the release once all the expected canisters were upgraded
-    - (Optional) Provide links to corresponding NNS proposals
-    - Uncheck `Set as a pre-release` box and check `Set as the latest release ` to indicate that the release is fully deployed
+| Network          | Production                    | Staging                       |
+|------------------|-------------------------------|-------------------------------|
+| Bitcoin Mainnet  | `gatoo-6iaaa-aaaan-aaacq-cai` | `ljyeq-zaaaa-aaaad-actaa-cai` |
+| Bitcoin Testnet  | `gjqfs-iaaaa-aaaan-aaada-cai` | -                             |
+| Dogecoin Mainnet | `he6b4-hiaaa-aaaan-aaaeq-cai` | `kwqxh-2yaaa-aaaad-acteq-cai` |
+| Dogecoin Testnet | `hn5ka-raaaa-aaaan-aaafa-cai` | -                             |
+
+The Bitcoin and watchdog canisters are deployed in production by submitting proposals to the Internet
+Computer's [Network Nervous System](https://internetcomputer.org/nns).
+
+## Releasing Canisters (ic-btc-canister / watchdog)
+
+### Step 1: Create a Release PR
+
+1. Go to Actions → Create Release PR
+2. Click **Run workflow**
+3. Select the canister (`ic-btc-canister` or `watchdog`)
+4. Click **Run workflow**
+
+This creates a draft PR that updates the canister's `CHANGELOG.md` using [git-cliff](https://git-cliff.org/).
+
+5. Review and merge the PR
+
+### Step 2: Create GitHub Release
+
+1. Go to Actions → Create GitHub Releases
+2. Click **Run workflow**
+3. Select the canister (`ic-btc-canister` or `watchdog`)
+4. Click **Run workflow**
+
+This creates a **draft** GitHub release with:
+
+- WASM artifact (downloaded from latest CI build on `master`)
+- Candid file
+- Changelog (scoped to the package's directory)
+- SHA-256 checksum
+- Placeholder for NNS proposal links
+
+5. Review the draft release
+
+### Step 3: Deploy via NNS Proposal
+
+After the release is published:
+
+1. Submit an NNS proposal to upgrade/re-install the canister
+2. Update the release notes with the proposal link
+3. Mark the release as "Latest" once deployed
+
+## Releasing Library Crates (ic-btc-interface / ic-btc-validation)
+
+### Step 1: Create a Release PR
+
+1. Go to Actions → Create Release PR
+2. Click **Run workflow**
+3. Select `library-crates`
+4. Click **Run workflow**
+
+This uses [release-plz](https://release-plz.ieni.dev/) to create a PR that:
+
+- Bumps versions in `Cargo.toml` based on conventional commits (patch, minor, or major)
+- Updates `CHANGELOG.md` for both crates
+
+5. Review and merge the PR
+
+### Step 2: Publish to crates.io
+
+1. Go to Actions → Publish Crates to crates.io
+2. Click **Run workflow**
+
+This publishes both `ic-btc-interface` and `ic-btc-validation` to crates.io and creates git tags.
+
+## Manual WASM Build (for verification)
+
+To manually build and verify WASM checksums:
+
+```shell
+# Clone and checkout the release commit
+git clone https://github.com/dfinity/bitcoin-canister
+cd bitcoin-canister
+git checkout <commit-sha>
+
+# Build reproducibly with Docker
+./scripts/docker-build
+
+# Verify checksums match the release
+sha256sum *.wasm.gz
+```
+
+**Note**: Reproducible builds require Docker. There is no reproducibility guarantee on Mac M1s; preferably use Ubuntu or
+Intel Macs.

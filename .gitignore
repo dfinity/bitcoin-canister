@@ -16,3 +16,4 @@ chunk_hashes.txt
 
 *.log
 *.csv
+!validation/tests/data/*.csv

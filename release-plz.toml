@@ -1,0 +1,49 @@
+[workspace]
+# Exclude all packages by default
+release = false
+changelog_update = false
+publish = false
+git_release_enable = false # disable GitHub releases
+git_tag_enable = false
+
+# Use cliff.toml for changelog generation
+changelog_config = "cliff.toml"
+
+# update dependencies with `cargo update`
+dependencies_update = true
+
+# creates the git release as draft
+git_release_draft = true
+
+# If true, creates the release PR as a draft.
+pr_draft = true
+
+# labels for the release PR
+pr_labels = ["release"]
+
+# disallow updating repositories with uncommitted changes
+allow_dirty = false
+
+# disallow packaging with uncommitted changes
+publish_allow_dirty = false
+
+# Only these crates are managed by release-plz.
+# ic-btc-canister and watchdog use date-based releases and are managed manually.
+
+[[package]]
+name = "ic-btc-interface"
+release = true
+changelog_update = true
+changelog_path = "interface/CHANGELOG.md"
+semver_check = true
+publish = true # enable `cargo publish`
+git_tag_enable = true
+
+[[package]]
+name = "ic-btc-validation"
+release = true
+changelog_update = true
+changelog_path = "validation/CHANGELOG.md"
+semver_check = true
+publish = true # enable `cargo publish`
+git_tag_enable = true

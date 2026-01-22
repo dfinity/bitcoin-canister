@@ -1,0 +1,173 @@
+name: Create Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Which package to release'
+        required: true
+        type: choice
+        options:
+          - ic-btc-canister  # Date-based, uses git-cliff
+          - watchdog         # Date-based, uses git-cliff
+          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
+
+# Creates a Release PR for a specific package:
+# - ic-btc-canister, watchdog: via git-cliff (date-based)
+# - library-crates: via release-plz (semver) - includes ic-btc-interface & ic-btc-validation
+
+jobs:
+  # ===== ic-btc-canister Release PR (date-based) =====
+  canister-pr:
+    name: Create Release PR for ic-btc-canister
+    if: ${{ inputs.package == 'ic-btc-canister' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release date
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
+
+      - name: Update canister CHANGELOG
+        run: |
+          # Get the previous release tag
+          PREV_TAG=$(git tag --list 'ic-btc-canister/release/*' --sort=-version:refname | head -n1)
+          NEW_TAG="ic-btc-canister/release/${{ env.RELEASE_DATE }}"
+          
+          # Prepend new changelog entry
+          git-cliff --config cliff.toml \
+            --include-path "canister/**" \
+            --tag-pattern "ic-btc-canister/release/.*" \
+            --prepend canister/CHANGELOG.md \
+            --unreleased \
+            --tag "$NEW_TAG"
+          
+          # Append footer link for the new release
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> canister/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> canister/CHANGELOG.md
+          else
+            echo "" >> canister/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> canister/CHANGELOG.md
+          fi
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(ic-btc-canister): update changelog for release/${{ env.RELEASE_DATE }}"
+          title: "chore(ic-btc-canister): release/${{ env.RELEASE_DATE }}"
+          body: |
+            ## ic-btc-canister release/${{ env.RELEASE_DATE }}
+
+            This PR updates the changelog for ic-btc-canister.
+
+            After merging, run the **Create GitHub Releases** workflow with `ic-btc-canister` selected.
+          branch: ic-btc-canister/release/${{ env.RELEASE_DATE }}
+          labels: release
+          draft: true
+
+  # ===== watchdog Release PR (date-based) =====
+  watchdog-pr:
+    name: Create Release PR for watchdog
+    if: ${{ inputs.package == 'watchdog' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release date
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
+
+      - name: Update watchdog CHANGELOG
+        run: |
+          # Get the previous release tag
+          PREV_TAG=$(git tag --list 'watchdog/release/*' --sort=-version:refname | head -n1)
+          NEW_TAG="watchdog/release/${{ env.RELEASE_DATE }}"
+          
+          # Prepend new changelog entry
+          git-cliff --config cliff.toml \
+            --include-path "watchdog/**" \
+            --tag-pattern "watchdog/release/.*" \
+            --prepend watchdog/CHANGELOG.md \
+            --unreleased \
+            --tag "$NEW_TAG"
+          
+          # Append footer link for the new release
+          if [ -n "$PREV_TAG" ]; then
+            echo "" >> watchdog/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> watchdog/CHANGELOG.md
+          else
+            echo "" >> watchdog/CHANGELOG.md
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> watchdog/CHANGELOG.md
+          fi
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(watchdog): update changelog for release/${{ env.RELEASE_DATE }}"
+          title: "chore(watchdog): release/${{ env.RELEASE_DATE }}"
+          body: |
+            ## watchdog release/${{ env.RELEASE_DATE }}
+
+            This PR updates the changelog for watchdog.
+
+            After merging, run the **Create GitHub Releases** workflow with `watchdog` selected.
+          branch: watchdog/release/${{ env.RELEASE_DATE }}
+          labels: release
+          draft: true
+
+  # ===== Library Crates Release PR (semver) =====
+  library-crates-pr:
+    name: Create Release PR for library crates
+    if: ${{ inputs.package == 'library-crates' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Release PR (release-plz)
+        # Creates a single PR for ic-btc-interface and ic-btc-validation
+        uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
+        with:
+          command: release-pr
+          version: 0.3.151
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
