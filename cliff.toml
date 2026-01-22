@@ -46,19 +46,16 @@ trim = true
 conventional_commits = true
 filter_unconventional = false
 commit_parsers = [
-    { message = "^feat", group = "Added" },
     { message = "^[a|A]dd", group = "Added" },
     { message = "^[s|S]upport", group = "Added" },
+    { message = "^[r|R]emove", group = "Removed" },
     { message = "^.*: add", group = "Added" },
     { message = "^.*: support", group = "Added" },
-    { message = "^[r|R]emove", group = "Removed" },
     { message = "^.*: remove", group = "Removed" },
     { message = "^.*: delete", group = "Removed" },
+    { message = "^test", group = "Fixed" },
     { message = "^fix", group = "Fixed" },
     { message = "^.*: fix", group = "Fixed" },
-    { message = "^test", group = "Fixed" },
-    { message = "^security", group = "Security" },
-    { message = "^.*: security", group = "Security" },
     { message = "^.*", group = "Changed" },
 ]
 filter_commits = false
