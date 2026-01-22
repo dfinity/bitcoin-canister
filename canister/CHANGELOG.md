@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-01-21] - 2026-01-21
+
+### Added
+
+- Add ic-btc-validation CHANGELOG
+
+- Add bitcoin canister changelog (#463)
+
+- Add network validation for addresses in get_balance and get_utxos requests (#458)
+
+- Add canister_arg to initialize and upgrade canister (#457)
+
+
+### Changed
+
+- Update CHANGELOG.md
+
+- Use only two cliff.toml for semver and date-based version changelog
+
+- Have separate cliff.toml files for each changelog
+
+- Format according to keep a changelog format
+
+- Create CHANGELOG.md
+
+
+### Removed
+
+- Remove author name
+
+
 ## [release/2025-12-03] - 2025-12-03
 
 ### Changed
@@ -281,3 +312,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2022-12-20]: https://github.com/dfinity/bitcoin-canister/compare/release/2022-12-02...release/2022-12-20
 
 [release/2022-12-02]: https://github.com/dfinity/bitcoin-canister/releases/tag/release/2022-12-02
+
+[release/2026-01-21]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-canister/release/2025-12-03...ic-btc-canister/release/2026-01-21
