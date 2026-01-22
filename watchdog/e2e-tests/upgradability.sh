@@ -114,7 +114,7 @@ dfx canister stop watchdog
 
 # Redeploy the canister to test the pre-upgrade hook.
 # '4449444c0000' decodes to '()'
-dfx deploy --no-wallet --upgrade-unchanged watchdog --argument-type raw --argument '4449444c0000'
+dfx deploy --upgrade-unchanged watchdog --argument-type raw --argument '4449444c0000'
 dfx canister start watchdog
 
 echo "SUCCESS"

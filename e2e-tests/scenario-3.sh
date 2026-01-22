@@ -16,6 +16,7 @@ dfx deploy --no-wallet e2e-scenario-3
 # Configure dfx.json to use pre-built WASM
 use_prebuilt_bitcoin_wasm
 
+# Deploy the bitcoin canister, setting the blocks_source to be the source above.
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
   network = opt variant { regtest };

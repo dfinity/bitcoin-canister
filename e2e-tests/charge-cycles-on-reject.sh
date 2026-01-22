@@ -18,6 +18,7 @@ dfx deploy e2e-scenario-1
 # (dfx deploy sets up wallet infrastructure needed for cycle charging tests)
 use_prebuilt_bitcoin_wasm
 
+# Deploy the bitcoin canister.
 dfx deploy bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
   network = opt variant { regtest };

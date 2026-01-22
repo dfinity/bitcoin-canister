@@ -74,7 +74,7 @@ dfx canister stop bitcoin
 echo "Upgrade canister to own version..."
 
 # Redeploy the canister to test the pre-upgrade hook.
-dfx deploy --no-wallet --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
+dfx deploy --upgrade-unchanged bitcoin --argument "(variant {upgrade})"
 dfx canister start bitcoin
 
 echo "SUCCESS"

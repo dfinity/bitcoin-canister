@@ -15,6 +15,7 @@ dfx start --background --clean
 # Configure dfx.json to use pre-built WASM
 use_prebuilt_bitcoin_wasm
 
+# Deploy the bitcoin canister.
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 0;
   network = opt variant { regtest };
@@ -43,7 +44,7 @@ FEES="record {
   get_block_headers_maximum = 0 : nat;
 }";
 
-dfx deploy --no-wallet --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
+dfx deploy --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
   fees = opt $FEES;
 }})"
 
