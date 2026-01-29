@@ -14,9 +14,6 @@ on:
 # Creates GitHub releases for date-based canisters:
 # - ic-btc-canister: date-based tag with WASM artifact
 # - watchdog: date-based tag with WASM artifact
-#
-# For semver crates (ic-btc-interface, ic-btc-validation):
-# Tags are created by release-plz when publishing to crates.io (see publish-crates.yml)
 
 jobs:
   canister-release:
