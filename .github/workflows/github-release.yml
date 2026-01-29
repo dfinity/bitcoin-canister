@@ -20,7 +20,7 @@ on:
 
 jobs:
   # ===== ic-btc-canister Release (date-based) =====
-  canister-release:
+  bitcoin-canister-release:
     name: Release ic-btc-canister
     if: ${{ inputs.release_type == 'ic-btc-canister' }}
     runs-on: ubuntu-latest
@@ -61,7 +61,7 @@ jobs:
               archive_format: "zip",
             });
             await exec.exec('curl', ['-sSL', url, '-o', "wasms.zip"]);
-            await exec.exec('unzip', ["wasms.zip", "-d", "wasms"]);
+            await exec.exec('unzip', ["wasms.zip", "ic-btc-canister.wasm.gz", "-d", "wasms"]);
             await exec.exec('rm', ["wasms.zip"]);
 
       - name: SHA256 of WASM artifact
@@ -129,7 +129,7 @@ jobs:
             canister/candid.did
 
   # ===== watchdog Release (date-based) =====
-  watchdog-release:
+  watchdog-canister-release:
     name: Release watchdog
     if: ${{ inputs.release_type == 'watchdog' }}
     runs-on: ubuntu-latest
@@ -170,7 +170,7 @@ jobs:
               archive_format: "zip",
             });
             await exec.exec('curl', ['-sSL', url, '-o', "wasms.zip"]);
-            await exec.exec('unzip', ["wasms.zip", "-d", "wasms"]);
+            await exec.exec('unzip', ["wasms.zip", "watchdog.wasm.gz", "-d", "wasms"]);
             await exec.exec('rm', ["wasms.zip"]);
 
       - name: SHA256 of WASM artifact
