@@ -17,10 +17,10 @@ on:
 # - library-crates: via release-plz (semver) - includes ic-btc-interface & ic-btc-validation
 
 jobs:
-  # ===== ic-btc-canister Release PR (date-based) =====
+  # ===== Canister Release PR (date-based) =====
   canister-pr:
-    name: Create Release PR for ic-btc-canister
-    if: ${{ inputs.package == 'ic-btc-canister' }}
+    name: Create Release PR for ${{ inputs.package }}
+    if: ${{ inputs.package == 'ic-btc-canister' || inputs.package == 'watchdog' }}
     runs-on: ubuntu-latest
 
     permissions:
@@ -28,6 +28,16 @@ jobs:
       contents: write
 
     steps:
+      - name: Set release parameters
+        run: |
+          if [ "${{ inputs.package }}" = "ic-btc-canister" ]; then
+            echo "INCLUDE_PATH=canister/**" >> "$GITHUB_ENV"
+            echo "CHANGELOG_PATH=canister/CHANGELOG.md" >> "$GITHUB_ENV"
+          else
+            echo "INCLUDE_PATH=watchdog/**" >> "$GITHUB_ENV"
+            echo "CHANGELOG_PATH=watchdog/CHANGELOG.md" >> "$GITHUB_ENV"
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -43,107 +53,42 @@ jobs:
           RELEASE_DATE=$(date +%Y-%m-%d)
           echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
 
-      - name: Update canister CHANGELOG
+      - name: Update CHANGELOG
         run: |
           # Get the previous release tag
-          PREV_TAG=$(git tag --list 'ic-btc-canister/release/*' --sort=-version:refname | head -n1)
-          NEW_TAG="ic-btc-canister/release/${{ env.RELEASE_DATE }}"
+          PREV_TAG=$(git tag --list '${{ inputs.package }}/release/*' --sort=-version:refname | head -n1)
+          NEW_TAG="${{ inputs.package }}/release/${{ env.RELEASE_DATE }}"
           
           # Prepend new changelog entry
           git-cliff --config cliff.toml \
-            --include-path "canister/**" \
-            --tag-pattern "ic-btc-canister/release/.*" \
-            --prepend canister/CHANGELOG.md \
+            --include-path "${{ env.INCLUDE_PATH }}" \
+            --tag-pattern "${{ inputs.package }}/release/.*" \
+            --prepend "${{ env.CHANGELOG_PATH }}" \
             --unreleased \
             --tag "$NEW_TAG"
           
           # Append footer link for the new release
           if [ -n "$PREV_TAG" ]; then
-            echo "" >> canister/CHANGELOG.md
-            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> canister/CHANGELOG.md
+            echo "" >> "${{ env.CHANGELOG_PATH }}"
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> "${{ env.CHANGELOG_PATH }}"
           else
-            echo "" >> canister/CHANGELOG.md
-            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> canister/CHANGELOG.md
+            echo "" >> "${{ env.CHANGELOG_PATH }}"
+            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> "${{ env.CHANGELOG_PATH }}"
           fi
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(ic-btc-canister): update changelog for release/${{ env.RELEASE_DATE }}"
-          title: "chore(ic-btc-canister): release/${{ env.RELEASE_DATE }}"
+          commit-message: "chore(${{ inputs.package }}): update changelog for release/${{ env.RELEASE_DATE }}"
+          title: "chore(${{ inputs.package }}): release/${{ env.RELEASE_DATE }}"
           body: |
-            ## ic-btc-canister release/${{ env.RELEASE_DATE }}
+            ## ${{ inputs.package }} release/${{ env.RELEASE_DATE }}
 
-            This PR updates the changelog for ic-btc-canister.
+            This PR updates the changelog for ${{ inputs.package }}.
 
-            After merging, run the **Create GitHub Releases** workflow with `ic-btc-canister` selected.
-          branch: ic-btc-canister/release/${{ env.RELEASE_DATE }}
-          labels: release
-          draft: true
-
-  # ===== watchdog Release PR (date-based) =====
-  watchdog-pr:
-    name: Create Release PR for watchdog
-    if: ${{ inputs.package == 'watchdog' }}
-    runs-on: ubuntu-latest
-
-    permissions:
-      pull-requests: write
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install git-cliff
-        uses: taiki-e/install-action@v2
-        with:
-          tool: git-cliff
-
-      - name: Generate release date
-        run: |
-          RELEASE_DATE=$(date +%Y-%m-%d)
-          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
-
-      - name: Update watchdog CHANGELOG
-        run: |
-          # Get the previous release tag
-          PREV_TAG=$(git tag --list 'watchdog/release/*' --sort=-version:refname | head -n1)
-          NEW_TAG="watchdog/release/${{ env.RELEASE_DATE }}"
-          
-          # Prepend new changelog entry
-          git-cliff --config cliff.toml \
-            --include-path "watchdog/**" \
-            --tag-pattern "watchdog/release/.*" \
-            --prepend watchdog/CHANGELOG.md \
-            --unreleased \
-            --tag "$NEW_TAG"
-          
-          # Append footer link for the new release
-          if [ -n "$PREV_TAG" ]; then
-            echo "" >> watchdog/CHANGELOG.md
-            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> watchdog/CHANGELOG.md
-          else
-            echo "" >> watchdog/CHANGELOG.md
-            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> watchdog/CHANGELOG.md
-          fi
-
-      - name: Create PR
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(watchdog): update changelog for release/${{ env.RELEASE_DATE }}"
-          title: "chore(watchdog): release/${{ env.RELEASE_DATE }}"
-          body: |
-            ## watchdog release/${{ env.RELEASE_DATE }}
-
-            This PR updates the changelog for watchdog.
-
-            After merging, run the **Create GitHub Releases** workflow with `watchdog` selected.
-          branch: watchdog/release/${{ env.RELEASE_DATE }}
+            After merging, run the **Create GitHub Releases** workflow with `${{ inputs.package }}` selected.
+          branch: ${{ inputs.package }}/release/${{ env.RELEASE_DATE }}
           labels: release
           draft: true
 
