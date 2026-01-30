@@ -1,0 +1,63 @@
+# git-cliff ~ configuration for changelog generation
+# https://git-cliff.org/docs/configuration
+#
+# Used by:
+# - release-plz: for ic-btc-interface and ic-btc-validation (semver)
+# - release-pr.yml workflow: for ic-btc-canister and watchdog (date-based)
+
+[changelog]
+header = """
+# Changelog\n
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).\n
+"""
+body = """
+{% if version -%}
+    {% set display_version = version | trim_start_matches(pat="ic-btc-canister/") | trim_start_matches(pat="watchdog/") -%}
+    ## [{{ display_version }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else -%}
+    ## [Unreleased]
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | upper_first }}
+    {% for commit in commits %}
+        - {{ commit.message | split(pat="\n") | first | upper_first | trim }}
+    {% endfor %}
+{% endfor %}\n
+"""
+footer = """
+{% for release in releases -%}
+    {% if release.version -%}
+        {% if release.previous.version -%}
+            [{{ release.version | trim_start_matches(pat="v") }}]: \
+                https://github.com/dfinity/bitcoin-canister\
+                    /compare/{{ release.previous.version }}...{{ release.version }}
+        {% endif -%}
+    {% else -%}
+        [unreleased]: https://github.com/dfinity/bitcoin-canister\
+            /compare/{{ release.previous.version }}...HEAD
+    {% endif -%}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+commit_parsers = [
+    { message = "^[a|A]dd", group = "Added" },
+    { message = "^[s|S]upport", group = "Added" },
+    { message = "^[r|R]emove", group = "Removed" },
+    { message = "^.*: add", group = "Added" },
+    { message = "^.*: support", group = "Added" },
+    { message = "^.*: remove", group = "Removed" },
+    { message = "^.*: delete", group = "Removed" },
+    { message = "^test", group = "Fixed" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^.*: fix", group = "Fixed" },
+    { message = "^.*", group = "Changed" },
+]
+filter_commits = false
+topo_order = false
+sort_commits = "newest"
