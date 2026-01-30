@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-01-30] - 2026-01-30
+
+### Added
+
+- Add `health_status_v2` endpoint (#450)
+
+
+### Changed
+
+- Refactor explorer logic (#456)
+
+
+### Removed
+
+- Remove retrieving latest block hash (#459)
+
+- Remove deprecated method counter (#455)
+
+- Remove blockexplorer.one from list of providers (#454)
+
+
 ## [2025-07-02 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2025-07-02)
 
 Features:
@@ -68,3 +89,5 @@ Chores:
 ## [2023-04-21 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2023-04-21)
 
 - create watchdog canister
+
+[release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30
