@@ -13,8 +13,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Release plz (#464)
-
 - Refactor explorer logic (#456)
 
 
