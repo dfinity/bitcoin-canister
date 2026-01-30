@@ -18,6 +18,7 @@ REFERENCE_CANISTER_NAME="upgradability-test"
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/utils.sh"
 pushd "$SCRIPT_DIR"
 
 # Get the URL of the latest release.
@@ -60,6 +61,9 @@ if ! [[ $(dfx canister status bitcoin 2>&1) == *"Status: Stopped"* ]]; then
   echo "Failed to create and stop Bitcoin canister."
   exit 1
 fi
+
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
 
 echo "Deploy new version of canister..."
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
