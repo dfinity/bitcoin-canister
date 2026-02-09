@@ -96,6 +96,7 @@ jobs:
           # Generate changelog with git-cliff (scoped to package directory)
           # Strip the version title line (e.g., "## [release/2026-01-21] - 2026-01-21")
           CHANGELOG=$(git-cliff --config cliff.toml \
+            --tag-pattern "${{ inputs.release_type }}/release/.*" \
             --include-path "${{ env.INCLUDE_PATH }}" \
             --unreleased \
             --tag "$RELEASE_TAG" \
