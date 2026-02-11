@@ -149,4 +149,6 @@ service bitcoin : (canister_arg) -> {
   get_config : () -> (config) query;
 
   set_config : (set_config_request) -> ();
+
+  get_main_chain_height : () -> (block_height) query;
 };

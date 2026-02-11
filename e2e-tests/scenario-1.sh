@@ -23,6 +23,13 @@ dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
 # Wait until the ingestion of stable blocks is complete.
 wait_until_stable_height 3 60
 
+# Verify the main chain height using the query endpoint.
+HEIGHT=$(dfx canister call bitcoin get_main_chain_height --query)
+if ! [[ $HEIGHT == "(5 : nat32)" ]]; then
+  echo "FAIL: Expected height 5, got $HEIGHT"
+  exit 1
+fi
+
 # Fetch the balance of an address we do not expect to have funds.
 BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
   network = variant { regtest };

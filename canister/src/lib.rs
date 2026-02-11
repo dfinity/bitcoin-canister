@@ -182,6 +182,10 @@ pub fn get_config() -> Config {
     })
 }
 
+pub fn get_main_chain_height() -> u32 {
+    with_state(main_chain_height)
+}
+
 pub fn pre_upgrade() {
     print("Running pre_upgrade...");
 
@@ -687,6 +691,18 @@ mod test {
         with_state(|s| {
             assert_eq!(s.disable_api_if_not_fully_synced, Flag::Enabled);
         });
+    }
+
+    #[test]
+    fn get_main_chain_height_returns_correct_height() {
+        init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(Network::Regtest),
+            ..Default::default()
+        });
+
+        // After init, main chain height should be 0 (only genesis block, height 0)
+        assert_eq!(get_main_chain_height(), 0);
     }
 
     #[test]
