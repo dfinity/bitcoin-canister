@@ -158,11 +158,6 @@ fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> Tim
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_bitcoin_canister().transform(raw)
-}
-
-#[query]
 fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
 }
@@ -190,11 +185,6 @@ fn transform_bitcoin_mainnet_blockstream_info(raw: TransformArgs) -> HttpRequest
 #[query]
 fn transform_bitcoin_mempool(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_mainnet_mempool().transform(raw)
-}
-
-#[query]
-fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_canister().transform(raw)
 }
 
 #[query]
