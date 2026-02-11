@@ -364,10 +364,9 @@ mod test {
             assert_eq!(config.subnet_type, canister.subnet_type());
             assert!(!config.explorers.is_empty());
 
-            // Verify get_providers includes canister provider
+            // Verify get_providers returns only explorers (canister height is fetched separately)
             let providers = config.get_providers(canister);
-            assert_eq!(providers.len(), config.explorers.len() + 1);
-            let provider_names: Vec<String> = providers.iter().map(|p| p.name()).collect();
+            assert_eq!(providers.len(), config.explorers.len());
         }
     }
 

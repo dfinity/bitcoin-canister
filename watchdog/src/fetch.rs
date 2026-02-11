@@ -1,9 +1,7 @@
 use crate::block_apis::{BitcoinBlockApi, BlockProvider};
 use crate::{print, storage};
 use candid::CandidType;
-use ic_btc_interface::Flag;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::convert::TryFrom;
 
 /// The data fetched from the external block APIs.
@@ -74,14 +72,23 @@ pub async fn fetch_all_data() -> Vec<BlockInfo> {
 
     let mut block_info = fetch_providers(config.get_providers(canister)).await;
 
-    if let Some(height) = fetch_canister_height().await {
-        let canister_block_info = BlockInfo {
-            provider: canister.name(),
-            height: Some(height),
-        };
-        block_info.push(canister_block_info);
-    } else {
-        print("Error getting canister main chain height.");
+    match fetch_canister_height().await {
+        Some(height) => {
+            let canister_block_info = BlockInfo {
+                provider: canister.name(),
+                height: Some(height),
+            };
+            block_info.push(canister_block_info);
+        }
+        None => {
+            print("Error getting canister main chain height.");
+            // Still add the canister with None height so health check can report it
+            let canister_block_info = BlockInfo {
+                provider: canister.name(),
+                height: None,
+            };
+            block_info.push(canister_block_info);
+        }
     };
 
     block_info
@@ -131,37 +138,31 @@ async fn fetch_canister_height() -> Option<u64> {
 }
 
 /// Mock implementation for tests (non-wasm32 targets).
-/// Uses thread-local storage to allow tests to set the expected response.
 #[cfg(not(target_arch = "wasm32"))]
-async fn fetch_canister_height() -> serde_json::Value {
-    MOCK_CANISTER_HEIGHT.with(|cell| cell.borrow().clone())
+async fn fetch_canister_height() -> Option<u64> {
+    MOCK_CANISTER_HEIGHT.with(|cell| *cell.borrow())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
-    static MOCK_CANISTER_HEIGHT: std::cell::RefCell<serde_json::Value> =
-        std::cell::RefCell::new(json!({}));
+    static MOCK_CANISTER_HEIGHT: std::cell::RefCell<Option<u64>> =
+        std::cell::RefCell::new(None);
 }
 
 /// Sets the mock response for `fetch_canister_height` in tests.
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)] // Used by test_utils, not directly in non-test builds
+#[allow(dead_code)]
 pub fn mock_canister_height(height: Option<u64>) {
     MOCK_CANISTER_HEIGHT.with(|cell| {
-        *cell.borrow_mut() = match height {
-            Some(h) => json!({ "height": h }),
-            None => json!({}),
-        };
+        *cell.borrow_mut() = height;
     });
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::block_apis::{BitcoinTestnetProviderBlockApi, DogecoinProviderBlockApi};
     use crate::config::Canister;
     use crate::test_utils;
-    use assert_json_diff::assert_json_eq;
 
     fn setup_canister(canister: Canister) {
         crate::storage::set_canister_config(canister);
@@ -170,7 +171,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet() {
         setup_canister(Canister::BitcoinMainnet);
-        crate::test_utils::mock_bitcoin_mainnet_outcalls();
+        test_utils::mock_bitcoin_mainnet_outcalls();
 
         verify_bitcoin_mainnet_fetch_results().await;
     }
@@ -178,7 +179,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_bitcoin_mainnet_staging() {
         setup_canister(Canister::BitcoinMainnetStaging);
-        crate::test_utils::mock_bitcoin_mainnet_outcalls();
+        test_utils::mock_bitcoin_mainnet_outcalls();
 
         verify_bitcoin_mainnet_fetch_results().await;
     }
@@ -214,7 +215,7 @@ mod test {
                 },
                 BlockInfo {
                     provider: "bitcoin_canister".to_string(),
-                    height: Some(700007),
+                    height: Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT),
                 },
             ]
         );
@@ -223,7 +224,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_testnet() {
         setup_canister(Canister::BitcoinTestnet);
-        crate::test_utils::mock_bitcoin_testnet_outcalls();
+        test_utils::mock_bitcoin_testnet_outcalls();
 
         let result = fetch_all_data().await;
         assert_eq!(
@@ -235,7 +236,7 @@ mod test {
                 },
                 BlockInfo {
                     provider: "bitcoin_canister".to_string(),
-                    height: Some(55001),
+                    height: Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT),
                 },
             ]
         );
@@ -260,7 +261,7 @@ mod test {
                 },
                 BlockInfo {
                     provider: "dogecoin_canister".to_string(),
-                    height: Some(5931098),
+                    height: Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT),
                 },
             ]
         );
@@ -269,7 +270,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet() {
         setup_canister(Canister::DogecoinMainnet);
-        crate::test_utils::mock_dogecoin_mainnet_outcalls();
+        test_utils::mock_dogecoin_mainnet_outcalls();
 
         verify_dogecoin_mainnet_fetch_results().await;
     }
@@ -277,7 +278,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_dogecoin_mainnet_staging() {
         setup_canister(Canister::DogecoinMainnetStaging);
-        crate::test_utils::mock_dogecoin_mainnet_outcalls();
+        test_utils::mock_dogecoin_mainnet_outcalls();
 
         verify_dogecoin_mainnet_fetch_results().await;
     }
@@ -285,7 +286,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_mainnet() {
         setup_canister(Canister::BitcoinMainnet);
-        crate::test_utils::mock_all_outcalls_404();
+        test_utils::mock_all_outcalls_404();
 
         verify_bitcoin_mainnet_fetch_failed_404().await;
     }
@@ -293,7 +294,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_mainnet_staging() {
         setup_canister(Canister::BitcoinMainnetStaging);
-        crate::test_utils::mock_all_outcalls_404();
+        test_utils::mock_all_outcalls_404();
 
         verify_bitcoin_mainnet_fetch_failed_404().await;
     }
@@ -338,7 +339,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_bitcoin_testnet() {
         setup_canister(Canister::BitcoinTestnet);
-        crate::test_utils::mock_all_outcalls_404();
+        test_utils::mock_all_outcalls_404();
 
         let result = fetch_all_data().await;
         assert_eq!(
@@ -384,7 +385,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet() {
         setup_canister(Canister::DogecoinMainnet);
-        crate::test_utils::mock_all_outcalls_404();
+        test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;
     }
@@ -392,7 +393,7 @@ mod test {
     #[tokio::test]
     async fn test_fetch_all_data_failed_404_dogecoin_mainnet_staging() {
         setup_canister(Canister::DogecoinMainnetStaging);
-        crate::test_utils::mock_all_outcalls_404();
+        test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;
     }
@@ -401,40 +402,29 @@ mod test {
     async fn test_bitcoin_canister_mainnet() {
         // Bitcoin canister uses inter-canister calls, not HTTP requests
         test_utils::mock_bitcoin_mainnet_outcalls();
-        let response = fetch_canister_height().await;
-        assert_json_eq!(
-            response,
-            json!({
-                "height": test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT,
-            })
-        );
+        let height = fetch_canister_height().await;
+        assert_eq!(height, Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT));
     }
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
         // Bitcoin canister uses inter-canister calls, not HTTP requests
         test_utils::mock_bitcoin_testnet_outcalls();
-        let response = BitcoinTestnetProviderBlockApi::BitcoinCanister
-            .fetch_data()
-            .await;
-        assert_json_eq!(
-            response,
-            json!({
-                "height": test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT,
-            })
-        );
+        let height = fetch_canister_height().await;
+        assert_eq!(height, Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT));
     }
 
     #[tokio::test]
     async fn test_dogecoin_canister_mainnet() {
         test_utils::mock_dogecoin_mainnet_outcalls();
-        crate::block_apis::test::run_test(
-            DogecoinProviderBlockApi::DogecoinCanister,
-            vec![(endpoint_dogecoin_canister(), 1)],
-            json!({
-                "height": 5931098,
-            }),
-        )
-        .await;
+        let height = fetch_canister_height().await;
+        assert_eq!(height, Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT));
+    }
+
+    #[tokio::test]
+    async fn test_fetch_canister_height_failed() {
+        test_utils::mock_all_outcalls_404();
+        let height = fetch_canister_height().await;
+        assert_eq!(height, None);
     }
 }

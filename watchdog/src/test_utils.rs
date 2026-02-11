@@ -1,8 +1,18 @@
 use crate::endpoints::*;
+use crate::fetch::mock_canister_height;
 use crate::http::HttpRequestConfig;
+
+// Height values for canister inter-canister call mocks
+pub const BITCOIN_MAINNET_CANISTER_HEIGHT: u64 = 700007;
+pub const BITCOIN_TESTNET_CANISTER_HEIGHT: u64 = 55001;
+pub const DOGECOIN_MAINNET_CANISTER_HEIGHT: u64 = 5931098;
 
 /// Mocks all the Bitcoin mainnet outcalls to be successful.
 pub fn mock_bitcoin_mainnet_outcalls() {
+    // Mock the canister inter-canister call
+    mock_canister_height(Some(BITCOIN_MAINNET_CANISTER_HEIGHT));
+
+    // Mock HTTP outcalls to external explorers
     let mocks = [
         (
             endpoint_bitcoin_mainnet_api_bitaps_com(),
@@ -41,6 +51,10 @@ pub fn mock_bitcoin_mainnet_outcalls() {
 
 /// Mocks all the Bitcoin testnet outcalls to be successful.
 pub fn mock_bitcoin_testnet_outcalls() {
+    // Mock the canister inter-canister call
+    mock_canister_height(Some(BITCOIN_TESTNET_CANISTER_HEIGHT));
+
+    // Mock HTTP outcalls to external explorers
     let mocks = [(
         endpoint_bitcoin_testnet_mempool(),
         BITCOIN_TESTNET_MEMPOOL_RESPONSE,
@@ -57,6 +71,10 @@ pub fn mock_bitcoin_testnet_outcalls() {
 
 /// Mocks all the Dogecoin mainnet outcalls to be successful.
 pub fn mock_dogecoin_mainnet_outcalls() {
+    // Mock the canister inter-canister call
+    mock_canister_height(Some(DOGECOIN_MAINNET_CANISTER_HEIGHT));
+
+    // Mock HTTP outcalls to external explorers
     let mocks = [
         (
             endpoint_dogecoin_mainnet_api_blockchair_com(),
@@ -97,6 +115,9 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
 
 /// Mocks all the outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
+    // Mock the canister inter-canister call to fail
+    mock_canister_height(None);
+
     for config in all_mock_outcalls() {
         let request = config.request();
         let mock_response = ic_http::create_response().status(404).build();
@@ -201,41 +222,8 @@ pub const BITCOIN_MAINNET_BLOCKCHAIN_INFO_RESPONSE: &str = r#"700004"#;
 // https://blockstream.info/api/blocks/tip/height
 pub const BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE: &str = r#"700005"#;
 
-// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics (staging)
-pub const BITCOIN_MAINNET_CANISTER_RESPONSE: &str = r#"{
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 700007 1680014894644
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 782801 1680014894644
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 86798838 1680014894644
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 86294218 1680014894644
-}"#;
-
 // https://mempool.space/api/blocks/tip/height
 pub const BITCOIN_MAINNET_MEMPOOL_RESPONSE: &str = r#"700008"#;
-
-// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-pub const BITCOIN_TESTNET_CANISTER_RESPONSE: &str = r#"{
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 55001 1682533330541
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 2430866 1682533330541
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 28755498 1682533330541
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 28388537 1682533330541
-}"#;
 
 // https://mempool.space/testnet4/api/blocks/tip/height
 pub const BITCOIN_TESTNET_MEMPOOL_RESPONSE: &str = r#"55002"#;

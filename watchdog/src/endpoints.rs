@@ -8,23 +8,7 @@ use crate::{
     transform_dogecoin_mainnet_api_blockcypher_com, transform_dogecoin_mainnet_tokenview,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
-use regex::Regex;
 use serde_json::json;
-
-/// Applies regex rule to parse bitcoin_canister block height.
-fn regex_height(text: String) -> Result<String, String> {
-    const RE_PATTERN: &str = r"\s*main_chain_height (\d+) \d+";
-    match Regex::new(RE_PATTERN) {
-        Err(e) => Err(format!("Regex: failed to compile: {}", e)),
-        Ok(re) => match re.captures(&text) {
-            None => Err("Regex: no match found.".to_string()),
-            Some(cap) => match cap.len() {
-                2 => Ok(String::from(&cap[1])),
-                x => Err(format!("Regex: expected 1 group exactly, provided {}.", x)),
-            },
-        },
-    }
-}
 
 /// Creates a config for fetching mainnet block data from api.bitaps.com.
 pub fn endpoint_bitcoin_mainnet_api_bitaps_com() -> HttpRequestConfig {
@@ -270,7 +254,6 @@ fn apply_to_body_json(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::Canister;
     use crate::test_utils;
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
@@ -341,10 +324,6 @@ mod test {
             }),
         )
         .await;
-    }
-
-    fn setup_canister(canister: Canister) {
-        crate::storage::set_canister_config(canister);
     }
 
     #[tokio::test]
