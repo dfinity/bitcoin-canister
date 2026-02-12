@@ -265,10 +265,10 @@ set_config : (set_config_request) -> ();
 
 This endpoint is used to update the configuration. The watchdog canister can only set the API access flag. All other configuration can only be updated by the controller of the canister. For the main Bitcoin canister (connected to Bitcoin mainnet), the only controller is the NNS root canister.
 
-### `get_main_chain_tip_info`
+### `get_blockchain_info`
 
 ```
-type main_chain_tip_info = record {
+type blockchain_info = record {
   height : block_height;
   block_hash : block_hash;
   timestamp : nat32;
@@ -276,7 +276,7 @@ type main_chain_tip_info = record {
   utxos_length : nat64;
 };
 
-get_main_chain_tip_info : () -> (main_chain_tip_info) query;
+get_blockchain_info : () -> (blockchain_info) query;
 ```
 
 This endpoint returns information about the canister's best guess at the main chain tip, including:

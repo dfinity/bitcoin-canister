@@ -561,13 +561,14 @@ pub struct HttpResponse {
     pub body: ByteBuf,
 }
 
-/// Information about the tip of the main chain.
+/// Information about the blockchain as seen by the canister.
 ///
-/// The main chain is the canister's best guess at what the Bitcoin network considers
-/// the canonical chain. It is defined as the longest chain with an "uncontested" tip.
-/// As in, there exists no other block at the same height as the tip.
+/// Returns information about the main chain tip. The main chain is the
+/// canister's best guess at what the Bitcoin network considers the canonical chain.
+/// It is defined as the longest chain with an "uncontested" tip — meaning there
+/// exists no other block at the same height as the tip.
 #[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq)]
-pub struct MainChainTipInfo {
+pub struct BlockchainInfo {
     pub height: Height,
     pub block_hash: Vec<u8>,
     /// Unix timestamp of the tip block.

@@ -139,8 +139,8 @@ fn set_config(request: SetConfigRequest) {
 }
 
 #[query]
-pub fn get_main_chain_tip_info() -> ic_btc_canister::types::MainChainTipInfo {
-    ic_btc_canister::get_main_chain_tip_info()
+pub fn get_blockchain_info() -> ic_btc_canister::types::BlockchainInfo {
+    ic_btc_canister::get_blockchain_info()
 }
 
 #[query]

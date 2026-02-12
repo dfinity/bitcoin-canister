@@ -182,8 +182,8 @@ pub fn get_config() -> Config {
     })
 }
 
-pub fn get_main_chain_tip_info() -> types::MainChainTipInfo {
-    with_state(state::main_chain_tip_info)
+pub fn get_blockchain_info() -> types::BlockchainInfo {
+    with_state(state::blockchain_info)
 }
 
 pub fn pre_upgrade() {
@@ -694,7 +694,7 @@ mod test {
     }
 
     #[test]
-    fn get_main_chain_tip_info_returns_correct_info() {
+    fn get_blockchain_info_returns_correct_info() {
         let network = Network::Mainnet;
         init(InitConfig {
             stability_threshold: Some(1),
@@ -703,7 +703,7 @@ mod test {
         });
 
         let genesis = genesis_block(network);
-        let tip_info = get_main_chain_tip_info();
+        let tip_info = get_blockchain_info();
 
         // After init, the tip is the Bitcoin genesis block for the configured network.
         assert_eq!(tip_info.height, 0);

@@ -285,11 +285,11 @@ pub fn main_chain_height(state: &State) -> Height {
 }
 
 /// Returns information about the tip of the main chain.
-pub fn main_chain_tip_info(state: &State) -> crate::types::MainChainTipInfo {
+pub fn blockchain_info(state: &State) -> crate::types::BlockchainInfo {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
     let tip_block = main_chain.tip();
 
-    crate::types::MainChainTipInfo {
+    crate::types::BlockchainInfo {
         height: main_chain_height(state),
         block_hash: tip_block.block_hash().to_vec(),
         timestamp: tip_block.header().time,
