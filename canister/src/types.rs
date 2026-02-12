@@ -563,7 +563,7 @@ pub struct HttpResponse {
 
 /// Information about the blockchain as seen by the canister.
 ///
-/// Returns information about the main chain tip. The main chain is the
+/// Returns information about the blockchain state at the current tip of the main chain. The main chain is the
 /// canister's best guess at what the Bitcoin network considers the canonical chain.
 /// It is defined as the longest chain with an "uncontested" tip — meaning there
 /// exists no other block at the same height as the tip.
