@@ -284,6 +284,33 @@ pub fn main_chain_height(state: &State) -> Height {
         - 1
 }
 
+/// Returns information about the tip of the main chain.
+pub fn main_chain_tip_info(state: &State) -> crate::types::MainChainTipInfo {
+    let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+    let tip_block = main_chain.tip();
+
+    // Calculate total UTXOs: stable UTXOs + net change from unstable main chain blocks
+    let mut total_utxos = state.utxos.utxos_len() as i64;
+    for block in main_chain.into_chain() {
+        for tx in block.txdata() {
+            // Each output creates a UTXO
+            total_utxos += tx.output().len() as i64;
+            // Each input (except coinbase) spends a UTXO
+            if !tx.is_coinbase() {
+                total_utxos -= tx.input().len() as i64;
+            }
+        }
+    }
+
+    crate::types::MainChainTipInfo {
+        height: main_chain_height(state),
+        block_hash: tip_block.block_hash().to_vec(),
+        timestamp: tip_block.header().time,
+        difficulty: tip_block.difficulty(state.network()),
+        utxos_length: total_utxos as u64,
+    }
+}
+
 pub fn get_block_hashes(state: &State) -> Vec<BlockHash> {
     unstable_blocks::get_block_hashes(&state.unstable_blocks)
 }

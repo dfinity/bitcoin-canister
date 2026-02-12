@@ -265,25 +265,35 @@ set_config : (set_config_request) -> ();
 
 This endpoint is used to update the configuration. The watchdog canister can only set the API access flag. All other configuration can only be updated by the controller of the canister. For the main Bitcoin canister (connected to Bitcoin mainnet), the only controller is the NNS root canister.
 
-### `get_main_chain_height`
+### `get_main_chain_tip_info`
 
 ```
-get_main_chain_height : () -> (block_height) query;
+type main_chain_tip_info = record {
+  height : block_height;
+  block_hash : block_hash;
+  timestamp : nat32;
+  difficulty : nat;
+  utxos_length : nat64;
+};
+
+get_main_chain_tip_info : () -> (main_chain_tip_info) query;
 ```
 
-This endpoint returns the height of the main chain tip as a `block_height` (nat32).
+This endpoint returns information about the canister's best guess at the main chain tip, including:
+
+* `height`: The height of the main chain tip.
+* `block_hash`: The hash of the tip block as a `block_hash` (blob, 32 bytes).
+* `timestamp`: The Unix timestamp of the tip block.
+* `difficulty`: The difficulty of the tip block.
+* `utxos_length`: The total number of UTXOs up to the main chain tip. This includes both stable UTXOs and UTXOs from unstable blocks on the main chain.
 
 The main chain is defined as the longest chain of blocks with an "uncontested" tip — meaning there is no other block at
-the same height as the tip. If there is a fork at the tip (two or more blocks competing at the same height), the
-returned height will be the height of the last uncontested block, not the height of the contested blocks.
+the same height as the tip.
 
 This endpoint is primarily intended for monitoring purposes, such as by the watchdog canister. Unlike other endpoints:
 
 * It does **not** require the API to be enabled (`api_access` flag).
 * It does **not** require the canister to be fully synced.
-
-This makes it suitable for monitoring the canister's sync progress even when the API is disabled or the canister is
-still catching up with the Bitcoin network.
 
 ### Byte Order
 
