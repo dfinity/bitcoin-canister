@@ -111,30 +111,30 @@ async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInf
         .collect()
 }
 
-/// Fetches the canister main chain height.
+/// Fetches the canister main chain height via the `get_blockchain_info` endpoint.
 #[cfg(target_arch = "wasm32")]
 async fn fetch_canister_height() -> Option<u64> {
     let id = crate::storage::get_canister().canister_principal();
-    let result = ic_cdk::call::Call::unbounded_wait(id, "get_main_chain_height")
+    let result = ic_cdk::call::Call::unbounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await
         .map_err(|err| {
             print(&format!(
-                "Error getting canister main chain height: {:?}",
+                "Error calling get_blockchain_info: {:?}",
                 err
             ))
         })
         .ok()?;
-    let height = result
+    let info: ic_btc_interface::BlockchainInfo = result
         .candid()
         .map_err(|err| {
             print(&format!(
-                "Error decoding get_main_chain_height result: {:?}",
+                "Error decoding get_blockchain_info result: {:?}",
                 err
             ))
         })
         .ok()?;
-    Some(height)
+    Some(info.height as u64)
 }
 
 /// Mock implementation for tests (non-wasm32 targets).
