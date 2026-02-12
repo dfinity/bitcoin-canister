@@ -1,4 +1,39 @@
-# Watchdog canister changelog
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [release/2026-01-30] - 2026-01-30
+
+### Added
+
+- Add `health_status_v2` endpoint (#450)
+
+### Changed
+
+- Refactor explorer logic (#456)
+
+### Removed
+
+- Remove retrieving latest block hash (#459)
+
+- Remove deprecated method counter (#455)
+
+- Remove blockexplorer.one from list of providers (#454)
+
+## [2025-12-03 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2025-12-03)
+
+- feat(watchdog): increase interval fetch and height diff for
+  dogecoin ([#449](https://github.com/dfinity/bitcoin-canister/pull/449))
+- chore: add Bitcoin mainnet staging target for watchdog ([#443](https://github.com/dfinity/bitcoin-canister/pull/443))
+- chore(watchdog): clean bitcoin mainnet explorers ([#441](https://github.com/dfinity/bitcoin-canister/pull/441))
+- fix(watchdog): add cycles for http requests when in an application
+  subnet ([#439](https://github.com/dfinity/bitcoin-canister/pull/439))
+- refactor(watchdog)!: remove the bitcoin_ prefix from candid
+  types ([#436](https://github.com/dfinity/bitcoin-canister/pull/436))
+- feat(watchdog): store config in stable memory ([#435](https://github.com/dfinity/bitcoin-canister/pull/435))
+- feat(watchdog): add dogecoin canister monitoring ([#428](https://github.com/dfinity/bitcoin-canister/pull/428))
 
 ## [2025-07-02 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2025-07-02)
 
@@ -64,3 +99,5 @@ Chores:
 ## [2023-04-21 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2023-04-21)
 
 - create watchdog canister
+
+[release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30

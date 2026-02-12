@@ -1,0 +1,136 @@
+name: Create GitHub Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Which release to create'
+        required: true
+        type: choice
+        options:
+          - ic-btc-canister # Creates ic-btc-canister/release/YYYY-MM-DD
+          - watchdog        # Creates watchdog/release/YYYY-MM-DD
+
+# Creates GitHub releases for date-based canisters:
+# - ic-btc-canister: date-based tag with WASM artifact
+# - watchdog: date-based tag with WASM artifact
+
+jobs:
+  canister-release:
+    name: Release ${{ inputs.release_type }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Set release parameters
+        run: |
+          if [ "${{ inputs.release_type }}" = "ic-btc-canister" ]; then
+            echo "WASM_NAME=ic-btc-canister.wasm.gz" >> "$GITHUB_ENV"
+            echo "INCLUDE_PATH=canister/**" >> "$GITHUB_ENV"
+            echo "CANDID_PATH=canister/candid.did" >> "$GITHUB_ENV"
+          else
+            echo "WASM_NAME=watchdog.wasm.gz" >> "$GITHUB_ENV"
+            echo "INCLUDE_PATH=watchdog/**" >> "$GITHUB_ENV"
+            echo "CANDID_PATH=watchdog/candid.did" >> "$GITHUB_ENV"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download WASM artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const allArtifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: "wasms",
+            });
+            const mainArtifacts = allArtifacts
+              .filter(artifact => !artifact.expired)
+              .filter(artifact => artifact.workflow_run.head_branch === "master");
+            
+            mainArtifacts.sort((a,b) => new Date(b.updated_at) - new Date(a.updated_at));
+            const latestMainArtifact = mainArtifacts[0];
+            if(!latestMainArtifact) {
+              throw new Error("Could not find 'wasms' artifact from branch master");
+            }
+            console.log("Found 'wasms' artifact for commit", latestMainArtifact.workflow_run.head_sha);
+            
+            const { url } = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: latestMainArtifact.id,
+              archive_format: "zip",
+            });
+            await exec.exec('curl', ['-sSL', url, '-o', "wasms.zip"]);
+            await exec.exec('unzip', ["wasms.zip", "-d", "wasms"]);
+            await exec.exec('rm', ["wasms.zip"]);
+
+      - name: SHA256 of WASM artifact
+        run: |
+          echo "WASM_SHA256=$(shasum -a 256 ./wasms/${{ env.WASM_NAME }} | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate release tag and notes
+        run: |
+          RELEASE_DATE=$(date +%Y-%m-%d)
+          RELEASE_TAG="${{ inputs.release_type }}/release/${RELEASE_DATE}"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
+          
+          # Find previous tag: prefer <package>/release/*, fallback to release/*
+          PREV_TAG=$(git tag --list '${{ inputs.release_type }}/release/*' --sort=-version:refname | head -n1)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git tag --list 'release/*' --sort=-version:refname | head -n1)
+          fi
+          
+          # Generate changelog with git-cliff (scoped to package directory)
+          # Strip the version title line (e.g., "## [release/2026-01-21] - 2026-01-21")
+          CHANGELOG=$(git-cliff --config cliff.toml \
+            --include-path "${{ env.INCLUDE_PATH }}" \
+            --unreleased \
+            --tag "$RELEASE_TAG" \
+            --strip header \
+            "${PREV_TAG}.." | sed '/^## \[.*\] - /d')
+          
+          # Build release body
+          CHECKSUMS="## SHA-256
+
+          \`\`\`
+          ${WASM_SHA256}  ${{ env.WASM_NAME }}
+          \`\`\`"
+          
+          PROPOSALS="## Proposals
+
+          [TO BE ADDED]"
+          
+          RELEASE_BODY="${CHANGELOG}
+
+          ${CHECKSUMS}
+
+          ${PROPOSALS}"
+          
+          # Export multiline variable
+          echo "RELEASE_BODY<<EOF" >> "$GITHUB_ENV"
+          echo "$RELEASE_BODY" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ inputs.release_type }}/release/${{ env.RELEASE_DATE }}
+          body: ${{ env.RELEASE_BODY }}
+          files: |
+            wasms/${{ env.WASM_NAME }}
+            ${{ env.CANDID_PATH }}
