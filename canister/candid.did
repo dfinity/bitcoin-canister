@@ -126,6 +126,14 @@ type init_config = record {
   lazily_evaluate_fee_percentiles : opt flag;
 };
 
+type blockchain_info = record {
+  height : block_height;
+  block_hash : block_hash;
+  timestamp : nat32;
+  difficulty : nat;
+  utxos_length : nat64;
+};
+
 type canister_arg = variant {
   init : init_config;
   upgrade : opt set_config_request;
@@ -150,5 +158,5 @@ service bitcoin : (canister_arg) -> {
 
   set_config : (set_config_request) -> ();
 
-  get_main_chain_height : () -> (block_height) query;
+  get_blockchain_info : () -> (blockchain_info) query;
 };

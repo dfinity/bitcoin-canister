@@ -182,8 +182,8 @@ pub fn get_config() -> Config {
     })
 }
 
-pub fn get_main_chain_height() -> u32 {
-    with_state(main_chain_height)
+pub fn get_blockchain_info() -> types::BlockchainInfo {
+    with_state(state::blockchain_info)
 }
 
 pub fn pre_upgrade() {
@@ -694,15 +694,24 @@ mod test {
     }
 
     #[test]
-    fn get_main_chain_height_returns_correct_height() {
+    fn get_blockchain_info_returns_correct_info() {
+        let network = Network::Mainnet;
         init(InitConfig {
             stability_threshold: Some(1),
-            network: Some(Network::Regtest),
+            network: Some(network),
             ..Default::default()
         });
 
-        // After init, main chain height should be 0 (only genesis block, height 0)
-        assert_eq!(get_main_chain_height(), 0);
+        let genesis = genesis_block(network);
+        let tip_info = get_blockchain_info();
+
+        // After init, the tip is the Bitcoin genesis block for the configured network.
+        assert_eq!(tip_info.height, 0);
+        assert_eq!(tip_info.block_hash, genesis.block_hash().to_vec());
+        assert_eq!(tip_info.timestamp, genesis.header().time);
+        assert_eq!(tip_info.difficulty, genesis.difficulty(network));
+        // Genesis block has 1 coinbase output.
+        assert_eq!(tip_info.utxos_length, 1);
     }
 
     #[test]

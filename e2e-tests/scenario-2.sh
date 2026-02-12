@@ -27,10 +27,10 @@ dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
 # Wait until the ingestion of stable blocks is complete.
 wait_until_main_chain_height 4 60
 
-# Verify the main chain height using the query endpoint.
-HEIGHT=$(dfx canister call bitcoin get_main_chain_height --query)
-if ! [[ $HEIGHT == "(4 : nat32)" ]]; then
-  echo "FAIL: Expected height 4, got $HEIGHT"
+# Verify the blockchain info using the query endpoint.
+BLOCKCHAIN_INFO=$(dfx canister call bitcoin get_blockchain_info --query)
+if ! [[ $BLOCKCHAIN_INFO == *"height = 4"* ]]; then
+  echo "FAIL: Expected height 4 in blockchain info, got $BLOCKCHAIN_INFO"
   exit 1
 fi
 

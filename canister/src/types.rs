@@ -561,6 +561,24 @@ pub struct HttpResponse {
     pub body: ByteBuf,
 }
 
+/// Information about the blockchain as seen by the canister.
+///
+/// Returns information about the blockchain state at the current tip of the main chain. The main chain is the
+/// canister's best guess at what the Bitcoin network considers the canonical chain.
+/// It is defined as the longest chain with an "uncontested" tip — meaning there
+/// exists no other block at the same height as the tip.
+#[derive(Clone, Debug, CandidType, Deserialize, PartialEq, Eq)]
+pub struct BlockchainInfo {
+    pub height: Height,
+    pub block_hash: Vec<u8>,
+    /// Unix timestamp of the tip block.
+    pub timestamp: u32,
+    /// Difficulty of the tip block.
+    pub difficulty: u128,
+    /// Total number of UTXOs up to the main chain tip (stable + unstable main chain blocks).
+    pub utxos_length: u64,
+}
+
 /// A type used to facilitate time-slicing.
 #[must_use]
 #[derive(Debug, PartialEq, Eq)]
