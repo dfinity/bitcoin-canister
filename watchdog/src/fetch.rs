@@ -1,5 +1,7 @@
 use crate::block_apis::{BitcoinBlockApi, BlockProvider};
-use crate::{print, storage};
+#[cfg(target_arch = "wasm32")]
+use crate::print;
+use crate::storage;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
