@@ -80,15 +80,15 @@ fn start_block_info_fetch_loop() {
 
 /// Fetches the data from the external APIs and canister monitored and stores it in the local storage.
 async fn fetch_block_info_data() {
+    let explorer_data = crate::fetch::fetch_all_providers_data().await;
+    for info in explorer_data {
+        crate::storage::insert_block_info(info);
+    }
+
     let canister_height = crate::fetch::fetch_canister_height().await;
     crate::storage::set_canister_height(canister_height);
     if canister_height.is_none() {
         crate::print("Error getting canister main chain height.");
-    }
-
-    let explorer_data = crate::fetch::fetch_all_providers_data().await;
-    for info in explorer_data {
-        crate::storage::insert_block_info(info);
     }
 }
 
