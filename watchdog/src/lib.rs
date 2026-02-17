@@ -37,7 +37,7 @@ thread_local! {
     static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The last fetched main chain height of the monitored canister.
-    static CANISTER_HEIGHT: RefCell<Option<u64>> = RefCell::new(None);
+    static CANISTER_HEIGHT: RefCell<Option<u64>> = const { RefCell::new(None) };
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };

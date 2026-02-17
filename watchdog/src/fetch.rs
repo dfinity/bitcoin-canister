@@ -119,7 +119,7 @@ pub async fn fetch_canister_height() -> Option<u64> {
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
     static MOCK_CANISTER_HEIGHT: std::cell::RefCell<Option<u64>> =
-        std::cell::RefCell::new(None);
+        const { std::cell::RefCell::new(None) };
 }
 
 /// Sets the mock response for `fetch_canister_height` in tests.
