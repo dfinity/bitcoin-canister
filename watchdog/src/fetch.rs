@@ -1,5 +1,5 @@
 use crate::block_apis::{BitcoinBlockApi, BlockProvider};
-use crate::storage;
+use crate::{print, storage};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
