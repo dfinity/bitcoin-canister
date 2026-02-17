@@ -1,18 +1,13 @@
 use crate::endpoints::*;
-use crate::fetch::mock_canister_height;
 use crate::http::HttpRequestConfig;
 
-// Height values for canister inter-canister call mocks
+// Height values for canister inter-canister call mocks (use with crate::fetch::mock_canister_height)
 pub const BITCOIN_MAINNET_CANISTER_HEIGHT: u64 = 700007;
 pub const BITCOIN_TESTNET_CANISTER_HEIGHT: u64 = 55001;
 pub const DOGECOIN_MAINNET_CANISTER_HEIGHT: u64 = 5931098;
 
-/// Mocks all the Bitcoin mainnet outcalls to be successful.
+/// Mocks all the Bitcoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_mainnet_outcalls() {
-    // Mock the canister inter-canister call
-    mock_canister_height(Some(BITCOIN_MAINNET_CANISTER_HEIGHT));
-
-    // Mock HTTP outcalls to external explorers
     let mocks = [
         (
             endpoint_bitcoin_mainnet_api_bitaps_com(),
@@ -49,12 +44,8 @@ pub fn mock_bitcoin_mainnet_outcalls() {
     }
 }
 
-/// Mocks all the Bitcoin testnet outcalls to be successful.
+/// Mocks all the Bitcoin testnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_testnet_outcalls() {
-    // Mock the canister inter-canister call
-    mock_canister_height(Some(BITCOIN_TESTNET_CANISTER_HEIGHT));
-
-    // Mock HTTP outcalls to external explorers
     let mocks = [(
         endpoint_bitcoin_testnet_mempool(),
         BITCOIN_TESTNET_MEMPOOL_RESPONSE,
@@ -69,12 +60,8 @@ pub fn mock_bitcoin_testnet_outcalls() {
     }
 }
 
-/// Mocks all the Dogecoin mainnet outcalls to be successful.
+/// Mocks all the Dogecoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_dogecoin_mainnet_outcalls() {
-    // Mock the canister inter-canister call
-    mock_canister_height(Some(DOGECOIN_MAINNET_CANISTER_HEIGHT));
-
-    // Mock HTTP outcalls to external explorers
     let mocks = [
         (
             endpoint_dogecoin_mainnet_api_blockchair_com(),
@@ -113,11 +100,8 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
     ]
 }
 
-/// Mocks all the outcalls to fail with status code 404.
+/// Mocks all the HTTP explorer outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
-    // Mock the canister inter-canister call to fail
-    mock_canister_height(None);
-
     for config in all_mock_outcalls() {
         let request = config.request();
         let mock_response = ic_http::create_response().status(404).build();

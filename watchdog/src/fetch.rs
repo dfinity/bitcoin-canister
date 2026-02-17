@@ -345,28 +345,28 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet() {
-        test_utils::mock_bitcoin_mainnet_outcalls();
+        mock_canister_height(Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT));
         let height = fetch_canister_height().await;
         assert_eq!(height, Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT));
     }
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
-        test_utils::mock_bitcoin_testnet_outcalls();
+        mock_canister_height(Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT));
         let height = fetch_canister_height().await;
         assert_eq!(height, Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT));
     }
 
     #[tokio::test]
     async fn test_dogecoin_canister_mainnet() {
-        test_utils::mock_dogecoin_mainnet_outcalls();
+        mock_canister_height(Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT));
         let height = fetch_canister_height().await;
         assert_eq!(height, Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT));
     }
 
     #[tokio::test]
     async fn test_fetch_canister_height_failed() {
-        test_utils::mock_all_outcalls_404();
+        mock_canister_height(None);
         let height = fetch_canister_height().await;
         assert_eq!(height, None);
     }

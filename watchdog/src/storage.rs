@@ -45,7 +45,7 @@ pub fn set_config(config: Config) {
     CONFIG.with(|cell| cell.borrow_mut().set(config));
 }
 
-/// Sets the monitored canister's main chain height (from get_blockchain_info).
+/// Sets the monitored canister's main chain height.
 pub fn set_canister_height(height: Option<u64>) {
     CANISTER_HEIGHT.with(|cell| *cell.borrow_mut() = height);
 }
@@ -62,7 +62,7 @@ pub fn insert_block_info(info: BlockInfo) {
     });
 }
 
-/// Returns block info for a provider (explorers only; use get_canister_height for the canister).
+/// Returns block info for an API provider.
 pub fn get_block_info(provider: &str) -> Option<BlockInfo> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }
