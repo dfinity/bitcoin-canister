@@ -55,11 +55,6 @@ pub fn get_canister_height() -> Option<u64> {
     CANISTER_HEIGHT.with(|cell| *cell.borrow())
 }
 
-/// Clears explorer block info (called before each fetch so the map only has current tick data).
-pub fn clear_block_info_data() {
-    BLOCK_INFO_DATA.with(|cell| cell.borrow_mut().clear());
-}
-
 /// Inserts explorer data into the local storage.
 pub fn insert_block_info(info: BlockInfo) {
     BLOCK_INFO_DATA.with(|cell| {

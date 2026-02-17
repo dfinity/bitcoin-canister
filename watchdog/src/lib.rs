@@ -86,7 +86,6 @@ async fn fetch_block_info_data() {
         crate::print("Error getting canister main chain height.");
     }
 
-    crate::storage::clear_block_info_data();
     let explorer_data = crate::fetch::fetch_all_providers_data().await;
     for info in explorer_data {
         crate::storage::insert_block_info(info);
