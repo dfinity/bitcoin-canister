@@ -1345,6 +1345,7 @@ mod test {
                 .build(),
         );
         assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
+        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
 
         // Block 3: coinbase (1 output) + spend_tx_2 (2 inputs, 1 output).
         // Net: +1 + (1 - 2) = 0. Running total: 4.
