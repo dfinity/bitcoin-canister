@@ -715,6 +715,18 @@ mod test {
     }
 
     #[test]
+    fn get_blockchain_info_succeeds_when_api_disabled() {
+        init(InitConfig {
+            api_access: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        let info = get_blockchain_info();
+        assert_eq!(info.height, 0);
+        assert_eq!(info.utxos_length, 1);
+    }
+
+    #[test]
     fn init_applies_default_fees_when_not_explicitly_provided() {
         let custom = Fees {
             get_utxos_base: 123,
