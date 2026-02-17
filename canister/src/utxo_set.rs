@@ -1333,6 +1333,9 @@ mod test {
 
         // Block 2: coinbase (1 output) + spend_tx (1 input, 3 outputs).
         // Net: +1 + (3 - 1) = +3. Running total: 4.
+        let coinbase_tx_2 = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
         let spend_tx = TransactionBuilder::new()
             .with_input(OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address, 300)
@@ -1341,13 +1344,18 @@ mod test {
             .build();
         blocks.push(
             BlockBuilder::with_prev_header(blocks.last().unwrap().header())
+                .with_transaction(coinbase_tx_2)
                 .with_transaction(spend_tx.clone())
                 .build(),
         );
         assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
+        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
 
         // Block 3: coinbase (1 output) + spend_tx_2 (2 inputs, 1 output).
         // Net: +1 + (1 - 2) = 0. Running total: 4.
+        let coinbase_tx_3 = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
         let spend_tx_2 = TransactionBuilder::new()
             .with_input(OutPoint::new(spend_tx.txid(), 0))
             .with_input(OutPoint::new(spend_tx.txid(), 1))
@@ -1355,9 +1363,12 @@ mod test {
             .build();
         blocks.push(
             BlockBuilder::with_prev_header(blocks.last().unwrap().header())
+                .with_transaction(coinbase_tx_3)
                 .with_transaction(spend_tx_2)
                 .build(),
         );
         assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
+        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
+        assert_eq!(count_utxos_in_blocks(4, &blocks[2..]), 4);
     }
 }
