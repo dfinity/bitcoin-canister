@@ -1,6 +1,6 @@
 use crate::{
     api::{get_balance, get_current_fee_percentiles, get_utxos},
-    genesis_block, heartbeat, init,
+    genesis_block, get_blockchain_info, heartbeat, init,
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
@@ -600,6 +600,55 @@ fn get_chain_with_n_block_and_header_blobs(
         blob_vec.push(get_header_blob(block.header()));
     }
     (block_vec, blob_vec)
+}
+
+#[async_std::test]
+async fn get_blockchain_info_succeeds_when_not_synced() {
+    // get_blockchain_info is for monitoring and must succeed even when the canister
+    // is not fully synced (verify_synced would panic for other endpoints).
+    let network = Network::Regtest;
+
+    init(InitConfig {
+        stability_threshold: Some(2),
+        network: Some(network),
+        ..Default::default()
+    });
+
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+
+    let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
+        .iter()
+        .map(|block| {
+            let mut block_bytes = vec![];
+            block.consensus_encode(&mut block_bytes).unwrap();
+            block_bytes
+        })
+        .collect();
+
+    let (_, next_blocks_blobs) =
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
+
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks,
+            next: next_blocks_blobs,
+        },
+    )));
+
+    heartbeat().await;
+    heartbeat().await;
+    heartbeat().await;
+
+    assert_eq!(with_state(main_chain_height), 2);
+    assert!(
+        with_state(|s| s.unstable_blocks.next_block_headers_max_height().unwrap())
+            > with_state(main_chain_height) + SYNCED_THRESHOLD
+    );
+    assert!(catch_unwind(verify_synced).is_err());
+
+    let info = get_blockchain_info();
+    assert_eq!(info.height, 2);
 }
 
 #[async_std::test]
