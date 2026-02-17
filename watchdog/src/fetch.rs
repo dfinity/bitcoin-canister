@@ -118,12 +118,7 @@ async fn fetch_canister_height() -> Option<u64> {
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await
-        .map_err(|err| {
-            print(&format!(
-                "Error calling get_blockchain_info: {:?}",
-                err
-            ))
-        })
+        .map_err(|err| print(&format!("Error calling get_blockchain_info: {:?}", err)))
         .ok()?;
     let info: ic_btc_interface::BlockchainInfo = result
         .candid()
@@ -400,7 +395,6 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_mainnet() {
-        // Bitcoin canister uses inter-canister calls, not HTTP requests
         test_utils::mock_bitcoin_mainnet_outcalls();
         let height = fetch_canister_height().await;
         assert_eq!(height, Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT));
@@ -408,7 +402,6 @@ mod test {
 
     #[tokio::test]
     async fn test_bitcoin_canister_testnet() {
-        // Bitcoin canister uses inter-canister calls, not HTTP requests
         test_utils::mock_bitcoin_testnet_outcalls();
         let height = fetch_canister_height().await;
         assert_eq!(height, Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT));
