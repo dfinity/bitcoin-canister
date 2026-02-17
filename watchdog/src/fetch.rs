@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 /// The data fetched from the external block APIs.
 #[derive(Clone, Debug, Eq, PartialEq, CandidType, Serialize, Deserialize)]
 pub struct BlockInfo {
-    /// The provider of the block data (canister and block API providers).
+    /// The API provider of the block data.
     pub provider: String,
 
     /// The height of the block.
@@ -65,8 +65,8 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
     }
 }
 
-/// Fetches block info from the explorer APIs only (not the canister).
-pub async fn fetch_all_data() -> Vec<BlockInfo> {
+/// Fetches block info from the block provider APIs.
+pub async fn fetch_all_providers_data() -> Vec<BlockInfo> {
     let canister = storage::get_canister();
     let config = storage::get_config();
     fetch_providers(config.get_providers(canister)).await
@@ -158,7 +158,7 @@ mod test {
     }
 
     async fn verify_bitcoin_mainnet_fetch_results() {
-        let result = fetch_all_data().await;
+        let result = fetch_all_providers_data().await;
         assert_eq!(
             result,
             vec![
@@ -195,7 +195,7 @@ mod test {
         setup_canister(Canister::BitcoinTestnet);
         test_utils::mock_bitcoin_testnet_outcalls();
 
-        let result = fetch_all_data().await;
+        let result = fetch_all_providers_data().await;
         assert_eq!(
             result,
             vec![BlockInfo {
@@ -206,7 +206,7 @@ mod test {
     }
 
     async fn verify_dogecoin_mainnet_fetch_results() {
-        let result = fetch_all_data().await;
+        let result = fetch_all_providers_data().await;
         assert_eq!(
             result,
             vec![
@@ -259,7 +259,7 @@ mod test {
     }
 
     async fn verify_bitcoin_mainnet_fetch_failed_404() {
-        let result = fetch_all_data().await;
+        let result = fetch_all_providers_data().await;
         assert_eq!(
             result,
             vec![
@@ -296,7 +296,7 @@ mod test {
         setup_canister(Canister::BitcoinTestnet);
         test_utils::mock_all_outcalls_404();
 
-        let result = fetch_all_data().await;
+        let result = fetch_all_providers_data().await;
         assert_eq!(
             result,
             vec![BlockInfo {
@@ -307,7 +307,7 @@ mod test {
     }
 
     async fn verify_dogecoin_mainnet_fetch_failed_404() {
-        let result = fetch_all_data().await;
+        let result = fetch_all_providers_data().await;
         assert_eq!(
             result,
             vec![

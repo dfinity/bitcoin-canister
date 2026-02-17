@@ -33,7 +33,7 @@ use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
-    /// The local storage for the data fetched from the external APIs (explorers only).
+    /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The last fetched main chain height of the monitored canister.
@@ -78,7 +78,7 @@ fn start_block_info_fetch_loop() {
     );
 }
 
-/// Fetches the data from the external APIs and stores it in the local storage.
+/// Fetches the data from the external APIs and canister monitored and stores it in the local storage.
 async fn fetch_block_info_data() {
     let canister_height = crate::fetch::fetch_canister_height().await;
     crate::storage::set_canister_height(canister_height);
@@ -87,7 +87,7 @@ async fn fetch_block_info_data() {
     }
 
     crate::storage::clear_block_info_data();
-    let explorer_data = crate::fetch::fetch_all_data().await;
+    let explorer_data = crate::fetch::fetch_all_providers_data().await;
     for info in explorer_data {
         crate::storage::insert_block_info(info);
     }

@@ -128,7 +128,6 @@ fn compare(
     explorers: Vec<BlockInfo>,
     config: Config,
 ) -> HealthStatus {
-    let height_source = canister_height;
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
@@ -139,7 +138,7 @@ fn compare(
         config.get_blocks_behind_threshold(),
         config.get_blocks_ahead_threshold(),
     );
-    let height_diff = height_source
+    let height_diff = canister_height
         .zip(height_target)
         .map(|(source, target)| source as i64 - target as i64);
     let height_status = height_diff.map_or(HeightStatus::NotEnoughData, |diff| {
@@ -153,7 +152,7 @@ fn compare(
     });
 
     HealthStatus {
-        height_source,
+        height_source: canister_height,
         height_target,
         height_diff,
         height_status,
