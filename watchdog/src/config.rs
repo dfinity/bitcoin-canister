@@ -94,17 +94,6 @@ impl Storable for Canister {
 }
 
 impl Canister {
-    pub fn name(&self) -> String {
-        match self {
-            Canister::BitcoinMainnet
-            | Canister::BitcoinMainnetStaging
-            | Canister::BitcoinTestnet => "bitcoin_canister".to_string(),
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-                "dogecoin_canister".to_string()
-            }
-        }
-    }
-
     pub fn network(&self) -> Network {
         match self {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => Network::BitcoinMainnet,

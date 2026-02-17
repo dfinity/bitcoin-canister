@@ -85,10 +85,9 @@ impl TryFrom<HealthStatus> for LegacyHealthStatus {
 
 /// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
-    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
     compare(
-        crate::storage::get_block_info(&canister.name()),
+        crate::storage::get_canister_height(),
         config
             .explorers
             .iter()
@@ -123,9 +122,13 @@ fn calculate_height_target(
     }
 }
 
-/// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
-    let height_source = source.and_then(|block| block.height);
+/// Compares the canister height with the explorer heights.
+fn compare(
+    canister_height: Option<u64>,
+    explorers: Vec<BlockInfo>,
+    config: Config,
+) -> HealthStatus {
+    let height_source = canister_height;
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
@@ -274,12 +277,12 @@ mod test {
     #[test]
     fn test_compare_no_source_neither_explorers() {
         // Arrange
-        let source = None;
+        let canister_height = None;
         let other = vec![];
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
                 height_source: None,
                 height_target: None,
@@ -293,12 +296,12 @@ mod test {
     #[test]
     fn test_compare_no_explorers() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![];
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
                 height_source: Some(1_000),
                 height_target: None,
@@ -312,7 +315,7 @@ mod test {
     #[test]
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
@@ -320,7 +323,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
                 height_source: Some(1_000),
                 height_target: None,
@@ -337,7 +340,7 @@ mod test {
     #[test]
     fn test_compare_behind() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
@@ -346,7 +349,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
                 height_source: Some(1_000),
                 height_target: Some(1_005),
@@ -364,7 +367,7 @@ mod test {
     #[test]
     fn test_compare_ahead() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
@@ -373,7 +376,7 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
                 height_source: Some(1_000),
                 height_target: Some(995),

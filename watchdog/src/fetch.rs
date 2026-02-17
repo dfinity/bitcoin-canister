@@ -1,5 +1,5 @@
 use crate::block_apis::{BitcoinBlockApi, BlockProvider};
-use crate::{print, storage};
+use crate::storage;
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -65,33 +65,11 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
     }
 }
 
-/// Fetches the data from the external APIs and the canister.
+/// Fetches block info from the explorer APIs only (not the canister).
 pub async fn fetch_all_data() -> Vec<BlockInfo> {
     let canister = storage::get_canister();
     let config = storage::get_config();
-
-    let mut block_info = fetch_providers(config.get_providers(canister)).await;
-
-    match fetch_canister_height().await {
-        Some(height) => {
-            let canister_block_info = BlockInfo {
-                provider: canister.name(),
-                height: Some(height),
-            };
-            block_info.push(canister_block_info);
-        }
-        None => {
-            print("Error getting canister main chain height.");
-            // Still add the canister with None height so health check can report it
-            let canister_block_info = BlockInfo {
-                provider: canister.name(),
-                height: None,
-            };
-            block_info.push(canister_block_info);
-        }
-    };
-
-    block_info
+    fetch_providers(config.get_providers(canister)).await
 }
 
 async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInfo> {
@@ -113,7 +91,7 @@ async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInf
 
 /// Fetches the canister main chain height via the `get_blockchain_info` endpoint.
 #[cfg(target_arch = "wasm32")]
-async fn fetch_canister_height() -> Option<u64> {
+pub async fn fetch_canister_height() -> Option<u64> {
     let id = crate::storage::get_canister().canister_principal();
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_blockchain_info")
         .with_args(&())
@@ -134,7 +112,7 @@ async fn fetch_canister_height() -> Option<u64> {
 
 /// Mock implementation for tests (non-wasm32 targets).
 #[cfg(not(target_arch = "wasm32"))]
-async fn fetch_canister_height() -> Option<u64> {
+pub async fn fetch_canister_height() -> Option<u64> {
     MOCK_CANISTER_HEIGHT.with(|cell| *cell.borrow())
 }
 
@@ -208,10 +186,6 @@ mod test {
                     provider: "bitcoin_mempool_mainnet".to_string(),
                     height: Some(700008),
                 },
-                BlockInfo {
-                    provider: "bitcoin_canister".to_string(),
-                    height: Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT),
-                },
             ]
         );
     }
@@ -224,16 +198,10 @@ mod test {
         let result = fetch_all_data().await;
         assert_eq!(
             result,
-            vec![
-                BlockInfo {
-                    provider: "bitcoin_mempool_testnet".to_string(),
-                    height: Some(55002),
-                },
-                BlockInfo {
-                    provider: "bitcoin_canister".to_string(),
-                    height: Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT),
-                },
-            ]
+            vec![BlockInfo {
+                provider: "bitcoin_mempool_testnet".to_string(),
+                height: Some(55002),
+            }]
         );
     }
 
@@ -253,10 +221,6 @@ mod test {
                 BlockInfo {
                     provider: "dogecoin_tokenview_mainnet".to_string(),
                     height: Some(5931072),
-                },
-                BlockInfo {
-                    provider: "dogecoin_canister".to_string(),
-                    height: Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT),
                 },
             ]
         );
@@ -323,10 +287,6 @@ mod test {
                     provider: "bitcoin_mempool_mainnet".to_string(),
                     height: None,
                 },
-                BlockInfo {
-                    provider: "bitcoin_canister".to_string(),
-                    height: None,
-                },
             ]
         );
     }
@@ -339,16 +299,10 @@ mod test {
         let result = fetch_all_data().await;
         assert_eq!(
             result,
-            vec![
-                BlockInfo {
-                    provider: "bitcoin_mempool_testnet".to_string(),
-                    height: None,
-                },
-                BlockInfo {
-                    provider: "bitcoin_canister".to_string(),
-                    height: None,
-                },
-            ]
+            vec![BlockInfo {
+                provider: "bitcoin_mempool_testnet".to_string(),
+                height: None,
+            }]
         );
     }
 
@@ -367,10 +321,6 @@ mod test {
                 },
                 BlockInfo {
                     provider: "dogecoin_tokenview_mainnet".to_string(),
-                    height: None,
-                },
-                BlockInfo {
-                    provider: "dogecoin_canister".to_string(),
                     height: None,
                 },
             ]

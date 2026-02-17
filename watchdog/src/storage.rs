@@ -1,6 +1,6 @@
 use crate::config::{Canister, Config};
 use crate::fetch::BlockInfo;
-use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA};
+use crate::{API_ACCESS_TARGET, BLOCK_INFO_DATA, CANISTER_HEIGHT};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{Cell, DefaultMemoryImpl};
@@ -45,14 +45,29 @@ pub fn set_config(config: Config) {
     CONFIG.with(|cell| cell.borrow_mut().set(config));
 }
 
-/// Inserts the data into the local storage.
+/// Sets the monitored canister's main chain height (from get_blockchain_info).
+pub fn set_canister_height(height: Option<u64>) {
+    CANISTER_HEIGHT.with(|cell| *cell.borrow_mut() = height);
+}
+
+/// Returns the monitored canister's main chain height.
+pub fn get_canister_height() -> Option<u64> {
+    CANISTER_HEIGHT.with(|cell| *cell.borrow())
+}
+
+/// Clears explorer block info (called before each fetch so the map only has current tick data).
+pub fn clear_block_info_data() {
+    BLOCK_INFO_DATA.with(|cell| cell.borrow_mut().clear());
+}
+
+/// Inserts explorer data into the local storage.
 pub fn insert_block_info(info: BlockInfo) {
     BLOCK_INFO_DATA.with(|cell| {
         cell.borrow_mut().insert(info.provider.to_string(), info);
     });
 }
 
-/// Returns the data from the local storage.
+/// Returns block info for a provider (explorers only; use get_canister_height for the canister).
 pub fn get_block_info(provider: &str) -> Option<BlockInfo> {
     BLOCK_INFO_DATA.with(|cell| cell.borrow().get(provider).cloned())
 }

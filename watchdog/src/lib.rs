@@ -33,8 +33,11 @@ use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
-    /// The local storage for the data fetched from the external APIs.
+    /// The local storage for the data fetched from the external APIs (explorers only).
     static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo>> = RefCell::new(HashMap::new());
+
+    /// The last fetched main chain height of the monitored canister.
+    static CANISTER_HEIGHT: RefCell<Option<u64>> = RefCell::new(None);
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
@@ -77,8 +80,17 @@ fn start_block_info_fetch_loop() {
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_block_info_data() {
-    let data = crate::fetch::fetch_all_data().await;
-    data.into_iter().for_each(crate::storage::insert_block_info);
+    let canister_height = crate::fetch::fetch_canister_height().await;
+    crate::storage::set_canister_height(canister_height);
+    if canister_height.is_none() {
+        crate::print("Error getting canister main chain height.");
+    }
+
+    crate::storage::clear_block_info_data();
+    let explorer_data = crate::fetch::fetch_all_data().await;
+    for info in explorer_data {
+        crate::storage::insert_block_info(info);
+    }
 }
 
 /// Periodically fetches data and sets the API access to the canister monitored.
