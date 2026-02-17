@@ -1360,5 +1360,7 @@ mod test {
                 .build(),
         );
         assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
+        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
+        assert_eq!(count_utxos_in_blocks(4, &blocks[2..]), 4);
     }
 }
