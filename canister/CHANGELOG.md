@@ -8,18 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add `get_blockchain_info` endpoint (#483)
+- Add `get_blockchain_info` endpoint ([#483](https://github.com/dfinity/bitcoin-canister/pull/483))
 
-- Add bitcoin canister changelog (#463)
+- Add network validation for addresses in get_balance and get_utxos requests ([#458](https://github.com/dfinity/bitcoin-canister/pull/458))
 
-- Add network validation for addresses in get_balance and get_utxos requests (#458)
-
-- Add canister_arg to initialize and upgrade canister (#457)
-
-
-### Changed
-
-- Release plz (#464)
+- Add canister_arg to initialize and upgrade canister ([#457](https://github.com/dfinity/bitcoin-canister/pull/457))
 
 
 ## [release/2025-12-03] - 2025-12-03
