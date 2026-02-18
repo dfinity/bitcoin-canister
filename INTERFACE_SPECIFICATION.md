@@ -265,6 +265,36 @@ set_config : (set_config_request) -> ();
 
 This endpoint is used to update the configuration. The watchdog canister can only set the API access flag. All other configuration can only be updated by the controller of the canister. For the main Bitcoin canister (connected to Bitcoin mainnet), the only controller is the NNS root canister.
 
+### `get_blockchain_info`
+
+```
+type blockchain_info = record {
+  height : block_height;
+  block_hash : block_hash;
+  timestamp : nat32;
+  difficulty : nat;
+  utxos_length : nat64;
+};
+
+get_blockchain_info : () -> (blockchain_info) query;
+```
+
+This endpoint returns information about the canister's current view of the Bitcoin blockchain, which includes the following:
+
+* `height`: The height of the main chain tip.
+* `block_hash`: The hash of the tip block as a `block_hash` (blob, 32 bytes).
+* `timestamp`: The Unix timestamp of the tip block.
+* `difficulty`: The difficulty of the tip block.
+* `utxos_length`: The total number of UTXOs up to the main chain tip.
+
+The main chain is defined as the longest chain of blocks with an "uncontested" tip — meaning there is no other block at
+the same height as the tip.
+
+This endpoint is primarily intended for monitoring purposes, such as by the watchdog canister. Unlike other endpoints:
+
+* It does **not** require the API to be enabled (`api_access` flag).
+* It does **not** require the canister to be fully synced.
+
 ### Byte Order
 
 Since the Bitcoin canister provides a low-level interface, it uses the [same byte order as Bitcoin uses internally](https://learnmeabitcoin.com/technical/general/byte-order).

@@ -561,6 +561,8 @@ pub struct HttpResponse {
     pub body: ByteBuf,
 }
 
+pub use ic_btc_interface::BlockchainInfo;
+
 /// A type used to facilitate time-slicing.
 #[must_use]
 #[derive(Debug, PartialEq, Eq)]

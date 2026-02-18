@@ -182,6 +182,10 @@ pub fn get_config() -> Config {
     })
 }
 
+pub fn get_blockchain_info() -> types::BlockchainInfo {
+    with_state(state::blockchain_info)
+}
+
 pub fn pre_upgrade() {
     print("Running pre_upgrade...");
 
@@ -687,6 +691,39 @@ mod test {
         with_state(|s| {
             assert_eq!(s.disable_api_if_not_fully_synced, Flag::Enabled);
         });
+    }
+
+    #[test]
+    fn get_blockchain_info_returns_correct_info() {
+        let network = Network::Mainnet;
+        init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let genesis = genesis_block(network);
+        let tip_info = get_blockchain_info();
+
+        // After init, the tip is the Bitcoin genesis block for the configured network.
+        assert_eq!(tip_info.height, 0);
+        assert_eq!(tip_info.block_hash, genesis.block_hash().to_vec());
+        assert_eq!(tip_info.timestamp, genesis.header().time);
+        assert_eq!(tip_info.difficulty, genesis.difficulty(network));
+        // Genesis block has 1 coinbase output.
+        assert_eq!(tip_info.utxos_length, 1);
+    }
+
+    #[test]
+    fn get_blockchain_info_succeeds_when_api_disabled() {
+        init(InitConfig {
+            api_access: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        let info = get_blockchain_info();
+        assert_eq!(info.height, 0);
+        assert_eq!(info.utxos_length, 1);
     }
 
     #[test]

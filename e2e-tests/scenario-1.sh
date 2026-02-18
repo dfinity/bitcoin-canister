@@ -13,12 +13,25 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks for scenario 1.
 dfx deploy --no-wallet e2e-scenario-1
 
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
+
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 2;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-scenario-1)\";
 }})"
+
+# Wait until all blocks have been received.
+wait_until_main_chain_height 5 60
+
+# Verify the blockchain info using the query endpoint.
+BLOCKCHAIN_INFO=$(dfx canister call bitcoin get_blockchain_info --query)
+if ! [[ $BLOCKCHAIN_INFO == *"height = 5"* ]]; then
+  echo "FAIL: Expected height 5 in blockchain info, got $BLOCKCHAIN_INFO"
+  exit 1
+fi
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_stable_height 3 60
