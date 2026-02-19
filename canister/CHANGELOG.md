@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-02-19] - 2026-02-19
+
+### Changed
+
+- Merge branch 'master' into mducroux/fix-release-plz
+
+
 ## [release/2026-02-18] - 2026-02-18
 
 ### Added
@@ -294,3 +301,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2022-12-02]: https://github.com/dfinity/bitcoin-canister/releases/tag/release/2022-12-02
 
 [release/2026-02-18]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-canister/release/2025-12-03...ic-btc-canister/release/2026-02-18
+
+[release/2026-02-19]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-02-18...release/2026-02-19
