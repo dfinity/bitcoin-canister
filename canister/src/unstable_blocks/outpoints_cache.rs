@@ -156,9 +156,9 @@ impl OutPointsCache {
         }
 
         self.added_outpoints
-            .insert(block.block_hash(), added_outpoints);
+            .insert(*block.block_hash(), added_outpoints);
         self.removed_outpoints
-            .insert(block.block_hash(), removed_outpoints);
+            .insert(*block.block_hash(), removed_outpoints);
 
         Ok(())
     }
@@ -207,8 +207,8 @@ impl OutPointsCache {
         }
 
         let block_hash = block.block_hash();
-        self.added_outpoints.remove(&block_hash);
-        self.removed_outpoints.remove(&block_hash);
+        self.added_outpoints.remove(block_hash);
+        self.removed_outpoints.remove(block_hash);
     }
 }
 
@@ -253,6 +253,7 @@ mod test {
         let btc_network = into_bitcoin_network(network);
         let address_1 = random_p2pkh_address(btc_network).into();
         let address_2 = random_p2pkh_address(btc_network).into();
+        let address_3 = random_p2pkh_address(btc_network).into();
 
         let tx_0 = TransactionBuilder::coinbase()
             .with_output(&address_1, 1000)
@@ -289,11 +290,20 @@ mod test {
             .with_output(&address_2, 2000)
             .build();
 
+        let tx_coinbase_block_1 = TransactionBuilder::coinbase()
+            .with_output(&address_3, 10_000)
+            .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .with_transaction(tx_coinbase_block_1.clone())
             .with_transaction(tx_1.clone())
             .build();
 
         cache.insert(&utxos, &block_1, 1).unwrap();
+
+        let outpoint_coinbase_1 = OutPoint {
+            txid: tx_coinbase_block_1.txid(),
+            vout: 0,
+        };
 
         let outpoint_1 = OutPoint {
             txid: tx_1.txid(),
@@ -310,6 +320,11 @@ mod test {
                         height: 0,
                         count: 2
                     },
+                    outpoint_coinbase_1.clone() => TxOutInfo {
+                        txout: (&tx_coinbase_block_1.output()[0]).into(),
+                        height: 1,
+                        count: 1
+                    },
                     outpoint_1.clone() => TxOutInfo {
                         txout: (&tx_1.output()[0]).into(),
                         height: 1,
@@ -317,16 +332,17 @@ mod test {
                     }
                 },
                 added_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {
+                    *block_0.block_hash() => maplit::btreemap! {
                         address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
-                    block_1.block_hash() => maplit::btreemap! {
-                        address_2.clone() => vec![OutPoint::new(tx_1.txid(), 0)]
+                    *block_1.block_hash() => maplit::btreemap! {
+                        address_2.clone() => vec![OutPoint::new(tx_1.txid(), 0)],
+                        address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {},
-                    block_1.block_hash() => maplit::btreemap! {
+                    *block_0.block_hash() => maplit::btreemap! {},
+                    *block_1.block_hash() => maplit::btreemap! {
                         address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
@@ -344,6 +360,11 @@ mod test {
                         height: 0,
                         count: 1
                     },
+                    outpoint_coinbase_1.clone() => TxOutInfo {
+                        txout: (&tx_coinbase_block_1.output()[0]).into(),
+                        height: 1,
+                        count: 1
+                    },
                     outpoint_1 => TxOutInfo {
                         txout: (&tx_1.output()[0]).into(),
                         height: 1,
@@ -351,12 +372,13 @@ mod test {
                     }
                 },
                 added_outpoints: maplit::btreemap! {
-                    block_1.block_hash() => maplit::btreemap! {
-                        address_2 => vec![OutPoint::new(tx_1.txid(), 0)]
+                    *block_1.block_hash() => maplit::btreemap! {
+                        address_2 => vec![OutPoint::new(tx_1.txid(), 0)],
+                        address_3.clone() => vec![OutPoint::new(tx_coinbase_block_1.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
-                    block_1.block_hash() => maplit::btreemap! {
+                    *block_1.block_hash() => maplit::btreemap! {
                         address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
@@ -474,12 +496,12 @@ mod test {
                     },
                 },
                 added_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {
+                    *block_0.block_hash() => maplit::btreemap! {
                         address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
                 removed_outpoints: maplit::btreemap! {
-                    block_0.block_hash() => maplit::btreemap! {}
+                    *block_0.block_hash() => maplit::btreemap! {}
                 },
             }
         );

@@ -112,7 +112,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         // Memory
         w.encode_gauge(
             "stable_memory_size_in_bytes",
-            (ic_cdk::api::stable::stable_size() * WASM_PAGE_SIZE) as f64,
+            (ic_cdk::stable::stable_size() * WASM_PAGE_SIZE) as f64,
             "The size of stable memory in bytes.",
         )?;
         w.encode_gauge(
@@ -164,7 +164,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
 
         w.encode_gauge(
             "cycles_balance",
-            ic_cdk::api::canister_balance() as f64,
+            ic_cdk::api::canister_cycle_balance() as f64,
             "The cycles balance of the canister.",
         )?;
 

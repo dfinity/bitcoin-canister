@@ -1,4 +1,4 @@
-use ic_cdk::api::management_canister::http_request::{HttpHeader, HttpResponse};
+use ic_cdk::management_canister::{HttpHeader, HttpRequestResult};
 
 /// Creates a new `HttpResponseBuilder` to construct an HTTP response.
 pub fn create_response() -> HttpResponseBuilder {
@@ -39,8 +39,8 @@ impl HttpResponseBuilder {
         self
     }
 
-    pub fn build(self) -> HttpResponse {
-        HttpResponse {
+    pub fn build(self) -> HttpRequestResult {
+        HttpRequestResult {
             status: self.status,
             headers: self.headers,
             body: self.body,

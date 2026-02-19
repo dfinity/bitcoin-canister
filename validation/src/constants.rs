@@ -15,7 +15,6 @@ pub fn max_target(network: &Network) -> Target {
         Network::Testnet | Network::Testnet4 => Target::MAX_ATTAINABLE_TESTNET,
         Network::Regtest => Target::MAX_ATTAINABLE_REGTEST,
         Network::Signet => Target::MAX_ATTAINABLE_SIGNET,
-        &other => unreachable!("Unsupported network: {:?}", other),
     }
 }
 
@@ -25,7 +24,6 @@ pub fn no_pow_retargeting(network: &Network) -> bool {
     match network {
         Network::Bitcoin | Network::Testnet | Network::Testnet4 | Network::Signet => false,
         Network::Regtest => true,
-        &other => unreachable!("Unsupported network: {:?}", other),
     }
 }
 
@@ -36,7 +34,6 @@ pub fn pow_limit_bits(network: &Network) -> CompactTarget {
         Network::Testnet | Network::Testnet4 => 0x1d00ffff,
         Network::Regtest => 0x207fffff,
         Network::Signet => 0x1e0377ae,
-        &other => unreachable!("Unsupported network: {:?}", other),
     };
     CompactTarget::from_consensus(bits)
 }

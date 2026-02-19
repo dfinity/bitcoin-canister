@@ -97,8 +97,8 @@ impl UtxoSet {
     /// Returns:
     ///   * `None` if there was no block to continue ingesting.
     ///   * `Slicing::Done(block_hash, ingestion_stats)` if the partially ingested
-    ///      block is now fully ingested, where `block_hash` is the hash of the ingested block,
-    ///      while 'ingestion_stats' is the number of instructions used to ingest block by type.
+    ///     block is now fully ingested, where `block_hash` is the hash of the ingested block,
+    ///     while 'ingestion_stats' is the number of instructions used to ingest block by type.
     ///   * `Slicing::Paused(())` if the block continued to be ingested, but is time-sliced.
     pub fn ingest_block_continue(
         &mut self,
@@ -151,7 +151,7 @@ impl UtxoSet {
 
         // Block ingestion complete.
         self.next_height += 1;
-        Some(Slicing::Done((block.block_hash(), stats)))
+        Some(Slicing::Done((*block.block_hash(), stats)))
     }
 
     /// Returns the balance of the given address.
@@ -220,10 +220,9 @@ impl UtxoSet {
         let stable_outpoints = self
             .address_utxos
             .range(AddressUtxoRange::new(address, offset))
-            .map(|(address_utxo_blob, _)| {
-                let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
-                    address_utxo_blob.as_slice(),
-                ));
+            .map(|entry| {
+                let address_utxo =
+                    AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
                 address_utxo.outpoint
             })
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
@@ -372,7 +371,7 @@ impl UtxoSet {
 
                 let ins_start = performance_counter();
                 self.insert_utxo(
-                    OutPoint::new(txid, vout as u32),
+                    OutPoint::new(txid.clone(), vout as u32),
                     output.clone(),
                     utxos_delta,
                 );
@@ -440,6 +439,25 @@ impl UtxoSet {
     pub fn get_total_supply(&self) -> Satoshi {
         self.utxos.iter().map(|(_, (v, _))| v.value).sum()
     }
+}
+
+/// Counts the net UTXOs created by the given blocks, added to a base count.
+///
+/// Each output creates a UTXO; each input (except coinbase) spends a UTXO.
+pub fn count_utxos_in_blocks<'a>(
+    base_count: u64,
+    blocks: impl IntoIterator<Item = &'a Block>,
+) -> u64 {
+    let mut total = base_count as i64;
+    for block in blocks {
+        for tx in block.txdata() {
+            total += tx.output().len() as i64;
+            if !tx.is_coinbase() {
+                total -= tx.input().len() as i64;
+            }
+        }
+    }
+    total.max(0) as u64
 }
 
 fn init_address_utxos(
@@ -570,8 +588,8 @@ mod test {
     use super::*;
     use crate::{
         address_utxoset::AddressUtxoSet,
-        runtime,
-        test_utils::{BlockBuilder, TransactionBuilder},
+        genesis_block, runtime,
+        test_utils::{build_chain, BlockBuilder, TransactionBuilder},
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::{
@@ -583,6 +601,7 @@ mod test {
     use ic_btc_interface::Network;
     use ic_btc_test_utils::random_p2pkh_address;
     use ic_btc_types::into_bitcoin_network;
+    use maplit::btreeset;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
 
@@ -620,36 +639,84 @@ mod test {
     }
 
     #[test]
-    fn filter_provably_unspendable_utxos() {
-        for network in [Network::Mainnet, Network::Regtest, Network::Testnet].iter() {
-            let mut utxo = UtxoSet::new(*network);
+    fn filter_mainnet_provably_unspendable_utxos() {
+        test_filter_provably_unspendable_utxos(UtxoSet::new(Network::Mainnet));
+    }
 
+    #[test]
+    fn filter_testnet_provably_unspendable_utxos() {
+        test_filter_provably_unspendable_utxos(UtxoSet::new(Network::Testnet));
+    }
+
+    #[test]
+    fn filter_regtest_provably_unspendable_utxos() {
+        test_filter_provably_unspendable_utxos(UtxoSet::new(Network::Regtest));
+    }
+
+    fn test_filter_provably_unspendable_utxos(mut utxos_set: UtxoSet) {
+        let network = utxos_set.network;
+        let coinbase = TransactionBuilder::coinbase().build();
+        let coinbase_outpoint = OutPoint {
+            txid: coinbase.txid(),
+            vout: 0,
+        };
+        let coinbase_out = &coinbase.output()[0];
+
+        let block = BlockBuilder::genesis()
+            // A block must have a coinbase transaction
+            .with_transaction(coinbase.clone())
             // A provably unspendable tx.
-            let block = BlockBuilder::genesis()
-                .with_transaction(Transaction::new(bitcoin::Transaction {
-                    output: vec![BitcoinTxOut {
-                        value: Amount::from_sat(50_0000_0000),
-                        script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
-                    }],
-                    input: vec![],
-                    version: Version(1),
-                    lock_time: LockTime::from_consensus(0),
-                }))
-                .build();
+            .with_transaction(Transaction::new(bitcoin::Transaction {
+                output: vec![BitcoinTxOut {
+                    value: Amount::from_sat(50_0000_0000),
+                    script_pubkey: Builder::new().push_opcode(OP_RETURN).into_script(),
+                }],
+                input: vec![],
+                version: Version(1),
+                lock_time: LockTime::from_consensus(0),
+            }))
+            .build();
 
-            assert_eq!(
-                utxo.ingest_block(block.clone()),
-                Slicing::Done((
-                    block.block_hash(),
-                    BlockIngestionStats {
-                        num_rounds: 1,
-                        ..Default::default()
+        assert_eq!(
+            utxos_set.ingest_block(block.clone()),
+            Slicing::Done((
+                *block.block_hash(),
+                BlockIngestionStats {
+                    num_rounds: 1,
+                    ..Default::default()
+                }
+            ))
+        );
+
+        let ingested_utxos: BTreeSet<_> = utxos_set.utxos.iter().collect();
+        assert_eq!(
+            ingested_utxos,
+            btreeset! { ( coinbase_outpoint.clone(), ( TxOut::from(coinbase_out), 0 ) ) },
+            "BUG: utxos should only contain the coinbase transaction"
+        );
+        let ingested_address_utxos: BTreeSet<_> = utxos_set
+            .address_utxos
+            .iter()
+            .map(|entry| entry.into_pair())
+            .collect();
+        assert_eq!(
+            ingested_address_utxos,
+            btreeset! {
+                (Blob::try_from(
+                    AddressUtxo {
+                        address: Address::from_script(&coinbase_out.script_pubkey, network).unwrap(),
+                        height: 0,
+                        outpoint: coinbase_outpoint,
                     }
-                ))
-            );
-            assert!(utxo.utxos.is_empty());
-            assert!(utxo.address_utxos.is_empty());
-        }
+                    .to_bytes()
+                    .as_ref(),
+                )
+                .unwrap(),
+                ()
+                )
+            },
+            "BUG: address_utxos should only contain the address from the coinbase transaction output"
+        );
     }
 
     #[test]
@@ -699,7 +766,7 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .iter()
-                .map(|(k, _)| k)
+                .map(|entry| *entry.key())
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
                 Blob::try_from(AddressUtxo {
@@ -741,7 +808,7 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .iter()
-                .map(|(k, _)| k)
+                .map(|entry| *entry.key())
                 .collect::<BTreeSet<_>>(),
             maplit::btreeset! {
                 Blob::try_from(AddressUtxo {
@@ -782,10 +849,9 @@ mod test {
         assert_eq!(
             utxo.address_utxos
                 .range(AddressUtxoRange::new(&address, &None))
-                .map(|(address_utxo_blob, _)| {
-                    let address_utxo = AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(
-                        address_utxo_blob.as_slice(),
-                    ));
+                .map(|entry| {
+                    let address_utxo =
+                        AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
                     address_utxo.height
                 })
                 .collect::<Vec<_>>(),
@@ -893,7 +959,7 @@ mod test {
         assert_eq!(
             utxo_set.ingest_block(block.clone()),
             Slicing::Done((
-                block.block_hash(),
+                *block.block_hash(),
                 BlockIngestionStats {
                     num_rounds: 1,
                     ..Default::default()
@@ -968,6 +1034,7 @@ mod test {
             let address_1 = random_p2pkh_address(btc_network).into();
             let address_2 = random_p2pkh_address(btc_network).into();
             let address_3 = random_p2pkh_address(btc_network).into();
+            let address_miner = random_p2pkh_address(btc_network).into();
 
             let mut utxo_set = UtxoSet::new(network);
 
@@ -1015,17 +1082,22 @@ mod test {
                 .with_transaction(tx_0.clone())
                 .build();
 
-            // Block 1: Contains transactions 1 and 2.
+            // Block 1: Contains coinbase, transactions 1 and 2.
+            let mining_reward = 10;
+            let coinbase_tx=TransactionBuilder::coinbase().with_output(&address_miner, mining_reward).build();
             let block_1 = BlockBuilder::with_prev_header(block_0.header())
+                .with_transaction(coinbase_tx.clone())
                 .with_transaction(tx_1.clone())
                 .with_transaction(tx_2.clone())
                 .build();
+            let num_inputs_outputs_block_1 = num_inputs_outputs(&block_1);
+            prop_assert_eq!(num_inputs_outputs_block_1 as u64, tx_cardinality * 4 + 1);
 
             // Ingest block 0 without any time-slicing.
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set.ingest_block(block_0.clone()),
                 Slicing::Done((
-                    block_0.block_hash(),
+                    *block_0.block_hash(),
                     BlockIngestionStats {
                         num_rounds: 1,
                         ..Default::default()
@@ -1046,11 +1118,12 @@ mod test {
                     // Block 1 ingestion is paused. Assert that the state is exactly
                     // what we expect if only block 0 is ingested.
 
-                    assert_eq!(utxo_set.get_balance(&address_1), tx_cardinality);
-                    assert_eq!(utxo_set.get_balance(&address_2), 0);
-                    assert_eq!(utxo_set.get_balance(&address_3), 0);
+                    prop_assert_eq!(utxo_set.get_balance(&address_1), tx_cardinality);
+                    prop_assert_eq!(utxo_set.get_balance(&address_miner), 0);
+                    prop_assert_eq!(utxo_set.get_balance(&address_2), 0);
+                    prop_assert_eq!(utxo_set.get_balance(&address_3), 0);
 
-                    assert_eq!(
+                    prop_assert_eq!(
                         utxo_set
                             .get_address_outpoints(&address_1, &None)
                             .collect::<Vec<_>>(),
@@ -1062,14 +1135,21 @@ mod test {
                             .collect::<Vec<_>>()
                     );
 
-                    assert_eq!(
+                    prop_assert_eq!(
+                        utxo_set
+                            .get_address_outpoints(&address_miner, &None)
+                            .collect::<Vec<_>>(),
+                        vec![]
+                    );
+
+                    prop_assert_eq!(
                         utxo_set
                             .get_address_outpoints(&address_2, &None)
                             .collect::<Vec<_>>(),
                         vec![]
                     );
 
-                    assert_eq!(
+                    prop_assert_eq!(
                         utxo_set
                             .get_address_outpoints(&address_3, &None)
                             .collect::<Vec<_>>(),
@@ -1086,7 +1166,15 @@ mod test {
                             .is_some());
 
                         // All the outpoints in block 1 do not exist.
-                        assert_eq!(
+                        prop_assert_eq!(
+                            utxo_set.get_utxo(&OutPoint {
+                                vout: 0,
+                                txid: coinbase_tx.txid(),
+                            }),
+                            None
+                        );
+
+                        prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: i as u32,
                                 txid: tx_1.txid(),
@@ -1094,7 +1182,7 @@ mod test {
                             None
                         );
 
-                        assert_eq!(
+                        prop_assert_eq!(
                             utxo_set.get_utxo(&OutPoint {
                                 vout: i as u32,
                                 txid: tx_2.txid(),
@@ -1109,29 +1197,30 @@ mod test {
 
             // Finished ingesting block 1. Assert that the balances, addresses outpoints, and
             // UTXOs are updated accordingly.
-            assert_eq!(utxo_set.get_balance(&address_1), 0);
-            assert_eq!(utxo_set.get_balance(&address_2), 0);
-            assert_eq!(utxo_set.get_balance(&address_3), tx_cardinality);
-            assert_eq!(
+            prop_assert_eq!(utxo_set.get_balance(&address_1), 0);
+            prop_assert_eq!(utxo_set.get_balance(&address_miner), mining_reward);
+            prop_assert_eq!(utxo_set.get_balance(&address_2), 0);
+            prop_assert_eq!(utxo_set.get_balance(&address_3), tx_cardinality);
+            prop_assert_eq!(
                 num_rounds,
-                ((tx_cardinality * 4) as f32 / ingestion_rate as f32).ceil() as u32
+                (num_inputs_outputs_block_1 as f32 / ingestion_rate as f32).ceil() as u32
             );
 
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_1, &None)
                     .collect::<Vec<_>>(),
                 vec![]
             );
 
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_2, &None)
                     .collect::<Vec<_>>(),
                 vec![]
             );
 
-            assert_eq!(
+            prop_assert_eq!(
                 utxo_set
                     .get_address_outpoints(&address_3, &None)
                     .collect::<Vec<_>>(),
@@ -1145,7 +1234,7 @@ mod test {
 
             for i in 0..tx_cardinality {
                 // All the outpoints in tx 0 don't exist.
-                assert_eq!(
+                prop_assert_eq!(
                     utxo_set.get_utxo(&OutPoint {
                         vout: i as u32,
                         txid: tx_0.txid(),
@@ -1154,7 +1243,7 @@ mod test {
                 );
 
                 // All the outpoints in tx 1 don't exist.
-                assert_eq!(
+                prop_assert_eq!(
                     utxo_set.get_utxo(&OutPoint {
                         vout: i as u32,
                         txid: tx_1.txid(),
@@ -1186,5 +1275,100 @@ mod test {
                 false
             }
         })
+    }
+
+    fn num_inputs_outputs(block: &Block) -> usize {
+        let num_inputs = block
+            .txdata()
+            .iter()
+            .filter(|tx| !tx.is_coinbase())
+            .map(|tx| tx.input().len())
+            .sum::<usize>();
+        let num_outputs = block
+            .txdata()
+            .iter()
+            .map(|tx| tx.output().len())
+            .sum::<usize>();
+        num_inputs + num_outputs
+    }
+
+    #[test]
+    fn count_utxos_in_blocks_empty() {
+        assert_eq!(count_utxos_in_blocks(0, vec![]), 0);
+        assert_eq!(count_utxos_in_blocks(5, vec![]), 5);
+    }
+
+    #[test]
+    fn count_utxos_in_blocks_genesis_only() {
+        let genesis = genesis_block(Network::Regtest);
+        let blocks: Vec<&Block> = vec![&genesis];
+        assert_eq!(count_utxos_in_blocks(0, blocks), 1);
+    }
+
+    #[test]
+    fn count_utxos_in_blocks_chain_of_coinbase_blocks() {
+        let network = Network::Regtest;
+        let blocks = build_chain(network, 3, 1);
+        let blocks_refs: Vec<&Block> = blocks.iter().collect();
+        // Genesis + 2 blocks, each with 1 coinbase output. Total = 3 UTXOs.
+        assert_eq!(count_utxos_in_blocks(0, blocks_refs), 3);
+    }
+
+    #[test]
+    fn count_utxos_in_blocks_with_spending_transactions() {
+        let network = Network::Regtest;
+        let address: Address = random_p2pkh_address(into_bitcoin_network(network)).into();
+        let mut blocks: Vec<Block> = vec![];
+
+        // Block 1 (genesis): coinbase with 1 output → +1. Running total: 1.
+        let coinbase_tx = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        blocks.push(
+            BlockBuilder::genesis()
+                .with_transaction(coinbase_tx.clone())
+                .build(),
+        );
+        assert_eq!(count_utxos_in_blocks(0, &blocks), 1);
+
+        // Block 2: coinbase (1 output) + spend_tx (1 input, 3 outputs).
+        // Net: +1 + (3 - 1) = +3. Running total: 4.
+        let coinbase_tx_2 = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        let spend_tx = TransactionBuilder::new()
+            .with_input(OutPoint::new(coinbase_tx.txid(), 0))
+            .with_output(&address, 300)
+            .with_output(&address, 300)
+            .with_output(&address, 400)
+            .build();
+        blocks.push(
+            BlockBuilder::with_prev_header(blocks.last().unwrap().header())
+                .with_transaction(coinbase_tx_2)
+                .with_transaction(spend_tx.clone())
+                .build(),
+        );
+        assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
+        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
+
+        // Block 3: coinbase (1 output) + spend_tx_2 (2 inputs, 1 output).
+        // Net: +1 + (1 - 2) = 0. Running total: 4.
+        let coinbase_tx_3 = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        let spend_tx_2 = TransactionBuilder::new()
+            .with_input(OutPoint::new(spend_tx.txid(), 0))
+            .with_input(OutPoint::new(spend_tx.txid(), 1))
+            .with_output(&address, 600)
+            .build();
+        blocks.push(
+            BlockBuilder::with_prev_header(blocks.last().unwrap().header())
+                .with_transaction(coinbase_tx_3)
+                .with_transaction(spend_tx_2)
+                .build(),
+        );
+        assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
+        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
+        assert_eq!(count_utxos_in_blocks(4, &blocks[2..]), 4);
     }
 }

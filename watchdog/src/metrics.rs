@@ -1,7 +1,5 @@
-use crate::{
-    bitcoin_block_apis::BitcoinBlockApi, config::BitcoinNetwork, health::HeightStatus,
-    types::CandidHttpResponse,
-};
+use crate::config::Network;
+use crate::{health::HeightStatus, types::CandidHttpResponse};
 use ic_btc_interface::Flag;
 use ic_metrics_encoder::MetricsEncoder;
 use serde_bytes::ByteBuf;
@@ -38,14 +36,17 @@ pub fn get_metrics() -> CandidHttpResponse {
 
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
+    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
-    let (mainnet, testnet) = match config.bitcoin_network {
-        BitcoinNetwork::Mainnet => (1.0, 0.0),
-        BitcoinNetwork::Testnet => (0.0, 1.0),
+    let (bitcoin_mainnet, bitcoin_testnet, dogecoin_mainnet) = match canister.network() {
+        Network::BitcoinMainnet => (1.0, 0.0, 0.0),
+        Network::BitcoinTestnet => (0.0, 1.0, 0.0),
+        Network::DogecoinMainnet => (0.0, 0.0, 1.0),
     };
-    w.gauge_vec("bitcoin_network", "Bitcoin network.")?
-        .value(&[("network", "mainnet")], mainnet)?
-        .value(&[("network", "testnet")], testnet)?;
+    w.gauge_vec("network", "Network.")?
+        .value(&[("network", "bitcoin_mainnet")], bitcoin_mainnet)?
+        .value(&[("network", "bitcoin_testnet")], bitcoin_testnet)?
+        .value(&[("network", "dogecoin_mainnet")], dogecoin_mainnet)?;
     w.encode_gauge(
         "blocks_behind_threshold",
         config.get_blocks_behind_threshold() as f64,
@@ -64,9 +65,9 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
 
     let health = crate::health::health_status();
     w.encode_gauge(
-        "bitcoin_canister_height",
+        "canister_height",
         health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),
-        "Main chain height of the Bitcoin canister.",
+        "Main chain height of the canister.",
     )?;
     w.encode_gauge(
         "height_target",
@@ -76,7 +77,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     w.encode_gauge(
         "height_diff",
         health.height_diff.map(|x| x as f64).unwrap_or(NO_VALUE),
-        "Difference between Bitcoin canister height and target height.",
+        "Difference between canister height and target height.",
     )?;
 
     let (not_enough_data, ok, ahead, behind) = match health.height_status {
@@ -85,7 +86,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         HeightStatus::Ahead => (0.0, 0.0, 1.0, 0.0),
         HeightStatus::Behind => (0.0, 0.0, 0.0, 1.0),
     };
-    w.gauge_vec("height_status", "Bitcoin canister height status.")?
+    w.gauge_vec("height_status", "Canister height status.")?
         .value(&[("code", "not_enough_data")], not_enough_data)?
         .value(&[("code", "ok")], ok)?
         .value(&[("code", "ahead")], ahead)?
@@ -98,7 +99,7 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     };
     w.gauge_vec(
         "api_access_target",
-        "Expected value of the Bitcoin canister API access flag.",
+        "Expected value of the canister API access flag.",
     )?
     .value(&[("flag", "undefined")], undefined)?
     .value(&[("flag", "enabled")], enabled)?
@@ -110,16 +111,16 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     }
     let mut gauge = w.gauge_vec("explorer_height", "Heights from the explorers.")?;
     let mut available_explorers_count: u64 = 0;
-    for explorer in BitcoinBlockApi::network_explorers(config.bitcoin_network) {
+    for explorer in &config.explorers {
         let height = available_explorers
-            .get(&explorer)
+            .get(explorer)
             .map_or(NO_VALUE, |block_info| {
                 block_info.height.map_or(NO_VALUE, |x| x as f64)
             });
         if !height.is_nan() {
             available_explorers_count += 1;
         }
-        gauge = gauge.value(&[("explorer", &explorer.to_string())], height)?;
+        gauge = gauge.value(&[("explorer", explorer)], height)?;
     }
     w.encode_gauge(
         "available_explorers",

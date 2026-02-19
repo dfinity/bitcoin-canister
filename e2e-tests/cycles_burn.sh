@@ -16,11 +16,14 @@ dfx start --background --clean
 
 INITIAL_BALANCE=100000000000
 
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
+
 # Deploy the bitcoin canister.
-dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(record {
+dfx deploy --no-wallet --with-cycles "$INITIAL_BALANCE" bitcoin --argument "(variant {init = record {
   network = opt variant { regtest };
   burn_cycles = opt variant { enabled };
-})"
+}})"
 
 sleep 3
 

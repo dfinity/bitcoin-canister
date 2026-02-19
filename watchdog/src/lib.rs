@@ -1,5 +1,5 @@
 mod api_access;
-mod bitcoin_block_apis;
+mod block_apis;
 mod config;
 mod endpoints;
 mod fetch;
@@ -12,29 +12,29 @@ mod types;
 #[cfg(test)]
 mod test_utils;
 
+use crate::config::{Config, Network};
+use crate::fetch::BlockInfo;
+use crate::health::HealthStatus;
 use crate::{
-    bitcoin_block_apis::BitcoinBlockApi,
-    config::{BitcoinNetwork, Config},
     endpoints::*,
-    fetch::BlockInfo,
-    health::HealthStatus,
+    health::LegacyHealthStatus,
+    types::WatchdogArg,
     types::{CandidHttpRequest, CandidHttpResponse},
 };
 use ic_btc_interface::Flag;
-use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
-use ic_cdk_macros::{init, post_upgrade, query};
+use ic_cdk::{
+    init,
+    management_canister::{HttpRequestResult, TransformArgs},
+    post_upgrade, query,
+};
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::time::Duration;
+use std::convert::TryFrom;
+use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
-    /// The local storage for the configuration.
-    static CONFIG: RefCell<Config> = RefCell::new(Config::mainnet());
-
     /// The local storage for the data fetched from the external APIs.
-    static BLOCK_INFO_DATA: RefCell<HashMap<BitcoinBlockApi, BlockInfo>> = RefCell::new(HashMap::new());
+    static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo>> = RefCell::new(HashMap::new());
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
@@ -42,50 +42,72 @@ thread_local! {
 
 /// This function is called when the canister is created.
 #[init]
-fn init(network: BitcoinNetwork) {
-    let config = match network {
-        BitcoinNetwork::Mainnet => Config::mainnet(),
-        BitcoinNetwork::Testnet => Config::testnet(),
+fn init(watchdog_arg: WatchdogArg) {
+    let target = match watchdog_arg {
+        WatchdogArg::Init(args) => args.target,
+        WatchdogArg::Upgrade(_) => panic!("cannot initialize canister during upgrade"),
     };
-    crate::storage::set_config(config);
 
-    set_timer(
-        Duration::from_secs(crate::storage::get_config().delay_before_first_fetch_sec),
-        || {
-            ic_cdk::spawn(async {
-                tick().await;
-                ic_cdk_timers::set_timer_interval(
-                    Duration::from_secs(crate::storage::get_config().interval_between_fetches_sec),
-                    || ic_cdk::spawn(tick()),
-                );
-            })
-        },
-    );
+    storage::set_canister_config(target);
+
+    start_block_info_fetch_loop();
 }
 
 /// This function is called after the canister is upgraded.
 #[post_upgrade]
-fn post_upgrade(network: BitcoinNetwork) {
-    init(network)
+fn post_upgrade(watchdog_arg: Option<WatchdogArg>) {
+    if let Some(WatchdogArg::Init(_)) = watchdog_arg {
+        panic!("cannot upgrade canister with init args");
+    };
+    start_block_info_fetch_loop();
+}
+
+fn start_block_info_fetch_loop() {
+    set_timer(
+        Duration::from_secs(storage::get_config().delay_before_first_fetch_sec),
+        async {
+            tick().await;
+            ic_cdk_timers::set_timer_interval(
+                Duration::from_secs(storage::get_config().interval_between_fetches_sec),
+                || async { tick().await },
+            );
+        },
+    );
 }
 
 /// Fetches the data from the external APIs and stores it in the local storage.
 async fn fetch_block_info_data() {
-    let bitcoin_network = crate::storage::get_config().bitcoin_network;
-    let data = crate::fetch::fetch_all_data(bitcoin_network).await;
+    let data = crate::fetch::fetch_all_data().await;
     data.into_iter().for_each(crate::storage::insert_block_info);
 }
 
-/// Periodically fetches data and sets the API access to the Bitcoin canister.
+/// Periodically fetches data and sets the API access to the canister monitored.
 async fn tick() {
     fetch_block_info_data().await;
     crate::api_access::synchronise_api_access().await;
 }
 
-/// Returns the health status of the Bitcoin canister.
+/// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
-fn health_status() -> HealthStatus {
-    crate::health::health_status()
+fn health_status() -> LegacyHealthStatus {
+    let network = storage::get_canister().network();
+    match network {
+        Network::BitcoinMainnet | Network::BitcoinTestnet => {
+            LegacyHealthStatus::try_from(health::health_status()).unwrap_or_else(|e| {
+                panic!(
+                    "Failed to convert health status for Bitcoin network: {}",
+                    e.reason
+                )
+            })
+        }
+        _ => panic!("health_status can only be called for Bitcoin networks"),
+    }
+}
+
+/// Returns the health status of the canister monitored.
+#[query]
+fn health_status_v2() -> HealthStatus {
+    health::health_status()
 }
 
 /// Returns the configuration of the watchdog canister.
@@ -94,7 +116,7 @@ pub fn get_config() -> Config {
     crate::storage::get_config()
 }
 
-/// Returns the API access target for the Bitcoin canister.
+/// Returns the API access target for the canister monitored.
 #[query]
 pub fn get_api_access_target() -> Option<Flag> {
     crate::storage::get_api_access_target()
@@ -117,16 +139,16 @@ pub fn http_request(request: CandidHttpRequest) -> CandidHttpResponse {
 // Prints a message to the console.
 fn print(msg: &str) {
     #[cfg(target_arch = "wasm32")]
-    ic_cdk::api::print(msg);
+    ic_cdk::api::debug_print(msg);
 
     #[cfg(not(target_arch = "wasm32"))]
     println!("{}", msg);
 }
 
 #[allow(unused_variables)]
-fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
+fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> TimerId {
     #[cfg(target_arch = "wasm32")]
-    return ic_cdk_timers::set_timer(delay, func);
+    return ic_cdk_timers::set_timer(delay, future);
 
     #[cfg(not(target_arch = "wasm32"))]
     TimerId::default()
@@ -136,74 +158,120 @@ fn set_timer(delay: Duration, func: impl FnOnce() + 'static) -> TimerId {
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_api_bitaps_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_api_bitaps_com_block_mainnet().transform(raw)
-}
-
-#[query]
-fn transform_api_blockchair_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_api_blockchair_com_block_mainnet().transform(raw)
-}
-
-#[query]
-fn transform_api_blockcypher_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_api_blockcypher_com_block_mainnet().transform(raw)
-}
-
-#[query]
-fn transform_bitcoin_canister(raw: TransformArgs) -> HttpResponse {
+fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_canister().transform(raw)
 }
 
 #[query]
-fn transform_bitcoinexplorer_org_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_bitcoinexplorer_org_block_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
 }
 
 #[query]
-fn transform_blockchain_info_hash(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockchain_info_hash_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_api_blockchair_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_blockchair_com().transform(raw)
 }
 
 #[query]
-fn transform_blockchain_info_height(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockchain_info_height_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_api_blockcypher_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_blockcypher_com().transform(raw)
 }
 
 #[query]
-fn transform_blockstream_info_hash(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockstream_info_hash_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_blockchain_info(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_blockchain_info().transform(raw)
 }
 
 #[query]
-fn transform_blockstream_info_height(raw: TransformArgs) -> HttpResponse {
-    endpoint_blockstream_info_height_mainnet().transform(raw)
+fn transform_bitcoin_mainnet_blockstream_info(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_blockstream_info().transform(raw)
 }
 
 #[query]
-fn transform_chain_api_btc_com_block(raw: TransformArgs) -> HttpResponse {
-    endpoint_chain_api_btc_com_block_mainnet().transform(raw)
+fn transform_bitcoin_mempool(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_mempool().transform(raw)
 }
 
 #[query]
-fn transform_mempool_height(raw: TransformArgs) -> HttpResponse {
-    endpoint_mempool_height_mainnet().transform(raw)
+fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_canister().transform(raw)
+}
+
+#[query]
+fn transform_dogecoin_mainnet_api_blockchair_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_api_blockchair_com().transform(raw)
+}
+
+#[query]
+fn transform_dogecoin_mainnet_api_blockcypher_com(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_api_blockcypher_com().transform(raw)
+}
+
+#[query]
+fn transform_dogecoin_mainnet_tokenview(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_tokenview().transform(raw)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::config::{Canister, Config};
+    use crate::types::InitArg;
 
     #[test]
-    fn init_with_testnet_uses_testnet_config() {
-        init(BitcoinNetwork::Testnet);
-        assert_eq!(get_config(), Config::testnet());
+    fn init_with_bitcoin_testnet_uses_testnet_config() {
+        let canister = Canister::BitcoinTestnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+        assert_eq!(get_config(), Config::for_target(canister));
     }
 
     #[test]
-    fn init_with_mainnet_uses_mainnet_config() {
-        init(BitcoinNetwork::Mainnet);
-        assert_eq!(get_config(), Config::mainnet());
+    fn init_with_bitcoin_mainnet_uses_mainnet_config() {
+        let canister = Canister::BitcoinMainnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+        assert_eq!(get_config(), Config::for_target(canister));
+    }
+
+    #[test]
+    fn init_with_bitcoin_mainnet_staging_uses_mainnet_staging_config() {
+        let canister = Canister::BitcoinMainnetStaging;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+        assert_eq!(get_config(), Config::for_target(canister));
+    }
+
+    #[test]
+    fn init_with_dogecoin_mainnet_uses_mainnet_config() {
+        let canister = Canister::DogecoinMainnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+        assert_eq!(get_config(), Config::for_target(canister));
+    }
+
+    #[test]
+    fn init_with_dogecoin_mainnet_staging_uses_mainnet_staging_config() {
+        let canister = Canister::DogecoinMainnetStaging;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+        assert_eq!(get_config(), Config::for_target(canister));
+    }
+
+    #[test]
+    fn test_post_upgrade_with_no_args() {
+        let canister = Canister::DogecoinMainnet;
+        let init_arg = WatchdogArg::Init(InitArg { target: canister });
+        init(init_arg);
+
+        let config_before = get_config();
+
+        post_upgrade(None);
+
+        let config_after = get_config();
+
+        assert_eq!(config_before, config_after);
+        assert_eq!(config_after, Config::for_target(canister));
     }
 
     #[test]

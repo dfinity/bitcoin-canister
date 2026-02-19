@@ -1,5 +1,6 @@
-use crate::{blocktree::BlockDoesNotExtendTree, state::State, unstable_blocks};
+use crate::{state::State, unstable_blocks};
 use bitcoin::{block::Header, hashes::Hash};
+use ic_btc_types::BlockHash;
 use ic_btc_validation::HeaderStore;
 
 /// A structure passed to the validation crate to validate a specific block header.
@@ -10,17 +11,33 @@ pub struct ValidationContext<'a> {
     chain: Vec<(&'a Header, ic_btc_types::BlockHash)>,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum ValidationContextError {
+    BlockDoesNotExtendTree(BlockHash),
+    AlreadyKnown(BlockHash),
+}
+
 impl<'a> ValidationContext<'a> {
     /// Initialize a `ValidationContext` for the given block header.
-    pub fn new(state: &'a State, header: &Header) -> Result<Self, BlockDoesNotExtendTree> {
+    pub fn new(state: &'a State, header: &Header) -> Result<Self, ValidationContextError> {
         // Retrieve the chain that the given header extends.
         // The given header must extend one of the unstable blocks.
         let prev_block_hash = header.prev_blockhash.into();
-        let chain = unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash)
-            .ok_or_else(|| BlockDoesNotExtendTree(header.block_hash().into()))?
+        let current_block_hash = ic_btc_types::BlockHash::from(header.block_hash());
+        let (chain, tip_successors) =
+            unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &prev_block_hash).ok_or(
+                ValidationContextError::BlockDoesNotExtendTree(current_block_hash),
+            )?;
+        if tip_successors
+            .iter()
+            .any(|c| c.block_hash() == &current_block_hash)
+        {
+            return Err(ValidationContextError::AlreadyKnown(current_block_hash));
+        }
+        let chain = chain
             .into_chain()
             .iter()
-            .map(|block| (block.header(), block.block_hash()))
+            .map(|block| (block.header(), *block.block_hash()))
             .collect();
 
         Ok(Self { state, chain })
@@ -31,17 +48,17 @@ impl<'a> ValidationContext<'a> {
     pub fn new_with_next_block_headers(
         state: &'a State,
         header: &Header,
-    ) -> Result<Self, BlockDoesNotExtendTree> {
+    ) -> Result<Self, ValidationContextError> {
         let prev_block_hash = header.prev_blockhash.into();
         let next_block_headers_chain = state
             .unstable_blocks
-            .get_next_block_headers_chain_with_tip(prev_block_hash);
+            .get_next_block_headers_chain_with_tip(&prev_block_hash);
         if next_block_headers_chain.is_empty() {
             Self::new(state, header)
         } else {
             let mut context = Self::new(state, next_block_headers_chain[0].0)?;
             for item in next_block_headers_chain.iter() {
-                context.chain.push(item.clone())
+                context.chain.push(*item)
             }
             Ok(context)
         }
@@ -126,10 +143,10 @@ mod test {
         assert_eq!(
             validation_context.chain,
             vec![
-                (genesis.header(), genesis.block_hash()),
-                (block_0.header(), block_0.block_hash()),
-                (block_1.header(), block_1.block_hash()),
-                (block_2.header(), block_2.block_hash()),
+                (genesis.header(), *genesis.block_hash()),
+                (block_0.header(), *block_0.block_hash()),
+                (block_1.header(), *block_1.block_hash()),
+                (block_2.header(), *block_2.block_hash()),
             ]
         );
 
@@ -138,7 +155,7 @@ mod test {
 
         assert!(matches!(
             ValidationContext::new_with_next_block_headers(&state, not_inserted_2.header()),
-            Err(BlockDoesNotExtendTree(..))
+            Err(ValidationContextError::BlockDoesNotExtendTree(..))
         ));
     }
 

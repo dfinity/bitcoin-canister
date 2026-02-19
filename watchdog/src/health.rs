@@ -1,56 +1,100 @@
-use crate::{bitcoin_block_apis::BitcoinBlockApi, config::Config, fetch::BlockInfo};
+use crate::config::Config;
+use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
+use std::convert::TryFrom;
 
-/// Bitcoin canister height status compared to other explorers.
+/// Canister height status compared to other explorers.
 #[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HeightStatus {
     /// Not enough data to calculate the status.
     #[serde(rename = "not_enough_data")]
     NotEnoughData,
 
-    /// Bitcoin canister height is healthy.
+    /// Canister height is healthy.
     #[serde(rename = "ok")]
     Ok,
 
-    /// Bitcoin canister height is ahead of other explorers, might not be healthy.
+    /// Canister height is ahead of other explorers, might not be healthy.
     #[serde(rename = "ahead")]
     Ahead,
 
-    /// Bitcoin canister height is behind other explorers, might not be healthy.
+    /// Canister height is behind other explorers, might not be healthy.
     #[serde(rename = "behind")]
     Behind,
 }
 
-/// Health status of the Bitcoin canister.
-#[derive(Clone, Debug, CandidType, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HealthStatus {
-    /// Main chain height of the Bitcoin canister.
+/// Legacy health status of the Bitcoin canister.
+/// Used in the deprecated health_status endpoint.
+#[derive(Clone, Debug, PartialEq, Eq, CandidType)]
+pub struct LegacyHealthStatus {
+    /// Main chain height of the canister.
     pub height_source: Option<u64>,
 
     /// Height target derived from explorer heights.
     pub height_target: Option<u64>,
 
-    /// Difference between Bitcoin canister height and target height.
+    /// Difference between canister height and target height.
     pub height_diff: Option<i64>,
 
-    /// Bitcoin canister height status.
+    /// Canister height status.
+    pub height_status: HeightStatus,
+
+    /// Block info from the explorers.
+    pub explorers: Vec<LegacyBlockInfo>,
+}
+
+/// Health status of the canister.
+#[derive(Clone, Debug, PartialEq, Eq, CandidType)]
+pub struct HealthStatus {
+    /// Main chain height of the canister.
+    pub height_source: Option<u64>,
+
+    /// Height target derived from explorer heights.
+    pub height_target: Option<u64>,
+
+    /// Difference between canister height and target height.
+    pub height_diff: Option<i64>,
+
+    /// Canister height status.
     pub height_status: HeightStatus,
 
     /// Block info from the explorers.
     pub explorers: Vec<BlockInfo>,
 }
 
-/// Calculates the health status of a Bitcoin canister.
+impl TryFrom<HealthStatus> for LegacyHealthStatus {
+    type Error = BlockInfoConversionError;
+
+    fn try_from(status: HealthStatus) -> Result<LegacyHealthStatus, Self::Error> {
+        let explorers = status
+            .explorers
+            .into_iter()
+            .map(LegacyBlockInfo::try_from)
+            .collect::<Result<Vec<LegacyBlockInfo>, Self::Error>>()?;
+
+        Ok(LegacyHealthStatus {
+            height_source: status.height_source,
+            height_target: status.height_target,
+            height_diff: status.height_diff,
+            height_status: status.height_status,
+            explorers,
+        })
+    }
+}
+
+/// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
-    let bitcoin_network = crate::storage::get_config().bitcoin_network;
+    let canister = crate::storage::get_canister();
+    let config = crate::storage::get_config();
     compare(
-        crate::storage::get_block_info(&BitcoinBlockApi::BitcoinCanister),
-        BitcoinBlockApi::network_explorers(bitcoin_network)
+        crate::storage::get_block_info(&canister.provider().name()),
+        config
+            .explorers
             .iter()
-            .filter_map(crate::storage::get_block_info)
+            .filter_map(|e| crate::storage::get_block_info(e))
             .collect::<Vec<_>>(),
-        crate::storage::get_config(),
+        config,
     )
 }
 
@@ -126,7 +170,7 @@ fn median(values: &[u64]) -> Option<u64> {
     values.sort();
 
     let mid_index = length / 2;
-    let median_value = if length % 2 == 0 {
+    let median_value = if length.is_multiple_of(2) {
         (values[mid_index - 1] + values[mid_index]) / 2
     } else {
         values[mid_index]
@@ -138,7 +182,6 @@ fn median(values: &[u64]) -> Option<u64> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::bitcoin_block_apis::BitcoinBlockApi;
 
     #[test]
     fn test_median() {
@@ -250,7 +293,7 @@ mod test {
     #[test]
     fn test_compare_no_explorers() {
         // Arrange
-        let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![];
 
         // Assert
@@ -269,10 +312,10 @@ mod test {
     #[test]
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
-        let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
         ];
 
         // Assert
@@ -284,8 +327,8 @@ mod test {
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
                 ],
             }
         );
@@ -294,11 +337,11 @@ mod test {
     #[test]
     fn test_compare_behind() {
         // Arrange
-        let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_004),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
         ];
 
         // Assert
@@ -310,9 +353,9 @@ mod test {
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_006),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_005),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 1_004),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_004),
                 ],
             }
         );
@@ -321,11 +364,11 @@ mod test {
     #[test]
     fn test_compare_ahead() {
         // Arrange
-        let source = Some(BlockInfo::new(BitcoinBlockApi::BitcoinCanister, 1_000));
+        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
         let other = vec![
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 996),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 995),
-            BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 994),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
+            BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
         ];
 
         // Assert
@@ -337,9 +380,9 @@ mod test {
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 996),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 995),
-                    BlockInfo::new(BitcoinBlockApi::ApiBlockchairComMainnet, 994),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
+                    BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 994),
                 ],
             }
         );

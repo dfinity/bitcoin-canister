@@ -30,19 +30,6 @@ type flag = variant {
   disabled;
 };
 
-type init_config = record {
-  stability_threshold : opt nat;
-  network : opt network;
-  blocks_source : opt principal;
-  syncing : opt flag;
-  fees : opt fees;
-  api_access : opt flag;
-  disable_api_if_not_fully_synced : opt flag;
-  watchdog_canister : opt opt principal;
-  burn_cycles : opt flag;
-  lazily_evaluate_fee_percentiles : opt flag;
-};
-
 type config = record {
   stability_threshold : nat;
   network : network;
@@ -126,7 +113,33 @@ type get_block_headers_response = record {
   block_headers : vec block_header;
 };
 
-service bitcoin : (init_config) -> {
+type init_config = record {
+  stability_threshold : opt nat;
+  network : opt network;
+  blocks_source : opt principal;
+  syncing : opt flag;
+  fees : opt fees;
+  api_access : opt flag;
+  disable_api_if_not_fully_synced : opt flag;
+  watchdog_canister : opt opt principal;
+  burn_cycles : opt flag;
+  lazily_evaluate_fee_percentiles : opt flag;
+};
+
+type blockchain_info = record {
+  height : block_height;
+  block_hash : block_hash;
+  timestamp : nat32;
+  difficulty : nat;
+  utxos_length : nat64;
+};
+
+type canister_arg = variant {
+  init : init_config;
+  upgrade : opt set_config_request;
+};
+
+service bitcoin : (canister_arg) -> {
   bitcoin_get_balance : (get_balance_request) -> (satoshi);
 
   bitcoin_get_balance_query : (get_balance_request) -> (satoshi) query;
@@ -144,4 +157,6 @@ service bitcoin : (init_config) -> {
   get_config : () -> (config) query;
 
   set_config : (set_config_request) -> ();
+
+  get_blockchain_info : () -> (blockchain_info) query;
 };

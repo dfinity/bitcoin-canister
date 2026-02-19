@@ -1,6 +1,6 @@
 use crate::{
     api::{get_balance, get_current_fee_percentiles, get_utxos},
-    genesis_block, heartbeat, init,
+    genesis_block, get_blockchain_info, heartbeat, init,
     runtime::{self, GetSuccessorsReply},
     state::main_chain_height,
     test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
@@ -22,7 +22,7 @@ use ic_btc_interface::{Flag, GetUtxosResponse, InitConfig, Network, Txid, UtxosF
 use ic_btc_interface::{OutPoint, Utxo};
 use ic_btc_test_utils::random_p2pkh_address;
 use ic_btc_types::{Block, BlockHash};
-use ic_cdk::api::call::RejectionCode;
+use ic_cdk::call::RejectCode;
 use std::str::FromStr;
 use std::{collections::HashMap, io::BufReader, path::PathBuf};
 use std::{fs::File, panic::catch_unwind};
@@ -87,7 +87,7 @@ async fn process_chain(network: Network, blocks_file: &str, num_blocks: u32) {
     println!("# blocks in file: {}", blocks.len());
 
     // Build the chain
-    chain.push(blocks.remove(&genesis_block(network).block_hash()).unwrap());
+    chain.push(blocks.remove(genesis_block(network).block_hash()).unwrap());
     for _ in 1..num_blocks {
         let next_block = blocks
             .remove(&chain[chain.len() - 1].block_hash().into())
@@ -570,7 +570,7 @@ async fn test_rejections_counting() {
     let counter_prior = crate::with_state(|state| state.syncing_state.num_get_successors_rejects);
 
     runtime::set_successors_response(GetSuccessorsReply::Err(
-        RejectionCode::CanisterReject,
+        RejectCode::CanisterReject,
         String::from("Test verification error."),
     ));
 
@@ -600,6 +600,55 @@ fn get_chain_with_n_block_and_header_blobs(
         blob_vec.push(get_header_blob(block.header()));
     }
     (block_vec, blob_vec)
+}
+
+#[async_std::test]
+async fn get_blockchain_info_succeeds_when_not_synced() {
+    // get_blockchain_info is for monitoring and must succeed even when the canister
+    // is not fully synced (verify_synced would panic for other endpoints).
+    let network = Network::Regtest;
+
+    init(InitConfig {
+        stability_threshold: Some(2),
+        network: Some(network),
+        ..Default::default()
+    });
+
+    let block_1 = BlockBuilder::with_prev_header(genesis_block(network).header()).build();
+    let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+
+    let blocks: Vec<BlockBlob> = [block_1.clone(), block_2.clone()]
+        .iter()
+        .map(|block| {
+            let mut block_bytes = vec![];
+            block.consensus_encode(&mut block_bytes).unwrap();
+            block_bytes
+        })
+        .collect();
+
+    let (_, next_blocks_blobs) =
+        get_chain_with_n_block_and_header_blobs(&block_2, (SYNCED_THRESHOLD + 1) as usize);
+
+    runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+        GetSuccessorsCompleteResponse {
+            blocks,
+            next: next_blocks_blobs,
+        },
+    )));
+
+    heartbeat().await;
+    heartbeat().await;
+    heartbeat().await;
+
+    assert_eq!(with_state(main_chain_height), 2);
+    assert!(
+        with_state(|s| s.unstable_blocks.next_block_headers_max_height().unwrap())
+            > with_state(main_chain_height) + SYNCED_THRESHOLD
+    );
+    assert!(catch_unwind(verify_synced).is_err());
+
+    let info = get_blockchain_info();
+    assert_eq!(info.height, 2);
 }
 
 #[async_std::test]

@@ -4,6 +4,7 @@
 set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/utils.sh"
 pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
@@ -11,11 +12,14 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
+
 # Deploy the bitcoin canister.
-dfx deploy --no-wallet bitcoin --argument "(record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 0;
   network = opt variant { regtest };
-})"
+}})"
 
 # The stability threshold is zero
 CONFIG=$(dfx canister call bitcoin get_config --query)
@@ -23,11 +27,6 @@ if ! [[ $CONFIG == *"stability_threshold = 0"* ]]; then
   echo "FAIL"
   exit 1
 fi
-
-# Modify the candid file such that post_upgrade can accept a `opt set_config_request`.
-# This is necessary because post_upgrade takes a different argument from `init`, but candid
-# doesn't provide a way of specifying that and dfx doesn't provide a way to bypass type checks.
-sed -i.bak 's/service bitcoin : (init_config)/service bitcoin : (opt set_config_request)/' ../canister/candid.did
 
 # Upgrade and update the fees.
 FEES="record {
@@ -45,12 +44,9 @@ FEES="record {
   get_block_headers_maximum = 0 : nat;
 }";
 
-dfx deploy --upgrade-unchanged bitcoin --argument "opt (record {
+dfx deploy --upgrade-unchanged bitcoin --argument "(variant { upgrade = opt record {
   fees = opt $FEES;
-})"
-
-# Revert the modification to the candid file.
-sed -i.bak 's/service bitcoin : (opt set_config_request)/service bitcoin : (init_config)/' ../canister/candid.did
+}})"
 
 # Verify the fees have been updated.
 CONFIG=$(dfx canister call bitcoin get_config --query)

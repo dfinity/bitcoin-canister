@@ -1,16 +1,16 @@
-/// Bitcoin canister height status compared to other explorers.
+/// Canister height status compared to other explorers.
 type height_status = variant {
     /// Not enough data to calculate the status.
     not_enough_data;
 
-    /// Bitcoin canister height is healthy.
+    /// Canister height is healthy.
     ok;
 
-    /// Bitcoin canister height is ahead
+    /// Canister height is ahead
     /// of other explorers, might not be healthy.
     behind;
 
-    /// Bitcoin canister height is behind
+    /// Canister height is behind
     /// other explorers, might not be healthy.
     ahead;
 };
@@ -21,15 +21,13 @@ type bitcoin_block_api = variant {
     api_blockchair_com_mainnet;
     api_blockcypher_com_mainnet;
     bitcoin_canister;
-    bitcoinexplorer_org_mainnet;
     blockchain_info_mainnet;
     blockstream_info_mainnet;
-    chain_api_btc_com_mainnet;
     mempool_mainnet;
     mempool_testnet;
 };
 
-/// Information about a Bitcoin block from a specific API provider.
+/// Information about a block from a specific API provider.
 type block_info = record {
     /// Bitcoin block API provider.
     provider : bitcoin_block_api;
@@ -38,34 +36,65 @@ type block_info = record {
     height : opt nat64;
 };
 
-// The health status of the Bitcoin canister.
+/// Information about a block from a specific API provider.
+type block_info_v2 = record {
+    /// Block API provider name (e.g. bitcoin_mempool_mainnet).
+    provider : text;
+
+    /// Block height.
+    height : opt nat64;
+};
+
+// The health status of the canister monitored.
 type health_status = record {
-    /// Main chain height of the Bitcoin canister.
+    /// Main chain height of the canister.
     height_source : opt nat64;
 
     /// Height target derived from explorer heights.
     height_target : opt nat64;
 
-    /// Difference between Bitcoin canister height and target height.
+    /// Difference between canister height and target height.
     height_diff : opt int64;
 
-    /// Bitcoin canister height status.
+    /// Canister height status.
     height_status : height_status;
 
-    /// Block info from the explorers.
+    /// Block info from the Bitcoin explorers.
     explorers : vec block_info;
 };
 
-/// Bitcoin network.
-type bitcoin_network = variant {
-    mainnet;
-    testnet;
+// The health status of the canister monitored.
+type health_status_v2 = record {
+    /// Main chain height of the canister.
+    canister_height : opt nat64;
+
+    /// Height target derived from explorer heights.
+    explorer_height : opt nat64;
+
+    /// Canister height status.
+    height_status : height_status;
+
+    /// Block info from the explorers.
+    explorers : vec block_info_v2;
+};
+
+/// Network.
+type network = variant {
+    bitcoin_mainnet;
+    bitcoin_testnet;
+    dogecoin_mainnet;
+};
+
+/// Subnet type.
+type subnet_type = variant {
+    system;
+    application;
 };
 
 /// Watchdog canister configuration.
 type config = record {
-    /// The Bitcoin network to use.
-    bitcoin_network : bitcoin_network;
+    /// The network to use.
+    network : network;
 
     /// Below this threshold, the canister is considered to be behind.
     blocks_behind_threshold : nat64;
@@ -76,8 +105,8 @@ type config = record {
     /// The minimum number of explorers to compare against.
     min_explorers : nat64;
 
-    /// Bitcoin canister principal.
-    bitcoin_canister_principal : principal;
+    /// Canister principal.
+    canister_principal : principal;
 
     /// The number of seconds to wait before the first data fetch.
     delay_before_first_fetch_sec : nat64;
@@ -85,8 +114,11 @@ type config = record {
     /// The number of seconds to wait between all the other data fetches.
     interval_between_fetches_sec : nat64;
 
-    /// Bitcoin Explorers to use for fetching bitcoin block data.
-    explorers : vec bitcoin_block_api;
+    /// Explorers to use for fetching block data.
+    explorers : vec text;
+
+    /// Type of subnet on which the watchdog and target canisters are deployed.
+    subnet_type : subnet_type;
 };
 
 type flag = variant {
@@ -94,13 +126,38 @@ type flag = variant {
     disabled;
 };
 
-service : (bitcoin_network) -> {
-    /// Returns the health status of the Bitcoin canister.
+type canister = variant {
+    bitcoin_mainnet;
+    bitcoin_mainnet_staging;
+    bitcoin_testnet;
+    dogecoin_mainnet;
+    dogecoin_mainnet_staging;
+};
+
+type init_arg = record {
+    /// The target canister.
+    target : canister;
+};
+
+type upgrade_arg = record {};
+
+type watchdog_arg = variant {
+    init : init_arg;
+    upgrade : opt upgrade_arg;
+};
+
+service : (watchdog_arg) -> {
+    /// [DEPRECATED] Returns the health status of the target canister (Bitcoin only).
+    /// Please use `health_status_v2` instead.
     health_status : () -> (health_status) query;
 
-    /// Returns the configuration of the watchdog canister.
+    /// Returns the health status of the target canister.
+    health_status_v2 : () -> (health_status_v2) query;
+
+    /// Returns the configuration of the Watchdog canister.
+    /// This is a debug endpoint and may be unstable.
     get_config : () -> (config) query;
 
-    /// Returns the API access target for the Bitcoin canister.
+    /// Returns the API access target for the target canister.
     get_api_access_target : () -> (opt flag) query;
 };

@@ -1,7 +1,6 @@
 use crate::transform::create_transform_context;
-use ic_cdk::api::management_canister::http_request::{
-    CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse, TransformArgs,
-    TransformContext,
+use ic_cdk::management_canister::{
+    HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs, TransformContext,
 };
 
 /// Creates a new `HttpRequestBuilder` to construct an HTTP request.
@@ -80,7 +79,7 @@ impl HttpRequestBuilder {
         context: Vec<u8>,
     ) -> Self
     where
-        T: Fn(TransformArgs) -> HttpResponse + 'static,
+        T: Fn(TransformArgs) -> HttpRequestResult + 'static,
     {
         self.transform = Some(create_transform_context(
             candid_function_name,
@@ -90,14 +89,15 @@ impl HttpRequestBuilder {
         self
     }
 
-    pub fn build(self) -> CanisterHttpRequestArgument {
-        CanisterHttpRequestArgument {
+    pub fn build(self) -> HttpRequestArgs {
+        HttpRequestArgs {
             url: self.url,
             max_response_bytes: self.max_response_bytes,
             method: self.method,
             headers: self.headers,
             body: self.body,
             transform: self.transform,
+            is_replicated: None,
         }
     }
 }

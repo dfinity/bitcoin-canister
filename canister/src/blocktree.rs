@@ -1,4 +1,3 @@
-use bitcoin::hashes::Hash;
 use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
@@ -9,7 +8,8 @@ use std::ops::{Add, Sub};
 /// * the first block of the chain
 /// * the successors to this block (which can be an empty list)
 #[derive(Debug, PartialEq, Eq)]
-pub struct BlockChain<'a> {
+#[cfg_attr(test, derive(Clone))]
+pub struct BlockChain<'a, Block> {
     // The first block of this `BlockChain`, i.e. the one at the lowest height.
     first: &'a Block,
     // The successor blocks of this `BlockChain`, i.e. the chain after the
@@ -17,7 +17,7 @@ pub struct BlockChain<'a> {
     successors: Vec<&'a Block>,
 }
 
-impl<'a> BlockChain<'a> {
+impl<'a, Block> BlockChain<'a, Block> {
     /// Creates a new `BlockChain` with the given `first` block and an empty list
     /// of successors.
     pub fn new(first: &'a Block) -> Self {
@@ -62,17 +62,6 @@ impl<'a> BlockChain<'a> {
         let mut chain = vec![self.first];
         chain.extend(self.successors);
         chain
-    }
-}
-
-/// Error returned when attempting to create a `BlockChain` out of an empty
-/// list of blocks.
-#[derive(Debug)]
-pub struct EmptyChainError {}
-
-impl fmt::Display for EmptyChainError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "cannot create a `BlockChain` from an empty chain")
     }
 }
 
@@ -137,18 +126,36 @@ impl Sub for DifficultyBasedDepth {
 
 /// Maintains a tree of connected blocks.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct BlockTree {
-    pub root: Block,
-    pub children: Vec<BlockTree>,
+pub struct BlockTree<Block> {
+    root: Block,
+    children: Vec<BlockTree<Block>>,
 }
 
-impl BlockTree {
+impl<Block> BlockTree<Block> {
     /// Creates a new `BlockTree` with the given block as its root.
     pub fn new(root: Block) -> Self {
         Self {
             root,
             children: vec![],
         }
+    }
+
+    pub fn into_root(self) -> Block {
+        self.root
+    }
+
+    pub fn root(&self) -> &Block {
+        &self.root
+    }
+
+    pub fn children(&self) -> &[Self] {
+        &self.children
+    }
+
+    /// Remove the child at given index and return it.
+    /// This function will panic if the index is out of range.
+    pub fn remove_child(&mut self, index: usize) -> Self {
+        self.children.swap_remove(index)
     }
 
     /// Returns all blocks in the tree with their depths
@@ -203,44 +210,10 @@ impl BlockTree {
             .collect()
     }
 
-    /// Extends the tree with the given block.
-    ///
-    /// Blocks can extend the tree in the following cases:
-    ///   * The block is already present in the tree (no-op).
-    ///   * The block is a successor of a block already in the tree.
-    pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
-        if self.contains(&block) {
-            // The block is already present in the tree. Nothing to do.
-            return Ok(());
-        }
-
-        // Check if the block is a successor to any of the blocks in the tree.
-        match self.find_mut(&block.header().prev_blockhash.into()) {
-            Some((block_subtree, _)) => {
-                assert_eq!(
-                    block_subtree.root.block_hash().to_vec(),
-                    block
-                        .header()
-                        .prev_blockhash
-                        .as_raw_hash()
-                        .as_byte_array()
-                        .to_vec()
-                );
-                // Add the block as a successor.
-                block_subtree.children.push(BlockTree::new(block));
-                Ok(())
-            }
-            None => Err(BlockDoesNotExtendTree(block.block_hash())),
-        }
-    }
-
     /// Returns all the blockchains in the tree.
-    pub fn blockchains(&self) -> Vec<BlockChain> {
+    pub fn blockchains(&self) -> Vec<BlockChain<'_, Block>> {
         if self.children.is_empty() {
-            return vec![BlockChain {
-                first: &self.root,
-                successors: vec![],
-            }];
+            return vec![BlockChain::new(&self.root)];
         }
 
         let mut tips = vec![];
@@ -253,45 +226,123 @@ impl BlockTree {
                         first: &self.root,
                         successors: bc.into_chain(),
                     })
-                    .collect::<Vec<BlockChain>>(),
+                    .collect::<Vec<_>>(),
             );
         }
 
         tips
     }
 
-    /// Returns a `BlockChain` starting from the anchor and ending with the `tip`.
+    fn get_child_blocks(&self) -> Vec<&Block> {
+        self.children.iter().map(|c| &c.root).collect()
+    }
+
+    /// Returns the number of blocks in the tree.
+    pub fn blocks_count(&self) -> usize {
+        1 + self
+            .children
+            .iter()
+            .map(|child| child.blocks_count())
+            .sum::<usize>()
+    }
+
+    /// Returns all blocks in the tree.
+    pub fn blocks(&self) -> impl Iterator<Item = &Block> {
+        Box::new(
+            std::iter::once(&self.root)
+                .chain(self.children.iter().flat_map(|child| child.blocks())),
+        ) as Box<dyn Iterator<Item = &Block>>
+    }
+}
+
+pub trait ChainBlock {
+    fn block_hash(&self) -> &BlockHash;
+    fn prev_block_hash(&self) -> BlockHash;
+    fn difficulty(&self, network: Network) -> u128;
+}
+
+impl ChainBlock for Block {
+    fn block_hash(&self) -> &BlockHash {
+        self.block_hash()
+    }
+    fn prev_block_hash(&self) -> BlockHash {
+        BlockHash::from(self.header().prev_blockhash)
+    }
+    fn difficulty(&self, network: Network) -> u128 {
+        self.difficulty(network)
+    }
+}
+
+impl<Block: ChainBlock> BlockTree<Block> {
+    /// Extends the tree with the given block.
+    ///
+    /// Blocks can extend the tree in the following cases:
+    ///   * The block is a successor of a block already in the tree.
+    ///
+    /// Note that `ValidationContext` ensures that the block to insert is not already present.
+    pub fn extend(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
+        debug_assert!(
+            self.find(block.block_hash()).is_none(),
+            "BUG: block {} is already present in the tree, but this should have been prevented when instantiating `ValidationContext`",
+            block.block_hash()
+        );
+
+        // Check if the block is a successor to any of the blocks in the tree.
+        let prev_block_hash = block.prev_block_hash();
+        match self.find_mut(&prev_block_hash) {
+            Some((block_subtree, _)) => {
+                assert_eq!(block_subtree.root.block_hash(), &prev_block_hash);
+                // Add the block as a successor.
+                block_subtree.children.push(BlockTree::new(block));
+                Ok(())
+            }
+            None => Err(BlockDoesNotExtendTree(*block.block_hash())),
+        }
+    }
+
+    /// Returns a `BlockChain` starting from the anchor and ending with the `tip`,
+    /// together with the tip's direct children.
     ///
     /// If the `tip` doesn't exist in the tree, `None` is returned.
-    pub fn get_chain_with_tip<'a>(&'a self, tip: &BlockHash) -> Option<BlockChain<'a>> {
+    pub fn get_chain_with_tip<'a>(
+        &'a self,
+        tip: &BlockHash,
+    ) -> Option<(BlockChain<'a, Block>, Vec<&'a Block>)> {
         // Compute the chain in reverse order, as that's more efficient, and then
         // reverse it to get the answer in the correct order.
-        self.get_chain_with_tip_reverse(tip).map(|mut chain| {
-            // Safe to unwrap as the `chain` would contain at least the root of the
-            // `BlockTree` it was produced from.
-            // This would be the first block since the chain is in reverse order.
-            let first = chain.pop().unwrap();
-            // Reverse the chain to get the list of `successors` in the right order.
-            chain.reverse();
-            BlockChain {
-                first,
-                successors: chain,
-            }
-        })
+        self.get_chain_with_tip_reverse(tip)
+            .map(|(mut chain, tip_successors)| {
+                // Safe to unwrap as the `chain` would contain at least the root of the
+                // `BlockTree` it was produced from.
+                // This would be the first block since the chain is in reverse order.
+                let first = chain.pop().unwrap();
+                // Reverse the chain to get the list of `successors` in the right order.
+                chain.reverse();
+                (
+                    BlockChain {
+                        first,
+                        successors: chain,
+                    },
+                    tip_successors,
+                )
+            })
     }
 
     // Do a depth-first search to find the blockchain that ends with the given `tip`.
     // For performance reasons, the list is returned in the reverse order, starting
     // from `tip` and ending with `anchor`.
-    fn get_chain_with_tip_reverse<'a>(&'a self, tip: &BlockHash) -> Option<Vec<&'a Block>> {
-        if self.root.block_hash() == *tip {
-            return Some(vec![&self.root]);
+    fn get_chain_with_tip_reverse<'a>(
+        &'a self,
+        tip: &BlockHash,
+    ) -> Option<(Vec<&'a Block>, Vec<&'a Block>)> {
+        if self.root.block_hash() == tip {
+            return Some((vec![&self.root], self.get_child_blocks()));
         }
 
         for child in self.children.iter() {
-            if let Some(mut chain) = child.get_chain_with_tip_reverse(tip) {
+            if let Some((mut chain, tip_successors)) = child.get_chain_with_tip_reverse(tip) {
                 chain.push(&self.root);
-                return Some(chain);
+                return Some((chain, tip_successors));
             }
         }
 
@@ -317,15 +368,18 @@ impl BlockTree {
         res
     }
 
-    // Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
-    // along with its depth if it exists, and `None` otherwise.
-    pub fn find_mut<'a>(&'a mut self, blockhash: &BlockHash) -> Option<(&'a mut BlockTree, u32)> {
-        fn find_mut_helper<'a>(
-            block_tree: &'a mut BlockTree,
+    /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
+    /// along with its depth if it exists, and `None` otherwise.
+    pub fn find_mut<'a>(
+        &'a mut self,
+        blockhash: &BlockHash,
+    ) -> Option<(&'a mut BlockTree<Block>, u32)> {
+        fn find_mut_helper<'a, Block: ChainBlock>(
+            block_tree: &'a mut BlockTree<Block>,
             blockhash: &BlockHash,
             depth: u32,
-        ) -> Option<(&'a mut BlockTree, u32)> {
-            if block_tree.root.block_hash() == *blockhash {
+        ) -> Option<(&'a mut BlockTree<Block>, u32)> {
+            if block_tree.root.block_hash() == blockhash {
                 return Some((block_tree, depth));
             }
 
@@ -341,45 +395,28 @@ impl BlockTree {
         find_mut_helper(self, blockhash, 0)
     }
 
-    /// Returns true if a block exists in the tree, false otherwise.
-    fn contains(&self, block: &Block) -> bool {
-        if self.root.block_hash() == block.block_hash() {
-            return true;
+    /// Returns a `BlockTree` where the hash of the root matches the hash of the provided `block`
+    /// if it exists, and `None` otherwise.
+    fn find(&self, block_hash: &BlockHash) -> Option<&BlockTree<Block>> {
+        if self.root.block_hash() == block_hash {
+            return Some(self);
         }
 
         for child in self.children.iter() {
-            if child.contains(block) {
-                return true;
+            if let res @ Some(_) = child.find(block_hash) {
+                return res;
             }
         }
 
-        false
+        None
     }
 
     /// Returns the hashes of all blocks in the tree.
     pub fn get_hashes(&self) -> Vec<BlockHash> {
         let mut hashes = Vec::with_capacity(self.children.len() + 1);
-        hashes.push(self.root.block_hash());
+        hashes.push(*self.root.block_hash());
         hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
         hashes
-    }
-
-    /// Returns the number of blocks in the tree.
-    pub fn blocks_count(&self) -> usize {
-        1 + self
-            .children
-            .iter()
-            .map(|child| child.blocks_count())
-            .sum::<usize>()
-    }
-
-    /// Returns all blocks in the tree.
-    pub fn blocks(&self) -> Vec<Block> {
-        let mut blocks = vec![self.root.clone()];
-        for child in self.children.iter() {
-            blocks.extend(child.blocks());
-        }
-        blocks
     }
 }
 
@@ -394,7 +431,10 @@ mod test {
     use crate::test_utils::{BlockBuilder, BlockChainBuilder};
     use proptest::collection::vec as pvec;
     use proptest::prelude::*;
+    use std::collections::BTreeSet;
     use test_strategy::proptest;
+
+    type BlockTree = super::BlockTree<Block>;
 
     // For generating arbitrary BlockTrees.
     impl Arbitrary for BlockTree {
@@ -431,13 +471,15 @@ mod test {
     #[test]
     fn tree_single_block() {
         let block_tree = BlockTree::new(BlockBuilder::genesis().build());
+        let expected_chain = BlockChain {
+            first: &block_tree.root,
+            successors: vec![],
+        };
 
+        assert_eq!(block_tree.blockchains(), vec![expected_chain.clone()]);
         assert_eq!(
-            block_tree.blockchains(),
-            vec![BlockChain {
-                first: &block_tree.root,
-                successors: vec![],
-            }]
+            Some((expected_chain, vec![])),
+            block_tree.get_chain_with_tip(block_tree.root.block_hash())
         );
     }
 
@@ -447,16 +489,27 @@ mod test {
         let genesis_block_header = *genesis_block.header();
         let mut block_tree = BlockTree::new(genesis_block);
 
+        let mut children = vec![];
         for i in 1..5 {
             // Create different blocks extending the genesis block.
             // Each one of these should be a separate fork.
-            block_tree
-                .extend(BlockBuilder::with_prev_header(&genesis_block_header).build())
-                .unwrap();
+            let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
+            children.push(block.clone());
+            block_tree.extend(block).unwrap();
             assert_eq!(block_tree.blockchains().len(), i);
         }
 
         assert_eq!(block_tree.children.len(), 4);
+        assert_eq!(
+            Some((
+                BlockChain {
+                    first: &block_tree.root,
+                    successors: vec![],
+                },
+                children.iter().collect()
+            )),
+            block_tree.get_chain_with_tip(block_tree.root.block_hash())
+        );
     }
 
     #[test]
@@ -468,7 +521,7 @@ mod test {
 
         let mut block_tree = BlockTree::new(blocks[0].clone());
 
-        for block in blocks.iter() {
+        for block in blocks.iter().skip(1) {
             block_tree.extend(block.clone()).unwrap();
         }
 
@@ -476,8 +529,9 @@ mod test {
             // Fetch the blockchain with the `block` as tip.
             let block_hash = block.block_hash();
             let chain = block_tree
-                .get_chain_with_tip(&block_hash)
+                .get_chain_with_tip(block_hash)
                 .unwrap()
+                .0
                 .into_chain();
 
             // The first block should be the genesis block.
@@ -490,15 +544,7 @@ mod test {
 
             // All blocks should be correctly chained to one another.
             for i in 1..chain.len() {
-                assert_eq!(
-                    chain[i - 1].block_hash().to_vec(),
-                    chain[i]
-                        .header()
-                        .prev_blockhash
-                        .as_raw_hash()
-                        .as_byte_array()
-                        .to_vec()
-                )
+                assert_eq!(chain[i - 1].block_hash(), &chain[i].prev_block_hash())
             }
         }
     }
@@ -514,7 +560,7 @@ mod test {
                 blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
             }
 
-            for block in blocks.iter() {
+            for block in blocks.iter().skip(1) {
                 block_tree.extend(block.clone()).unwrap();
             }
 
@@ -522,8 +568,9 @@ mod test {
                 // Fetch the blockchain with the `block` as tip.
                 let block_hash = block.block_hash();
                 let chain = block_tree
-                    .get_chain_with_tip(&block_hash)
+                    .get_chain_with_tip(block_hash)
                     .unwrap()
+                    .0
                     .into_chain();
 
                 // The first block should be the genesis block.
@@ -536,15 +583,7 @@ mod test {
 
                 // All blocks should be correctly chained to one another.
                 for i in 1..chain.len() {
-                    assert_eq!(
-                        chain[i - 1].block_hash().to_vec(),
-                        chain[i]
-                            .header()
-                            .prev_blockhash
-                            .as_raw_hash()
-                            .as_byte_array()
-                            .to_vec()
-                    )
+                    assert_eq!(chain[i - 1].block_hash(), &chain[i].prev_block_hash())
                 }
             }
 
@@ -611,8 +650,9 @@ mod test {
 
         let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
             vec![vec![]; chain_len];
+        expected_blocks_with_depths_by_heights[0].push((&chain[0], chain_len as u32));
 
-        for (i, block) in chain.iter().enumerate() {
+        for (i, block) in chain.iter().enumerate().skip(1) {
             expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
             block_tree.extend(block.clone()).unwrap();
         }
@@ -706,5 +746,47 @@ mod test {
         ciborium::ser::into_writer(&tree, &mut bytes).unwrap();
         let new_tree: BlockTree = ciborium::de::from_reader(&bytes[..]).unwrap();
         assert_eq!(tree, new_tree);
+    }
+
+    #[proptest]
+    fn should_find_chain_from_tip_and_tip_successors(tree: BlockTree, random_index: usize) {
+        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<&'a Block>) {
+            flattened_tree.push(&tree.root);
+
+            for child in &tree.children {
+                flatten(child, flattened_tree);
+            }
+        }
+        let mut blocks = vec![];
+        flatten(&tree, &mut blocks);
+        assert_eq!(blocks, tree.blocks().collect::<Vec<_>>());
+        assert_eq!(blocks.len(), tree.blocks_count());
+
+        let chosen_block = blocks[random_index % blocks.len()];
+
+        let (chain, tip_children) = tree.get_chain_with_tip(chosen_block.block_hash()).unwrap();
+        let tip = tree
+            .find(chain.tip().block_hash())
+            .expect("BUG: could not find tip");
+        prop_assert_eq!(tip.root.block_hash(), chain.tip().block_hash());
+
+        let actual_children: BTreeSet<_> =
+            tip_children.into_iter().map(|b| b.block_hash()).collect();
+        let expected_children: BTreeSet<_> = tip
+            .get_child_blocks()
+            .into_iter()
+            .map(|b| b.block_hash())
+            .collect();
+        prop_assert_eq!(expected_children, actual_children);
+
+        let mut chain = chain.into_chain();
+        while let Some(tip) = chain.pop() {
+            if let Some(prev) = chain.last() {
+                prop_assert_eq!(
+                    prev.block_hash(),
+                    &ic_btc_types::BlockHash::from(tip.header().prev_blockhash)
+                );
+            }
+        }
     }
 }

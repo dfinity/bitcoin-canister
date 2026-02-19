@@ -1,24 +1,33 @@
 #!/usr/bin/env bash
 
-# Function to deploy the watchdog canister for mainnet bitcoin_canister.
-deploy_watchdog_canister_mainnet() {
-  dfx deploy --no-wallet watchdog --argument "(variant { mainnet })"
+# Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
+# When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
+use_prebuilt_watchdog_wasm() {
+  if [[ -f ../../wasms/watchdog.wasm.gz ]]; then
+    sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
+  fi
+}
+
+# Function to deploy the watchdog canister for mainnet bitcoin_canister using pre-built WASM.
+deploy_watchdog_canister_bitcoin_mainnet() {
+  use_prebuilt_watchdog_wasm
+  dfx deploy --no-wallet watchdog --argument "(variant { init = record { target = (variant { bitcoin_mainnet } ) } } )"
 }
 
 # Function to get watchdog canister metrics.
 get_watchdog_canister_metrics() {
   canister_id=$(dfx canister id watchdog)
-  curl "http://127.0.0.1:8000/metrics?canisterId=$canister_id"
+  curl "http://$canister_id.raw.localhost:8000/metrics"
 }
 
 # Function to check for presence of specific fields in the config.
 check_config_fields() {
   CONFIG_FIELDS=(
-    "bitcoin_network"
+    "network"
     "blocks_behind_threshold"
     "blocks_ahead_threshold"
     "min_explorers"
-    "bitcoin_canister_principal"
+    "canister_principal"
     "delay_before_first_fetch_sec"
     "interval_between_fetches_sec"
     "explorers"
@@ -75,11 +84,11 @@ check_health_status_data() {
 # Function to check for presence of specific names in the metrics.
 check_metric_names() {
   METRIC_NAMES=(
-    "bitcoin_network"
+    "network"
     "blocks_behind_threshold"
     "blocks_ahead_threshold"
     "min_explorers"
-    "bitcoin_canister_height"
+    "canister_height"
     "height_target"
     "height_diff"
     "height_status"

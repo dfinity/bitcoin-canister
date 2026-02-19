@@ -9,15 +9,51 @@ use candid::CandidType;
 use datasize::DataSize;
 use ic_btc_interface::{Network, Txid as PublicTxid};
 use ic_stable_structures::{storable::Bound, Storable};
-use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, cell::RefCell, fmt, str::FromStr};
+use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
+use std::{borrow::Cow, fmt, str::FromStr};
+
+/// Wrapper for [OnceCell] that implements [Serialize] and [Deserialize].
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct OnceCell<T>(std::cell::OnceCell<T>);
+
+impl<T> OnceCell<T> {
+    fn new() -> Self {
+        Self(std::cell::OnceCell::new())
+    }
+
+    fn get_or_init<F: FnOnce() -> T>(&self, f: F) -> &T {
+        self.0.get_or_init(f)
+    }
+}
+
+impl<T: Serialize> Serialize for OnceCell<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.get().serialize(serializer)
+    }
+}
+
+impl<'de, T> Deserialize<'de> for OnceCell<T>
+where
+    Option<T>: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let cell = OnceCell(std::cell::OnceCell::new());
+        if let Some(val) = <Option<T>>::deserialize(deserializer)? {
+            assert!(cell.0.set(val).is_ok())
+        }
+        Ok(cell)
+    }
+}
 
 // NOTE: If new fields are added, then the implementation of `PartialEq` should be updated.
-#[derive(Clone, Debug, Serialize, Deserialize, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq)]
 pub struct Block {
     block: BitcoinBlock,
     transactions: Vec<Transaction>,
-    block_hash: RefCell<Option<BlockHash>>,
+    block_hash: OnceCell<BlockHash>,
 
     #[cfg(feature = "mock_difficulty")]
     pub mock_difficulty: Option<u128>,
@@ -32,7 +68,7 @@ impl Block {
                 .map(|tx| Transaction::new(tx.clone()))
                 .collect(),
             block,
-            block_hash: RefCell::new(None),
+            block_hash: OnceCell::new(),
             #[cfg(feature = "mock_difficulty")]
             mock_difficulty: None,
         }
@@ -42,11 +78,9 @@ impl Block {
         &self.block.header
     }
 
-    pub fn block_hash(&self) -> BlockHash {
+    pub fn block_hash(&self) -> &BlockHash {
         self.block_hash
-            .borrow_mut()
-            .get_or_insert_with(|| BlockHash::from(self.block.block_hash()))
-            .clone()
+            .get_or_init(|| BlockHash::from(self.block.block_hash()))
     }
 
     pub fn txdata(&self) -> &[Transaction] {
@@ -66,7 +100,7 @@ impl Block {
         use bitcoin::consensus::Encodable;
         self.block
             .consensus_encode(buffer)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            .map_err(std::io::Error::other)
     }
 
     // Computes the difficulty given a block's target.
@@ -90,14 +124,14 @@ impl PartialEq for Block {
 #[derive(Clone, Debug, Serialize, Deserialize, Eq)]
 pub struct Transaction {
     tx: bitcoin::Transaction,
-    txid: RefCell<Option<Txid>>,
+    txid: OnceCell<Txid>,
 }
 
 impl Transaction {
     pub fn new(tx: bitcoin::Transaction) -> Self {
         Self {
             tx,
-            txid: RefCell::new(None),
+            txid: OnceCell::new(),
         }
     }
 
@@ -135,20 +169,17 @@ impl Transaction {
     }
 
     pub fn txid(&self) -> Txid {
-        if self.txid.borrow().is_none() {
+        self.txid
+            .get_or_init(||
             // Compute the txid as it wasn't computed already.
             // `tx.txid()` is an expensive call, so it's useful to cache.
-            let txid = Txid::from(
+            Txid::from(
                 self.tx
                     .compute_txid()
-                    .as_raw_hash()
                     .as_byte_array()
                     .to_vec(),
-            );
-            self.txid.borrow_mut().replace(txid);
-        }
-
-        self.txid.borrow().clone().expect("txid must be available")
+            ))
+            .clone()
     }
 }
 
@@ -184,7 +215,6 @@ impl FromStr for Txid {
         use bitcoin::Txid as BitcoinTxid;
         let bytes = BitcoinTxid::from_str(txid)
             .unwrap()
-            .as_raw_hash()
             .as_byte_array()
             .to_vec();
         Ok(Self::from(bytes))
@@ -198,10 +228,6 @@ impl Txid {
 
     pub fn as_bytes(&self) -> &[u8] {
         self.bytes.as_slice()
-    }
-
-    pub fn to_vec(self) -> Vec<u8> {
-        self.bytes
     }
 }
 
@@ -235,13 +261,28 @@ impl std::fmt::Display for Txid {
 
 // A blob representing a block hash.
 #[derive(
-    CandidType, PartialEq, Clone, Ord, PartialOrd, Eq, Serialize, Deserialize, Hash, DataSize,
+    CandidType,
+    Clone,
+    Copy,
+    Default,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    Hash,
+    DataSize,
 )]
-pub struct BlockHash(Vec<u8>);
+pub struct BlockHash([u8; 32]);
 
 impl Storable for BlockHash {
-    fn to_bytes(&self) -> Cow<[u8]> {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.0.as_slice())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        self.0.to_vec()
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
@@ -255,8 +296,11 @@ impl Storable for BlockHash {
 }
 
 impl BlockHash {
-    pub fn to_vec(self) -> Vec<u8> {
-        self.0
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
     }
 }
 
@@ -265,16 +309,18 @@ impl From<Vec<u8>> for BlockHash {
         assert_eq!(
             bytes.len() as u32,
             Self::BOUND.max_size(),
-            "BlockHash must {} bytes",
+            "BlockHash must be {} bytes",
             Self::BOUND.max_size()
         );
-        Self(bytes)
+        let mut arr = [0; 32];
+        arr.copy_from_slice(&bytes[..32]);
+        Self(arr)
     }
 }
 
 impl From<bitcoin::BlockHash> for BlockHash {
     fn from(block_hash: bitcoin::BlockHash) -> Self {
-        Self(block_hash.as_raw_hash().as_byte_array().to_vec())
+        Self(block_hash.to_byte_array())
     }
 }
 
@@ -283,26 +329,18 @@ impl FromStr for BlockHash {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(
-            bitcoin::BlockHash::from_str(s)
+            *bitcoin::BlockHash::from_str(s)
                 .map_err(|e| e.to_string())?
-                .as_raw_hash()
-                .as_byte_array()
-                .to_vec(),
+                .as_byte_array(),
         ))
     }
 }
 
 impl fmt::Display for BlockHash {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut b = self.0.clone();
+        let mut b = self.0;
         b.reverse();
         write!(f, "{}", hex::encode(b))
-    }
-}
-
-impl Default for BlockHash {
-    fn default() -> Self {
-        Self(vec![0; 32])
     }
 }
 
@@ -345,7 +383,7 @@ impl OutPoint {
 impl From<&BitcoinOutPoint> for OutPoint {
     fn from(bitcoin_outpoint: &BitcoinOutPoint) -> Self {
         Self {
-            txid: Txid::from(bitcoin_outpoint.txid.as_raw_hash().as_byte_array().to_vec()),
+            txid: Txid::from(bitcoin_outpoint.txid.as_byte_array().to_vec()),
             vout: bitcoin_outpoint.vout,
         }
     }
@@ -363,14 +401,24 @@ impl From<OutPoint> for bitcoin::OutPoint {
 }
 
 impl Storable for OutPoint {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        let mut v: Vec<u8> = self.txid.clone().to_vec(); // Store the txid (32 bytes)
+    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
+        let mut v: Vec<u8> = self.txid.as_bytes().to_vec();
         v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
 
         // An outpoint is always exactly 36 bytes.
         assert_eq!(v.len(), OutPoint::size() as usize);
 
         std::borrow::Cow::Owned(v)
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        let mut v: Vec<u8> = self.txid.as_bytes().to_vec(); // Store the txid (32 bytes)
+        v.append(&mut self.vout.to_le_bytes().to_vec()); // Then the vout (4 bytes)
+
+        // An outpoint is always exactly 36 bytes.
+        assert_eq!(v.len(), OutPoint::size() as usize);
+
+        v
     }
 
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
@@ -387,55 +435,107 @@ impl Storable for OutPoint {
     };
 }
 
-#[test]
-fn target_difficulty() {
-    use bitcoin::CompactTarget;
-    // Example found in https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
-    assert_eq!(
-        Block::target_difficulty(
-            Network::Mainnet,
-            Target::from_compact(CompactTarget::from_consensus(0x1b0404cb))
-        ),
-        16_307
-    );
+#[cfg(test)]
+mod test {
+    use super::*;
+    use proptest::proptest;
+    use std::cell::RefCell;
 
-    // Mainnet block 768362.
-    // Data pulled from https://www.blockchain.com/explorer/blocks/btc/768362
-    assert_eq!(
-        Block::target_difficulty(
-            Network::Mainnet,
-            Target::from_compact(CompactTarget::from_consensus(386397584))
-        ),
-        35_364_065_900_457
-    );
+    proptest! {
+        // OnceCell<T> is introduced to replace the use of RefCell<Option<T>>.
+        // In order to ensure this change does not break compatibility during
+        // upgrades, the test below checks their serialization formats (in CBOR)
+        // remain the same.
+        #[test]
+        fn serialization_of_ref_cell_equals_once_cell(hash: Option<[u8; 32]>) {
+            let blockhash = hash.map(BlockHash);
+            let ref_cell = RefCell::new(blockhash);
+             let mut ref_bytes = vec![];
+            ciborium::ser::into_writer(&ref_cell, &mut ref_bytes).unwrap();
 
-    // Mainnet block 700000.
-    // Data pulled from https://www.blockchain.com/explorer/blocks/btc/700000
-    assert_eq!(
-        Block::target_difficulty(
-            Network::Mainnet,
-            Target::from_compact(CompactTarget::from_consensus(386877668))
-        ),
-        18_415_156_832_118
-    );
+            let once_cell: OnceCell<BlockHash> = OnceCell::new();
+            if let Some(hash) = blockhash {
+                let _ = once_cell.get_or_init(|| hash);
+            }
+            let mut once_bytes = vec![];
+            ciborium::ser::into_writer(&once_cell, &mut once_bytes).unwrap();
 
-    // Testnet block 2412153.
-    // Data pulled from https://www.blockchain.com/explorer/blocks/btc-testnet/2412153
-    assert_eq!(
-        Block::target_difficulty(
-            Network::Testnet,
-            Target::from_compact(CompactTarget::from_consensus(422681968))
-        ),
-        86_564_599
-    );
+            // assert the serialized bytes are the same
+            assert_eq!(ref_bytes, once_bytes);
+        }
+    }
 
-    // Testnet block 1500000.
-    // Data pulled from https://www.blockchain.com/explorer/blocks/btc-testnet/1500000
-    assert_eq!(
-        Block::target_difficulty(
-            Network::Testnet,
-            Target::from_compact(CompactTarget::from_consensus(457142912))
-        ),
-        1_032
-    );
+    #[derive(Serialize)]
+    struct VecHash(Vec<u8>);
+
+    proptest! {
+        // BlockHash was changed from Vec<u8> to [u8; 32]. The test below
+        // checks their serialization formats (in CBOR) remain the same.
+        #[test]
+        fn serialization_of_fixed_array_equals_vec(hash: [u8; 32]) {
+            let fixed_hash = BlockHash(hash);
+             let mut fixed_hash_bytes = vec![];
+            ciborium::ser::into_writer(&fixed_hash, &mut fixed_hash_bytes).unwrap();
+
+            let vec_hash = VecHash(hash.to_vec());
+            let mut vec_hash_bytes = vec![];
+            ciborium::ser::into_writer(&vec_hash, &mut vec_hash_bytes).unwrap();
+
+            // assert the serialized bytes are the same
+            assert_eq!(fixed_hash_bytes, vec_hash_bytes);
+        }
+    }
+
+    #[test]
+    fn target_difficulty() {
+        use bitcoin::CompactTarget;
+        // Example found in https://en.bitcoin.it/wiki/Difficulty#How_is_difficulty_calculated.3F_What_is_the_difference_between_bdiff_and_pdiff.3F
+        assert_eq!(
+            Block::target_difficulty(
+                Network::Mainnet,
+                Target::from_compact(CompactTarget::from_consensus(0x1b0404cb))
+            ),
+            16_307
+        );
+
+        // Mainnet block 768362.
+        // Data pulled from https://www.blockchain.com/explorer/blocks/btc/768362
+        assert_eq!(
+            Block::target_difficulty(
+                Network::Mainnet,
+                Target::from_compact(CompactTarget::from_consensus(386397584))
+            ),
+            35_364_065_900_457
+        );
+
+        // Mainnet block 700000.
+        // Data pulled from https://www.blockchain.com/explorer/blocks/btc/700000
+        assert_eq!(
+            Block::target_difficulty(
+                Network::Mainnet,
+                Target::from_compact(CompactTarget::from_consensus(386877668))
+            ),
+            18_415_156_832_118
+        );
+
+        // Testnet block 2412153.
+        // Data pulled from https://www.blockchain.com/explorer/blocks/btc-testnet/2412153
+        assert_eq!(
+            Block::target_difficulty(
+                Network::Testnet,
+                Target::from_compact(CompactTarget::from_consensus(422681968))
+            ),
+            86_564_599
+        );
+
+        // Testnet block 1500000.
+        // Data pulled from https://www.blockchain.com/explorer/blocks/btc-testnet/1500000
+        assert_eq!(
+            Block::target_difficulty(
+                Network::Testnet,
+                Target::from_compact(CompactTarget::from_consensus(457142912))
+            ),
+            1_032
+        );
+    }
 }

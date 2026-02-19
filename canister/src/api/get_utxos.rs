@@ -2,13 +2,12 @@ use crate::{
     blocktree::BlockChain,
     charge_cycles,
     runtime::{performance_counter, print},
-    types::{Address, GetUtxosRequest, Page, Utxo},
+    types::{Address, AddressParseError, GetUtxosRequest, Page, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
 use ic_btc_interface::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use ic_btc_types::{Block, BlockHash, OutPoint, Txid};
 use serde_bytes::ByteBuf;
-use std::str::FromStr;
 
 // The maximum number of UTXOs that are allowed to be included in a single
 // `GetUtxosResponse`.
@@ -136,7 +135,7 @@ fn get_utxos_internal(
                 height,
                 outpoint,
             } = Page::from_bytes(page).map_err(|err| GetUtxosError::MalformedPage { err })?;
-            let chain =
+            let (chain, _tip_children) =
                 unstable_blocks::get_chain_with_tip(&state.unstable_blocks, &tip_block_hash)
                     .ok_or(GetUtxosError::UnknownTipBlockHash {
                         tip_block_hash: tip_block_hash.to_vec(),
@@ -176,7 +175,7 @@ fn get_utxos_internal(
 // ```
 fn get_stability_count(
     blocks_with_depths_on_the_same_height: &[(&Block, u32)],
-    target_block: BlockHash,
+    target_block: &BlockHash,
 ) -> i32 {
     let mut max_depth_of_the_other_blocks = 0;
     let mut target_block_depth = 0;
@@ -194,13 +193,18 @@ fn get_utxos_from_chain(
     state: &State,
     address: &str,
     min_confirmations: u32,
-    chain: BlockChain,
+    chain: BlockChain<Block>,
     offset: Option<Utxo>,
     utxo_limit: usize,
 ) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
     let mut stats = Stats::default();
 
-    let address = Address::from_str(address).map_err(|_| GetUtxosError::MalformedAddress)?;
+    let address = Address::from_str_checked(address, state.network()).map_err(|e| match e {
+        AddressParseError::MalformedAddress => GetUtxosError::MalformedAddress,
+        AddressParseError::WrongNetwork { expected } => {
+            GetUtxosError::AddressForWrongNetwork { expected }
+        }
+    })?;
 
     if chain.len() < min_confirmations as usize {
         return Err(GetUtxosError::MinConfirmationsTooLarge {
@@ -261,7 +265,7 @@ fn get_utxos_from_chain(
     let rest = utxos.split_off(utxos.len().min(utxo_limit));
     let next_page = rest.first().map(|next| {
         Page {
-            tip_block_hash: tip_block_hash.clone(),
+            tip_block_hash: *tip_block_hash,
             height: next.height,
             outpoint: OutPoint::new(Txid::from(next.outpoint.txid), next.outpoint.vout),
         }
@@ -328,6 +332,52 @@ mod test {
             }),
             Err(GetUtxosError::MalformedAddress)
         );
+    }
+
+    #[test]
+    fn get_utxos_error_on_wrong_network() {
+        crate::init(InitConfig {
+            network: Some(Network::Mainnet),
+            ..Default::default()
+        });
+
+        // Use a testnet address on a mainnet canister
+        let testnet_address = random_p2pkh_address(bitcoin::Network::Testnet4);
+
+        let result = get_utxos(GetUtxosRequest {
+            address: testnet_address.to_string(),
+            filter: None,
+        });
+
+        match result {
+            Err(GetUtxosError::AddressForWrongNetwork { expected }) => {
+                assert_eq!(expected, Network::Mainnet);
+            }
+            other => panic!("Expected AddressForWrongNetwork error, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn get_utxos_query_error_on_wrong_network() {
+        crate::init(InitConfig {
+            network: Some(Network::Testnet),
+            ..Default::default()
+        });
+
+        // Use a mainnet address on a testnet canister
+        let mainnet_address = random_p2pkh_address(bitcoin::Network::Bitcoin);
+
+        let result = get_utxos_query(GetUtxosRequest {
+            address: mainnet_address.to_string(),
+            filter: None,
+        });
+
+        match result {
+            Err(GetUtxosError::AddressForWrongNetwork { expected }) => {
+                assert_eq!(expected, Network::Testnet);
+            }
+            other => panic!("Expected AddressForWrongNetwork error, got {:?}", other),
+        }
     }
 
     #[test]
@@ -1121,7 +1171,7 @@ mod test {
 
             assert_eq!(response.utxos.len(), 3);
             assert!(response.utxos.len() < utxo_set.len());
-            assert_eq!(response.tip_block_hash, tip_block_hash.clone().to_vec());
+            assert_eq!(response.tip_block_hash, tip_block_hash.to_vec());
             assert_eq!(response.tip_height, 0);
             assert!(response.next_page.is_some());
 
@@ -1139,7 +1189,7 @@ mod test {
 
             assert_eq!(response.utxos.len(), 4);
             assert!(response.utxos.len() < utxo_set.len());
-            assert_eq!(response.tip_block_hash, tip_block_hash.clone().to_vec());
+            assert_eq!(response.tip_block_hash, tip_block_hash.to_vec());
             assert_eq!(response.tip_height, 0);
             assert!(response.next_page.is_some());
 
@@ -1150,7 +1200,7 @@ mod test {
 
             assert_eq!(response.utxos.len(), num_transactions as usize);
             assert_eq!(response.utxos.len(), utxo_set.len());
-            assert_eq!(response.tip_block_hash, tip_block_hash.clone().to_vec());
+            assert_eq!(response.tip_block_hash, tip_block_hash.to_vec());
             assert_eq!(response.tip_height, 0);
             assert!(response.next_page.is_none());
         }
@@ -1397,7 +1447,7 @@ mod test {
     }
 
     // Asserts that the given block hash is the tip at the given number of confirmations.
-    fn assert_tip_at_confirmations(confirmations: u32, expected_tip: BlockHash) {
+    fn assert_tip_at_confirmations(confirmations: u32, expected_tip: &BlockHash) {
         // To fetch the tip, we call `get_utxos` using a random address.
         let address = random_p2pkh_address(bitcoin::Network::Regtest).to_string();
         assert_eq!(

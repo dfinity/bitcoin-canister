@@ -27,6 +27,7 @@ use crate::{
 pub use api::get_metrics;
 pub use api::send_transaction;
 pub use api::set_config;
+use candid::{CandidType, Deserialize};
 pub use heartbeat::heartbeat;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
@@ -86,6 +87,14 @@ fn reset_syncing_state(state: &mut State) {
     state.syncing_state.response_to_process = None;
 }
 
+#[derive(CandidType, Deserialize)]
+pub enum CanisterArg {
+    #[serde(rename = "init")]
+    Init(InitConfig),
+    #[serde(rename = "upgrade")]
+    Upgrade(Option<SetConfigRequest>),
+}
+
 /// Initializes the state of the Bitcoin canister.
 pub fn init(init_config: InitConfig) {
     print("Running init...");
@@ -108,6 +117,8 @@ pub fn init(init_config: InitConfig) {
     with_state_mut(|s| s.burn_cycles = config.burn_cycles);
     with_state_mut(|s| s.lazily_evaluate_fee_percentiles = config.lazily_evaluate_fee_percentiles);
     with_state_mut(|s| s.fees = config.fees);
+
+    print("...init completed!");
 }
 
 pub fn get_current_fee_percentiles(
@@ -169,6 +180,10 @@ pub fn get_config() -> Config {
         burn_cycles: s.burn_cycles,
         lazily_evaluate_fee_percentiles: s.lazily_evaluate_fee_percentiles,
     })
+}
+
+pub fn get_blockchain_info() -> types::BlockchainInfo {
+    with_state(state::blockchain_info)
 }
 
 pub fn pre_upgrade() {
@@ -245,8 +260,6 @@ pub(crate) fn genesis_block(network: Network) -> Block {
 
 pub(crate) fn charge_cycles(amount: u128) {
     verify_has_enough_cycles(amount);
-
-    let amount: u64 = amount.try_into().expect("amount must be u64");
     assert_eq!(
         msg_cycles_accept(amount),
         amount,
@@ -256,8 +269,6 @@ pub(crate) fn charge_cycles(amount: u128) {
 
 /// Panics if the request contains less than the amount of cycles given.
 pub(crate) fn verify_has_enough_cycles(amount: u128) {
-    let amount: u64 = amount.try_into().expect("amount must be u64");
-
     if msg_cycles_available() < amount {
         panic!(
             "Received {} cycles. {} cycles are required.",
@@ -535,10 +546,10 @@ mod test {
 
     #[test]
     #[should_panic(
-        expected = "Received 9223372036854775807 cycles. 18446744073709551615 cycles are required."
+        expected = "Received 170141183460469231731687303715884105727 cycles. 340282366920938463463374607431768211455 cycles are required."
     )]
     fn test_verify_has_enough_cycles_panics_with_not_enough_cycles() {
-        verify_has_enough_cycles(u64::MAX as u128);
+        verify_has_enough_cycles(u128::MAX);
     }
 
     #[test]
@@ -680,6 +691,39 @@ mod test {
         with_state(|s| {
             assert_eq!(s.disable_api_if_not_fully_synced, Flag::Enabled);
         });
+    }
+
+    #[test]
+    fn get_blockchain_info_returns_correct_info() {
+        let network = Network::Mainnet;
+        init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let genesis = genesis_block(network);
+        let tip_info = get_blockchain_info();
+
+        // After init, the tip is the Bitcoin genesis block for the configured network.
+        assert_eq!(tip_info.height, 0);
+        assert_eq!(tip_info.block_hash, genesis.block_hash().to_vec());
+        assert_eq!(tip_info.timestamp, genesis.header().time);
+        assert_eq!(tip_info.difficulty, genesis.difficulty(network));
+        // Genesis block has 1 coinbase output.
+        assert_eq!(tip_info.utxos_length, 1);
+    }
+
+    #[test]
+    fn get_blockchain_info_succeeds_when_api_disabled() {
+        init(InitConfig {
+            api_access: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        let info = get_blockchain_info();
+        assert_eq!(info.height, 0);
+        assert_eq!(info.utxos_length, 1);
     }
 
     #[test]

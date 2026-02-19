@@ -1,6 +1,6 @@
 //! A canister that writes data to stable memory.
-use ic_cdk::api::stable;
-use ic_cdk_macros::{init, query, update};
+use ic_cdk::stable;
+use ic_cdk::{init, query, update};
 use std::{cell::RefCell, cmp::min, collections::BTreeSet};
 use uploader::*;
 

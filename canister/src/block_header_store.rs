@@ -50,12 +50,12 @@ impl BlockHeaderStore {
             .consensus_encode(&mut header_blob)
             .expect("block header must be valid");
 
-        self.insert(block_hash, BlockHeaderBlob::from(header_blob), height);
+        self.insert(*block_hash, BlockHeaderBlob::from(header_blob), height);
     }
 
     /// Inserts a block's header and hash into the store.
     pub fn insert(&mut self, block_hash: BlockHash, header_blob: BlockHeaderBlob, height: Height) {
-        self.block_headers.insert(block_hash.clone(), header_blob);
+        self.block_headers.insert(block_hash, header_blob);
         self.block_heights.insert(height, block_hash);
     }
 
@@ -81,7 +81,7 @@ impl BlockHeaderStore {
     ) -> impl Iterator<Item = BlockHeaderBlob> + '_ {
         self.block_heights
             .range(heights)
-            .map(move |(_, block_hash)| self.block_headers.get(&block_hash).unwrap())
+            .map(move |entry| self.block_headers.get(&entry.value()).unwrap())
     }
 }
 

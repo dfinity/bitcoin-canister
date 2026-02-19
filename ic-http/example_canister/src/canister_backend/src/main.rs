@@ -1,6 +1,4 @@
-use ic_cdk::api::management_canister::http_request::{
-    CanisterHttpRequestArgument, HttpHeader, HttpResponse, TransformArgs,
-};
+use ic_cdk::management_canister::{HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs};
 
 const ZERO_CYCLES: u128 = 0;
 
@@ -21,8 +19,8 @@ fn parse_json(body: Vec<u8>) -> serde_json::Value {
 
 /// Apply a transform function to the quote HTTP response.
 #[ic_cdk_macros::query]
-fn transform_quote(raw: TransformArgs) -> HttpResponse {
-    let mut response = HttpResponse {
+fn transform_quote(raw: TransformArgs) -> HttpRequestResult {
+    let mut response = HttpRequestResult {
         status: raw.response.status.clone(),
         ..Default::default()
     };
@@ -42,7 +40,7 @@ fn transform_quote(raw: TransformArgs) -> HttpResponse {
 }
 
 /// Create a request to the dummyjson.com API for quotes.
-fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
+fn build_quote_request(url: &str) -> HttpRequestArgs {
     ic_http::create_request()
         .get(url)
         .header(HttpHeader {
@@ -54,16 +52,16 @@ fn build_quote_request(url: &str) -> CanisterHttpRequestArgument {
 }
 
 /// Fetch data by making an HTTP request.
-async fn fetch(request: CanisterHttpRequestArgument) -> String {
+async fn fetch(request: HttpRequestArgs) -> String {
     let result = ic_http::http_request(request, ZERO_CYCLES).await;
 
     match result {
-        Ok((response,)) => {
+        Ok(response) => {
             let body = String::from_utf8(response.body).unwrap();
             format!("Response: {:?}", body)
         }
-        Err((code, msg)) => {
-            format!("Error: {:?} {:?}", code, msg)
+        Err(err) => {
+            format!("Error: {}", err)
         }
     }
 }
@@ -80,7 +78,7 @@ fn main() {}
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_cdk::api::call::RejectionCode;
+    use ic_cdk::call::RejectCode;
 
     #[tokio::test]
     async fn test_http_request_transform_body_quote() {
@@ -99,7 +97,7 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .unwrap();
 
@@ -119,7 +117,7 @@ mod test {
         ic_http::mock::mock(request.clone(), mock_response);
 
         // Act.
-        let (response,) = ic_http::http_request(request.clone(), ZERO_CYCLES)
+        let response = ic_http::http_request(request.clone(), ZERO_CYCLES)
             .await
             .unwrap();
 
@@ -132,17 +130,19 @@ mod test {
     async fn test_http_request_transform_body_quote_error() {
         // Arrange.
         let request = build_quote_request("https://dummyjson.com/quotes/1");
-        let mock_error = (RejectionCode::SysFatal, "system fatal error".to_string());
+        let mock_error = (RejectCode::SysFatal, "system fatal error".to_string());
         ic_http::mock::mock_error(request.clone(), mock_error);
 
         // Act.
         let result = ic_http::http_request(request.clone(), ZERO_CYCLES).await;
 
         // Assert.
-        assert_eq!(
+        assert!(matches!(
             result,
-            Err((RejectionCode::SysFatal, "system fatal error".to_string()))
-        );
+            Err(ic_cdk::call::Error::CallRejected(rejected))
+            if rejected.raw_reject_code() == RejectCode::SysFatal as u32 &&
+               rejected.reject_message() == "system fatal error"
+        ));
         assert_eq!(ic_http::mock::times_called(request), 1);
     }
 }

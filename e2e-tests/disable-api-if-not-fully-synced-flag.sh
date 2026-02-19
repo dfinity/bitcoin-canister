@@ -15,14 +15,17 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks.
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
+
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
-# And enabling 'disable_api_if_not_fully_synced'. 
-dfx deploy --no-wallet bitcoin --argument "(record {
+# And enabling 'disable_api_if_not_fully_synced'.
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
   disable_api_if_not_fully_synced = opt variant { enabled };
-})"
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 # The number of next block headers should be 3, the canister
@@ -114,14 +117,14 @@ dfx start --background --clean
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
-# And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make 
-# influence behaviour of the canister. 
-dfx deploy --no-wallet bitcoin --argument "(record {
+# And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make
+# influence behaviour of the canister.
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
   blocks_source = opt principal \"$(dfx canister id e2e-disable-api-if-not-fully-synced-flag)\";
   disable_api_if_not_fully_synced = opt variant { disabled };
-})"
+}})"
 
 # Wait until the ingestion of stable blocks is complete.
 wait_until_main_chain_height 2 60

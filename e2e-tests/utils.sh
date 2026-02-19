@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+# Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
+# When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
+use_prebuilt_bitcoin_wasm() {
+  if [[ -f ../wasms/ic-btc-canister.wasm.gz ]]; then
+    sed -i.bak 's|"wasm": "../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"|"wasm": "../wasms/ic-btc-canister.wasm.gz"|' dfx.json
+    sed -i.bak 's|"build": "../scripts/build-canister.sh ic-btc-canister"|"build": "true"|' dfx.json
+  fi
+}
+
 # Waits until the main chain of the bitcoin canister has reached a certain height.
 wait_until_main_chain_height () {
   HEIGHT=$1
@@ -8,7 +17,7 @@ wait_until_main_chain_height () {
   BITCOIN_CANISTER_ID=$(dfx canister id bitcoin)
 
   while
-    METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$BITCOIN_CANISTER_ID")
+    METRICS=$(curl "http://$BITCOIN_CANISTER_ID.raw.localhost:8000/metrics")
     ! [[ "$METRICS" == *"main_chain_height $HEIGHT"* ]]; do
       ((ATTEMPTS-=1))
 
@@ -29,7 +38,7 @@ wait_until_stable_height () {
   BITCOIN_CANISTER_ID=$(dfx canister id bitcoin)
 
   while
-    METRICS=$(curl "http://127.0.0.1:8000/metrics?canisterId=$BITCOIN_CANISTER_ID")
+    METRICS=$(curl "http://$BITCOIN_CANISTER_ID.raw.localhost:8000/metrics")
     ! [[ "$METRICS" == *"stable_height $HEIGHT"* ]]; do
       ((ATTEMPTS-=1))
 

@@ -17,7 +17,6 @@ ic-btc-interface = { workspace = true }
 ic-btc-types = { workspace = true }
 ic-btc-validation = { workspace = true }
 ic-cdk = { workspace = true }
-ic-cdk-macros = { workspace = true }
 ic-metrics-encoder = { workspace = true }
 ic-stable-structures = { workspace = true }
 lazy_static = "1.4.0"
@@ -42,7 +41,7 @@ ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
 maplit = "1.0.2"
 pocket-ic = { workspace = true }
-proptest = "0.9.4"
+proptest = { workspace = true }
 tempfile = { workspace = true }
 test-strategy = "0.3.1"
 
@@ -50,3 +49,4 @@ test-strategy = "0.3.1"
 file_memory = []
 save_chain_as_hex = []
 mock_time = []
+canbench-rs = ["dep:canbench-rs", "ic-btc-validation/canbench-rs"]

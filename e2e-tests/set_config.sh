@@ -4,6 +4,7 @@
 set -Eexuo pipefail
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source "${SCRIPT_DIR}/utils.sh"
 pushd "$SCRIPT_DIR"
 
 # Run dfx stop if we run into errors.
@@ -11,11 +12,14 @@ trap "dfx stop" EXIT SIGINT
 
 dfx start --background --clean
 
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
+
 # Deploy the bitcoin canister.
-dfx deploy --no-wallet bitcoin --argument "(record {
+dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 0;
   network = opt variant { regtest };
-})"
+}})"
 
 # The stability threshold is zero
 CONFIG=$(dfx canister call bitcoin get_config --query)

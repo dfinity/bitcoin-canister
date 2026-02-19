@@ -19,7 +19,7 @@ fn is_watchdog_caller() -> bool {
 
     #[cfg(target_arch = "wasm32")]
     {
-        crate::with_state(|s| Some(ic_cdk::caller()) == s.watchdog_canister)
+        crate::with_state(|s| Some(ic_cdk::api::msg_caller()) == s.watchdog_canister)
     }
 }
 
@@ -64,13 +64,17 @@ pub(crate) fn set_config_no_verification(request: SetConfigRequest) {
         if let Some(lazily_evaluate_fee_percentiles) = request.lazily_evaluate_fee_percentiles {
             s.lazily_evaluate_fee_percentiles = lazily_evaluate_fee_percentiles;
         }
+
+        if let Some(burn_cycles) = request.burn_cycles {
+            s.burn_cycles = burn_cycles;
+        }
     });
 }
 
 fn verify_caller() {
     #[cfg(target_arch = "wasm32")]
     {
-        if !ic_cdk::api::is_controller(&ic_cdk::caller()) {
+        if !ic_cdk::api::is_controller(&ic_cdk::api::msg_caller()) {
             panic!("Only controllers can call set_config");
         }
     }
@@ -249,6 +253,20 @@ mod test {
             });
 
             assert_eq!(with_state(|s| s.lazily_evaluate_fee_percentiles), *flag);
+        }
+    }
+
+    #[test]
+    fn test_set_burn_cycles() {
+        init(InitConfig::default());
+
+        for flag in &[Flag::Enabled, Flag::Disabled] {
+            set_config_no_verification(SetConfigRequest {
+                burn_cycles: Some(*flag),
+                ..Default::default()
+            });
+
+            assert_eq!(with_state(|s| s.burn_cycles), *flag);
         }
     }
 }
