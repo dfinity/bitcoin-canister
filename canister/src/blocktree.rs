@@ -368,6 +368,114 @@ impl<Block: ChainBlock> BlockTree<Block> {
         res
     }
 
+    /// Returns the main chain determined by most accumulated proof-of-work.
+    ///
+    /// At each node, the child subtree with the strictly highest accumulated
+    /// difficulty is followed. When accumulated difficulties are tied, the
+    /// deeper subtree (by block count) wins. If children still tie on both
+    /// criteria, the chain stops (contested tip).
+    ///
+    /// Runs in O(n) time where n is the number of blocks in the tree.
+    pub fn main_chain_by_difficulty(&self, network: Network) -> BlockChain<'_, Block> {
+        let (_, _, mut chain_rev) = self.main_chain_by_difficulty_inner(network);
+        chain_rev.reverse();
+        let mut chain = BlockChain::new(chain_rev[0]);
+        for &block in &chain_rev[1..] {
+            chain.push(block);
+        }
+        chain
+    }
+
+    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_reversed).
+    fn main_chain_by_difficulty_inner(
+        &self,
+        network: Network,
+    ) -> (DifficultyBasedDepth, usize, Vec<&Block>) {
+        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
+
+        if self.children.is_empty() {
+            return (self_difficulty, 1, vec![&self.root]);
+        }
+
+        let child_results: Vec<_> = self
+            .children
+            .iter()
+            .map(|c| c.main_chain_by_difficulty_inner(network))
+            .collect();
+
+        let max_key = child_results
+            .iter()
+            .map(|(d, depth, _)| (*d, *depth))
+            .max()
+            .unwrap();
+
+        let total_difficulty = self_difficulty + max_key.0;
+        let total_depth = 1 + max_key.1;
+
+        let mut matches = child_results
+            .into_iter()
+            .filter(|(d, depth, _)| (*d, *depth) == max_key);
+        let (_, _, mut chain) = matches.next().unwrap();
+
+        if matches.next().is_none() {
+            chain.push(&self.root);
+            (total_difficulty, total_depth, chain)
+        } else {
+            // There are contested branches with the same difficulty and depth.
+            (total_difficulty, total_depth, vec![&self.root])
+        }
+    }
+
+    /// Returns the length of the main chain determined by most accumulated
+    /// proof-of-work.
+    ///
+    /// See [`main_chain_by_difficulty`](Self::main_chain_by_difficulty) for the
+    /// definition.
+    ///
+    /// Runs in O(n) time where n is the number of blocks in the tree.
+    pub fn main_chain_length_by_difficulty(&self, network: Network) -> usize {
+        self.main_chain_length_by_difficulty_inner(network).2
+    }
+
+    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_length).
+    fn main_chain_length_by_difficulty_inner(
+        &self,
+        network: Network,
+    ) -> (DifficultyBasedDepth, usize, usize) {
+        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
+
+        if self.children.is_empty() {
+            return (self_difficulty, 1, 1);
+        }
+
+        let child_results: Vec<_> = self
+            .children
+            .iter()
+            .map(|c| c.main_chain_length_by_difficulty_inner(network))
+            .collect();
+
+        let max_key = child_results
+            .iter()
+            .map(|(d, depth, _)| (*d, *depth))
+            .max()
+            .unwrap();
+
+        let total_difficulty = self_difficulty + max_key.0;
+        let total_depth = 1 + max_key.1;
+
+        let mut matches = child_results
+            .iter()
+            .filter(|(d, depth, _)| (*d, *depth) == max_key);
+        let best = matches.next().unwrap();
+
+        if matches.next().is_none() {
+            (total_difficulty, total_depth, 1 + best.2)
+        } else {
+            // There are contested branches with the same difficulty and depth.
+            (total_difficulty, total_depth, 1)
+        }
+    }
+
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
     /// along with its depth if it exists, and `None` otherwise.
     pub fn find_mut<'a>(
@@ -622,6 +730,15 @@ mod test {
             block_tree.difficulty_based_depth(Network::Mainnet),
             DifficultyBasedDepth::new(15)
         );
+    }
+
+    // Consistency: main_chain_length_by_difficulty always matches
+    // main_chain_by_difficulty().len().
+    #[proptest]
+    fn test_main_chain_length_matches_chain_len(tree: BlockTree) {
+        let chain = tree.main_chain_by_difficulty(Network::Regtest);
+        let length = tree.main_chain_length_by_difficulty(Network::Regtest);
+        prop_assert_eq!(chain.len(), length);
     }
 
     #[test]

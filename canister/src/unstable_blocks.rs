@@ -293,60 +293,20 @@ pub fn push(
 
 /// Returns the best guess on what the main blockchain is.
 ///
-/// The most likely chain to be "main", we hypothesize, is the longest
-/// chain of blocks with an "uncontested" tip. As in, there exists no other
-/// block at the same height as the tip.
+/// The main chain is determined by most accumulated proof-of-work (difficulty),
+/// following Bitcoin's consensus rule. At each fork, the branch with the
+/// strictly highest accumulated difficulty is followed. When accumulated
+/// difficulties are tied, the longest branch (by block count) wins. If
+/// branches still tie on both criteria, the chain stops at the fork point
+/// (contested tip).
 pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, Block> {
-    // Get all the blockchains that extend the anchor.
-    let blockchains = blocks.tree.blockchains();
-
-    // Find the length of the longest blockchain.
-    let mut longest_blockchain_len = 0;
-    for blockchain in blockchains.iter() {
-        longest_blockchain_len = longest_blockchain_len.max(blockchain.len());
-    }
-
-    // Get all the longest blockchains.
-    let longest_blockchains: Vec<Vec<&'_ Block>> = blockchains
-        .into_iter()
-        .filter(|bc| bc.len() == longest_blockchain_len)
-        .map(|bc| bc.into_chain())
-        .collect();
-
-    // A `BlockChain` contains at least one block which means we can safely index at
-    // height 0 of the chain.
-    let mut main_chain = BlockChain::new(longest_blockchains[0][0]);
-    for height_idx in 1..longest_blockchain_len {
-        // If all the blocks on the same height are identical, then this block is part of the
-        // "main" chain.
-        let block = longest_blockchains[0][height_idx];
-        let block_hash = block.block_hash();
-        for chain in longest_blockchains.iter().skip(1) {
-            if chain[height_idx].block_hash() != block_hash {
-                return main_chain;
-            }
-        }
-
-        main_chain.push(block);
-    }
-
-    main_chain
+    blocks.tree.main_chain_by_difficulty(blocks.network)
 }
 
 /// Returns the length of the "main chain".
 /// See `get_main_chain` for what defines a main chain.
 pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
-    let blocks_by_height = blocks.blocks_with_depths_by_heights();
-
-    // Traverse the heights in reverse order. The highest height with a single block corresponds to
-    // the tip of the main chain.
-    for height in (0..blocks_by_height.len()).rev() {
-        if blocks_by_height[height].len() == 1 {
-            return height + 1;
-        }
-    }
-
-    unreachable!("There must be at least one height with exactly one block.");
+    blocks.tree.main_chain_length_by_difficulty(blocks.network)
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
@@ -983,6 +943,547 @@ mod test {
         let forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
 
         assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+    }
+
+    // Linear chain with varying difficulties: the entire chain is "main".
+    //
+    // * (d=5) -> A (d=10) -> B (d=15) -> C (d=20)
+    #[test]
+    fn get_main_chain_linear_chain_varying_difficulty() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(5);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(15);
+        let block_c =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(20);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+        push(&mut forest, &utxos, block_c.clone()).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c])
+        );
+        assert_eq!(get_main_chain_length(&forest), 4);
+    }
+
+    // Two children with equal difficulty and equal depth: contested.
+    //
+    // * (d=5) -> A (d=10)
+    //         -> B (d=10)
+    //
+    // Main chain = [*], length 1.
+    #[test]
+    fn get_main_chain_equal_difficulty_fork() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(5);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+
+        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain_length(&forest), 1);
+    }
+
+    // Difficulty-based main chain selection: the fork with higher accumulated
+    // difficulty wins even if it has fewer blocks.
+    //
+    // * (d=1) -> A (d=1) -> B (d=100)
+    //         -> C (d=1) -> D (d=1) -> E (d=1)
+    //
+    // A's branch accumulated difficulty: 1+100 = 101
+    // C's branch accumulated difficulty: 1+1+1 = 3
+    // Main chain = [*, A, B], length 3.
+    #[test]
+    fn get_main_chain_higher_difficulty_beats_longer() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(100);
+        let block_c =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
+        let block_d =
+            BlockBuilder::with_prev_header(block_c.header()).build_with_mock_difficulty(1);
+        let block_e =
+            BlockBuilder::with_prev_header(block_d.header()).build_with_mock_difficulty(1);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+        push(&mut forest, &utxos, block_d).unwrap();
+        push(&mut forest, &utxos, block_e).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
+        );
+        assert_eq!(get_main_chain_length(&forest), 3);
+    }
+
+    // Equal difficulty, different depths: the deeper branch wins.
+    //
+    // * (d=5) -> A (d=0) -> B (d=10)
+    //         -> C (d=10)
+    //
+    // A's branch: difficulty=10, depth=2.
+    // C's branch: difficulty=10, depth=1.
+    // A wins on depth tiebreaker. Main chain = [*, A, B], length 3.
+    #[test]
+    fn get_main_chain_depth_tiebreaker() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(5);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(0);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(10);
+        let block_c =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
+        );
+        assert_eq!(get_main_chain_length(&forest), 3);
+    }
+
+    // A new block shifts the main chain from one fork to another.
+    //
+    // Initially:
+    //   * (d=1) -> A (d=10)
+    //           -> B (d=5)
+    //
+    // A wins. Main chain = [*, A].
+    //
+    // After adding C (d=20) extending B:
+    //   * (d=1) -> A (d=10)
+    //           -> B (d=5) -> C (d=20)
+    //
+    // B's branch accumulated: 5+20 = 25 > A's 10.
+    // Main chain = [*, B, C].
+    #[test]
+    fn get_main_chain_difficulty_chain_switch() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(5);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a])
+        );
+        assert_eq!(get_main_chain_length(&forest), 2);
+
+        let block_c =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(20);
+        push(&mut forest, &utxos, block_c.clone()).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_b, &block_c])
+        );
+        assert_eq!(get_main_chain_length(&forest), 3);
+    }
+
+    // Contested fork with equal difficulty AND equal depth.
+    //
+    // * (d=1) -> A (d=50) -> C (d=10)
+    //         -> B (d=50) -> D (d=10)
+    //
+    // A's branch: (diff=60, depth=2). B's branch: (diff=60, depth=2). Tied.
+    // Main chain = [*], length 1.
+    #[test]
+    fn get_main_chain_difficulty_fully_contested() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(50);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(50);
+        let block_c =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(10);
+        let block_d =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(10);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+        push(&mut forest, &utxos, block_d).unwrap();
+
+        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain_length(&forest), 1);
+    }
+
+    // Contested deeper in the tree: the main chain stops at the inner fork.
+    //
+    // * (d=5) -> A (d=10) -> B (d=20)
+    //                     -> C (d=20)
+    //
+    // At A, B and C tie on (diff=20, depth=1). Main chain = [*, A], length 2.
+    #[test]
+    fn get_main_chain_contested_deeper_fork() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(5);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(20);
+        let block_c =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(20);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a])
+        );
+        assert_eq!(get_main_chain_length(&forest), 2);
+    }
+
+    // The deeper branch wins at a nested fork via the depth tiebreaker
+    // when all blocks have equal difficulty.
+    //
+    // * (d=1) -> A (d=1) -> B (d=1) -> C (d=1)
+    //                    -> D (d=1)
+    //
+    // At A: B's subtree (diff=2, depth=2) vs D's subtree (diff=1, depth=1).
+    // B wins on difficulty. Main chain = [*, A, B, C], length 4.
+    #[test]
+    fn get_main_chain_depth_resolves_nested_fork() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(1);
+        let block_c =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(1);
+        let block_d =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(1);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+        push(&mut forest, &utxos, block_c.clone()).unwrap();
+        push(&mut forest, &utxos, block_d).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c])
+        );
+        assert_eq!(get_main_chain_length(&forest), 4);
+    }
+
+    // Multiple forks at different levels.
+    //
+    //       * (d=1)
+    //      / \
+    //     A   X (d=1 each)
+    //    / \   \
+    //   B   E   Y (d=1 each)
+    //   |       |
+    //   C       Z (d=1 each)
+    //   |
+    //   D (d=1)
+    //
+    // A's subtree (diff=4, depth=4) beats X's subtree (diff=3, depth=3).
+    // Within A, B's subtree (diff=3, depth=3) beats E's subtree (diff=1, depth=1).
+    // Main chain = [*, A, B, C, D], length 5.
+    #[test]
+    fn get_main_chain_multi_level_forks() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
+        let block_x =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(1);
+        let block_e =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(1);
+        let block_y =
+            BlockBuilder::with_prev_header(block_x.header()).build_with_mock_difficulty(1);
+        let block_c =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(1);
+        let block_z =
+            BlockBuilder::with_prev_header(block_y.header()).build_with_mock_difficulty(1);
+        let block_d =
+            BlockBuilder::with_prev_header(block_c.header()).build_with_mock_difficulty(1);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_x).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+        push(&mut forest, &utxos, block_e).unwrap();
+        push(&mut forest, &utxos, block_y).unwrap();
+        push(&mut forest, &utxos, block_c.clone()).unwrap();
+        push(&mut forest, &utxos, block_z).unwrap();
+        push(&mut forest, &utxos, block_d.clone()).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(
+                &block_0,
+                vec![&block_a, &block_b, &block_c, &block_d]
+            )
+        );
+        assert_eq!(get_main_chain_length(&forest), 5);
+    }
+
+    // High-difficulty short fork beats a low-difficulty long fork that
+    // also has a contested split.
+    //
+    //     * (d=1)
+    //    / \
+    //   A   D (d=100)
+    //   |
+    //   B (d=1)
+    //  / \
+    // C   E (d=1 each)
+    //
+    // D's subtree: diff=100, depth=1. A's subtree: diff=max(1+1, 1+1)=2, depth=3.
+    // D wins. Main chain = [*, D], length 2.
+    #[test]
+    fn get_main_chain_high_diff_short_over_low_diff_long_contested() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
+        let block_d =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(100);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(1);
+        let block_c =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(1);
+        let block_e =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(1);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_d.clone()).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+        push(&mut forest, &utxos, block_e).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_d])
+        );
+        assert_eq!(get_main_chain_length(&forest), 2);
+    }
+
+    // With all blocks having difficulty 0, behavior degenerates to longest-chain.
+    //
+    // * (d=0) -> A (d=0) -> B (d=0)
+    //         -> C (d=0)
+    //
+    // A's branch depth=2 > C's depth=1. A wins.
+    // Main chain = [*, A, B], length 3.
+    #[test]
+    fn get_main_chain_zero_difficulty_falls_back_to_depth() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(0);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(0);
+        let block_b =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(0);
+        let block_c =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(0);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
+        );
+        assert_eq!(get_main_chain_length(&forest), 3);
+    }
+
+    // Three children: one clearly wins on difficulty.
+    //
+    //     * (d=1)
+    //   / | \
+    //  A  B  C  (d=10, 5, 3)
+    //
+    // A wins. Main chain = [*, A], length 2.
+    #[test]
+    fn get_main_chain_three_children_one_winner() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(5);
+        let block_c =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(3);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a])
+        );
+        assert_eq!(get_main_chain_length(&forest), 2);
+    }
+
+    // Three children: two tie, third loses. Still contested.
+    //
+    //     * (d=1)
+    //   / | \
+    //  A  B  C  (d=10, 10, 3)
+    //
+    // A and B tie. Main chain = [*], length 1.
+    #[test]
+    fn get_main_chain_three_children_two_tie() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_c =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(3);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+        push(&mut forest, &utxos, block_c).unwrap();
+
+        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain_length(&forest), 1);
+    }
+
+    // Adding a block resolves a previously contested fork.
+    //
+    // Before:
+    //   * (d=1) -> A (d=10)
+    //           -> B (d=10)
+    //
+    // Contested. Main chain = [*].
+    //
+    // After extending A with C (d=5):
+    //   * (d=1) -> A (d=10) -> C (d=5)
+    //           -> B (d=10)
+    //
+    // A's subtree: (diff=15, depth=2) > B's subtree: (diff=10, depth=1).
+    // Main chain = [*, A, C], length 3.
+    #[test]
+    fn get_main_chain_resolving_contest() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
+        push(&mut forest, &utxos, block_b).unwrap();
+
+        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain_length(&forest), 1);
+
+        let block_c =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(5);
+        push(&mut forest, &utxos, block_c.clone()).unwrap();
+
+        assert_eq!(
+            get_main_chain(&forest),
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_c])
+        );
+        assert_eq!(get_main_chain_length(&forest), 3);
+    }
+
+    // get_main_chain_length is consistent with get_main_chain().len() for
+    // various difficulty configurations.
+    #[test]
+    fn get_main_chain_length_consistent_with_chain() {
+        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
+        let block_a =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
+        let block_b =
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(5);
+        let block_c =
+            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(3);
+        let block_d =
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(20);
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        // After each insertion, verify consistency.
+        push(&mut forest, &utxos, block_a).unwrap();
+        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+
+        push(&mut forest, &utxos, block_b).unwrap();
+        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+
+        push(&mut forest, &utxos, block_c).unwrap();
+        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+
+        push(&mut forest, &utxos, block_d).unwrap();
+        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
     }
 
     #[test]
