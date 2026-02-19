@@ -210,29 +210,6 @@ impl<Block> BlockTree<Block> {
             .collect()
     }
 
-    /// Returns all the blockchains in the tree.
-    pub fn blockchains(&self) -> Vec<BlockChain<'_, Block>> {
-        if self.children.is_empty() {
-            return vec![BlockChain::new(&self.root)];
-        }
-
-        let mut tips = vec![];
-        for child in self.children.iter() {
-            tips.extend(
-                child
-                    .blockchains()
-                    .into_iter()
-                    .map(|bc| BlockChain {
-                        first: &self.root,
-                        successors: bc.into_chain(),
-                    })
-                    .collect::<Vec<_>>(),
-            );
-        }
-
-        tips
-    }
-
     fn get_child_blocks(&self) -> Vec<&Block> {
         self.children.iter().map(|c| &c.root).collect()
     }
@@ -592,7 +569,6 @@ mod test {
             successors: vec![],
         };
 
-        assert_eq!(block_tree.blockchains(), vec![expected_chain.clone()]);
         assert_eq!(
             Some((expected_chain, vec![])),
             block_tree.get_chain_with_tip(block_tree.root.block_hash())
@@ -612,7 +588,6 @@ mod test {
             let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
             children.push(block.clone());
             block_tree.extend(block).unwrap();
-            assert_eq!(block_tree.blockchains().len(), i);
         }
 
         assert_eq!(block_tree.children.len(), 4);
