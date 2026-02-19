@@ -397,32 +397,36 @@ impl<Block: ChainBlock> BlockTree<Block> {
             return (self_difficulty, 1, vec![&self.root]);
         }
 
-        let child_results: Vec<_> = self
-            .children
-            .iter()
-            .map(|c| c.main_chain_by_difficulty_inner(network))
-            .collect();
+        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
+        let mut best_chain: Vec<&Block> = vec![];
+        let mut contested = false;
 
-        let max_key = child_results
-            .iter()
-            .map(|(d, depth, _)| (*d, *depth))
-            .max()
-            .unwrap();
+        for child in self.children.iter() {
+            let (child_diff, child_depth, child_chain) =
+                child.main_chain_by_difficulty_inner(network);
+            let key = (child_diff, child_depth);
 
-        let total_difficulty = self_difficulty + max_key.0;
-        let total_depth = 1 + max_key.1;
+            match key.cmp(&best_key) {
+                std::cmp::Ordering::Greater => {
+                    best_key = key;
+                    best_chain = child_chain;
+                    contested = false;
+                }
+                std::cmp::Ordering::Equal => {
+                    contested = true;
+                }
+                std::cmp::Ordering::Less => {}
+            }
+        }
 
-        let mut matches = child_results
-            .into_iter()
-            .filter(|(d, depth, _)| (*d, *depth) == max_key);
-        let (_, _, mut chain) = matches.next().unwrap();
+        let total_difficulty = self_difficulty + best_key.0;
+        let total_depth = 1 + best_key.1;
 
-        if matches.next().is_none() {
-            chain.push(&self.root);
-            (total_difficulty, total_depth, chain)
-        } else {
-            // There are contested branches with the same difficulty and depth.
+        if contested {
             (total_difficulty, total_depth, vec![&self.root])
+        } else {
+            best_chain.push(&self.root);
+            (total_difficulty, total_depth, best_chain)
         }
     }
 
@@ -448,31 +452,35 @@ impl<Block: ChainBlock> BlockTree<Block> {
             return (self_difficulty, 1, 1);
         }
 
-        let child_results: Vec<_> = self
-            .children
-            .iter()
-            .map(|c| c.main_chain_length_by_difficulty_inner(network))
-            .collect();
+        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
+        let mut best_length = 0;
+        let mut contested = false;
 
-        let max_key = child_results
-            .iter()
-            .map(|(d, depth, _)| (*d, *depth))
-            .max()
-            .unwrap();
+        for child in self.children.iter() {
+            let (child_diff, child_depth, child_len) =
+                child.main_chain_length_by_difficulty_inner(network);
+            let key = (child_diff, child_depth);
 
-        let total_difficulty = self_difficulty + max_key.0;
-        let total_depth = 1 + max_key.1;
+            match key.cmp(&best_key) {
+                std::cmp::Ordering::Greater => {
+                    best_key = key;
+                    best_length = child_len;
+                    contested = false;
+                }
+                std::cmp::Ordering::Equal => {
+                    contested = true;
+                }
+                std::cmp::Ordering::Less => {}
+            }
+        }
 
-        let mut matches = child_results
-            .iter()
-            .filter(|(d, depth, _)| (*d, *depth) == max_key);
-        let best = matches.next().unwrap();
+        let total_difficulty = self_difficulty + best_key.0;
+        let total_depth = 1 + best_key.1;
 
-        if matches.next().is_none() {
-            (total_difficulty, total_depth, 1 + best.2)
-        } else {
-            // There are contested branches with the same difficulty and depth.
+        if contested {
             (total_difficulty, total_depth, 1)
+        } else {
+            (total_difficulty, total_depth, 1 + best_length)
         }
     }
 
