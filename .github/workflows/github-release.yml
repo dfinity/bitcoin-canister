@@ -8,12 +8,12 @@ on:
         required: true
         type: choice
         options:
-          - ic-btc-canister # Creates ic-btc-canister/release/YYYY-MM-DD
+          - ic-btc-canister # Creates release/YYYY-MM-DD
           - watchdog        # Creates watchdog/release/YYYY-MM-DD
 
 # Creates GitHub releases for date-based canisters:
-# - ic-btc-canister: date-based tag with WASM artifact
-# - watchdog: date-based tag with WASM artifact
+# - ic-btc-canister: tag release/YYYY-MM-DD with WASM artifact
+# - watchdog: tag watchdog/release/YYYY-MM-DD with WASM artifact
 
 jobs:
   canister-release:
@@ -30,10 +30,12 @@ jobs:
             echo "WASM_NAME=ic-btc-canister.wasm.gz" >> "$GITHUB_ENV"
             echo "INCLUDE_PATH=canister/**" >> "$GITHUB_ENV"
             echo "CANDID_PATH=canister/candid.did" >> "$GITHUB_ENV"
+            echo "TAG_PREFIX=release/" >> "$GITHUB_ENV"
           else
             echo "WASM_NAME=watchdog.wasm.gz" >> "$GITHUB_ENV"
             echo "INCLUDE_PATH=watchdog/**" >> "$GITHUB_ENV"
             echo "CANDID_PATH=watchdog/candid.did" >> "$GITHUB_ENV"
+            echo "TAG_PREFIX=watchdog/release/" >> "$GITHUB_ENV"
           fi
 
       - name: Checkout repository
@@ -83,20 +85,17 @@ jobs:
       - name: Generate release tag and notes
         run: |
           RELEASE_DATE=$(date +%Y-%m-%d)
-          RELEASE_TAG="${{ inputs.release_type }}/release/${RELEASE_DATE}"
+          RELEASE_TAG="${{ env.TAG_PREFIX }}${RELEASE_DATE}"
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
           echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
           
-          # Find previous tag: prefer <package>/release/*, fallback to release/*
-          PREV_TAG=$(git tag --list '${{ inputs.release_type }}/release/*' --sort=-version:refname | head -n1)
-          if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(git tag --list 'release/*' --sort=-version:refname | head -n1)
-          fi
+          # Find previous tag for this package (release/* or watchdog/release/*)
+          PREV_TAG=$(git tag --list '${{ env.TAG_PREFIX }}*' --sort=-version:refname | head -n1)
           
           # Generate changelog with git-cliff (scoped to package directory)
           # Strip the version title line (e.g., "## [release/2026-01-21] - 2026-01-21")
           CHANGELOG=$(git-cliff --config cliff.toml \
-            --tag-pattern "${{ inputs.release_type }}/release/.*" \
+            --tag-pattern "${{ env.TAG_PREFIX }}.*" \
             --include-path "${{ env.INCLUDE_PATH }}" \
             --unreleased \
             --tag "$RELEASE_TAG" \
@@ -130,7 +129,7 @@ jobs:
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ inputs.release_type }}/release/${{ env.RELEASE_DATE }}
+          name: ${{ env.RELEASE_TAG }}
           body: ${{ env.RELEASE_BODY }}
           files: |
             wasms/${{ env.WASM_NAME }}
