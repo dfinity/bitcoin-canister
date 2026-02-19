@@ -1266,10 +1266,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(
-                &block_0,
-                vec![&block_a, &block_b, &block_c, &block_d]
-            )
+            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c, &block_d])
         );
         assert_eq!(get_main_chain_length(&forest), 5);
     }
@@ -1474,16 +1471,28 @@ mod test {
 
         // After each insertion, verify consistency.
         push(&mut forest, &utxos, block_a).unwrap();
-        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+        assert_eq!(
+            get_main_chain_length(&forest),
+            get_main_chain(&forest).len()
+        );
 
         push(&mut forest, &utxos, block_b).unwrap();
-        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+        assert_eq!(
+            get_main_chain_length(&forest),
+            get_main_chain(&forest).len()
+        );
 
         push(&mut forest, &utxos, block_c).unwrap();
-        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+        assert_eq!(
+            get_main_chain_length(&forest),
+            get_main_chain(&forest).len()
+        );
 
         push(&mut forest, &utxos, block_d).unwrap();
-        assert_eq!(get_main_chain_length(&forest), get_main_chain(&forest).len());
+        assert_eq!(
+            get_main_chain_length(&forest),
+            get_main_chain(&forest).len()
+        );
     }
 
     #[test]
