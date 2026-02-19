@@ -2,150 +2,145 @@ benches:
   get_metrics:
     total:
       calls: 1
-      instructions: 8121805
+      instructions: 10448370
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   insert_300_blocks:
     total:
       calls: 1
-      instructions: 418031808
+      instructions: 414617708
       heap_increase: 12
       stable_memory_increase: 0
     scopes:
       validate:
         calls: 300
-        instructions: 368057945
+        instructions: 365300655
         heap_increase: 3
         stable_memory_increase: 0
       validate_block:
         calls: 300
-        instructions: 18304266
+        instructions: 18214941
         heap_increase: 1
         stable_memory_increase: 0
       validate_block/check_merkle_root:
         calls: 300
-        instructions: 8001912
+        instructions: 8003712
         heap_increase: 0
         stable_memory_increase: 0
       validate_block/ensure_unique_transactions:
         calls: 300
-        instructions: 8466456
+        instructions: 8376793
         heap_increase: 0
         stable_memory_increase: 0
       validate_header:
         calls: 300
-        instructions: 348634661
+        instructions: 345968123
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_headers:
     total:
       calls: 1
-      instructions: 2847929780
+      instructions: 2842587747
       heap_increase: 0
       stable_memory_increase: 0
     scopes:
       validate_header:
         calls: 100
-        instructions: 2805796533
+        instructions: 2800682113
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_headers_multiple_times:
     total:
       calls: 1
-      instructions: 10299886083
+      instructions: 10264510391
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
       validate_header:
         calls: 1000
-        instructions: 8994730158
+        instructions: 8970020542
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_with_10k_transactions:
     total:
       calls: 1
-      instructions: 1382977300
+      instructions: 1372415001
       heap_increase: 73
       stable_memory_increase: 0
     scopes:
       validate:
         calls: 1
-        instructions: 149605767
+        instructions: 149053954
         heap_increase: 20
         stable_memory_increase: 0
       validate_block:
         calls: 1
-        instructions: 149499954
+        instructions: 148948438
         heap_increase: 20
         stable_memory_increase: 0
       validate_block/check_merkle_root:
         calls: 1
-        instructions: 70700324
+        instructions: 70700251
         heap_increase: 0
         stable_memory_increase: 0
       validate_block/ensure_unique_transactions:
         calls: 1
-        instructions: 78795072
+        instructions: 78243689
         heap_increase: 20
         stable_memory_increase: 0
       validate_header:
         calls: 1
-        instructions: 102959
+        instructions: 102748
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_with_1k_transactions:
     total:
       calls: 1
-      instructions: 114250378
+      instructions: 113195149
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
       validate:
         calls: 1
-        instructions: 15139308
+        instructions: 15083097
         heap_increase: 2
         stable_memory_increase: 0
       validate_block:
         calls: 1
-        instructions: 15033495
+        instructions: 14977581
         heap_increase: 2
         stable_memory_increase: 0
       validate_block/check_merkle_root:
         calls: 1
-        instructions: 7117874
+        instructions: 7117801
         heap_increase: 0
         stable_memory_increase: 0
       validate_block/ensure_unique_transactions:
         calls: 1
-        instructions: 7911063
+        instructions: 7855282
         heap_increase: 2
         stable_memory_increase: 0
       validate_header:
         calls: 1
-        instructions: 102959
+        instructions: 102748
         heap_increase: 0
         stable_memory_increase: 0
   pre_upgrade_with_many_unstable_blocks:
     total:
       calls: 1
-      instructions: 5370720187
+      instructions: 5310505414
       heap_increase: 4088
       stable_memory_increase: 1792
     scopes:
-      serialize_blocktree:
-        calls: 1
-        instructions: 1940039130
-        heap_increase: 2039
-        stable_memory_increase: 0
       serialize_blocktree_flatten:
         calls: 1
-        instructions: 185083
+        instructions: 187205
         heap_increase: 0
         stable_memory_increase: 0
       serialize_blocktree_serialize_seq:
         calls: 1
-        instructions: 1939851167
+        instructions: 1902474842
         heap_increase: 2039
         stable_memory_increase: 0
-version: 0.3.0
+version: 0.4.0
