@@ -582,7 +582,7 @@ mod test {
         let mut block_tree = BlockTree::new(genesis_block);
 
         let mut children = vec![];
-        for i in 1..5 {
+        for _ in 1..5 {
             // Create different blocks extending the genesis block.
             // Each one of these should be a separate fork.
             let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
