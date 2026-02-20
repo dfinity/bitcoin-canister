@@ -210,29 +210,6 @@ impl<Block> BlockTree<Block> {
             .collect()
     }
 
-    /// Returns all the blockchains in the tree.
-    pub fn blockchains(&self) -> Vec<BlockChain<'_, Block>> {
-        if self.children.is_empty() {
-            return vec![BlockChain::new(&self.root)];
-        }
-
-        let mut tips = vec![];
-        for child in self.children.iter() {
-            tips.extend(
-                child
-                    .blockchains()
-                    .into_iter()
-                    .map(|bc| BlockChain {
-                        first: &self.root,
-                        successors: bc.into_chain(),
-                    })
-                    .collect::<Vec<_>>(),
-            );
-        }
-
-        tips
-    }
-
     fn get_child_blocks(&self) -> Vec<&Block> {
         self.children.iter().map(|c| &c.root).collect()
     }
@@ -368,6 +345,122 @@ impl<Block: ChainBlock> BlockTree<Block> {
         res
     }
 
+    /// Returns the main chain determined by most accumulated proof-of-work.
+    ///
+    /// At each node, the child subtree with the strictly highest accumulated
+    /// difficulty is followed. When accumulated difficulties are tied, the
+    /// deeper subtree (by block count) wins. If children still tie on both
+    /// criteria, the chain stops (contested tip).
+    ///
+    /// Runs in O(n) time where n is the number of blocks in the tree.
+    pub fn main_chain_by_difficulty(&self, network: Network) -> BlockChain<'_, Block> {
+        let (_, _, mut chain_rev) = self.main_chain_by_difficulty_inner(network);
+        chain_rev.reverse();
+        let mut chain = BlockChain::new(chain_rev[0]);
+        for &block in &chain_rev[1..] {
+            chain.push(block);
+        }
+        chain
+    }
+
+    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_reversed).
+    fn main_chain_by_difficulty_inner(
+        &self,
+        network: Network,
+    ) -> (DifficultyBasedDepth, usize, Vec<&Block>) {
+        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
+
+        if self.children.is_empty() {
+            return (self_difficulty, 1, vec![&self.root]);
+        }
+
+        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
+        let mut best_chain: Vec<&Block> = vec![];
+        let mut contested = false;
+
+        for child in self.children.iter() {
+            let (child_diff, child_depth, child_chain) =
+                child.main_chain_by_difficulty_inner(network);
+            let key = (child_diff, child_depth);
+
+            match key.cmp(&best_key) {
+                std::cmp::Ordering::Greater => {
+                    best_key = key;
+                    best_chain = child_chain;
+                    contested = false;
+                }
+                std::cmp::Ordering::Equal => {
+                    contested = true;
+                }
+                std::cmp::Ordering::Less => {}
+            }
+        }
+
+        let total_difficulty = self_difficulty + best_key.0;
+        let total_depth = 1 + best_key.1;
+
+        if contested {
+            (total_difficulty, total_depth, vec![&self.root])
+        } else {
+            best_chain.push(&self.root);
+            (total_difficulty, total_depth, best_chain)
+        }
+    }
+
+    /// Returns the length of the main chain determined by most accumulated
+    /// proof-of-work.
+    ///
+    /// See [`main_chain_by_difficulty`](Self::main_chain_by_difficulty) for the
+    /// definition.
+    ///
+    /// Runs in O(n) time where n is the number of blocks in the tree.
+    pub fn main_chain_length_by_difficulty(&self, network: Network) -> usize {
+        self.main_chain_length_by_difficulty_inner(network).2
+    }
+
+    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_length).
+    fn main_chain_length_by_difficulty_inner(
+        &self,
+        network: Network,
+    ) -> (DifficultyBasedDepth, usize, usize) {
+        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
+
+        if self.children.is_empty() {
+            return (self_difficulty, 1, 1);
+        }
+
+        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
+        let mut best_length = 0;
+        let mut contested = false;
+
+        for child in self.children.iter() {
+            let (child_diff, child_depth, child_len) =
+                child.main_chain_length_by_difficulty_inner(network);
+            let key = (child_diff, child_depth);
+
+            match key.cmp(&best_key) {
+                std::cmp::Ordering::Greater => {
+                    best_key = key;
+                    best_length = child_len;
+                    contested = false;
+                }
+                std::cmp::Ordering::Equal => {
+                    contested = true;
+                }
+                std::cmp::Ordering::Less => {}
+            }
+        }
+
+        let total_difficulty = self_difficulty + best_key.0;
+        let total_depth = 1 + best_key.1;
+
+        if contested {
+            (total_difficulty, total_depth, 1)
+        } else {
+            (total_difficulty, total_depth, 1 + best_length)
+        }
+    }
+
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
     /// along with its depth if it exists, and `None` otherwise.
     pub fn find_mut<'a>(
@@ -476,7 +569,6 @@ mod test {
             successors: vec![],
         };
 
-        assert_eq!(block_tree.blockchains(), vec![expected_chain.clone()]);
         assert_eq!(
             Some((expected_chain, vec![])),
             block_tree.get_chain_with_tip(block_tree.root.block_hash())
@@ -490,13 +582,12 @@ mod test {
         let mut block_tree = BlockTree::new(genesis_block);
 
         let mut children = vec![];
-        for i in 1..5 {
+        for _ in 1..5 {
             // Create different blocks extending the genesis block.
             // Each one of these should be a separate fork.
             let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
             children.push(block.clone());
             block_tree.extend(block).unwrap();
-            assert_eq!(block_tree.blockchains().len(), i);
         }
 
         assert_eq!(block_tree.children.len(), 4);
@@ -622,6 +713,15 @@ mod test {
             block_tree.difficulty_based_depth(Network::Mainnet),
             DifficultyBasedDepth::new(15)
         );
+    }
+
+    // Consistency: main_chain_length_by_difficulty always matches
+    // main_chain_by_difficulty().len().
+    #[proptest]
+    fn test_main_chain_length_matches_chain_len(tree: BlockTree) {
+        let chain = tree.main_chain_by_difficulty(Network::Regtest);
+        let length = tree.main_chain_length_by_difficulty(Network::Regtest);
+        prop_assert_eq!(chain.len(), length);
     }
 
     #[test]
