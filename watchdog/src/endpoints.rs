@@ -2,67 +2,13 @@ use crate::config::Network;
 use crate::transform_bitcoin_mempool;
 use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
-    print, transform_bitcoin_canister, transform_bitcoin_mainnet_api_bitaps_com,
-    transform_bitcoin_mainnet_api_blockchair_com, transform_bitcoin_mainnet_api_blockcypher_com,
-    transform_bitcoin_mainnet_blockchain_info, transform_bitcoin_mainnet_blockstream_info,
-    transform_dogecoin_canister, transform_dogecoin_mainnet_api_blockchair_com,
+    print, transform_bitcoin_mainnet_api_bitaps_com, transform_bitcoin_mainnet_api_blockchair_com,
+    transform_bitcoin_mainnet_api_blockcypher_com, transform_bitcoin_mainnet_blockchain_info,
+    transform_bitcoin_mainnet_blockstream_info, transform_dogecoin_mainnet_api_blockchair_com,
     transform_dogecoin_mainnet_api_blockcypher_com, transform_dogecoin_mainnet_tokenview,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
-use regex::Regex;
 use serde_json::json;
-
-/// Applies regex rule to parse bitcoin_canister block height.
-fn regex_height(text: String) -> Result<String, String> {
-    const RE_PATTERN: &str = r"\s*main_chain_height (\d+) \d+";
-    match Regex::new(RE_PATTERN) {
-        Err(e) => Err(format!("Regex: failed to compile: {}", e)),
-        Ok(re) => match re.captures(&text) {
-            None => Err("Regex: no match found.".to_string()),
-            Some(cap) => match cap.len() {
-                2 => Ok(String::from(&cap[1])),
-                x => Err(format!("Regex: expected 1 group exactly, provided {}.", x)),
-            },
-        },
-    }
-}
-
-/// Parses text for bitcoin_canister block height.
-fn parse_bitcoin_canister_height(text: String) -> Result<u64, String> {
-    let height = regex_height(text)?;
-    match height.parse::<u64>() {
-        Ok(height) => Ok(height),
-        Err(_) => Err(format!("Failed to parse height: {}", height)),
-    }
-}
-
-/// Parses text for dogecoin_canister block height.
-fn parse_dogecoin_canister_height(text: String) -> Result<u64, String> {
-    parse_bitcoin_canister_height(text)
-}
-
-/// Creates a config for fetching block data from bitcoin_canister.
-pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        &crate::storage::get_canister().get_canister_endpoint(),
-        Some(TransformFnWrapper {
-            name: "transform_bitcoin_canister",
-            func: transform_bitcoin_canister,
-        }),
-        |raw| {
-            apply_to_body(raw, |text| {
-                parse_bitcoin_canister_height(text)
-                    .map(|height| {
-                        json!({
-                            "height": height,
-                        })
-                        .to_string()
-                    })
-                    .unwrap_or_default()
-            })
-        },
-    )
-}
 
 /// Creates a config for fetching mainnet block data from api.bitaps.com.
 pub fn endpoint_bitcoin_mainnet_api_bitaps_com() -> HttpRequestConfig {
@@ -204,29 +150,6 @@ pub fn endpoint_bitcoin_testnet_mempool() -> HttpRequestConfig {
     endpoint_bitcoin_mempool(Network::BitcoinTestnet)
 }
 
-/// Creates a config for fetching block data from dogecoin_canister.
-pub fn endpoint_dogecoin_canister() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        &crate::storage::get_canister().get_canister_endpoint(),
-        Some(TransformFnWrapper {
-            name: "transform_dogecoin_canister",
-            func: transform_dogecoin_canister,
-        }),
-        |raw| {
-            apply_to_body(raw, |text| {
-                parse_dogecoin_canister_height(text)
-                    .map(|height| {
-                        json!({
-                            "height": height,
-                        })
-                        .to_string()
-                    })
-                    .unwrap_or_default()
-            })
-        },
-    )
-}
-
 /// Creates a config for fetching Dogecoin mainnet block data from api.blockchair.com.
 pub fn endpoint_dogecoin_mainnet_api_blockchair_com() -> HttpRequestConfig {
     HttpRequestConfig::new(
@@ -331,7 +254,6 @@ fn apply_to_body_json(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::Canister;
     use crate::test_utils;
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
@@ -404,52 +326,6 @@ mod test {
         .await;
     }
 
-    fn setup_canister(canister: Canister) {
-        crate::storage::set_canister_config(canister);
-    }
-
-    #[tokio::test]
-    async fn test_bitcoin_canister_mainnet() {
-        setup_canister(Canister::BitcoinMainnet);
-        run_http_request_test(
-            endpoint_bitcoin_canister(),
-            "https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics",
-            test_utils::BITCOIN_MAINNET_CANISTER_RESPONSE,
-            json!({
-                "height": 700007,
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_bitcoin_canister_mainnet_staging() {
-        setup_canister(Canister::BitcoinMainnetStaging);
-        run_http_request_test(
-            endpoint_bitcoin_canister(),
-            "https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics",
-            test_utils::BITCOIN_MAINNET_CANISTER_RESPONSE,
-            json!({
-                "height": 700007,
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_bitcoin_canister_testnet() {
-        setup_canister(Canister::BitcoinTestnet);
-        run_http_request_test(
-            endpoint_bitcoin_canister(),
-            "https://g4xu7-jiaaa-aaaan-aaaaq-cai.raw.ic0.app/metrics",
-            test_utils::BITCOIN_TESTNET_CANISTER_RESPONSE,
-            json!({
-                "height": 55001,
-            }),
-        )
-        .await;
-    }
-
     #[tokio::test]
     async fn test_blockchain_info_height() {
         run_http_request_test(
@@ -497,34 +373,6 @@ mod test {
             test_utils::DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
             json!({
                 "height": 5926989,
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_dogecoin_canister_mainnet() {
-        setup_canister(Canister::DogecoinMainnet);
-        run_http_request_test(
-            endpoint_dogecoin_canister(),
-            "https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics",
-            test_utils::DOGECOIN_MAINNET_CANISTER_RESPONSE,
-            json!({
-                "height": 5931098,
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
-    async fn test_dogecoin_staging_canister_mainnet() {
-        setup_canister(Canister::DogecoinMainnetStaging);
-        run_http_request_test(
-            endpoint_dogecoin_canister(),
-            "https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics",
-            test_utils::DOGECOIN_MAINNET_CANISTER_RESPONSE,
-            json!({
-                "height": 5931098,
             }),
         )
         .await;
@@ -581,14 +429,12 @@ mod test {
         assert_eq!(
             names,
             vec![
-                "transform_bitcoin_canister",
                 "transform_bitcoin_mainnet_api_bitaps_com",
                 "transform_bitcoin_mainnet_api_blockchair_com",
                 "transform_bitcoin_mainnet_api_blockcypher_com",
                 "transform_bitcoin_mainnet_blockchain_info",
                 "transform_bitcoin_mainnet_blockstream_info",
                 "transform_bitcoin_mempool",
-                "transform_dogecoin_canister",
                 "transform_dogecoin_mainnet_api_blockchair_com",
                 "transform_dogecoin_mainnet_api_blockcypher_com",
                 "transform_dogecoin_mainnet_tokenview",
@@ -596,49 +442,15 @@ mod test {
         );
     }
 
-    #[test]
-    fn test_height_regex() {
-        let test_cases = [
-            (r#"main_chain_height 700007 1680014894644"#, Ok(700007)),
-            (
-                r#"    main_chain_height 700007 1680014894644   "#,
-                Ok(700007),
-            ),
-            (
-                r#"
-                    # HELP main_chain_height Height of the main chain.
-                    # TYPE main_chain_height gauge
-                    main_chain_height 700007 1680014894644
-                    # HELP stable_height The height of the latest stable block.
-                    # TYPE stable_height gauge
-                    stable_height 782801 1680014894644
-                "#,
-                Ok(700007),
-            ),
-            (r#"700007"#, Err("Regex: no match found.".to_string())),
-            (
-                r#"main_chain_height 123456789012345678901234567890 123"#,
-                Err("Failed to parse height: 123456789012345678901234567890".to_string()),
-            ),
-        ];
-
-        for (text, expected) in test_cases {
-            let result = parse_bitcoin_canister_height(text.to_string());
-            assert_eq!(result, expected);
-        }
-    }
-
     #[tokio::test]
     async fn test_http_response_404() {
         let expected_status = candid::Nat::from(404u16);
         let test_cases = [
-            endpoint_bitcoin_canister(),
             endpoint_bitcoin_mainnet_api_blockchair_com(),
             endpoint_bitcoin_mainnet_api_blockcypher_com(),
             endpoint_bitcoin_mainnet_blockchain_info(),
             endpoint_bitcoin_mainnet_blockstream_info(),
             endpoint_bitcoin_testnet_mempool(),
-            endpoint_dogecoin_canister(),
             endpoint_dogecoin_mainnet_api_blockchair_com(),
             endpoint_dogecoin_mainnet_api_blockcypher_com(),
             endpoint_dogecoin_mainnet_tokenview(),

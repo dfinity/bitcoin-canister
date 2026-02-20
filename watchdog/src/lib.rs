@@ -36,6 +36,9 @@ thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo>> = RefCell::new(HashMap::new());
 
+    /// The last fetched main chain height of the monitored canister.
+    static CANISTER_HEIGHT: RefCell<Option<u64>> = const { RefCell::new(None) };
+
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
 }
@@ -75,10 +78,18 @@ fn start_block_info_fetch_loop() {
     );
 }
 
-/// Fetches the data from the external APIs and stores it in the local storage.
+/// Fetches the data from the external APIs and canister monitored and stores it in the local storage.
 async fn fetch_block_info_data() {
-    let data = crate::fetch::fetch_all_data().await;
-    data.into_iter().for_each(crate::storage::insert_block_info);
+    let explorer_data = crate::fetch::fetch_all_providers_data().await;
+    for info in explorer_data {
+        crate::storage::insert_block_info(info);
+    }
+
+    let canister_height = crate::fetch::fetch_canister_height().await;
+    crate::storage::set_canister_height(canister_height);
+    if canister_height.is_none() {
+        crate::print("Error getting canister main chain height.");
+    }
 }
 
 /// Periodically fetches data and sets the API access to the canister monitored.
@@ -158,11 +169,6 @@ fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> Tim
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_bitcoin_canister().transform(raw)
-}
-
-#[query]
 fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
 }
@@ -190,11 +196,6 @@ fn transform_bitcoin_mainnet_blockstream_info(raw: TransformArgs) -> HttpRequest
 #[query]
 fn transform_bitcoin_mempool(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_mainnet_mempool().transform(raw)
-}
-
-#[query]
-fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_canister().transform(raw)
 }
 
 #[query]

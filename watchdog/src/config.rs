@@ -125,28 +125,6 @@ impl Canister {
             }
         }
     }
-
-    pub fn get_canister_endpoint(&self) -> String {
-        let principal = self.canister_principal().to_text();
-        let suffix = match self.subnet_type() {
-            SubnetType::System => "raw.ic0.app",
-            SubnetType::Application => "raw.icp0.io",
-        };
-        format!("https://{principal}.{suffix}/metrics")
-    }
-
-    /// Returns the canister provider.
-    pub fn provider(&self) -> Box<dyn BlockProvider> {
-        match self {
-            Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => {
-                Box::new(BitcoinMainnetProviderBlockApi::BitcoinCanister)
-            }
-            Canister::BitcoinTestnet => Box::new(BitcoinTestnetProviderBlockApi::BitcoinCanister),
-            Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-                Box::new(DogecoinProviderBlockApi::DogecoinCanister)
-            }
-        }
-    }
 }
 
 /// Stored configuration.
@@ -240,9 +218,9 @@ impl Config {
         }
     }
 
-    /// Returns all providers (explorers + canister) parsed from stored strings.
+    /// Returns all providers parsed from stored strings.
     pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
-        let explorers: Vec<Box<dyn BlockProvider>> = match canister {
+        match canister {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => self
                 .explorers
                 .iter()
@@ -261,11 +239,7 @@ impl Config {
                 .filter_map(|s| s.parse::<DogecoinProviderBlockApi>().ok())
                 .map(|p| Box::new(p) as Box<dyn BlockProvider>)
                 .collect(),
-        };
-        explorers
-            .into_iter()
-            .chain(std::iter::once(canister.provider()))
-            .collect()
+        }
     }
 
     /// Returns the number of blocks behind threshold as a negative number.
@@ -326,37 +300,6 @@ mod test {
     ];
 
     #[test]
-    fn test_canister_endpoint_contains_principal() {
-        for canister in ALL_CANISTERS {
-            let endpoint = canister.get_canister_endpoint();
-            let principal = canister.canister_principal().to_text();
-            assert!(
-                endpoint.contains(&principal),
-                "Endpoint {} should contain principal {}",
-                endpoint,
-                principal
-            );
-        }
-    }
-
-    #[test]
-    fn test_canister_provider() {
-        for canister in ALL_CANISTERS {
-            let provider_name = canister.provider().name();
-            match canister {
-                Canister::BitcoinMainnet
-                | Canister::BitcoinMainnetStaging
-                | Canister::BitcoinTestnet => {
-                    assert_eq!(provider_name, "bitcoin_canister");
-                }
-                Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => {
-                    assert_eq!(provider_name, "dogecoin_canister");
-                }
-            }
-        }
-    }
-
-    #[test]
     fn test_staging_canisters_use_application_subnet() {
         assert_eq!(
             Canister::BitcoinMainnetStaging.subnet_type(),
@@ -410,11 +353,9 @@ mod test {
             assert_eq!(config.subnet_type, canister.subnet_type());
             assert!(!config.explorers.is_empty());
 
-            // Verify get_providers includes canister provider
+            // Verify get_providers returns only explorers (canister height is fetched separately)
             let providers = config.get_providers(canister);
-            assert_eq!(providers.len(), config.explorers.len() + 1);
-            let provider_names: Vec<String> = providers.iter().map(|p| p.name()).collect();
-            assert!(provider_names.contains(&canister.provider().name()));
+            assert_eq!(providers.len(), config.explorers.len());
         }
     }
 

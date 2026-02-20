@@ -1,7 +1,12 @@
 use crate::endpoints::*;
 use crate::http::HttpRequestConfig;
 
-/// Mocks all the Bitcoin mainnet outcalls to be successful.
+// Height values for canister inter-canister call mocks (use with crate::fetch::mock_canister_height)
+pub const BITCOIN_MAINNET_CANISTER_HEIGHT: u64 = 700007;
+pub const BITCOIN_TESTNET_CANISTER_HEIGHT: u64 = 55001;
+pub const DOGECOIN_MAINNET_CANISTER_HEIGHT: u64 = 5931098;
+
+/// Mocks all the Bitcoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
         (
@@ -15,10 +20,6 @@ pub fn mock_bitcoin_mainnet_outcalls() {
         (
             endpoint_bitcoin_mainnet_api_blockcypher_com(),
             BITCOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
-        ),
-        (
-            endpoint_bitcoin_canister(),
-            BITCOIN_MAINNET_CANISTER_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_blockchain_info(),
@@ -43,18 +44,12 @@ pub fn mock_bitcoin_mainnet_outcalls() {
     }
 }
 
-/// Mocks all the Bitcoin testnet outcalls to be successful.
+/// Mocks all the Bitcoin testnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_testnet_outcalls() {
-    let mocks = [
-        (
-            endpoint_bitcoin_canister(),
-            BITCOIN_TESTNET_CANISTER_RESPONSE,
-        ),
-        (
-            endpoint_bitcoin_testnet_mempool(),
-            BITCOIN_TESTNET_MEMPOOL_RESPONSE,
-        ),
-    ];
+    let mocks = [(
+        endpoint_bitcoin_testnet_mempool(),
+        BITCOIN_TESTNET_MEMPOOL_RESPONSE,
+    )];
     for (config, response_body) in mocks {
         let request = config.request();
         let mock_response = ic_http::create_response()
@@ -65,7 +60,7 @@ pub fn mock_bitcoin_testnet_outcalls() {
     }
 }
 
-/// Mocks all the Dogecoin mainnet outcalls to be successful.
+/// Mocks all the Dogecoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_dogecoin_mainnet_outcalls() {
     let mocks = [
         (
@@ -75,10 +70,6 @@ pub fn mock_dogecoin_mainnet_outcalls() {
         (
             endpoint_dogecoin_mainnet_api_blockcypher_com(),
             DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
-        ),
-        (
-            endpoint_dogecoin_canister(),
-            DOGECOIN_MAINNET_CANISTER_RESPONSE,
         ),
         (
             endpoint_dogecoin_mainnet_tokenview(),
@@ -99,19 +90,17 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
     vec![
         endpoint_bitcoin_mainnet_api_blockchair_com(),
         endpoint_bitcoin_mainnet_api_blockcypher_com(),
-        endpoint_bitcoin_canister(),
         endpoint_bitcoin_mainnet_blockchain_info(),
         endpoint_bitcoin_mainnet_blockstream_info(),
         endpoint_dogecoin_mainnet_api_blockchair_com(),
         endpoint_dogecoin_mainnet_api_blockcypher_com(),
-        endpoint_dogecoin_canister(),
         endpoint_dogecoin_mainnet_tokenview(),
         endpoint_bitcoin_mainnet_mempool(),
         endpoint_bitcoin_testnet_mempool(),
     ]
 }
 
-/// Mocks all the outcalls to fail with status code 404.
+/// Mocks all the HTTP explorer outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
     for config in all_mock_outcalls() {
         let request = config.request();
@@ -217,41 +206,8 @@ pub const BITCOIN_MAINNET_BLOCKCHAIN_INFO_RESPONSE: &str = r#"700004"#;
 // https://blockstream.info/api/blocks/tip/height
 pub const BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE: &str = r#"700005"#;
 
-// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics (staging)
-pub const BITCOIN_MAINNET_CANISTER_RESPONSE: &str = r#"{
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 700007 1680014894644
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 782801 1680014894644
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 86798838 1680014894644
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 86294218 1680014894644
-}"#;
-
 // https://mempool.space/api/blocks/tip/height
 pub const BITCOIN_MAINNET_MEMPOOL_RESPONSE: &str = r#"700008"#;
-
-// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-pub const BITCOIN_TESTNET_CANISTER_RESPONSE: &str = r#"{
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 55001 1682533330541
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 2430866 1682533330541
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 28755498 1682533330541
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 28388537 1682533330541
-}"#;
 
 // https://mempool.space/testnet4/api/blocks/tip/height
 pub const BITCOIN_TESTNET_MEMPOOL_RESPONSE: &str = r#"55002"#;
@@ -341,23 +297,6 @@ pub const DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE: &str = r#"{
     "last_fork_height": 5925951,
     "last_fork_hash": "5f1e661913de85c9fee78fdd998eefeef3284d28ed3c069e96af6414fa8be377"
 }"#;
-
-// https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics
-// https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics
-pub const DOGECOIN_MAINNET_CANISTER_RESPONSE: &str = r#"
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 5931098 1761310299589
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 5930458 1761310299589
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 202812896 1761310299589
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 202383805 1761310299589
-"#;
 
 // https://doge.tokenview.io/api/chainstat/doge
 pub const DOGECOIN_MAINNET_TOKENVIEW_RESPONSE: &str = r#"{
