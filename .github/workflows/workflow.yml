@@ -3,7 +3,7 @@ name: CI
 env:
   RUST_VERSION: 1.90.0
   DFX_VERSION: 0.29.2
-  POCKET_IC_SERVER_VERSION: 12.0.0
+  POCKET_IC_SERVER_VERSION: 11.0.0
   CARGO_TERM_COLOR: always # Force Cargo to use colors
   TERM: xterm-256color
 
