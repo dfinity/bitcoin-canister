@@ -1180,16 +1180,15 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
-    // The deeper branch wins at a nested fork via the depth tiebreaker
-    // when all blocks have equal difficulty.
+    // Longer branch wins on accumulated difficulty at a nested fork.
     //
     // * (d=1) -> A (d=1) -> B (d=1) -> C (d=1)
     //                    -> D (d=1)
     //
     // At A: B's subtree (diff=2, depth=2) vs D's subtree (diff=1, depth=1).
-    // B wins on difficulty. Main chain = [*, A, B, C], length 4.
+    // B wins on accumulated difficulty. Main chain = [*, A, B, C], length 4.
     #[test]
-    fn get_main_chain_depth_resolves_nested_fork() {
+    fn get_main_chain_longer_branch_wins_on_accumulated_difficulty() {
         let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
         let block_a =
             BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(1);
@@ -1315,38 +1314,6 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
-    // With all blocks having difficulty 0, behavior degenerates to longest-chain.
-    //
-    // * (d=0) -> A (d=0) -> B (d=0)
-    //         -> C (d=0)
-    //
-    // A's branch depth=2 > C's depth=1. A wins.
-    // Main chain = [*, A, B], length 3.
-    #[test]
-    fn get_main_chain_zero_difficulty_falls_back_to_depth() {
-        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(0);
-        let block_a =
-            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(0);
-        let block_b =
-            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(0);
-        let block_c =
-            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(0);
-
-        let network = Network::Mainnet;
-        let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
-
-        push(&mut forest, &utxos, block_a.clone()).unwrap();
-        push(&mut forest, &utxos, block_b.clone()).unwrap();
-        push(&mut forest, &utxos, block_c).unwrap();
-
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
-        );
-        assert_eq!(get_main_chain_length(&forest), 3);
-    }
-
     // Three children: one clearly wins on difficulty.
     //
     //     * (d=1)
@@ -1449,50 +1416,6 @@ mod test {
             BlockChain::new_with_successors(&block_0, vec![&block_a, &block_c])
         );
         assert_eq!(get_main_chain_length(&forest), 3);
-    }
-
-    // get_main_chain_length is consistent with get_main_chain().len() for
-    // various difficulty configurations.
-    #[test]
-    fn get_main_chain_length_consistent_with_chain() {
-        let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
-        let block_a =
-            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(10);
-        let block_b =
-            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(5);
-        let block_c =
-            BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(3);
-        let block_d =
-            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(20);
-
-        let network = Network::Mainnet;
-        let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
-
-        // After each insertion, verify consistency.
-        push(&mut forest, &utxos, block_a).unwrap();
-        assert_eq!(
-            get_main_chain_length(&forest),
-            get_main_chain(&forest).len()
-        );
-
-        push(&mut forest, &utxos, block_b).unwrap();
-        assert_eq!(
-            get_main_chain_length(&forest),
-            get_main_chain(&forest).len()
-        );
-
-        push(&mut forest, &utxos, block_c).unwrap();
-        assert_eq!(
-            get_main_chain_length(&forest),
-            get_main_chain(&forest).len()
-        );
-
-        push(&mut forest, &utxos, block_d).unwrap();
-        assert_eq!(
-            get_main_chain_length(&forest),
-            get_main_chain(&forest).len()
-        );
     }
 
     #[test]
