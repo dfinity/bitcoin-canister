@@ -87,7 +87,6 @@ check_health_status_v2_fields() {
   FIELDS=(
     "canister_height"
     "explorer_height"
-    "height_diff"
     "height_status"
     "explorers"
   )
