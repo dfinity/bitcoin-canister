@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# Configure dfx.json to use pre-built WASM from wasms/ directory instead of building.
-# This is used in CI where the WASM is downloaded from the canister-build-reproducibility job.
+# Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
+# When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
 use_prebuilt_watchdog_wasm() {
-  sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
+  if [[ -f ../../wasms/watchdog.wasm.gz ]]; then
+    sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
+  fi
 }
 
 # Function to deploy the watchdog canister for mainnet bitcoin_canister using pre-built WASM.
