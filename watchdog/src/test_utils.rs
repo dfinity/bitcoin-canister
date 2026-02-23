@@ -81,8 +81,8 @@ pub fn mock_dogecoin_mainnet_outcalls() {
             DOGECOIN_MAINNET_CANISTER_RESPONSE,
         ),
         (
-            endpoint_dogecoin_mainnet_tokenview(),
-            DOGECOIN_MAINNET_TOKENVIEW_RESPONSE,
+            endpoint_dogecoin_mainnet_psy_protocol(),
+            DOGECOIN_MAINNET_PSY_PROTOCOL_RESPONSE,
         ),
     ];
     for (config, response_body) in mocks {
@@ -105,7 +105,7 @@ fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
         endpoint_dogecoin_mainnet_api_blockchair_com(),
         endpoint_dogecoin_mainnet_api_blockcypher_com(),
         endpoint_dogecoin_canister(),
-        endpoint_dogecoin_mainnet_tokenview(),
+        endpoint_dogecoin_mainnet_psy_protocol(),
         endpoint_bitcoin_mainnet_mempool(),
         endpoint_bitcoin_testnet_mempool(),
     ]
@@ -359,24 +359,5 @@ pub const DOGECOIN_MAINNET_CANISTER_RESPONSE: &str = r#"
     address_utxos_length 202383805 1761310299589
 "#;
 
-// https://doge.tokenview.io/api/chainstat/doge
-pub const DOGECOIN_MAINNET_TOKENVIEW_RESPONSE: &str = r#"{
-    "code": 1,
-    "msg": "成功",
-    "enMsg": "SUCCESS",
-    "data": {
-        "priceUsd": "0.112765",
-        "changeUsd24h": "1.08",
-        "totalSupply": "151482236295.70523",
-        "sentValue24H": "4864251870.993262",
-        "hashrate": "3172090662519395.0",
-        "addressCount": "111151004.0",
-        "difficulty": "46047401.610852025",
-        "block_no": "5931072",
-        "txCount24H": 15704,
-        "size": "121449476",
-        "holders": 7164346,
-        "txCount": 406888172,
-        "turnoverRate": "3.21"
-    }
-}"#;
+// https://doge-electrs-demo.qed.me/blocks/tip/height
+pub const DOGECOIN_MAINNET_PSY_PROTOCOL_RESPONSE: &str = r#"5931072"#;

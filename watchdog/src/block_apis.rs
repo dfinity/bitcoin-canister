@@ -144,8 +144,8 @@ pub enum DogecoinProviderBlockApi {
     ApiBlockchairCom,
     #[strum(serialize = "dogecoin_api_blockcypher_com_mainnet")]
     ApiBlockcypherCom,
-    #[strum(serialize = "dogecoin_tokenview_mainnet")]
-    TokenView,
+    #[strum(serialize = "dogecoin_psy_protocol_mainnet")]
+    PsyProtocol,
 }
 
 #[async_trait]
@@ -163,8 +163,8 @@ impl BlockProvider for DogecoinProviderBlockApi {
                     .send_request_json()
                     .await
             }
-            Self::TokenView => {
-                endpoint_dogecoin_mainnet_tokenview()
+            Self::PsyProtocol => {
+                endpoint_dogecoin_mainnet_psy_protocol()
                     .send_request_json()
                     .await
             }
@@ -270,8 +270,8 @@ mod test {
             "dogecoin_api_blockcypher_com_mainnet"
         );
         assert_eq!(
-            DogecoinProviderBlockApi::TokenView.to_string(),
-            "dogecoin_tokenview_mainnet"
+            DogecoinProviderBlockApi::PsyProtocol.to_string(),
+            "dogecoin_psy_protocol_mainnet"
         );
 
         assert_eq!(
@@ -433,11 +433,11 @@ mod test {
         }
 
         #[tokio::test]
-        async fn test_tokenview_mainnet() {
+        async fn test_psy_protocol_mainnet() {
             test_utils::mock_dogecoin_mainnet_outcalls();
             run_test(
-                DogecoinProviderBlockApi::TokenView,
-                vec![(endpoint_dogecoin_mainnet_tokenview(), 1)],
+                DogecoinProviderBlockApi::PsyProtocol,
+                vec![(endpoint_dogecoin_mainnet_psy_protocol(), 1)],
                 json!({
                     "height": 5931072,
                 }),
