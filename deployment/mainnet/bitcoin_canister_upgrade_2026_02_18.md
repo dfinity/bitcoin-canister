@@ -18,9 +18,9 @@ Previous Bitcoin canister proposal: https://dashboard.internetcomputer.org/propo
 
 This upgrade adds the `get_blockchain_info` endpoint to the Bitcoin canister. This endpoint allows caller to query the canister for blockchain information, which includes the latest height, the hash, the timestamp and the difficulty the latest block. This endpoint can be called even if the API of the canister is disabled or if the canister is not in sync with the adapter. Later, the watchdog canister will use this endpoint to check the health of the Bitcoin canister instead of getting the latest height from the /metrics endpoint through HTTPs outcalls.
 
-Additionally, this upgrade adds network validation for addresses in `get_balance` and `get_utxos` requests so that an error is returned to the user in case the address is for a different network (e.g. regtest address for the mainnet canister).
+Additionally, this upgrade adds network validation for addresses in `get_balance` and `get_utxos` requests so that an error is returned to the user if the address is for a different network (e.g. regtest address for the mainnet canister).
 
-Finally, this upgrade adds unified canister_arg with init and upgrade variants to ease construction of the init and upgrade arguments of the canister.
+Finally, this upgrade adds unified canister arguments with init and upgrade variants to ease construction of the init and upgrade arguments of the canister.
 
 
 ## Release Notes
