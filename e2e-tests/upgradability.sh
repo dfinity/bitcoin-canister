@@ -66,7 +66,7 @@ fi
 use_prebuilt_bitcoin_wasm
 
 echo "Deploy new version of canister..."
-dfx deploy --no-wallet bitcoin --argument "(variant {init = record {}})"
+dfx deploy --no-wallet bitcoin --argument "(variant {upgrade})"
 
 dfx canister start bitcoin
 dfx canister stop bitcoin
