@@ -208,8 +208,8 @@ fn transform_dogecoin_mainnet_api_blockcypher_com(raw: TransformArgs) -> HttpReq
 }
 
 #[query]
-fn transform_dogecoin_mainnet_tokenview(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_mainnet_tokenview().transform(raw)
+fn transform_dogecoin_mainnet_psy_protocol(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_psy_protocol().transform(raw)
 }
 
 #[cfg(test)]
