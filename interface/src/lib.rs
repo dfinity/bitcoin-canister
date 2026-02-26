@@ -796,10 +796,12 @@ impl Fees {
 
 /// Information about the blockchain as seen by the canister.
 ///
-/// Currently returns information about the main chain tip. The main chain is the
+/// Returns information about the main chain tip. The main chain is the
 /// canister's best guess at what the Bitcoin network considers the canonical chain.
-/// It is defined as the longest chain with an "uncontested" tip — meaning there
-/// exists no other block at the same height as the tip.
+/// It is defined as the chain with the most accumulated proof-of-work (difficulty),
+/// following Bitcoin's consensus rule. When accumulated difficulties are tied,
+/// the longest branch (by block count) wins. If branches still tie on both
+/// criteria, the chain stops at the fork point (contested tip).
 #[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct BlockchainInfo {
     /// The height of the main chain tip.
