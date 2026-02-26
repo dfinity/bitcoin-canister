@@ -81,6 +81,34 @@ check_health_status_data() {
   fi
 }
 
+# Function to check for presence of specific fields in the health status v2
+# and that canister_height and explorer_height are not null.
+check_health_status_v2_fields() {
+  FIELDS=(
+    "canister_height"
+    "explorer_height"
+    "height_status"
+    "explorers"
+  )
+  
+  health_status=$(dfx canister call watchdog health_status_v2 --query)
+  for field in "${FIELDS[@]}"; do
+    if ! [[ $health_status == *"$field = "* ]]; then
+      echo "FAIL: $field not found in health_status_v2 of ${0##*/}"
+      exit 3
+    fi
+  done
+
+  if [[ $health_status == *"canister_height = null"* ]]; then
+    echo "FAIL: canister_height is null in health_status_v2 of ${0##*/}"
+    exit 3
+  fi
+  if [[ $health_status == *"explorer_height = null"* ]]; then
+    echo "FAIL: explorer_height is null in health_status_v2 of ${0##*/}"
+    exit 3
+  fi
+}
+
 # Function to check for presence of specific names in the metrics.
 check_metric_names() {
   METRIC_NAMES=(
