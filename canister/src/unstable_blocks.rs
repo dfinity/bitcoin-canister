@@ -297,7 +297,7 @@ pub fn push(
 /// following Bitcoin's consensus rule. At each fork, the branch with the
 /// strictly highest accumulated difficulty is followed. When accumulated
 /// difficulties are tied, the longest branch (by block count) wins. If
-/// branches still tie on both criteria, the chain stops at the fork point
+/// branches still tie on both criteria, the chain ends at the fork point
 /// (contested tip).
 pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, Block> {
     blocks.tree.main_chain_by_difficulty(blocks.network)

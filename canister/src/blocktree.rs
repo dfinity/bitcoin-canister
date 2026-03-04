@@ -350,7 +350,7 @@ impl<Block: ChainBlock> BlockTree<Block> {
     /// At each node, the child subtree with the strictly highest accumulated
     /// difficulty is followed. When accumulated difficulties are tied, the
     /// deeper subtree (by block count) wins. If children still tie on both
-    /// criteria, the chain stops (contested tip).
+    /// criteria, the chain ends at this node (contested tip).
     ///
     /// Runs in O(n) time where n is the number of blocks in the tree.
     pub fn main_chain_by_difficulty(&self, network: Network) -> BlockChain<'_, Block> {
