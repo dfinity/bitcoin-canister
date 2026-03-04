@@ -11,6 +11,7 @@ use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
+use std::cell::Cell;
 
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
@@ -69,6 +70,9 @@ pub struct UnstableBlocks {
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
+    // Cached length of the main chain. Invalidated on `push` and `pop`.
+    #[serde(skip)]
+    cached_main_chain_length: Cell<Option<usize>>,
 }
 
 impl UnstableBlocks {
@@ -85,6 +89,7 @@ impl UnstableBlocks {
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
+            cached_main_chain_length: Cell::new(None),
         }
     }
 
@@ -249,6 +254,8 @@ pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
 pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> {
     let stable_child_idx = get_stable_child(blocks)?;
 
+    blocks.cached_main_chain_length.set(None);
+
     // Replace the unstable block tree with that of the stable child.
     let mut tree = blocks.tree.remove_child(stable_child_idx);
     std::mem::swap(&mut tree, &mut blocks.tree);
@@ -276,6 +283,8 @@ pub fn push(
         .tree
         .find_mut(&block.header().prev_blockhash.into())
         .ok_or(BlockDoesNotExtendTree(block_hash))?;
+
+    blocks.cached_main_chain_length.set(None);
 
     let height = utxos.next_height() + depth + 1;
 
@@ -305,8 +314,15 @@ pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, Block> {
 
 /// Returns the length of the "main chain".
 /// See `get_main_chain` for what defines a main chain.
+///
+/// The result is cached and recomputed when the tree is mutated (via `push` or `pop`).
 pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
-    blocks.tree.main_chain_length_by_difficulty(blocks.network)
+    if let Some(len) = blocks.cached_main_chain_length.get() {
+        return len;
+    }
+    let len = blocks.tree.main_chain_length_by_difficulty(blocks.network);
+    blocks.cached_main_chain_length.set(Some(len));
+    len
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
@@ -1693,5 +1709,50 @@ mod test {
             testnet_unstable_max_depth_difference(MAX_UNSTABLE_BLOCKS + 1, stability_threshold),
             Depth::new(stability_threshold as u64)
         );
+    }
+
+    #[test]
+    fn cached_main_chain_length_invalidated_on_push() {
+        let block_0 = BlockBuilder::genesis().build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+
+        // Cache is empty initially.
+        assert_eq!(forest.cached_main_chain_length.get(), None);
+
+        // First call populates the cache.
+        assert_eq!(get_main_chain_length(&forest), 1);
+        assert_eq!(forest.cached_main_chain_length.get(), Some(1));
+
+        // Push invalidates the cache and the new value is correct.
+        push(&mut forest, &utxos, block_1).unwrap();
+        assert_eq!(forest.cached_main_chain_length.get(), None);
+        assert_eq!(get_main_chain_length(&forest), 2);
+        assert_eq!(forest.cached_main_chain_length.get(), Some(2));
+    }
+
+    #[test]
+    fn cached_main_chain_length_invalidated_on_pop() {
+        let block_0 = BlockBuilder::genesis().build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+
+        let network = Network::Mainnet;
+        let utxos = UtxoSet::new(network);
+        let mut forest = UnstableBlocks::new(&utxos, 0, block_0.clone(), network);
+        push(&mut forest, &utxos, block_1).unwrap();
+        push(&mut forest, &utxos, block_2).unwrap();
+
+        assert_eq!(get_main_chain_length(&forest), 3);
+        assert_eq!(forest.cached_main_chain_length.get(), Some(3));
+
+        // Pop invalidates the cache and the new value is correct.
+        pop(&mut forest, 0);
+        assert_eq!(forest.cached_main_chain_length.get(), None);
+        assert_eq!(get_main_chain_length(&forest), 2);
+        assert_eq!(forest.cached_main_chain_length.get(), Some(2));
     }
 }
