@@ -2,7 +2,8 @@ use bitcoin::consensus::Decodable;
 use bitcoin::constants::genesis_block;
 use bitcoin::{block::Header, consensus::Encodable, Block as BitcoinBlock};
 use canbench_rs::{bench, bench_fn, BenchResult};
-use ic_btc_canister::{types::BlockHeaderBlob, with_state_mut};
+use ic_btc_canister::state::main_chain_height;
+use ic_btc_canister::{types::BlockHeaderBlob, with_state, with_state_mut};
 use ic_btc_interface::{InitConfig, Network};
 use ic_btc_test_utils::{build_regtest_chain, BlockBuilder, TransactionBuilder};
 use ic_btc_types::Block;
@@ -185,6 +186,160 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
     bench_fn(|| {
         ic_btc_canister::pre_upgrade();
     })
+}
+
+// Benchmarks `get_blockchain_info` on a single linear chain (typical mainnet scenario).
+#[bench(raw)]
+fn get_blockchain_info_single_chain() -> BenchResult {
+    let blocks_to_insert: usize = 1000;
+
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Regtest),
+        stability_threshold: Some(2000),
+        ..Default::default()
+    });
+
+    let genesis = genesis_block(bitcoin::Network::Regtest);
+    let mut counter = 1u64;
+    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+
+    with_state_mut(|s| {
+        for block in &chain {
+            ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
+        }
+    });
+
+    with_state(|s| {
+        let chain_len = main_chain_height(s) as usize;
+        assert_eq!(
+            chain_len, blocks_to_insert,
+            "Expected all blocks to be inserted. Max height should be {}, got {}.",
+            blocks_to_insert, chain_len
+        );
+    });
+
+    bench_fn(|| {
+        ic_btc_canister::get_blockchain_info();
+    })
+}
+
+// Benchmarks `get_blockchain_info` with a main chain and a few short forks.
+#[bench(raw)]
+fn get_blockchain_info_with_forks() -> BenchResult {
+    let blocks_to_insert: usize = 1000;
+
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Regtest),
+        stability_threshold: Some(2000),
+        ..Default::default()
+    });
+
+    let genesis = genesis_block(bitcoin::Network::Regtest);
+    let mut counter = 1u64;
+    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+
+    with_state_mut(|s| {
+        for block in &chain {
+            ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
+        }
+    });
+
+    // Add 5 forks at various heights, each 10 blocks long.
+    for &fork_point in &[200, 400, 500, 600, 700] {
+        let fork = build_chain_from(*chain[fork_point].header(), 10, &mut counter);
+        with_state_mut(|s| {
+            for block in &fork {
+                ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
+            }
+        });
+    }
+
+    with_state(|s| {
+        let chain_len = main_chain_height(s) as usize;
+        assert_eq!(
+            chain_len, blocks_to_insert,
+            "Expected all blocks to be inserted. Max height should be {}, got {}.",
+            blocks_to_insert, chain_len
+        );
+    });
+
+    bench_fn(|| {
+        ic_btc_canister::get_blockchain_info();
+    })
+}
+
+// Benchmarks `get_blockchain_info` with many branches of varying lengths (testnet-like scenario).
+#[bench(raw)]
+fn get_blockchain_info_many_branches() -> BenchResult {
+    let blocks_to_insert = 500;
+
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Regtest),
+        stability_threshold: Some(2000),
+        ..Default::default()
+    });
+
+    let genesis = genesis_block(bitcoin::Network::Regtest);
+    let mut counter = 1u64;
+    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+
+    with_state_mut(|s| {
+        for block in &chain {
+            ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
+        }
+    });
+
+    // Add 49 forks at every 10th block, with varying lengths (5 to 14 blocks).
+    for i in 0..49usize {
+        let fork_point = i * 10;
+        let fork_len = 5 + (i % 10);
+        let fork = build_chain_from(*chain[fork_point].header(), fork_len, &mut counter);
+        with_state_mut(|s| {
+            for block in &fork {
+                ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
+            }
+        });
+    }
+
+    with_state(|s| {
+        let chain_len = main_chain_height(s) as usize;
+        assert_eq!(
+            chain_len, blocks_to_insert,
+            "Expected all blocks to be inserted. Max height should be {}, got {}.",
+            blocks_to_insert, chain_len
+        );
+    });
+
+    bench_fn(|| {
+        ic_btc_canister::get_blockchain_info();
+    })
+}
+
+/// Builds a chain of `num_blocks` blocks extending from the given header.
+/// Each block has a unique coinbase transaction (using `value_counter` for unique outputs).
+fn build_chain_from(prev_header: Header, num_blocks: usize, value_counter: &mut u64) -> Vec<Block> {
+    const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
+    let address = bitcoin::Address::from_str(ADDRESS)
+        .unwrap()
+        .assume_checked();
+
+    let mut blocks = Vec::with_capacity(num_blocks);
+    let mut prev = prev_header;
+    for _ in 0..num_blocks {
+        let block = Block::new(
+            BlockBuilder::with_prev_header(prev)
+                .with_transaction(
+                    TransactionBuilder::coinbase()
+                        .with_output(&address, *value_counter)
+                        .build(),
+                )
+                .build(),
+        );
+        prev = *block.header();
+        blocks.push(block);
+        *value_counter += 1;
+    }
+    blocks
 }
 
 fn bench_insert_block(num_transactions: u32) -> BenchResult {

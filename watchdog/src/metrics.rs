@@ -66,12 +66,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     let health = crate::health::health_status();
     w.encode_gauge(
         "canister_height",
-        health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),
+        health.canister_height.map(|x| x as f64).unwrap_or(NO_VALUE),
         "Main chain height of the canister.",
     )?;
     w.encode_gauge(
         "height_target",
-        health.height_target.map(|x| x as f64).unwrap_or(NO_VALUE),
+        health.explorer_height.map(|x| x as f64).unwrap_or(NO_VALUE),
         "Height target derived from explorer heights.",
     )?;
     w.encode_gauge(

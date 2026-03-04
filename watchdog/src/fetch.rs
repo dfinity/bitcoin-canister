@@ -186,7 +186,7 @@ mod test {
                     height: Some(5926989),
                 },
                 BlockInfo {
-                    provider: "dogecoin_tokenview_mainnet".to_string(),
+                    provider: "dogecoin_psy_protocol_mainnet".to_string(),
                     height: Some(5931072),
                 },
                 BlockInfo {
@@ -301,7 +301,7 @@ mod test {
                     height: None,
                 },
                 BlockInfo {
-                    provider: "dogecoin_tokenview_mainnet".to_string(),
+                    provider: "dogecoin_psy_protocol_mainnet".to_string(),
                     height: None,
                 },
                 BlockInfo {

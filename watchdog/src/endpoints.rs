@@ -6,7 +6,7 @@ use crate::{
     transform_bitcoin_mainnet_api_blockchair_com, transform_bitcoin_mainnet_api_blockcypher_com,
     transform_bitcoin_mainnet_blockchain_info, transform_bitcoin_mainnet_blockstream_info,
     transform_dogecoin_canister, transform_dogecoin_mainnet_api_blockchair_com,
-    transform_dogecoin_mainnet_api_blockcypher_com, transform_dogecoin_mainnet_tokenview,
+    transform_dogecoin_mainnet_api_blockcypher_com, transform_dogecoin_mainnet_psy_protocol,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use regex::Regex;
@@ -264,24 +264,24 @@ pub fn endpoint_dogecoin_mainnet_api_blockcypher_com() -> HttpRequestConfig {
     )
 }
 
-/// Creates a config for fetching Dogecoin mainnet block data from doge.tokenview.io.
-pub fn endpoint_dogecoin_mainnet_tokenview() -> HttpRequestConfig {
+/// Creates a config for fetching Dogecoin mainnet block data from doge-electrs-demo.qed.me.
+pub fn endpoint_dogecoin_mainnet_psy_protocol() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        "https://doge.tokenview.io/api/chainstat/doge",
+        "https://doge-electrs-demo.qed.me/blocks/tip/height",
         Some(TransformFnWrapper {
-            name: "transform_dogecoin_mainnet_tokenview",
-            func: transform_dogecoin_mainnet_tokenview,
+            name: "transform_dogecoin_mainnet_psy_protocol",
+            func: transform_dogecoin_mainnet_psy_protocol,
         }),
         |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                match data["block_no"]
-                    .as_u64()
-                    .or_else(|| data["block_no"].as_str()?.parse().ok())
-                {
-                    Some(h) => json!({"height": h}),
-                    None => json!({}),
-                }
+            apply_to_body(raw, |text| {
+                text.parse::<u64>()
+                    .map(|height| {
+                        json!({
+                            "height": height,
+                        })
+                        .to_string()
+                    })
+                    .unwrap_or_default()
             })
         },
     )
@@ -531,11 +531,11 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_dogecoin_tokenview_height_mainnet() {
+    async fn test_dogecoin_psy_protocol_height_mainnet() {
         run_http_request_test(
-            endpoint_dogecoin_mainnet_tokenview(),
-            "https://doge.tokenview.io/api/chainstat/doge",
-            test_utils::DOGECOIN_MAINNET_TOKENVIEW_RESPONSE,
+            endpoint_dogecoin_mainnet_psy_protocol(),
+            "https://doge-electrs-demo.qed.me/blocks/tip/height",
+            test_utils::DOGECOIN_MAINNET_PSY_PROTOCOL_RESPONSE,
             json!({
                 "height": 5931072,
             }),
@@ -591,7 +591,7 @@ mod test {
                 "transform_dogecoin_canister",
                 "transform_dogecoin_mainnet_api_blockchair_com",
                 "transform_dogecoin_mainnet_api_blockcypher_com",
-                "transform_dogecoin_mainnet_tokenview",
+                "transform_dogecoin_mainnet_psy_protocol",
             ]
         );
     }
@@ -641,7 +641,7 @@ mod test {
             endpoint_dogecoin_canister(),
             endpoint_dogecoin_mainnet_api_blockchair_com(),
             endpoint_dogecoin_mainnet_api_blockcypher_com(),
-            endpoint_dogecoin_mainnet_tokenview(),
+            endpoint_dogecoin_mainnet_psy_protocol(),
         ];
         for config in test_cases {
             // Arrange
