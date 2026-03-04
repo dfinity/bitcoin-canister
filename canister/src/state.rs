@@ -279,24 +279,33 @@ pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockH
 }
 
 pub fn main_chain_height(state: &State) -> Height {
-    unstable_blocks::get_main_chain_length(&state.unstable_blocks) as u32
-        + state.utxos.next_height()
-        - 1
+    main_chain_height_from_unstable_chain_length(
+        unstable_blocks::get_main_chain_length(&state.unstable_blocks),
+        state,
+    )
+}
+
+fn main_chain_height_from_unstable_chain_length(
+    unstable_chain_length: usize,
+    state: &State,
+) -> Height {
+    unstable_chain_length as u32 + state.utxos.next_height() - 1
 }
 
 /// Returns information about the blockchain state.
 pub fn blockchain_info(state: &State) -> crate::types::BlockchainInfo {
-    let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
-    let tip_block = main_chain.tip();
+    let unstable_main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+    let tip_block = unstable_main_chain.tip();
+    let height = main_chain_height_from_unstable_chain_length(unstable_main_chain.len(), state);
 
     crate::types::BlockchainInfo {
-        height: main_chain_height(state),
+        height,
         block_hash: tip_block.block_hash().to_vec(),
         timestamp: tip_block.header().time,
         difficulty: tip_block.difficulty(state.network()),
         utxos_length: crate::utxo_set::count_utxos_in_blocks(
             state.utxos.utxos_len(),
-            main_chain.into_chain(),
+            unstable_main_chain.into_chain(),
         ),
     }
 }
