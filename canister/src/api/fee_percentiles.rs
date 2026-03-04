@@ -7,6 +7,7 @@ use crate::{
 };
 use ic_btc_interface::MillisatoshiPerByte;
 use ic_btc_types::{Block, Transaction};
+use std::rc::Rc;
 
 /// The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
@@ -43,11 +44,11 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
-    let tip_block_hash = main_chain.tip().block_hash();
+    let tip_block_hash = *main_chain.tip().block_hash();
 
     // If fee percentiles were already cached, then return the cached results.
     if let Some(cache) = &state.fee_percentiles_cache {
-        if &cache.tip_block_hash == tip_block_hash {
+        if cache.tip_block_hash == tip_block_hash {
             return cache.fee_percentiles.clone();
         }
     }
@@ -71,7 +72,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     let fee_percentiles = percentiles(fees_per_byte);
 
     state.fee_percentiles_cache = Some(FeePercentilesCache {
-        tip_block_hash: *tip_block_hash,
+        tip_block_hash,
         fee_percentiles: fee_percentiles.clone(),
     });
 
@@ -82,7 +83,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
 /// Fees are returned in a reversed order, starting with the most recent ones, followed by the older ones.
 /// Eg. for transactions [..., Tn-2, Tn-1, Tn] fees would be [Fn, Fn-1, Fn-2, ...].
 fn get_fees_per_byte(
-    main_chain: Vec<&Block>,
+    main_chain: Vec<Rc<Block>>,
     unstable_blocks: &UnstableBlocks,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {

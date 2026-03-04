@@ -7,6 +7,7 @@ use crate::{
 };
 use ic_btc_interface::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
 use ic_btc_types::{Block, BlockHash, OutPoint, Txid};
+use std::rc::Rc;
 use serde_bytes::ByteBuf;
 
 // The maximum number of UTXOs that are allowed to be included in a single
@@ -174,7 +175,7 @@ fn get_utxos_internal(
 //    stability_count(b) = d(b) if |D(b)| = 0 and d(b) - max_{b' ∈ D(b)} d(b') otherwise.
 // ```
 fn get_stability_count(
-    blocks_with_depths_on_the_same_height: &[(&Block, u32)],
+    blocks_with_depths_on_the_same_height: &[(&Rc<Block>, u32)],
     target_block: &BlockHash,
 ) -> i32 {
     let mut max_depth_of_the_other_blocks = 0;
@@ -193,7 +194,7 @@ fn get_utxos_from_chain(
     state: &State,
     address: &str,
     min_confirmations: u32,
-    chain: BlockChain<Block>,
+    chain: BlockChain,
     offset: Option<Utxo>,
     utxo_limit: usize,
 ) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
@@ -215,7 +216,7 @@ fn get_utxos_from_chain(
 
     let mut address_utxos = state.get_utxos(address);
 
-    let mut tip_block_hash = chain.first().block_hash();
+    let mut tip_block_hash = *chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
 
     let blocks_with_depths_by_heights = state.unstable_blocks.blocks_with_depths_by_heights();
@@ -230,7 +231,7 @@ fn get_utxos_from_chain(
             // We can stop now since all remaining blocks will have a lower stability count.
             break;
         }
-        tip_block_hash = block.block_hash();
+        tip_block_hash = *block.block_hash();
         tip_block_height = state.utxos.next_height() + (i as u32);
         address_utxos.apply_block(block);
     }
@@ -265,7 +266,7 @@ fn get_utxos_from_chain(
     let rest = utxos.split_off(utxos.len().min(utxo_limit));
     let next_page = rest.first().map(|next| {
         Page {
-            tip_block_hash: *tip_block_hash,
+            tip_block_hash,
             height: next.height,
             outpoint: OutPoint::new(Txid::from(next.outpoint.txid), next.outpoint.vout),
         }
@@ -1363,8 +1364,8 @@ mod test {
 
     #[test]
     fn test_get_stability_count_single_block_on_height() {
-        let block = BlockBuilder::genesis().build();
-        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block, 1)];
+        let block = Rc::new(BlockBuilder::genesis().build());
+        let blocks_with_depths: Vec<(&Rc<Block>, u32)> = vec![(&block, 1)];
         // Stability count should be 1.
         assert_eq!(
             get_stability_count(&blocks_with_depths, block.block_hash()),
@@ -1374,11 +1375,11 @@ mod test {
 
     #[test]
     fn test_get_stability_count_multiple_blocks_on_height() {
-        let block1 = BlockBuilder::genesis().build();
-        let block2 = BlockBuilder::genesis().build();
-        let block3 = BlockBuilder::genesis().build();
+        let block1 = Rc::new(BlockBuilder::genesis().build());
+        let block2 = Rc::new(BlockBuilder::genesis().build());
+        let block3 = Rc::new(BlockBuilder::genesis().build());
 
-        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block1, 5), (&block2, 7), (&block3, 3)];
+        let blocks_with_depths: Vec<(&Rc<Block>, u32)> = vec![(&block1, 5), (&block2, 7), (&block3, 3)];
         // The stability_count of block1 should be 5 - 7 = -2.
         assert_eq!(
             get_stability_count(&blocks_with_depths, block1.block_hash()),

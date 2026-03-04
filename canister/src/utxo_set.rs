@@ -444,12 +444,13 @@ impl UtxoSet {
 /// Counts the net UTXOs created by the given blocks, added to a base count.
 ///
 /// Each output creates a UTXO; each input (except coinbase) spends a UTXO.
-pub fn count_utxos_in_blocks<'a>(
+pub fn count_utxos_in_blocks(
     base_count: u64,
-    blocks: impl IntoIterator<Item = &'a Block>,
+    blocks: impl IntoIterator<Item = impl std::ops::Deref<Target = Block>>,
 ) -> u64 {
     let mut total = base_count as i64;
     for block in blocks {
+        let block: &Block = &block;
         for tx in block.txdata() {
             total += tx.output().len() as i64;
             if !tx.is_coinbase() {
@@ -604,6 +605,7 @@ mod test {
     use maplit::btreeset;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
+    use std::rc::Rc;
 
     // A succinct wrapper around `ingest_tx_with_slicing` for tests that don't need slicing.
     fn ingest_tx(utxo_set: &mut UtxoSet, tx: &Transaction) {
@@ -1294,8 +1296,8 @@ mod test {
 
     #[test]
     fn count_utxos_in_blocks_empty() {
-        assert_eq!(count_utxos_in_blocks(0, vec![]), 0);
-        assert_eq!(count_utxos_in_blocks(5, vec![]), 5);
+        assert_eq!(count_utxos_in_blocks(0, Vec::<Rc<Block>>::new()), 0);
+        assert_eq!(count_utxos_in_blocks(5, Vec::<Rc<Block>>::new()), 5);
     }
 
     #[test]

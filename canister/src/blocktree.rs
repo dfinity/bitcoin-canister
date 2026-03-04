@@ -1,26 +1,29 @@
 use ic_btc_interface::Network;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
+use std::rc::Rc;
 mod serde;
 use std::ops::{Add, Sub};
 
 /// Represents a non-empty block chain as:
 /// * the first block of the chain
 /// * the successors to this block (which can be an empty list)
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(Clone))]
-pub struct BlockChain<'a, Block> {
+///
+/// Blocks are reference-counted (`Rc<Block>`) so the chain can be cheaply
+/// cloned and cached independently of the [`BlockTree`] that produced it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BlockChain {
     // The first block of this `BlockChain`, i.e. the one at the lowest height.
-    first: &'a Block,
+    first: Rc<Block>,
     // The successor blocks of this `BlockChain`, i.e. the chain after the
     // `first` block.
-    successors: Vec<&'a Block>,
+    successors: Vec<Rc<Block>>,
 }
 
-impl<'a, Block> BlockChain<'a, Block> {
+impl BlockChain {
     /// Creates a new `BlockChain` with the given `first` block and an empty list
     /// of successors.
-    pub fn new(first: &'a Block) -> Self {
+    pub fn new(first: Rc<Block>) -> Self {
         Self {
             first,
             successors: vec![],
@@ -29,12 +32,12 @@ impl<'a, Block> BlockChain<'a, Block> {
 
     /// This is only useful for tests to simplify the creation of a `BlockChain`.
     #[cfg(test)]
-    pub fn new_with_successors(first: &'a Block, successors: Vec<&'a Block>) -> Self {
+    pub fn new_with_successors(first: Rc<Block>, successors: Vec<Rc<Block>>) -> Self {
         Self { first, successors }
     }
 
     /// Appends a new block to the list of `successors` of this `BlockChain`.
-    pub fn push(&mut self, block: &'a Block) {
+    pub fn push(&mut self, block: Rc<Block>) {
         self.successors.push(block);
     }
 
@@ -43,22 +46,22 @@ impl<'a, Block> BlockChain<'a, Block> {
         self.successors.len() + 1
     }
 
-    pub fn first(&self) -> &'a Block {
-        self.first
+    pub fn first(&self) -> &Block {
+        &self.first
     }
 
-    pub fn tip(&self) -> &'a Block {
+    pub fn tip(&self) -> &Block {
         match self.successors.last() {
             None => {
                 // The chain consists of only one block, and that is the tip.
-                self.first
+                &self.first
             }
             Some(tip) => tip,
         }
     }
 
     /// Consumes this `BlockChain` and returns the entire chain of blocks.
-    pub fn into_chain(self) -> Vec<&'a Block> {
+    pub fn into_chain(self) -> Vec<Rc<Block>> {
         let mut chain = vec![self.first];
         chain.extend(self.successors);
         chain
@@ -210,10 +213,6 @@ impl<Block> BlockTree<Block> {
             .collect()
     }
 
-    fn get_child_blocks(&self) -> Vec<&Block> {
-        self.children.iter().map(|c| &c.root).collect()
-    }
-
     /// Returns the number of blocks in the tree.
     pub fn blocks_count(&self) -> usize {
         1 + self
@@ -250,6 +249,18 @@ impl ChainBlock for Block {
     }
 }
 
+impl ChainBlock for Rc<Block> {
+    fn block_hash(&self) -> &BlockHash {
+        Block::block_hash(self)
+    }
+    fn prev_block_hash(&self) -> BlockHash {
+        BlockHash::from(self.header().prev_blockhash)
+    }
+    fn difficulty(&self, network: Network) -> u128 {
+        Block::difficulty(self, network)
+    }
+}
+
 impl<Block: ChainBlock> BlockTree<Block> {
     /// Extends the tree with the given block.
     ///
@@ -277,55 +288,6 @@ impl<Block: ChainBlock> BlockTree<Block> {
         }
     }
 
-    /// Returns a `BlockChain` starting from the anchor and ending with the `tip`,
-    /// together with the tip's direct children.
-    ///
-    /// If the `tip` doesn't exist in the tree, `None` is returned.
-    pub fn get_chain_with_tip<'a>(
-        &'a self,
-        tip: &BlockHash,
-    ) -> Option<(BlockChain<'a, Block>, Vec<&'a Block>)> {
-        // Compute the chain in reverse order, as that's more efficient, and then
-        // reverse it to get the answer in the correct order.
-        self.get_chain_with_tip_reverse(tip)
-            .map(|(mut chain, tip_successors)| {
-                // Safe to unwrap as the `chain` would contain at least the root of the
-                // `BlockTree` it was produced from.
-                // This would be the first block since the chain is in reverse order.
-                let first = chain.pop().unwrap();
-                // Reverse the chain to get the list of `successors` in the right order.
-                chain.reverse();
-                (
-                    BlockChain {
-                        first,
-                        successors: chain,
-                    },
-                    tip_successors,
-                )
-            })
-    }
-
-    // Do a depth-first search to find the blockchain that ends with the given `tip`.
-    // For performance reasons, the list is returned in the reverse order, starting
-    // from `tip` and ending with `anchor`.
-    fn get_chain_with_tip_reverse<'a>(
-        &'a self,
-        tip: &BlockHash,
-    ) -> Option<(Vec<&'a Block>, Vec<&'a Block>)> {
-        if self.root.block_hash() == tip {
-            return Some((vec![&self.root], self.get_child_blocks()));
-        }
-
-        for child in self.children.iter() {
-            if let Some((mut chain, tip_successors)) = child.get_chain_with_tip_reverse(tip) {
-                chain.push(&self.root);
-                return Some((chain, tip_successors));
-            }
-        }
-
-        None
-    }
-
     // Returns the maximum sum of block difficulties from the root to a leaf inclusive.
     pub fn difficulty_based_depth(&self, network: Network) -> DifficultyBasedDepth {
         let mut res = DifficultyBasedDepth::new(0);
@@ -343,122 +305,6 @@ impl<Block: ChainBlock> BlockTree<Block> {
         }
         res = res + Depth::new(1);
         res
-    }
-
-    /// Returns the main chain determined by most accumulated proof-of-work.
-    ///
-    /// At each node, the child subtree with the strictly highest accumulated
-    /// difficulty is followed. When accumulated difficulties are tied, the
-    /// deeper subtree (by block count) wins. If children still tie on both
-    /// criteria, the chain ends at this node (contested tip).
-    ///
-    /// Runs in O(n) time where n is the number of blocks in the tree.
-    pub fn main_chain_by_difficulty(&self, network: Network) -> BlockChain<'_, Block> {
-        let (_, _, mut chain_rev) = self.main_chain_by_difficulty_inner(network);
-        chain_rev.reverse();
-        let mut chain = BlockChain::new(chain_rev[0]);
-        for &block in &chain_rev[1..] {
-            chain.push(block);
-        }
-        chain
-    }
-
-    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_reversed).
-    fn main_chain_by_difficulty_inner(
-        &self,
-        network: Network,
-    ) -> (DifficultyBasedDepth, usize, Vec<&Block>) {
-        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
-
-        if self.children.is_empty() {
-            return (self_difficulty, 1, vec![&self.root]);
-        }
-
-        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
-        let mut best_chain: Vec<&Block> = vec![];
-        let mut contested = false;
-
-        for child in self.children.iter() {
-            let (child_diff, child_depth, child_chain) =
-                child.main_chain_by_difficulty_inner(network);
-            let key = (child_diff, child_depth);
-
-            match key.cmp(&best_key) {
-                std::cmp::Ordering::Greater => {
-                    best_key = key;
-                    best_chain = child_chain;
-                    contested = false;
-                }
-                std::cmp::Ordering::Equal => {
-                    contested = true;
-                }
-                std::cmp::Ordering::Less => {}
-            }
-        }
-
-        let total_difficulty = self_difficulty + best_key.0;
-        let total_depth = 1 + best_key.1;
-
-        if contested {
-            (total_difficulty, total_depth, vec![&self.root])
-        } else {
-            best_chain.push(&self.root);
-            (total_difficulty, total_depth, best_chain)
-        }
-    }
-
-    /// Returns the length of the main chain determined by most accumulated
-    /// proof-of-work.
-    ///
-    /// See [`main_chain_by_difficulty`](Self::main_chain_by_difficulty) for the
-    /// definition.
-    ///
-    /// Runs in O(n) time where n is the number of blocks in the tree.
-    pub fn main_chain_length_by_difficulty(&self, network: Network) -> usize {
-        self.main_chain_length_by_difficulty_inner(network).2
-    }
-
-    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_length).
-    fn main_chain_length_by_difficulty_inner(
-        &self,
-        network: Network,
-    ) -> (DifficultyBasedDepth, usize, usize) {
-        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
-
-        if self.children.is_empty() {
-            return (self_difficulty, 1, 1);
-        }
-
-        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
-        let mut best_length = 0;
-        let mut contested = false;
-
-        for child in self.children.iter() {
-            let (child_diff, child_depth, child_len) =
-                child.main_chain_length_by_difficulty_inner(network);
-            let key = (child_diff, child_depth);
-
-            match key.cmp(&best_key) {
-                std::cmp::Ordering::Greater => {
-                    best_key = key;
-                    best_length = child_len;
-                    contested = false;
-                }
-                std::cmp::Ordering::Equal => {
-                    contested = true;
-                }
-                std::cmp::Ordering::Less => {}
-            }
-        }
-
-        let total_difficulty = self_difficulty + best_key.0;
-        let total_depth = 1 + best_key.1;
-
-        if contested {
-            (total_difficulty, total_depth, 1)
-        } else {
-            (total_difficulty, total_depth, 1 + best_length)
-        }
     }
 
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
@@ -513,6 +359,117 @@ impl<Block: ChainBlock> BlockTree<Block> {
     }
 }
 
+/// Methods that produce a [`BlockChain`] (which holds `Rc<Block>`) are only
+/// available on `BlockTree<Rc<Block>>`.
+impl BlockTree<Rc<Block>> {
+    /// Returns the main chain determined by most accumulated proof-of-work.
+    ///
+    /// At each node, the child subtree with the strictly highest accumulated
+    /// difficulty is followed. When accumulated difficulties are tied, the
+    /// deeper subtree (by block count) wins. If children still tie on both
+    /// criteria, the chain ends at this node (contested tip).
+    ///
+    /// Runs in O(n) time where n is the number of blocks in the tree.
+    pub fn main_chain_by_difficulty(&self, network: Network) -> BlockChain {
+        let (_, _, mut chain_rev) = self.main_chain_by_difficulty_inner(network);
+        chain_rev.reverse();
+        let mut chain = BlockChain::new(chain_rev[0].clone());
+        for block in &chain_rev[1..] {
+            chain.push(Rc::clone(block));
+        }
+        chain
+    }
+
+    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_reversed).
+    fn main_chain_by_difficulty_inner(
+        &self,
+        network: Network,
+    ) -> (DifficultyBasedDepth, usize, Vec<Rc<Block>>) {
+        let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty(network));
+
+        if self.children.is_empty() {
+            return (self_difficulty, 1, vec![Rc::clone(&self.root)]);
+        }
+
+        let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
+        let mut best_chain: Vec<Rc<Block>> = vec![];
+        let mut contested = false;
+
+        for child in self.children.iter() {
+            let (child_diff, child_depth, child_chain) =
+                child.main_chain_by_difficulty_inner(network);
+            let key = (child_diff, child_depth);
+
+            match key.cmp(&best_key) {
+                std::cmp::Ordering::Greater => {
+                    best_key = key;
+                    best_chain = child_chain;
+                    contested = false;
+                }
+                std::cmp::Ordering::Equal => {
+                    contested = true;
+                }
+                std::cmp::Ordering::Less => {}
+            }
+        }
+
+        let total_difficulty = self_difficulty + best_key.0;
+        let total_depth = 1 + best_key.1;
+
+        if contested {
+            (total_difficulty, total_depth, vec![Rc::clone(&self.root)])
+        } else {
+            best_chain.push(Rc::clone(&self.root));
+            (total_difficulty, total_depth, best_chain)
+        }
+    }
+
+    /// Returns a `BlockChain` starting from the anchor and ending with the `tip`,
+    /// together with the tip's direct children.
+    ///
+    /// If the `tip` doesn't exist in the tree, `None` is returned.
+    pub fn get_chain_with_tip(
+        &self,
+        tip: &BlockHash,
+    ) -> Option<(BlockChain, Vec<Rc<Block>>)> {
+        self.get_chain_with_tip_reverse(tip)
+            .map(|(mut chain, tip_successors)| {
+                let first = chain.pop().unwrap();
+                chain.reverse();
+                (
+                    BlockChain {
+                        first,
+                        successors: chain,
+                    },
+                    tip_successors,
+                )
+            })
+    }
+
+    fn get_chain_with_tip_reverse(
+        &self,
+        tip: &BlockHash,
+    ) -> Option<(Vec<Rc<Block>>, Vec<Rc<Block>>)> {
+        if self.root.block_hash() == tip {
+            let child_blocks = self
+                .children
+                .iter()
+                .map(|c| Rc::clone(&c.root))
+                .collect();
+            return Some((vec![Rc::clone(&self.root)], child_blocks));
+        }
+
+        for child in self.children.iter() {
+            if let Some((mut chain, tip_successors)) = child.get_chain_with_tip_reverse(tip) {
+                chain.push(Rc::clone(&self.root));
+                return Some((chain, tip_successors));
+            }
+        }
+
+        None
+    }
+}
+
 /// An error thrown when trying to add a block that isn't a successor
 /// of any block in the tree.
 #[derive(Debug)]
@@ -525,9 +482,15 @@ mod test {
     use proptest::collection::vec as pvec;
     use proptest::prelude::*;
     use std::collections::BTreeSet;
+    use std::rc::Rc;
     use test_strategy::proptest;
 
-    type BlockTree = super::BlockTree<Block>;
+    type BlockTree = super::BlockTree<Rc<Block>>;
+
+    /// Convenience helper to wrap a `Block` in `Rc`.
+    fn rc(block: &Block) -> Rc<Block> {
+        Rc::new(block.clone())
+    }
 
     // For generating arbitrary BlockTrees.
     impl Arbitrary for BlockTree {
@@ -542,8 +505,9 @@ mod test {
                 }
 
                 for _ in 0..num_children[0] {
-                    let mut subtree =
-                        BlockTree::new(BlockBuilder::with_prev_header(tree.root.header()).build());
+                    let mut subtree = BlockTree::new(Rc::new(
+                        BlockBuilder::with_prev_header(tree.root.header()).build(),
+                    ));
 
                     build_block_tree(&mut subtree, &num_children[1..]);
                     tree.children.push(subtree);
@@ -553,7 +517,7 @@ mod test {
             // Each depth can have up to 3 children, up to a depth of 10.
             pvec(1..3u8, 0..10)
                 .prop_map(|num_children| {
-                    let mut tree = BlockTree::new(BlockBuilder::genesis().build());
+                    let mut tree = BlockTree::new(Rc::new(BlockBuilder::genesis().build()));
                     build_block_tree(&mut tree, &num_children);
                     tree
                 })
@@ -563,11 +527,9 @@ mod test {
 
     #[test]
     fn tree_single_block() {
-        let block_tree = BlockTree::new(BlockBuilder::genesis().build());
-        let expected_chain = BlockChain {
-            first: &block_tree.root,
-            successors: vec![],
-        };
+        let block = BlockBuilder::genesis().build();
+        let block_tree = BlockTree::new(rc(&block));
+        let expected_chain = BlockChain::new(rc(&block));
 
         assert_eq!(
             Some((expected_chain, vec![])),
@@ -579,7 +541,7 @@ mod test {
     fn tree_multiple_forks() {
         let genesis_block = BlockBuilder::genesis().build();
         let genesis_block_header = *genesis_block.header();
-        let mut block_tree = BlockTree::new(genesis_block);
+        let mut block_tree = BlockTree::new(rc(&genesis_block));
 
         let mut children = vec![];
         for _ in 1..5 {
@@ -587,17 +549,14 @@ mod test {
             // Each one of these should be a separate fork.
             let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
             children.push(block.clone());
-            block_tree.extend(block).unwrap();
+            block_tree.extend(rc(&block)).unwrap();
         }
 
         assert_eq!(block_tree.children.len(), 4);
         assert_eq!(
             Some((
-                BlockChain {
-                    first: &block_tree.root,
-                    successors: vec![],
-                },
-                children.iter().collect()
+                BlockChain::new(Rc::clone(&block_tree.root)),
+                children.iter().map(rc).collect()
             )),
             block_tree.get_chain_with_tip(block_tree.root.block_hash())
         );
@@ -610,10 +569,10 @@ mod test {
             blocks.push(BlockBuilder::with_prev_header(blocks[i - 1].header()).build())
         }
 
-        let mut block_tree = BlockTree::new(blocks[0].clone());
+        let mut block_tree = BlockTree::new(rc(&blocks[0]));
 
         for block in blocks.iter().skip(1) {
-            block_tree.extend(block.clone()).unwrap();
+            block_tree.extend(rc(block)).unwrap();
         }
 
         for (i, block) in blocks.iter().enumerate() {
@@ -626,9 +585,9 @@ mod test {
                 .into_chain();
 
             // The first block should be the genesis block.
-            assert_eq!(chain[0], &blocks[0]);
+            assert_eq!(*chain[0], blocks[0]);
             // The last block should be the expected tip.
-            assert_eq!(chain.last().unwrap(), &block);
+            assert_eq!(**chain.last().unwrap(), *block);
 
             // The length of the chain should grow as the requested tip gets deeper.
             assert_eq!(chain.len(), i + 1);
@@ -643,7 +602,7 @@ mod test {
     #[test]
     fn chain_with_tip_multiple_forks() {
         let mut blocks = vec![BlockBuilder::genesis().build()];
-        let mut block_tree = BlockTree::new(blocks[0].clone());
+        let mut block_tree = BlockTree::new(rc(&blocks[0]));
 
         let num_forks = 5;
         for _ in 0..num_forks {
@@ -652,7 +611,7 @@ mod test {
             }
 
             for block in blocks.iter().skip(1) {
-                block_tree.extend(block.clone()).unwrap();
+                block_tree.extend(rc(block)).unwrap();
             }
 
             for (i, block) in blocks.iter().enumerate() {
@@ -665,9 +624,9 @@ mod test {
                     .into_chain();
 
                 // The first block should be the genesis block.
-                assert_eq!(chain[0], &blocks[0]);
+                assert_eq!(*chain[0], blocks[0]);
                 // The last block should be the expected tip.
-                assert_eq!(chain.last().unwrap(), &block);
+                assert_eq!(**chain.last().unwrap(), *block);
 
                 // The length of the chain should grow as the requested tip gets deeper.
                 assert_eq!(chain.len(), i + 1);
@@ -684,7 +643,8 @@ mod test {
 
     #[test]
     fn test_difficulty_based_depth_single_block() {
-        let block_tree = BlockTree::new(BlockBuilder::genesis().build_with_mock_difficulty(5));
+        let block_tree =
+            BlockTree::new(Rc::new(BlockBuilder::genesis().build_with_mock_difficulty(5)));
 
         assert_eq!(
             block_tree.difficulty_based_depth(Network::Mainnet),
@@ -696,14 +656,14 @@ mod test {
     fn test_difficulty_based_depth_root_with_children() {
         let genesis_block = BlockBuilder::genesis().build_with_mock_difficulty(5);
         let genesis_block_header = *genesis_block.header();
-        let mut block_tree = BlockTree::new(genesis_block);
+        let mut block_tree = BlockTree::new(rc(&genesis_block));
 
         for i in 1..11 {
             block_tree
-                .extend(
+                .extend(Rc::new(
                     BlockBuilder::with_prev_header(&genesis_block_header)
                         .build_with_mock_difficulty(i),
-                )
+                ))
                 .unwrap();
         }
 
@@ -715,19 +675,10 @@ mod test {
         );
     }
 
-    // Consistency: main_chain_length_by_difficulty always matches
-    // main_chain_by_difficulty().len().
-    #[proptest]
-    fn test_main_chain_length_matches_chain_len(tree: BlockTree) {
-        let chain = tree.main_chain_by_difficulty(Network::Regtest);
-        let length = tree.main_chain_length_by_difficulty(Network::Regtest);
-        prop_assert_eq!(chain.len(), length);
-    }
-
     #[test]
     fn test_blocks_with_depths_by_heights_only_root() {
         let genesis_block = BlockBuilder::genesis().build();
-        let block_tree = BlockTree::new(genesis_block.clone());
+        let block_tree = BlockTree::new(rc(&genesis_block));
         let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
 
         // The number of rows in blocks_with_depths_by_heights should be 1.
@@ -746,7 +697,7 @@ mod test {
         let chain_len: usize = 10;
         let chain = BlockChainBuilder::new(chain_len as u32).build();
 
-        let mut block_tree = BlockTree::new(chain[0].clone());
+        let mut block_tree = BlockTree::new(rc(&chain[0]));
 
         let mut expected_blocks_with_depths_by_heights: Vec<Vec<(&Block, u32)>> =
             vec![vec![]; chain_len];
@@ -754,7 +705,7 @@ mod test {
 
         for (i, block) in chain.iter().enumerate().skip(1) {
             expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
-            block_tree.extend(block.clone()).unwrap();
+            block_tree.extend(rc(block)).unwrap();
         }
 
         let actual_blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
@@ -777,10 +728,10 @@ mod test {
         // Create a fork from the genesis block with length 2.
         let fork = BlockChainBuilder::fork(&chain[0], 2).build();
 
-        let mut block_tree = BlockTree::new(chain[0].clone());
-        block_tree.extend(chain[1].clone()).unwrap();
-        block_tree.extend(fork[0].clone()).unwrap();
-        block_tree.extend(fork[1].clone()).unwrap();
+        let mut block_tree = BlockTree::new(rc(&chain[0]));
+        block_tree.extend(rc(&chain[1])).unwrap();
+        block_tree.extend(rc(&fork[0])).unwrap();
+        block_tree.extend(rc(&fork[1])).unwrap();
 
         let blocks_with_depths_by_heights = block_tree.blocks_with_depths_by_heights();
 
@@ -828,10 +779,10 @@ mod test {
     #[test]
     fn deserialize_very_deep_block_tree() {
         let chain = BlockChainBuilder::new(5_000).build();
-        let mut tree = BlockTree::new(chain[0].clone());
+        let mut tree = BlockTree::new(rc(&chain[0]));
 
-        for block in chain.into_iter().skip(1) {
-            tree.extend(block).unwrap();
+        for block in chain.iter().skip(1) {
+            tree.extend(rc(block)).unwrap();
         }
 
         let mut bytes = vec![];
@@ -850,8 +801,8 @@ mod test {
 
     #[proptest]
     fn should_find_chain_from_tip_and_tip_successors(tree: BlockTree, random_index: usize) {
-        fn flatten<'a>(tree: &'a BlockTree, flattened_tree: &mut Vec<&'a Block>) {
-            flattened_tree.push(&tree.root);
+        fn flatten(tree: &BlockTree, flattened_tree: &mut Vec<Rc<Block>>) {
+            flattened_tree.push(Rc::clone(&tree.root));
 
             for child in &tree.children {
                 flatten(child, flattened_tree);
@@ -859,10 +810,13 @@ mod test {
         }
         let mut blocks = vec![];
         flatten(&tree, &mut blocks);
-        assert_eq!(blocks, tree.blocks().collect::<Vec<_>>());
+        assert_eq!(
+            blocks.iter().map(|b| b.block_hash()).collect::<Vec<_>>(),
+            tree.blocks().map(|b| b.block_hash()).collect::<Vec<_>>()
+        );
         assert_eq!(blocks.len(), tree.blocks_count());
 
-        let chosen_block = blocks[random_index % blocks.len()];
+        let chosen_block = &blocks[random_index % blocks.len()];
 
         let (chain, tip_children) = tree.get_chain_with_tip(chosen_block.block_hash()).unwrap();
         let tip = tree
@@ -871,11 +825,11 @@ mod test {
         prop_assert_eq!(tip.root.block_hash(), chain.tip().block_hash());
 
         let actual_children: BTreeSet<_> =
-            tip_children.into_iter().map(|b| b.block_hash()).collect();
+            tip_children.iter().map(|b| b.block_hash()).collect();
         let expected_children: BTreeSet<_> = tip
-            .get_child_blocks()
-            .into_iter()
-            .map(|b| b.block_hash())
+            .children
+            .iter()
+            .map(|c| c.root.block_hash())
             .collect();
         prop_assert_eq!(expected_children, actual_children);
 

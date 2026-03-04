@@ -8,7 +8,7 @@ pub struct ValidationContext<'a> {
     state: &'a State,
     // BlockHash is stored in order to avoid repeatedly calling to
     // Header::block_hash() which is expensive.
-    chain: Vec<(&'a Header, ic_btc_types::BlockHash)>,
+    chain: Vec<(Header, ic_btc_types::BlockHash)>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -37,7 +37,7 @@ impl<'a> ValidationContext<'a> {
         let chain = chain
             .into_chain()
             .iter()
-            .map(|block| (block.header(), *block.block_hash()))
+            .map(|block| (*block.header(), *block.block_hash()))
             .collect();
 
         Ok(Self { state, chain })
@@ -58,7 +58,7 @@ impl<'a> ValidationContext<'a> {
         } else {
             let mut context = Self::new(state, next_block_headers_chain[0].0)?;
             for item in next_block_headers_chain.iter() {
-                context.chain.push(*item)
+                context.chain.push((*item.0, item.1))
             }
             Ok(context)
         }
@@ -72,7 +72,7 @@ impl HeaderStore for ValidationContext<'_> {
         let hash = ic_btc_types::BlockHash::from(hash.as_raw_hash().as_byte_array().to_vec());
         for item in self.chain.iter() {
             if item.1 == hash {
-                return Some(*item.0);
+                return Some(item.0);
             }
         }
 
@@ -94,7 +94,7 @@ impl HeaderStore for ValidationContext<'_> {
         } else if height <= self.height() {
             // The height requested is for an unstable block.
             // Retrieve the block header from the chain.
-            Some(*self.chain[(height - self.state.utxos.next_height()) as usize].0)
+            Some(self.chain[(height - self.state.utxos.next_height()) as usize].0)
         } else {
             // The height requested is higher than the tip.
             None
@@ -143,10 +143,10 @@ mod test {
         assert_eq!(
             validation_context.chain,
             vec![
-                (genesis.header(), *genesis.block_hash()),
-                (block_0.header(), *block_0.block_hash()),
-                (block_1.header(), *block_1.block_hash()),
-                (block_2.header(), *block_2.block_hash()),
+                (*genesis.header(), *genesis.block_hash()),
+                (*block_0.header(), *block_0.block_hash()),
+                (*block_1.header(), *block_1.block_hash()),
+                (*block_2.header(), *block_2.block_hash()),
             ]
         );
 

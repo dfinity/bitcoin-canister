@@ -5,6 +5,7 @@ use serde::{
     Deserialize, Serialize, Serializer,
 };
 use std::fmt;
+use std::rc::Rc;
 
 /// Serialization helper to flatten a nested tree into a list.
 #[derive(Default)]
@@ -30,8 +31,8 @@ impl<T: Serialize> Serialize for FlattenedTree<T> {
     }
 }
 
-/// Serialize `BlockTree<Block>` by flattening it into a list of `Block`.
-impl Serialize for BlockTree<Block> {
+/// Serialize `BlockTree<Rc<Block>>` by flattening it into a list of `Block`.
+impl Serialize for BlockTree<Rc<Block>> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut flattened = FlattenedTree(vec![]);
         {
@@ -89,19 +90,19 @@ trait TreeVisitor<'de, T>: Sized {
     }
 }
 
-/// Visitor for `BlockTree<Block>`
+/// Visitor for `BlockTree<Rc<Block>>`
 struct BlockTreeVisitor;
 
-impl<'de> TreeVisitor<'de, Block> for BlockTreeVisitor {
-    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Result<(Block, usize), A::Error> {
+impl<'de> TreeVisitor<'de, Rc<Block>> for BlockTreeVisitor {
+    fn next<A: SeqAccess<'de>>(&self, seq: &mut A) -> Result<(Rc<Block>, usize), A::Error> {
         seq.next_element::<(bitcoin::Block, usize)>()?
-            .map(|(block, size)| (Block::new(block), size))
+            .map(|(block, size)| (Rc::new(Block::new(block)), size))
             .ok_or(A::Error::custom("reading next element must succeed"))
     }
 }
 
 impl<'de> Visitor<'de> for BlockTreeVisitor {
-    type Value = BlockTree<Block>;
+    type Value = BlockTree<Rc<Block>>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("A blocktree deserializer.")
@@ -112,7 +113,7 @@ impl<'de> Visitor<'de> for BlockTreeVisitor {
     }
 }
 
-impl<'de> Deserialize<'de> for BlockTree<Block> {
+impl<'de> Deserialize<'de> for BlockTree<Rc<Block>> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

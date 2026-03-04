@@ -11,7 +11,8 @@ use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
-use std::cell::Cell;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
@@ -65,14 +66,15 @@ pub fn testnet_unstable_max_depth_difference(
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct UnstableBlocks {
     stability_threshold: u32,
-    tree: BlockTree<Block>,
+    tree: BlockTree<Rc<Block>>,
     outpoints_cache: OutPointsCache,
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
-    // Cached length of the main chain. Invalidated on `push` and `pop`.
+    // Cached main chain. Invalidated on `push` and `pop`.
+    // Cloning is cheap because `BlockChain` holds `Rc<Block>` pointers.
     #[serde(skip)]
-    cached_main_chain_length: Cell<Option<usize>>,
+    cached_main_chain: RefCell<Option<BlockChain>>,
 }
 
 impl UnstableBlocks {
@@ -85,11 +87,11 @@ impl UnstableBlocks {
 
         Self {
             stability_threshold,
-            tree: BlockTree::new(anchor),
+            tree: BlockTree::new(Rc::new(anchor)),
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
-            cached_main_chain_length: Cell::new(None),
+            cached_main_chain: RefCell::new(None),
         }
     }
 
@@ -142,7 +144,7 @@ impl UnstableBlocks {
 
     /// Returns all blocks in the tree with their respective depths
     /// separated by heights.
-    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
+    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Rc<Block>, u32)>> {
         self.tree.blocks_with_depths_by_heights()
     }
 
@@ -221,7 +223,7 @@ impl UnstableBlocks {
         &self,
         stable_height: Height,
         heights: std::ops::RangeInclusive<Height>,
-    ) -> impl Iterator<Item = &Header> {
+    ) -> impl Iterator<Item = Header> {
         if *heights.end() < stable_height {
             // `stable_height` is larger than any height from the range, which implies none of the requested
             // blocks are in unstable blocks, hence the result should be an empty iterator.
@@ -237,7 +239,7 @@ impl UnstableBlocks {
 
         get_main_chain(self).into_chain()[heights_relative_to_unstable_blocks]
             .iter()
-            .map(|block| block.header())
+            .map(|block| *block.header())
             .collect::<Vec<_>>()
             .into_iter()
     }
@@ -245,16 +247,16 @@ impl UnstableBlocks {
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
 pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
-    get_stable_child(blocks).map(|_| blocks.tree.root())
+    get_stable_child(blocks).map(|_| &**blocks.tree.root())
 }
 
 /// Pops the `anchor` block iff ∃ a child `C` of the `anchor` block that
 /// is stable. The child `C` becomes the new `anchor` block, and all its
 /// siblings are discarded.
-pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> {
+pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Rc<Block>> {
     let stable_child_idx = get_stable_child(blocks)?;
 
-    blocks.cached_main_chain_length.set(None);
+    blocks.cached_main_chain.borrow_mut().take();
 
     // Replace the unstable block tree with that of the stable child.
     let mut tree = blocks.tree.remove_child(stable_child_idx);
@@ -278,13 +280,14 @@ pub fn push(
     utxos: &UtxoSet,
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
+    let block = Rc::new(block);
     let block_hash = *block.block_hash();
     let (parent_block_tree, depth) = blocks
         .tree
         .find_mut(&block.header().prev_blockhash.into())
         .ok_or(BlockDoesNotExtendTree(block_hash))?;
 
-    blocks.cached_main_chain_length.set(None);
+    blocks.cached_main_chain.borrow_mut().take();
 
     let height = utxos.next_height() + depth + 1;
 
@@ -308,21 +311,28 @@ pub fn push(
 /// difficulties are tied, the longest branch (by block count) wins. If
 /// branches still tie on both criteria, the chain ends at the fork point
 /// (contested tip).
-pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, Block> {
-    blocks.tree.main_chain_by_difficulty(blocks.network)
+///
+/// The result is cached and only recomputed when the tree is mutated
+/// (via `push` or `pop`). Cloning the cached chain is cheap because
+/// `BlockChain` holds `Rc<Block>` pointers.
+pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain {
+    {
+        let cache = blocks.cached_main_chain.borrow();
+        if let Some(chain) = cache.as_ref() {
+            return chain.clone();
+        }
+    }
+    let chain = blocks.tree.main_chain_by_difficulty(blocks.network);
+    blocks.cached_main_chain.borrow_mut().replace(chain.clone());
+    chain
 }
 
 /// Returns the length of the "main chain".
 /// See `get_main_chain` for what defines a main chain.
 ///
-/// The result is cached and recomputed when the tree is mutated (via `push` or `pop`).
+/// The result is derived from the cached main chain when available.
 pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
-    if let Some(len) = blocks.cached_main_chain_length.get() {
-        return len;
-    }
-    let len = blocks.tree.main_chain_length_by_difficulty(blocks.network);
-    blocks.cached_main_chain_length.set(Some(len));
-    len
+    get_main_chain(blocks).len()
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
@@ -336,10 +346,10 @@ pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
 /// Returns a blockchain starting from the anchor and ending with the `tip`.
 ///
 /// If the `tip` doesn't exist in the tree, `None` is returned.
-pub fn get_chain_with_tip<'a>(
-    blocks: &'a UnstableBlocks,
+pub fn get_chain_with_tip(
+    blocks: &UnstableBlocks,
     tip: &BlockHash,
-) -> Option<(BlockChain<'a, Block>, Vec<&'a Block>)> {
+) -> Option<(BlockChain, Vec<Rc<Block>>)> {
     blocks.tree.get_chain_with_tip(tip)
 }
 
@@ -441,6 +451,11 @@ mod test {
     use crate::test_utils::{BlockBuilder, BlockChainBuilder};
     use ic_btc_interface::Network;
     use proptest::proptest;
+    use std::rc::Rc;
+
+    fn rc(block: &Block) -> Rc<Block> {
+        Rc::new(block.clone())
+    }
 
     #[test]
     fn empty() {
@@ -470,7 +485,7 @@ mod test {
         // Block 0 (the anchor) now has one stable child (Block 1).
         // Block 0 should be returned when calling `pop`.
         assert_eq!(peek(&forest), Some(&block_0));
-        assert_eq!(pop(&mut forest, 0), Some(block_0));
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&block_0));
 
         // Block 1 is now the anchor. It doesn't have stable
         // children yet, so calling `pop` should return `None`.
@@ -508,12 +523,12 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&block_0));
-        assert_eq!(pop(&mut forest, 0), Some(block_0));
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&block_0));
 
         // block_1 (the anchor) now has one stable child (block_2).
         // block_1 should be returned when calling `pop`.
         assert_eq!(peek(&forest), Some(&block_1));
-        assert_eq!(pop(&mut forest, 0), Some(block_1));
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&block_1));
 
         // block_2 is now the anchor. It doesn't have stable
         // children yet, so calling `pop` should return `None`.
@@ -553,13 +568,13 @@ mod test {
         //Now, fork2 has a difficulty_based_depth of 3, while fork1 has a difficulty_based_depth of 1,
         //hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&genesis_block));
-        assert_eq!(pop(&mut forest, 0), Some(genesis_block));
-        assert_eq!(forest.tree.root(), &forked_block);
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&genesis_block));
+        assert_eq!(**forest.tree.root(), forked_block);
 
         //fork2 is still stable, hence we can get a stable child.
         assert_eq!(peek(&forest), Some(&forked_block));
-        assert_eq!(pop(&mut forest, 0), Some(forked_block));
-        assert_eq!(forest.tree.root(), &block_1);
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&forked_block));
+        assert_eq!(**forest.tree.root(), block_1);
 
         // No stable children for fork2.
         assert_eq!(peek(&forest), None);
@@ -622,8 +637,8 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&genesis_block));
-        assert_eq!(pop(&mut forest, 0), Some(genesis_block));
-        assert_eq!(forest.tree.root(), &fork2_block);
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&genesis_block));
+        assert_eq!(**forest.tree.root(), fork2_block);
 
         // fork2_block should have a stable child block_2, because
         // its difficulty_based_depth is 25,
@@ -635,7 +650,7 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&fork2_block));
-        assert_eq!(pop(&mut forest, 0), Some(fork2_block));
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&fork2_block));
 
         // No stable child for block_2, because it does not have any children.
         assert_eq!(peek(&forest), None);
@@ -656,8 +671,8 @@ mod test {
         );
 
         assert_eq!(peek(&forest), Some(&block_2));
-        assert_eq!(pop(&mut forest, 0), Some(block_2));
-        assert_eq!(forest.tree.root(), &block_3);
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&block_2));
+        assert_eq!(**forest.tree.root(), block_3);
 
         // No stable child for block_3, because it does not have any children.
         assert_eq!(peek(&forest), None);
@@ -677,9 +692,9 @@ mod test {
         push(&mut forest, &utxos, block_2).unwrap();
 
         assert_eq!(peek(&forest), Some(&block_0));
-        assert_eq!(pop(&mut forest, 0), Some(block_0));
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&block_0));
         assert_eq!(peek(&forest), Some(&block_1));
-        assert_eq!(pop(&mut forest, 0), Some(block_1));
+        assert_eq!(pop(&mut forest, 0).as_deref(), Some(&block_1));
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest, 0), None);
     }
@@ -703,23 +718,23 @@ mod test {
         push(&mut forest, &utxos, block_2.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1), rc(&block_2)])
         );
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1]),
+            (BlockChain::new(rc(&block_0)), vec![rc(&block_1)]),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
-                vec![&block_2]
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1)]),
+                vec![rc(&block_2)]
             ),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2]),
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1), rc(&block_2)]),
                 vec![]
             ),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
@@ -744,22 +759,22 @@ mod test {
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2.clone()).unwrap();
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1, &block_2]),
+            (BlockChain::new(rc(&block_0)), vec![rc(&block_1), rc(&block_2)]),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1)]),
                 vec![]
             ),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_2]),
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_2)]),
                 vec![]
             ),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
@@ -788,30 +803,30 @@ mod test {
         push(&mut forest, &utxos, block_3.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_2, &block_3])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_2), rc(&block_3)])
         );
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1, &block_2]),
+            (BlockChain::new(rc(&block_0)), vec![rc(&block_1), rc(&block_2)]),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1)]),
                 vec![]
             ),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_2]),
-                vec![&block_3]
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_2)]),
+                vec![rc(&block_3)]
             ),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_2, &block_3]),
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_2), rc(&block_3)]),
                 vec![]
             ),
             get_chain_with_tip(&forest, block_3.block_hash()).unwrap()
@@ -845,31 +860,31 @@ mod test {
         push(&mut forest, &utxos, block_b.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_1])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1)])
         );
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1]),
+            (BlockChain::new(rc(&block_0)), vec![rc(&block_1)]),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
-                vec![&block_2, &block_a]
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1)]),
+                vec![rc(&block_2), rc(&block_a)]
             ),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2]),
-                vec![&block_3]
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1), rc(&block_2)]),
+                vec![rc(&block_3)]
             ),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1, &block_a]),
-                vec![&block_b]
+                BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1), rc(&block_a)]),
+                vec![rc(&block_b)]
             ),
             get_chain_with_tip(&forest, block_a.block_hash()).unwrap()
         );
@@ -910,7 +925,7 @@ mod test {
         push(&mut forest, &utxos, block_3).unwrap();
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
 
         // Now add block c to b.
         let block_c = BlockBuilder::with_prev_header(block_b.header()).build();
@@ -919,7 +934,7 @@ mod test {
         // Now the main chain should be "1 -> a -> b -> c"
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_1, &block_a, &block_b, &block_c])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_1), rc(&block_a), rc(&block_b), rc(&block_c)])
         );
     }
 
@@ -948,7 +963,7 @@ mod test {
         push(&mut forest, &utxos, block_x).unwrap();
         push(&mut forest, &utxos, block_y).unwrap();
         push(&mut forest, &utxos, block_z).unwrap();
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
     }
 
     #[test]
@@ -958,7 +973,7 @@ mod test {
         let utxos = UtxoSet::new(network);
         let forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
     }
 
     // Linear chain with varying difficulties: the entire chain is "main".
@@ -984,7 +999,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a), rc(&block_b), rc(&block_c)])
         );
         assert_eq!(get_main_chain_length(&forest), 4);
     }
@@ -1010,7 +1025,7 @@ mod test {
         push(&mut forest, &utxos, block_a).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
         assert_eq!(get_main_chain_length(&forest), 1);
     }
 
@@ -1049,7 +1064,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a), rc(&block_b)])
         );
         assert_eq!(get_main_chain_length(&forest), 3);
     }
@@ -1082,7 +1097,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a), rc(&block_b)])
         );
         assert_eq!(get_main_chain_length(&forest), 3);
     }
@@ -1118,7 +1133,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a)])
         );
         assert_eq!(get_main_chain_length(&forest), 2);
 
@@ -1128,7 +1143,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_b, &block_c])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_b), rc(&block_c)])
         );
         assert_eq!(get_main_chain_length(&forest), 3);
     }
@@ -1161,7 +1176,7 @@ mod test {
         push(&mut forest, &utxos, block_c).unwrap();
         push(&mut forest, &utxos, block_d).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
         assert_eq!(get_main_chain_length(&forest), 1);
     }
 
@@ -1191,7 +1206,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a)])
         );
         assert_eq!(get_main_chain_length(&forest), 2);
     }
@@ -1226,7 +1241,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a), rc(&block_b), rc(&block_c)])
         );
         assert_eq!(get_main_chain_length(&forest), 4);
     }
@@ -1281,7 +1296,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c, &block_d])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a), rc(&block_b), rc(&block_c), rc(&block_d)])
         );
         assert_eq!(get_main_chain_length(&forest), 5);
     }
@@ -1325,7 +1340,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_d])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_d)])
         );
         assert_eq!(get_main_chain_length(&forest), 2);
     }
@@ -1357,7 +1372,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a)])
         );
         assert_eq!(get_main_chain_length(&forest), 2);
     }
@@ -1387,7 +1402,7 @@ mod test {
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
         assert_eq!(get_main_chain_length(&forest), 1);
     }
 
@@ -1420,7 +1435,7 @@ mod test {
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), BlockChain::new(rc(&block_0)));
         assert_eq!(get_main_chain_length(&forest), 1);
 
         let block_c =
@@ -1429,7 +1444,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_c])
+            BlockChain::new_with_successors(rc(&block_0), vec![rc(&block_a), rc(&block_c)])
         );
         assert_eq!(get_main_chain_length(&forest), 3);
     }
@@ -1664,7 +1679,7 @@ mod test {
         // blocks are in unstable blocks, hence the result should be an empty iterator.
         assert!(unstable_blocks
             .get_block_headers_in_range(stable_height, range)
-            .eq([].iter()));
+            .eq(std::iter::empty::<Header>()));
     }
 
     #[test]
@@ -1681,7 +1696,7 @@ mod test {
                 let mut result = unstable_blocks.get_block_headers_in_range(0, std::ops::RangeInclusive::new(start_range as u32, end_range as u32)).peekable();
 
                 for expected_result in headers.iter().take(end_range + 1).skip(start_range){
-                    assert_eq!(expected_result, *result.peek().unwrap());
+                    assert_eq!(*expected_result, *result.peek().unwrap());
                     result.next();
                 }
             }
@@ -1712,7 +1727,7 @@ mod test {
     }
 
     #[test]
-    fn cached_main_chain_length_invalidated_on_push() {
+    fn cached_main_chain_invalidated_on_push() {
         let block_0 = BlockBuilder::genesis().build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
 
@@ -1721,21 +1736,21 @@ mod test {
         let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
 
         // Cache is empty initially.
-        assert_eq!(forest.cached_main_chain_length.get(), None);
+        assert!(forest.cached_main_chain.borrow().is_none());
 
         // First call populates the cache.
         assert_eq!(get_main_chain_length(&forest), 1);
-        assert_eq!(forest.cached_main_chain_length.get(), Some(1));
+        assert!(forest.cached_main_chain.borrow().is_some());
 
         // Push invalidates the cache and the new value is correct.
         push(&mut forest, &utxos, block_1).unwrap();
-        assert_eq!(forest.cached_main_chain_length.get(), None);
+        assert!(forest.cached_main_chain.borrow().is_none());
         assert_eq!(get_main_chain_length(&forest), 2);
-        assert_eq!(forest.cached_main_chain_length.get(), Some(2));
+        assert!(forest.cached_main_chain.borrow().is_some());
     }
 
     #[test]
-    fn cached_main_chain_length_invalidated_on_pop() {
+    fn cached_main_chain_invalidated_on_pop() {
         let block_0 = BlockBuilder::genesis().build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
         let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
@@ -1747,12 +1762,12 @@ mod test {
         push(&mut forest, &utxos, block_2).unwrap();
 
         assert_eq!(get_main_chain_length(&forest), 3);
-        assert_eq!(forest.cached_main_chain_length.get(), Some(3));
+        assert!(forest.cached_main_chain.borrow().is_some());
 
         // Pop invalidates the cache and the new value is correct.
         pop(&mut forest, 0);
-        assert_eq!(forest.cached_main_chain_length.get(), None);
+        assert!(forest.cached_main_chain.borrow().is_none());
         assert_eq!(get_main_chain_length(&forest), 2);
-        assert_eq!(forest.cached_main_chain_length.get(), Some(2));
+        assert!(forest.cached_main_chain.borrow().is_some());
     }
 }
