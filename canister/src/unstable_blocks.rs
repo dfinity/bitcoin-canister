@@ -1120,7 +1120,7 @@ mod test {
     // Contested fork with equal difficulty AND equal depth.
     //
     // * (d=1) -> A (d=50) -> C (d=10)
-    //         -> B (d=50) -> D (d=10)
+    //         -> B (d=20) -> D (d=40)
     //
     // A's branch: (diff=60, depth=2). B's branch: (diff=60, depth=2). Tied.
     // Main chain = [*], length 1.
@@ -1130,11 +1130,11 @@ mod test {
         let block_a =
             BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(50);
         let block_b =
-            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(50);
+            BlockBuilder::with_prev_header(block_0.header()).build_with_mock_difficulty(20);
         let block_c =
             BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(10);
         let block_d =
-            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(10);
+            BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(40);
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
