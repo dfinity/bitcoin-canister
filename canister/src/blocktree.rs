@@ -28,7 +28,6 @@ impl<'a, Block> BlockChain<'a, Block> {
     }
 
     /// This is only useful for tests to simplify the creation of a `BlockChain`.
-    #[cfg(test)]
     pub fn new_with_successors(first: &'a Block, successors: Vec<&'a Block>) -> Self {
         Self { first, successors }
     }
@@ -355,12 +354,11 @@ impl<Block: ChainBlock> BlockTree<Block> {
     /// Runs in O(n) time where n is the number of blocks in the tree.
     pub fn main_chain_by_difficulty(&self, network: Network) -> BlockChain<'_, Block> {
         let (_, _, mut chain_rev) = self.main_chain_by_difficulty_inner(network);
+        let first = chain_rev
+            .pop()
+            .expect("chain is never empty: always contains at least the root");
         chain_rev.reverse();
-        let mut chain = BlockChain::new(chain_rev[0]);
-        for &block in &chain_rev[1..] {
-            chain.push(block);
-        }
-        chain
+        BlockChain::new_with_successors(first, chain_rev)
     }
 
     /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_reversed).
