@@ -1,11 +1,6 @@
 use crate::endpoints::*;
 use crate::http::HttpRequestConfig;
 
-// Height values for canister inter-canister call mocks
-pub const BITCOIN_MAINNET_CANISTER_HEIGHT: u64 = 700007;
-pub const BITCOIN_TESTNET_CANISTER_HEIGHT: u64 = 55001;
-pub const DOGECOIN_MAINNET_CANISTER_HEIGHT: u64 = 5931098;
-
 /// Mocks all the Bitcoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
