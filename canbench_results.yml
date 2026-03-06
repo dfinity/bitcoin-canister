@@ -2,35 +2,35 @@ benches:
   get_blockchain_info_many_branches:
     total:
       calls: 1
-      instructions: 30356723
+      instructions: 2161036
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_single_chain:
     total:
       calls: 1
-      instructions: 6094927
+      instructions: 2615266
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_with_forks:
     total:
       calls: 1
-      instructions: 12786906
+      instructions: 2705933
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_metrics:
     total:
       calls: 1
-      instructions: 8198581
+      instructions: 10064782
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   insert_300_blocks:
     total:
       calls: 1
-      instructions: 418051775
+      instructions: 418044648
       heap_increase: 12
       stable_memory_increase: 0
     scopes:
@@ -86,7 +86,7 @@ benches:
   insert_block_with_10k_transactions:
     total:
       calls: 1
-      instructions: 1384037298
+      instructions: 1383437311
       heap_increase: 73
       stable_memory_increase: 0
     scopes:
@@ -118,7 +118,7 @@ benches:
   insert_block_with_1k_transactions:
     total:
       calls: 1
-      instructions: 114356376
+      instructions: 114296389
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
