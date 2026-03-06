@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add `AddressForWrongNetwork` struct used in network validation for addresses in `get_balance` and `get_utxos` endpoints ([#458](https://github.com/dfinity/bitcoin-canister/pull/458))
 
-- Add CanisterArg([#495](https://github.com/dfinity/bitcoin-canister/pull/495))
+- Add CanisterArg ([#495](https://github.com/dfinity/bitcoin-canister/pull/495))
 
 ## [0.3.0] - 2025-12-09
 
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add two APIs: `Fees::testnet` and `Fees::mainnet`.
 
-[0.4.0]: https://github.com/dfinity/bitcoin-canister/compare/0.3.0...0.4.0
+[0.4.0]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-interface-0.3.0...ic-btc-interface-0.4.0
 
 [0.3.0]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-interface-0.2.3...ic-btc-interface-0.3.0
 
