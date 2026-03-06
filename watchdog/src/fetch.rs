@@ -94,7 +94,7 @@ async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInf
 /// Fetches the canister main chain height via the `get_blockchain_info` endpoint.
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_canister_height() -> Option<u64> {
-    let id = crate::storage::get_canister().canister_principal();
+    let id = storage::get_canister().canister_principal(); // TODO(mducroux): weird we can have get_canister().canister_principal or get_config().canister_principal
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await
@@ -112,25 +112,9 @@ pub async fn fetch_canister_height() -> Option<u64> {
     Some(info.height as u64)
 }
 
-/// Mock implementation for tests (non-wasm32 targets).
 #[cfg(not(target_arch = "wasm32"))]
 pub async fn fetch_canister_height() -> Option<u64> {
-    MOCK_CANISTER_HEIGHT.with(|cell| *cell.borrow())
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-thread_local! {
-    static MOCK_CANISTER_HEIGHT: std::cell::RefCell<Option<u64>> =
-        const { std::cell::RefCell::new(None) };
-}
-
-/// Sets the mock response for `fetch_canister_height` in tests.
-#[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
-pub fn mock_canister_height(height: Option<u64>) {
-    MOCK_CANISTER_HEIGHT.with(|cell| {
-        *cell.borrow_mut() = height;
-    });
+    None
 }
 
 #[cfg(test)]
@@ -343,33 +327,5 @@ mod test {
         test_utils::mock_all_outcalls_404();
 
         verify_dogecoin_mainnet_fetch_failed_404().await;
-    }
-
-    #[tokio::test]
-    async fn test_bitcoin_canister_mainnet() {
-        mock_canister_height(Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT));
-        let height = fetch_canister_height().await;
-        assert_eq!(height, Some(test_utils::BITCOIN_MAINNET_CANISTER_HEIGHT));
-    }
-
-    #[tokio::test]
-    async fn test_bitcoin_canister_testnet() {
-        mock_canister_height(Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT));
-        let height = fetch_canister_height().await;
-        assert_eq!(height, Some(test_utils::BITCOIN_TESTNET_CANISTER_HEIGHT));
-    }
-
-    #[tokio::test]
-    async fn test_dogecoin_canister_mainnet() {
-        mock_canister_height(Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT));
-        let height = fetch_canister_height().await;
-        assert_eq!(height, Some(test_utils::DOGECOIN_MAINNET_CANISTER_HEIGHT));
-    }
-
-    #[tokio::test]
-    async fn test_fetch_canister_height_failed() {
-        mock_canister_height(None);
-        let height = fetch_canister_height().await;
-        assert_eq!(height, None);
     }
 }

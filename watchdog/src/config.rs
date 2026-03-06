@@ -219,6 +219,7 @@ impl Config {
     }
 
     /// Returns all providers parsed from stored strings.
+    // TODO(mducroux): simplify this
     pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
         match canister {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => self
