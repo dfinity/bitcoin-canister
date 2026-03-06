@@ -123,8 +123,11 @@ fn calculate_height_target(
 }
 
 /// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
-    let canister_height = source.and_then(|block| block.height);
+fn compare(
+    canister_height: Option<u64>,
+    explorers: Vec<BlockInfo>,
+    config: Config,
+) -> HealthStatus {
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
