@@ -1180,7 +1180,7 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
-    // Longer branch wins on accumulated difficulty at a nested fork.
+    // Longer branch wins on accumulated difficulty.
     //
     // * (d=1) -> A (d=1) -> B (d=1) -> C (d=1)
     //                    -> D (d=1)
