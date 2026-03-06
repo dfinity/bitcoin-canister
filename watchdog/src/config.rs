@@ -142,7 +142,10 @@ pub struct Config {
     /// The minimum number of explorers to compare against.
     pub min_explorers: u64,
 
-    /// Monitored canister principal.
+    /// Monitored canister.
+    pub canister: Canister,
+
+    /// The canister principal.
     pub canister_principal: Principal,
 
     /// The number of seconds to wait before the first data fetch.
@@ -164,6 +167,7 @@ impl Config {
         match canister {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => Self {
                 network: canister.network(),
+                canister,
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
                 explorers: [
@@ -185,6 +189,7 @@ impl Config {
             },
             Canister::BitcoinTestnet => Self {
                 network: canister.network(),
+                canister,
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
                 explorers: [BitcoinTestnetProviderBlockApi::Mempool]
@@ -199,6 +204,7 @@ impl Config {
             },
             Canister::DogecoinMainnet | Canister::DogecoinMainnetStaging => Self {
                 network: canister.network(),
+                canister,
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
                 explorers: [
@@ -218,10 +224,9 @@ impl Config {
         }
     }
 
-    /// Returns all providers parsed from stored strings.
-    // TODO(mducroux): simplify this
-    pub fn get_providers(&self, canister: Canister) -> Vec<Box<dyn BlockProvider>> {
-        match canister {
+    /// Returns all providers for the given canister in config.
+    pub fn get_providers(&self) -> Vec<Box<dyn BlockProvider>> {
+        match self.canister {
             Canister::BitcoinMainnet | Canister::BitcoinMainnetStaging => self
                 .explorers
                 .iter()
@@ -350,12 +355,12 @@ mod test {
         for canister in ALL_CANISTERS {
             let config = Config::for_target(canister);
             assert_eq!(config.network, canister.network());
-            assert_eq!(config.canister_principal, canister.canister_principal());
+            assert_eq!(config.canister, canister);
             assert_eq!(config.subnet_type, canister.subnet_type());
             assert!(!config.explorers.is_empty());
 
             // Verify get_providers returns only explorers (canister height is fetched separately)
-            let providers = config.get_providers(canister);
+            let providers = config.get_providers();
             assert_eq!(providers.len(), config.explorers.len());
         }
     }

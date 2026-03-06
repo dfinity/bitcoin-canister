@@ -69,9 +69,8 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
 
 /// Fetches block info from the block provider APIs.
 pub async fn fetch_all_providers_data() -> Vec<BlockInfo> {
-    let canister = storage::get_canister();
     let config = storage::get_config();
-    fetch_providers(config.get_providers(canister)).await
+    fetch_providers(config.get_providers()).await
 }
 
 async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInfo> {
@@ -94,7 +93,7 @@ async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInf
 /// Fetches the canister main chain height via the `get_blockchain_info` endpoint.
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_canister_height() -> Option<u64> {
-    let id = storage::get_canister().canister_principal(); // TODO(mducroux): weird we can have get_canister().canister_principal or get_config().canister_principal
+    let id = storage::get_config().canister_principal;
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await

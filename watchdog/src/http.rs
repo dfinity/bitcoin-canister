@@ -74,7 +74,7 @@ impl HttpRequestConfig {
 
     /// Sends the HTTP request.
     pub async fn send_request(&self) -> CallResult<HttpRequestResult> {
-        let canister = crate::storage::get_canister();
+        let canister = crate::storage::get_config().canister;
         let cycles = self.calculate_cycles(canister.subnet_type());
         ic_http::http_request(self.request.clone(), cycles).await
     }

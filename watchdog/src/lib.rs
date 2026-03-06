@@ -91,7 +91,7 @@ async fn fetch_block_height() {
     if canister_height.is_none() {
         print(&format!(
             "Error getting canister {} main chain height.",
-            storage::get_canister().canister_principal()
+            storage::get_config().canister_principal
         ));
     }
 }
@@ -105,7 +105,7 @@ async fn tick() {
 /// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
 fn health_status() -> LegacyHealthStatus {
-    let network = storage::get_canister().network();
+    let network = storage::get_config().network;
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
             LegacyHealthStatus::try_from(health::health_status()).unwrap_or_else(|e| {

@@ -12,26 +12,12 @@ thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
         RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-    static CANISTER: RefCell<Cell<Canister, Memory>> = RefCell::new(Cell::init(
-            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0))), Canister::default()));
-
     static CONFIG: RefCell<Cell<Config, Memory>> = RefCell::new(Cell::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1))), Config::default()));
 }
 
-/// Returns the target canister from stable storage.
-pub fn get_canister() -> Canister {
-    CANISTER.with(|cell| *cell.borrow().get())
-}
-
-/// Sets the target canister in stable storage.
-pub fn set_canister(canister: Canister) {
-    CANISTER.with(|cell| cell.borrow_mut().set(canister));
-}
-
 /// Initializes both the target canister and its default config.
 pub fn set_canister_config(canister: Canister) {
-    set_canister(canister);
     set_config(Config::for_target(canister));
 }
 
