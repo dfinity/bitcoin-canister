@@ -1281,7 +1281,7 @@ mod test {
     //  / \
     // C   E (d=1 each)
     //
-    // D's subtree: diff=100, depth=1. A's subtree: diff=max(1+1, 1+1)=2, depth=3.
+    // D's subtree: diff=100, depth=1. A's subtree: diff=3, depth=3.
     // D wins. Main chain = [*, D], length 2.
     #[test]
     fn get_main_chain_high_diff_short_over_low_diff_long_contested() {
