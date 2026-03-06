@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-# Configure dfx.json to use pre-built WASM from wasms/ directory instead of building.
-# This is used in CI where the WASM is downloaded from the canister-build-reproducibility job.
+# Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
+# When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
 use_prebuilt_bitcoin_wasm() {
-  sed -i.bak 's|"wasm": "../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"|"wasm": "../wasms/ic-btc-canister.wasm.gz"|' dfx.json
-  sed -i.bak 's|"build": "../scripts/build-canister.sh ic-btc-canister"|"build": "true"|' dfx.json
+  if [[ -f ../wasms/ic-btc-canister.wasm.gz ]]; then
+    sed -i.bak 's|"wasm": "../target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz"|"wasm": "../wasms/ic-btc-canister.wasm.gz"|' dfx.json
+    sed -i.bak 's|"build": "../scripts/build-canister.sh ic-btc-canister"|"build": "true"|' dfx.json
+  fi
 }
 
 # Waits until the main chain of the bitcoin canister has reached a certain height.

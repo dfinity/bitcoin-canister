@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# Configure dfx.json to use pre-built WASM from wasms/ directory instead of building.
-# This is used in CI where the WASM is downloaded from the canister-build-reproducibility job.
+# Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
+# When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
 use_prebuilt_watchdog_wasm() {
-  sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
+  if [[ -f ../../wasms/watchdog.wasm.gz ]]; then
+    sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
+  fi
 }
 
 # Function to deploy the watchdog canister for mainnet bitcoin_canister using pre-built WASM.
@@ -76,6 +78,34 @@ check_health_status_data() {
   if [ $has_enough_data -eq 0 ]; then
     echo "FAIL: Not enough data in health status of ${0##*/}"
     exit 4
+  fi
+}
+
+# Function to check for presence of specific fields in the health status v2
+# and that canister_height and explorer_height are not null.
+check_health_status_v2_fields() {
+  FIELDS=(
+    "canister_height"
+    "explorer_height"
+    "height_status"
+    "explorers"
+  )
+  
+  health_status=$(dfx canister call watchdog health_status_v2 --query)
+  for field in "${FIELDS[@]}"; do
+    if ! [[ $health_status == *"$field = "* ]]; then
+      echo "FAIL: $field not found in health_status_v2 of ${0##*/}"
+      exit 3
+    fi
+  done
+
+  if [[ $health_status == *"canister_height = null"* ]]; then
+    echo "FAIL: canister_height is null in health_status_v2 of ${0##*/}"
+    exit 3
+  fi
+  if [[ $health_status == *"explorer_height = null"* ]]; then
+    echo "FAIL: explorer_height is null in health_status_v2 of ${0##*/}"
+    exit 3
   fi
 }
 

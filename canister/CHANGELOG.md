@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-02-18] - 2026-02-18
+
+### Added
+
+- Add `get_blockchain_info` endpoint ([#483](https://github.com/dfinity/bitcoin-canister/pull/483))
+
+- Add network validation for addresses in get_balance and get_utxos requests ([#458](https://github.com/dfinity/bitcoin-canister/pull/458))
+
+- Add canister_arg to initialize and upgrade canister ([#457](https://github.com/dfinity/bitcoin-canister/pull/457))
+
+
 ## [release/2025-12-03] - 2025-12-03
 
 ### Changed
@@ -281,3 +292,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2022-12-20]: https://github.com/dfinity/bitcoin-canister/compare/release/2022-12-02...release/2022-12-20
 
 [release/2022-12-02]: https://github.com/dfinity/bitcoin-canister/releases/tag/release/2022-12-02
+
+[release/2026-02-18]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-canister/release/2025-12-03...ic-btc-canister/release/2026-02-18

@@ -48,10 +48,10 @@ pub struct LegacyHealthStatus {
 #[derive(Clone, Debug, PartialEq, Eq, CandidType)]
 pub struct HealthStatus {
     /// Main chain height of the canister.
-    pub height_source: Option<u64>,
+    pub canister_height: Option<u64>,
 
     /// Height target derived from explorer heights.
-    pub height_target: Option<u64>,
+    pub explorer_height: Option<u64>,
 
     /// Difference between canister height and target height.
     pub height_diff: Option<i64>,
@@ -74,8 +74,8 @@ impl TryFrom<HealthStatus> for LegacyHealthStatus {
             .collect::<Result<Vec<LegacyBlockInfo>, Self::Error>>()?;
 
         Ok(LegacyHealthStatus {
-            height_source: status.height_source,
-            height_target: status.height_target,
+            height_source: status.canister_height,
+            height_target: status.explorer_height,
             height_diff: status.height_diff,
             height_status: status.height_status,
             explorers,
@@ -122,24 +122,21 @@ fn calculate_height_target(
     }
 }
 
-/// Compares the canister height with the explorer heights.
-fn compare(
-    canister_height: Option<u64>,
-    explorers: Vec<BlockInfo>,
-    config: Config,
-) -> HealthStatus {
+/// Compares the source with the other explorers.
+fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
+    let canister_height = source.and_then(|block| block.height);
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
         .collect::<Vec<_>>();
-    let height_target = calculate_height_target(
+    let explorer_height = calculate_height_target(
         &heights,
         config.min_explorers as usize,
         config.get_blocks_behind_threshold(),
         config.get_blocks_ahead_threshold(),
     );
     let height_diff = canister_height
-        .zip(height_target)
+        .zip(explorer_height)
         .map(|(source, target)| source as i64 - target as i64);
     let height_status = height_diff.map_or(HeightStatus::NotEnoughData, |diff| {
         if diff < config.get_blocks_behind_threshold() {
@@ -152,8 +149,8 @@ fn compare(
     });
 
     HealthStatus {
-        height_source: canister_height,
-        height_target,
+        canister_height,
+        explorer_height,
         height_diff,
         height_status,
         explorers,
@@ -283,8 +280,8 @@ mod test {
         assert_eq!(
             compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: None,
-                height_target: None,
+                canister_height: None,
+                explorer_height: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![],
@@ -302,8 +299,8 @@ mod test {
         assert_eq!(
             compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: None,
+                canister_height: Some(1_000),
+                explorer_height: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![],
@@ -324,8 +321,8 @@ mod test {
         assert_eq!(
             compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: None,
+                canister_height: Some(1_000),
+                explorer_height: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
@@ -350,8 +347,8 @@ mod test {
         assert_eq!(
             compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: Some(1_005),
+                canister_height: Some(1_000),
+                explorer_height: Some(1_005),
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
@@ -377,8 +374,8 @@ mod test {
         assert_eq!(
             compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: Some(995),
+                canister_height: Some(1_000),
+                explorer_height: Some(995),
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![

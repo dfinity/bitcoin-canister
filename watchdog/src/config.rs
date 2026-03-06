@@ -204,7 +204,7 @@ impl Config {
                 explorers: [
                     DogecoinProviderBlockApi::ApiBlockchairCom,
                     DogecoinProviderBlockApi::ApiBlockcypherCom,
-                    DogecoinProviderBlockApi::TokenView,
+                    DogecoinProviderBlockApi::PsyProtocol,
                 ]
                 .iter()
                 .map(|p| p.to_string())
