@@ -2,21 +2,21 @@ benches:
   get_blockchain_info_many_branches:
     total:
       calls: 1
-      instructions: 2186477
+      instructions: 2161036
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_single_chain:
     total:
       calls: 1
-      instructions: 2654848
+      instructions: 2615266
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_with_forks:
     total:
       calls: 1
-      instructions: 2743920
+      instructions: 2705933
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
