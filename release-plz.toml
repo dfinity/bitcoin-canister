@@ -41,7 +41,7 @@ git_tag_enable = true
 
 [[package]]
 name = "ic-btc-validation"
-release = false # TODO(DEFI-2211): create release once validation crate is properely implemented
+release = false # TODO(DEFI-2211): create release once ticket is addressed
 changelog_update = false
 changelog_path = "validation/CHANGELOG.md"
 semver_check = false
