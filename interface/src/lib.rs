@@ -571,6 +571,14 @@ pub enum Flag {
     Disabled,
 }
 
+#[derive(CandidType, Deserialize)]
+pub enum CanisterArg {
+    #[serde(rename = "init")]
+    Init(InitConfig),
+    #[serde(rename = "upgrade")]
+    Upgrade(Option<SetConfigRequest>),
+}
+
 /// The config used to initialize the canister.
 ///
 /// This struct is equivalent to `Config`, except that all its fields are optional.
