@@ -28,12 +28,12 @@ pub use api::get_metrics;
 pub use api::send_transaction;
 pub use api::set_config;
 pub use heartbeat::heartbeat;
+pub use ic_btc_interface::CanisterArg;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
     GetUtxosResponse, InitConfig, MillisatoshiPerByte, Network, Satoshi, SetConfigRequest,
 };
-pub use ic_btc_interface::CanisterArg;
 use ic_btc_types::Block;
 use ic_stable_structures::Memory;
 pub use memory::get_memory;
