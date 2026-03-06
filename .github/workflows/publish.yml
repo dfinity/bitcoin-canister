@@ -1,61 +1,35 @@
-name: Publish crates to crates.io
+name: Publish ic-btc-interface crate to crates.io
 
 on:
-  workflow_dispatch:
-    inputs:
-      crate-name:
-        description: 'The name of the crate to publish'
-        required: true
-      crate-version:
-        description: 'The version of the crate to publish'
-        required: true
-      dry-run:
-        description: "If true, run publish in dry-run mode (don't actually publish the crate)"
-        required: false
-        default: 'false'
-        type: boolean
+  workflow_dispatch
 
-run-name: >-
-  ${{ format('Publish Crate {0} {1}', github.event.inputs.crate-name, github.event.inputs.crate-version) }}
-
-permissions:
-  contents: read
-  id-token: write
+# Publishes ic-btc-interface to crates.io
+# Run this after merging the release PR created by release-plz
 
 jobs:
-  publish-crates:
-    name: Publish Crate ${{ github.event.inputs.crate-name }} ${{ github.event.inputs.crate-version }}
+  publish:
+    name: Publish ic-btc-interface crate
     runs-on: ubuntu-latest
-    environment: publish-crates
+
+    permissions:
+      contents: write
+      id-token: write # Required for OIDC token exchange
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: rust-lang/crates-io-auth-action@b7e9a28eded4986ec6b1fa40eeee8f8f165559ec
+      - name: Authenticate with crates.io
         id: auth
+        uses: rust-lang/crates-io-auth-action@v1
 
-      - name: Check crate version
-        run: |
-          set -euo pipefail
-          crate_name="${{ github.event.inputs.crate-name }}"
-          crate_version="${{ github.event.inputs.crate-version }}"
-
-          current_crate_version=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[] | select(.name==\"${crate_name}\") | .version")
-          if [ "$current_crate_version" != "$crate_version" ]; then
-            echo "Crate version mismatch: expected $crate_version, found $current_crate_version"
-            exit 1
-          fi
-
-      - name: Build and Test Crate
-        run: |
-          cargo build --package ${{ github.event.inputs.crate-name }}
-          cargo test --package ${{ github.event.inputs.crate-name }}
-
-      - name: Publish Dry Run
-        if: ${{ github.event.inputs.dry-run == 'true' }}
-        run: cargo publish --package ${{ github.event.inputs.crate-name }} --allow-dirty --dry-run
-
-      - name: Publish Crate
-        if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: cargo publish --package ${{ github.event.inputs.crate-name }} --allow-dirty
+      - name: Publish crates (release-plz)
+        uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
+        with:
+          command: release
+          version: 0.3.151
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
