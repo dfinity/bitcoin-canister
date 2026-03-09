@@ -10,11 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `BlockchainInfo` struct for `get_blockchain_info` endpoint return type ([#483](https://github.com/dfinity/bitcoin-canister/pull/483))
+- Add `BlockchainInfo` struct for the `get_blockchain_info` endpoint return type ([#483](https://github.com/dfinity/bitcoin-canister/pull/483)).
 
-- Add `AddressForWrongNetwork` struct used in network validation for addresses in `get_balance` and `get_utxos` endpoints ([#458](https://github.com/dfinity/bitcoin-canister/pull/458))
+- Add `CanisterArg` enum ([#495](https://github.com/dfinity/bitcoin-canister/pull/495)).
 
-- Add CanisterArg ([#495](https://github.com/dfinity/bitcoin-canister/pull/495))
+- Add `AddressForWrongNetwork` variant to `GetBalanceError` and `GetUtxosError` enums for network validation of addresses in the `bitcoin_get_balance` and `bitcoin_get_utxos` endpoints ([#458](https://github.com/dfinity/bitcoin-canister/pull/458)). **Breaking change** for the `ic-btc-interface` crate as a new variant is added to existing enums, but not a breaking change for the canister, which does not return these enums but instead rejects requests with an error message.
 
 ## [0.3.0] - 2025-12-09
 
