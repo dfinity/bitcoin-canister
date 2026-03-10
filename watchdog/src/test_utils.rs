@@ -5,6 +5,10 @@ use crate::http::HttpRequestConfig;
 pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
         (
+            endpoint_bitcoin_mainnet_api_bitcore_io(),
+            BITCOIN_MAINNET_API_BITCORE_IO_RESPONSE,
+        ),
+        (
             endpoint_bitcoin_mainnet_api_blockchair_com(),
             BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
         ),
@@ -65,6 +69,10 @@ pub fn mock_bitcoin_testnet_outcalls() {
 pub fn mock_dogecoin_mainnet_outcalls() {
     let mocks = [
         (
+            endpoint_dogecoin_mainnet_api_bitcore_io(),
+            DOGECOIN_MAINNET_API_BITCORE_IO_RESPONSE,
+        ),
+        (
             endpoint_dogecoin_mainnet_api_blockchair_com(),
             DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
         ),
@@ -93,11 +101,13 @@ pub fn mock_dogecoin_mainnet_outcalls() {
 
 fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
     vec![
+        endpoint_bitcoin_mainnet_api_bitcore_io(),
         endpoint_bitcoin_mainnet_api_blockchair_com(),
         endpoint_bitcoin_mainnet_api_blockcypher_com(),
         endpoint_bitcoin_canister(),
         endpoint_bitcoin_mainnet_blockchain_info(),
         endpoint_bitcoin_mainnet_blockstream_info(),
+        endpoint_dogecoin_mainnet_api_bitcore_io(),
         endpoint_dogecoin_mainnet_api_blockchair_com(),
         endpoint_dogecoin_mainnet_api_blockcypher_com(),
         endpoint_dogecoin_canister(),
@@ -129,6 +139,28 @@ pub fn mock_all_outcalls_abusing_api() {
 }
 
 pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
+
+// https://api.bitcore.io/api/BTC/mainnet/block?limit=1
+pub const BITCOIN_MAINNET_API_BITCORE_IO_RESPONSE: &str = r#"[
+    {
+        "chain": "BTC",
+        "network": "mainnet",
+        "hash": "000000000000000000008be250ccc80da6c16b76b1803a0b12681df71c390988",
+        "height": 700009,
+        "version": 537919488,
+        "size": 749743,
+        "merkleRoot": "ec96bdffb2fdfe1de67caa017a8aff057f01b42e39350ca17a2ba5122d868c70",
+        "time": "2026-03-10T10:31:35.000Z",
+        "timeNormalized": "2026-03-10T10:31:35.000Z",
+        "nonce": 1995573277,
+        "bits": 386003148,
+        "previousBlockHash": "000000000000000000013fd0007073a3637515b501d56da32b538ecd508a6e4b",
+        "nextBlockHash": "",
+        "reward": 313014557,
+        "transactionCount": 5048,
+        "feeData": {"feeTotal":514557,"mean":0.5580776616275406,"median":0.1935483870967742,"mode":0.1935483870967742}
+    }
+]"#;
 
 // https://api.blockchair.com/bitcoin/stats
 pub const BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
@@ -240,6 +272,28 @@ pub const BITCOIN_TESTNET_CANISTER_RESPONSE: &str = r#"{
 
 // https://mempool.space/testnet4/api/blocks/tip/height
 pub const BITCOIN_TESTNET_MEMPOOL_RESPONSE: &str = r#"55002"#;
+
+// https://api.bitcore.io/api/DOGE/mainnet/block?limit=1
+pub const DOGECOIN_MAINNET_API_BITCORE_IO_RESPONSE: &str = r#"[
+    {
+        "chain": "DOGE",
+        "network": "mainnet",
+        "hash": "8e27a6b7b5505f1d3fad75190598997c3217f9b4fbc79ca925ce5b75d8aca6a3",
+        "height": 5931100,
+        "version": 6422788,
+        "size": 32640,
+        "merkleRoot": "d6a05d89139116f2d2a715a088ab002d6b2b974eb1669dca41a34ba8bd6b9a45",
+        "time": "2026-03-10T08:52:32.000Z",
+        "timeNormalized": "2026-03-10T08:52:32.000Z",
+        "nonce": 0,
+        "bits": 436245300,
+        "previousBlockHash": "36c92c28151d7b890814ab800b79ae5d39dc817f2056e492368755dfea00eab5",
+        "nextBlockHash": "",
+        "reward": 1000571856878,
+        "transactionCount": 88,
+        "feeData": {"feeTotal":571856878,"mean":19869.43776817445,"median":2000,"mode":2000}
+    }
+]"#;
 
 // https://api.blockchair.com/dogecoin/stats
 pub const DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{

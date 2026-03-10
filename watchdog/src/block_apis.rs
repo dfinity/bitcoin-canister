@@ -16,6 +16,9 @@ pub trait BlockProvider {
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum BitcoinBlockApi {
+    #[serde(rename = "api_bitcore_io_mainnet")]
+    ApiBitcoreIoMainnet,
+
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
@@ -56,6 +59,8 @@ impl std::fmt::Display for BitcoinBlockApi {
 pub enum BitcoinMainnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
+    #[strum(serialize = "bitcoin_api_bitcore_io_mainnet")]
+    ApiBitcoreIo,
     #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
     #[strum(serialize = "bitcoin_api_blockcypher_com_mainnet")]
@@ -73,6 +78,11 @@ impl BlockProvider for BitcoinMainnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
+            Self::ApiBitcoreIo => {
+                endpoint_bitcoin_mainnet_api_bitcore_io()
+                    .send_request_json()
+                    .await
+            }
             Self::ApiBlockchairCom => {
                 endpoint_bitcoin_mainnet_api_blockchair_com()
                     .send_request_json()
@@ -130,6 +140,8 @@ impl BlockProvider for BitcoinTestnetProviderBlockApi {
 pub enum DogecoinProviderBlockApi {
     #[strum(serialize = "dogecoin_canister")]
     DogecoinCanister,
+    #[strum(serialize = "dogecoin_api_bitcore_io_mainnet")]
+    ApiBitcoreIo,
     #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
     #[strum(serialize = "dogecoin_api_blockcypher_com_mainnet")]
@@ -143,6 +155,11 @@ impl BlockProvider for DogecoinProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
+            Self::ApiBitcoreIo => {
+                endpoint_dogecoin_mainnet_api_bitcore_io()
+                    .send_request_json()
+                    .await
+            }
             Self::ApiBlockchairCom => {
                 endpoint_dogecoin_mainnet_api_blockchair_com()
                     .send_request_json()
@@ -217,6 +234,10 @@ mod test {
     #[test]
     fn test_names() {
         assert_eq!(
+            BitcoinMainnetProviderBlockApi::ApiBitcoreIo.to_string(),
+            "bitcoin_api_bitcore_io_mainnet"
+        );
+        assert_eq!(
             BitcoinMainnetProviderBlockApi::ApiBlockchairCom.to_string(),
             "bitcoin_api_blockchair_com_mainnet"
         );
@@ -247,6 +268,10 @@ mod test {
             "bitcoin_mempool_testnet"
         );
 
+        assert_eq!(
+            DogecoinProviderBlockApi::ApiBitcoreIo.to_string(),
+            "dogecoin_api_bitcore_io_mainnet"
+        );
         assert_eq!(
             DogecoinProviderBlockApi::ApiBlockchairCom.to_string(),
             "dogecoin_api_blockchair_com_mainnet"
@@ -283,6 +308,19 @@ mod test {
 
     mod bitcoin_provider_block_api {
         use super::*;
+
+        #[tokio::test]
+        async fn test_api_bitcore_io_mainnet() {
+            test_utils::mock_bitcoin_mainnet_outcalls();
+            run_test(
+                BitcoinMainnetProviderBlockApi::ApiBitcoreIo,
+                vec![(endpoint_bitcoin_mainnet_api_bitcore_io(), 1)],
+                json!({
+                    "height": 700009,
+                }),
+            )
+            .await;
+        }
 
         #[tokio::test]
         async fn test_api_blockchair_com_mainnet() {
@@ -378,6 +416,19 @@ mod test {
 
     mod dogecoin_provider_block_api {
         use super::*;
+
+        #[tokio::test]
+        async fn test_api_bitcore_io_mainnet() {
+            test_utils::mock_dogecoin_mainnet_outcalls();
+            run_test(
+                DogecoinProviderBlockApi::ApiBitcoreIo,
+                vec![(endpoint_dogecoin_mainnet_api_bitcore_io(), 1)],
+                json!({
+                    "height": 5931100,
+                }),
+            )
+            .await;
+        }
 
         #[tokio::test]
         async fn test_api_blockchair_com_mainnet() {
