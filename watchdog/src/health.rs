@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
+use crate::fetch::{BlockInfo, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -63,23 +63,21 @@ pub struct HealthStatus {
     pub explorers: Vec<BlockInfo>,
 }
 
-impl TryFrom<HealthStatus> for LegacyHealthStatus {
-    type Error = BlockInfoConversionError;
-
-    fn try_from(status: HealthStatus) -> Result<LegacyHealthStatus, Self::Error> {
+impl From<HealthStatus> for LegacyHealthStatus {
+    fn from(status: HealthStatus) -> LegacyHealthStatus {
         let explorers = status
             .explorers
             .into_iter()
             .filter_map(|b| LegacyBlockInfo::try_from(b).ok())
             .collect();
 
-        Ok(LegacyHealthStatus {
+        LegacyHealthStatus {
             height_source: status.canister_height,
             height_target: status.explorer_height,
             height_diff: status.height_diff,
             height_status: status.height_status,
             explorers,
-        })
+        }
     }
 }
 

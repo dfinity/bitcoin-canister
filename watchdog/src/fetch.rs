@@ -34,13 +34,8 @@ pub struct LegacyBlockInfo {
     pub height: Option<u64>,
 }
 
-/// Error type for converting BlockInfo to LegacyBlockInfo.
-pub struct BlockInfoConversionError {
-    pub reason: String,
-}
-
 impl TryFrom<BlockInfo> for LegacyBlockInfo {
-    type Error = BlockInfoConversionError;
+    type Error = String;
 
     fn try_from(block_info: BlockInfo) -> Result<LegacyBlockInfo, Self::Error> {
         let provider = match block_info.provider.as_str() {
@@ -52,9 +47,7 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
             "bitcoin_mempool_mainnet" => BitcoinBlockApi::MempoolMainnet,
             "bitcoin_mempool_testnet" => BitcoinBlockApi::MempoolTestnet,
             _ => {
-                return Err(BlockInfoConversionError {
-                    reason: format!("unknown Bitcoin provider: {}", block_info.provider),
-                });
+                return Err(format!("unknown Bitcoin provider: {}", block_info.provider));
             }
         };
         Ok(LegacyBlockInfo {

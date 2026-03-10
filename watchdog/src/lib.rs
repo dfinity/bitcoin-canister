@@ -29,7 +29,6 @@ use ic_cdk::{
 };
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
-use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
@@ -93,12 +92,7 @@ fn health_status() -> LegacyHealthStatus {
     let network = storage::get_canister().network();
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
-            LegacyHealthStatus::try_from(health::health_status()).unwrap_or_else(|e| {
-                panic!(
-                    "Failed to convert health status for Bitcoin network: {}",
-                    e.reason
-                )
-            })
+            LegacyHealthStatus::from(health::health_status())
         }
         _ => panic!("health_status can only be called for Bitcoin networks"),
     }
