@@ -70,8 +70,8 @@ impl TryFrom<HealthStatus> for LegacyHealthStatus {
         let explorers = status
             .explorers
             .into_iter()
-            .map(LegacyBlockInfo::try_from)
-            .collect::<Result<Vec<LegacyBlockInfo>, Self::Error>>()?;
+            .filter_map(|b| LegacyBlockInfo::try_from(b).ok())
+            .collect();
 
         Ok(LegacyHealthStatus {
             height_source: status.canister_height,

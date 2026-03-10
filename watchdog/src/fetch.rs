@@ -53,7 +53,7 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
             "bitcoin_mempool_testnet" => BitcoinBlockApi::MempoolTestnet,
             _ => {
                 return Err(BlockInfoConversionError {
-                    reason: "BlockInfo can only contain Bitcoin providers".to_string(),
+                    reason: format!("unknown Bitcoin provider: {}", block_info.provider),
                 });
             }
         };
