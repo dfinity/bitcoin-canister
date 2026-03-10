@@ -2,8 +2,8 @@ use crate::config::Network;
 use crate::transform_bitcoin_mempool;
 use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
-    print, transform_bitcoin_canister, transform_bitcoin_mainnet_api_bitaps_com,
-    transform_bitcoin_mainnet_api_blockchair_com, transform_bitcoin_mainnet_api_blockcypher_com,
+    print, transform_bitcoin_canister, transform_bitcoin_mainnet_api_blockchair_com,
+    transform_bitcoin_mainnet_api_blockcypher_com,
     transform_bitcoin_mainnet_blockchain_info, transform_bitcoin_mainnet_blockstream_info,
     transform_dogecoin_canister, transform_dogecoin_mainnet_api_blockchair_com,
     transform_dogecoin_mainnet_api_blockcypher_com, transform_dogecoin_mainnet_psy_protocol,
@@ -59,25 +59,6 @@ pub fn endpoint_bitcoin_canister() -> HttpRequestConfig {
                         .to_string()
                     })
                     .unwrap_or_default()
-            })
-        },
-    )
-}
-
-/// Creates a config for fetching mainnet block data from api.bitaps.com.
-pub fn endpoint_bitcoin_mainnet_api_bitaps_com() -> HttpRequestConfig {
-    HttpRequestConfig::new(
-        "https://api.bitaps.com/btc/v1/blockchain/block/last",
-        Some(TransformFnWrapper {
-            name: "transform_bitcoin_mainnet_api_bitaps_com",
-            func: transform_bitcoin_mainnet_api_bitaps_com,
-        }),
-        |raw| {
-            apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
-                json!({
-                    "height": data["height"].as_u64(),
-                })
             })
         },
     )
@@ -366,19 +347,6 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_bitaps_com_block_mainnet() {
-        run_http_request_test(
-            endpoint_bitcoin_mainnet_api_bitaps_com(),
-            "https://api.bitaps.com/btc/v1/blockchain/block/last",
-            test_utils::BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE,
-            json!({
-                "height": 700001,
-            }),
-        )
-        .await;
-    }
-
-    #[tokio::test]
     async fn test_api_blockchair_com_block() {
         run_http_request_test(
             endpoint_bitcoin_mainnet_api_blockchair_com(),
@@ -582,7 +550,6 @@ mod test {
             names,
             vec![
                 "transform_bitcoin_canister",
-                "transform_bitcoin_mainnet_api_bitaps_com",
                 "transform_bitcoin_mainnet_api_blockchair_com",
                 "transform_bitcoin_mainnet_api_blockcypher_com",
                 "transform_bitcoin_mainnet_blockchain_info",

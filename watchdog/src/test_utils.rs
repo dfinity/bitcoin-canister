@@ -5,10 +5,6 @@ use crate::http::HttpRequestConfig;
 pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
         (
-            endpoint_bitcoin_mainnet_api_bitaps_com(),
-            BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE,
-        ),
-        (
             endpoint_bitcoin_mainnet_api_blockchair_com(),
             BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
         ),
@@ -133,17 +129,6 @@ pub fn mock_all_outcalls_abusing_api() {
 }
 
 pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
-
-// https://api.bitaps.com/btc/v1/blockchain/block/last
-pub const BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE: &str = r#"{
-    "data": {
-        "height": 700001,
-        "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
-        "adjustedTimestamp": 1678294552
-    },
-    "time": 0.0018
-}"#;
 
 // https://api.blockchair.com/bitcoin/stats
 pub const BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{

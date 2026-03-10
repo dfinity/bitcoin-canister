@@ -45,7 +45,6 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
     fn try_from(block_info: BlockInfo) -> Result<LegacyBlockInfo, Self::Error> {
         let provider = match block_info.provider.as_str() {
             "bitcoin_canister" => BitcoinBlockApi::BitcoinCanister,
-            "bitcoin_api_bitaps_com_mainnet" => BitcoinBlockApi::ApiBitapsComMainnet,
             "bitcoin_api_blockchair_com_mainnet" => BitcoinBlockApi::ApiBlockchairComMainnet,
             "bitcoin_api_blockcypher_com_mainnet" => BitcoinBlockApi::ApiBlockcypherComMainnet,
             "bitcoin_blockchain_info_mainnet" => BitcoinBlockApi::BlockchainInfoMainnet,
@@ -119,10 +118,6 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
-                    provider: "bitcoin_api_bitaps_com_mainnet".to_string(),
-                    height: Some(700001),
-                },
                 BlockInfo {
                     provider: "bitcoin_api_blockchair_com_mainnet".to_string(),
                     height: Some(700002),
@@ -234,10 +229,6 @@ mod test {
         assert_eq!(
             result,
             vec![
-                BlockInfo {
-                    provider: "bitcoin_api_bitaps_com_mainnet".to_string(),
-                    height: None,
-                },
                 BlockInfo {
                     provider: "bitcoin_api_blockchair_com_mainnet".to_string(),
                     height: None,

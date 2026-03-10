@@ -163,11 +163,6 @@ fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
-fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
-}
-
-#[query]
 fn transform_bitcoin_mainnet_api_blockchair_com(raw: TransformArgs) -> HttpRequestResult {
     endpoint_bitcoin_mainnet_api_blockchair_com().transform(raw)
 }

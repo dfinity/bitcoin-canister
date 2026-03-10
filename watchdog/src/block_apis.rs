@@ -16,9 +16,6 @@ pub trait BlockProvider {
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum BitcoinBlockApi {
-    #[serde(rename = "api_bitaps_com_mainnet")]
-    ApiBitapsComMainnet,
-
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
@@ -59,8 +56,6 @@ impl std::fmt::Display for BitcoinBlockApi {
 pub enum BitcoinMainnetProviderBlockApi {
     #[strum(serialize = "bitcoin_canister")]
     BitcoinCanister,
-    #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
-    ApiBitapsCom,
     #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
     #[strum(serialize = "bitcoin_api_blockcypher_com_mainnet")]
@@ -78,11 +73,6 @@ impl BlockProvider for BitcoinMainnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
             Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
-            Self::ApiBitapsCom => {
-                endpoint_bitcoin_mainnet_api_bitaps_com()
-                    .send_request_json()
-                    .await
-            }
             Self::ApiBlockchairCom => {
                 endpoint_bitcoin_mainnet_api_blockchair_com()
                     .send_request_json()
@@ -227,10 +217,6 @@ mod test {
     #[test]
     fn test_names() {
         assert_eq!(
-            BitcoinMainnetProviderBlockApi::ApiBitapsCom.to_string(),
-            "bitcoin_api_bitaps_com_mainnet"
-        );
-        assert_eq!(
             BitcoinMainnetProviderBlockApi::ApiBlockchairCom.to_string(),
             "bitcoin_api_blockchair_com_mainnet"
         );
@@ -297,19 +283,6 @@ mod test {
 
     mod bitcoin_provider_block_api {
         use super::*;
-
-        #[tokio::test]
-        async fn test_api_bitaps_com_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BitcoinMainnetProviderBlockApi::ApiBitapsCom,
-                vec![(endpoint_bitcoin_mainnet_api_bitaps_com(), 1)],
-                json!({
-                    "height": 700001,
-                }),
-            )
-            .await;
-        }
 
         #[tokio::test]
         async fn test_api_blockchair_com_mainnet() {

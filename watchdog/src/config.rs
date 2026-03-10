@@ -189,7 +189,6 @@ impl Config {
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
                 explorers: [
-                    BitcoinMainnetProviderBlockApi::ApiBitapsCom,
                     BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
                     BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
                     BitcoinMainnetProviderBlockApi::BlockchainInfo,
