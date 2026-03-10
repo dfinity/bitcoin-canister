@@ -16,9 +16,6 @@ pub trait BlockProvider {
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum BitcoinBlockApi {
-    #[serde(rename = "api_bitcore_io_mainnet")]
-    ApiBitcoreIoMainnet,
-
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
