@@ -41,9 +41,9 @@ git_tag_enable = true
 
 [[package]]
 name = "ic-btc-validation"
-release = true
-changelog_update = true
+release = false # TODO(DEFI-2211): create release once ticket is addressed
+changelog_update = false
 changelog_path = "validation/CHANGELOG.md"
-semver_check = true
-publish = true # enable `cargo publish`
-git_tag_enable = true
+semver_check = false
+publish = false # enable `cargo publish`
+git_tag_enable = false
