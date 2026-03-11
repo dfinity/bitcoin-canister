@@ -1,4 +1,4 @@
-use crate::block_apis::{BitcoinBlockApi, BlockProvider};
+use crate::block_apis::BitcoinBlockApi;
 #[cfg(target_arch = "wasm32")]
 use crate::print;
 use crate::storage;
