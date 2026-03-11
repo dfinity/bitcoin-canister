@@ -83,7 +83,7 @@ pub async fn fetch_all_providers_data() -> Vec<BlockInfo> {
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_canister_height() -> Option<u64> {
     let id = storage::get_config().canister_principal;
-    let result = ic_cdk::call::Call::unbounded_wait(id, "get_blockchain_info")
+    let result = ic_cdk::call::Call::bounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await
         .map_err(|err| print(&format!("Error calling get_blockchain_info: {:?}", err)))
