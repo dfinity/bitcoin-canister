@@ -62,17 +62,14 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
 /// Fetches block info from the block provider APIs.
 pub async fn fetch_all_providers_data() -> Vec<BlockInfo> {
     let config = storage::get_config();
-    fetch_providers(config.get_providers()).await
-}
-
-async fn fetch_providers(explorers: Vec<Box<dyn BlockProvider>>) -> Vec<BlockInfo> {
-    let futures = explorers
+    let providers = config.get_providers();
+    let futures = providers
         .iter()
         .map(|api| api.fetch_data())
         .collect::<Vec<_>>();
     let results = futures::future::join_all(futures).await;
 
-    explorers
+    providers
         .into_iter()
         .zip(results.into_iter())
         .map(|(provider, value)| BlockInfo {

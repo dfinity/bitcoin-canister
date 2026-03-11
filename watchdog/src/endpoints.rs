@@ -2,16 +2,14 @@ use crate::config::Network;
 use crate::transform_bitcoin_mempool;
 use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
-    print, transform_bitcoin_mainnet_api_bitcore_io,
-    transform_bitcoin_mainnet_api_blockchair_com, transform_bitcoin_mainnet_api_blockcypher_com,
-    transform_bitcoin_mainnet_blockchain_info, transform_bitcoin_mainnet_blockstream_info,
-    transform_dogecoin_mainnet_api_bitcore_io,
+    print, transform_bitcoin_mainnet_api_bitcore_io, transform_bitcoin_mainnet_api_blockchair_com,
+    transform_bitcoin_mainnet_api_blockcypher_com, transform_bitcoin_mainnet_blockchain_info,
+    transform_bitcoin_mainnet_blockstream_info, transform_dogecoin_mainnet_api_bitcore_io,
     transform_dogecoin_mainnet_api_blockchair_com, transform_dogecoin_mainnet_api_blockcypher_com,
     transform_dogecoin_mainnet_psy_protocol,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use serde_json::json;
-
 
 /// Creates a config for fetching mainnet block data from api.bitcore.io.
 pub fn endpoint_bitcoin_mainnet_api_bitcore_io() -> HttpRequestConfig {

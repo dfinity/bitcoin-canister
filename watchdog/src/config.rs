@@ -355,8 +355,9 @@ mod test {
     fn test_config_for_target() {
         for canister in ALL_CANISTERS {
             let config = Config::for_target(canister);
-            assert_eq!(config.network, canister.network());
             assert_eq!(config.canister, canister);
+            assert_eq!(config.network, canister.network());
+            assert_eq!(config.canister_principal, canister.canister_principal());
             assert_eq!(config.subnet_type, canister.subnet_type());
             assert!(!config.explorers.is_empty());
 
