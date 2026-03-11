@@ -29,7 +29,6 @@ use ic_cdk::{
 };
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
-use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
@@ -93,12 +92,7 @@ fn health_status() -> LegacyHealthStatus {
     let network = storage::get_canister().network();
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
-            LegacyHealthStatus::try_from(health::health_status()).unwrap_or_else(|e| {
-                panic!(
-                    "Failed to convert health status for Bitcoin network: {}",
-                    e.reason
-                )
-            })
+            LegacyHealthStatus::from(health::health_status())
         }
         _ => panic!("health_status can only be called for Bitcoin networks"),
     }
@@ -163,8 +157,8 @@ fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
-fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
+fn transform_bitcoin_mainnet_api_bitcore_io(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_bitcore_io().transform(raw)
 }
 
 #[query]
@@ -195,6 +189,11 @@ fn transform_bitcoin_mempool(raw: TransformArgs) -> HttpRequestResult {
 #[query]
 fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
     endpoint_dogecoin_canister().transform(raw)
+}
+
+#[query]
+fn transform_dogecoin_mainnet_api_bitcore_io(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_api_bitcore_io().transform(raw)
 }
 
 #[query]
