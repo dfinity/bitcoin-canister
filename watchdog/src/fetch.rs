@@ -36,18 +36,12 @@ pub struct LegacyBlockInfo {
     pub height: Option<u64>,
 }
 
-/// Error type for converting BlockInfo to LegacyBlockInfo.
-pub struct BlockInfoConversionError {
-    pub reason: String,
-}
-
 impl TryFrom<BlockInfo> for LegacyBlockInfo {
-    type Error = BlockInfoConversionError;
+    type Error = String;
 
     fn try_from(block_info: BlockInfo) -> Result<LegacyBlockInfo, Self::Error> {
         let provider = match block_info.provider.as_str() {
             "bitcoin_canister" => BitcoinBlockApi::BitcoinCanister,
-            "bitcoin_api_bitaps_com_mainnet" => BitcoinBlockApi::ApiBitapsComMainnet,
             "bitcoin_api_blockchair_com_mainnet" => BitcoinBlockApi::ApiBlockchairComMainnet,
             "bitcoin_api_blockcypher_com_mainnet" => BitcoinBlockApi::ApiBlockcypherComMainnet,
             "bitcoin_blockchain_info_mainnet" => BitcoinBlockApi::BlockchainInfoMainnet,
@@ -55,9 +49,7 @@ impl TryFrom<BlockInfo> for LegacyBlockInfo {
             "bitcoin_mempool_mainnet" => BitcoinBlockApi::MempoolMainnet,
             "bitcoin_mempool_testnet" => BitcoinBlockApi::MempoolTestnet,
             _ => {
-                return Err(BlockInfoConversionError {
-                    reason: "BlockInfo can only contain Bitcoin providers".to_string(),
-                });
+                return Err(format!("unknown Bitcoin provider: {}", block_info.provider));
             }
         };
         Ok(LegacyBlockInfo {
@@ -148,8 +140,8 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: "bitcoin_api_bitaps_com_mainnet".to_string(),
-                    height: Some(700001),
+                    provider: "bitcoin_api_bitcore_io_mainnet".to_string(),
+                    height: Some(700009),
                 },
                 BlockInfo {
                     provider: "bitcoin_api_blockchair_com_mainnet".to_string(),
@@ -195,6 +187,10 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: "dogecoin_api_bitcore_io_mainnet".to_string(),
+                    height: Some(5931100),
+                },
                 BlockInfo {
                     provider: "dogecoin_api_blockchair_com_mainnet".to_string(),
                     height: Some(5926987),
@@ -249,7 +245,7 @@ mod test {
             result,
             vec![
                 BlockInfo {
-                    provider: "bitcoin_api_bitaps_com_mainnet".to_string(),
+                    provider: "bitcoin_api_bitcore_io_mainnet".to_string(),
                     height: None,
                 },
                 BlockInfo {
@@ -296,6 +292,10 @@ mod test {
         assert_eq!(
             result,
             vec![
+                BlockInfo {
+                    provider: "dogecoin_api_bitcore_io_mainnet".to_string(),
+                    height: None,
+                },
                 BlockInfo {
                     provider: "dogecoin_api_blockchair_com_mainnet".to_string(),
                     height: None,

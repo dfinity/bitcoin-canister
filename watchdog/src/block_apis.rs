@@ -16,9 +16,6 @@ pub trait BlockProvider {
     Clone, Debug, Eq, PartialEq, Hash, CandidType, Serialize, Deserialize, PartialOrd, Ord,
 )]
 pub enum BitcoinBlockApi {
-    #[serde(rename = "api_bitaps_com_mainnet")]
-    ApiBitapsComMainnet,
-
     #[serde(rename = "api_blockchair_com_mainnet")]
     ApiBlockchairComMainnet,
 
@@ -57,8 +54,8 @@ impl std::fmt::Display for BitcoinBlockApi {
 /// Providers that serve Bitcoin mainnet block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Display, EnumString, EnumIter)]
 pub enum BitcoinMainnetProviderBlockApi {
-    #[strum(serialize = "bitcoin_api_bitaps_com_mainnet")]
-    ApiBitapsCom,
+    #[strum(serialize = "bitcoin_api_bitcore_io_mainnet")]
+    ApiBitcoreIo,
     #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
     #[strum(serialize = "bitcoin_api_blockcypher_com_mainnet")]
@@ -75,8 +72,8 @@ pub enum BitcoinMainnetProviderBlockApi {
 impl BlockProvider for BitcoinMainnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            Self::ApiBitapsCom => {
-                endpoint_bitcoin_mainnet_api_bitaps_com()
+            Self::ApiBitcoreIo => {
+                endpoint_bitcoin_mainnet_api_bitcore_io()
                     .send_request_json()
                     .await
             }
@@ -132,6 +129,8 @@ impl BlockProvider for BitcoinTestnetProviderBlockApi {
 /// Providers that serve Dogecoin block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Display, EnumString, EnumIter)]
 pub enum DogecoinProviderBlockApi {
+    #[strum(serialize = "dogecoin_api_bitcore_io_mainnet")]
+    ApiBitcoreIo,
     #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
     ApiBlockchairCom,
     #[strum(serialize = "dogecoin_api_blockcypher_com_mainnet")]
@@ -144,6 +143,11 @@ pub enum DogecoinProviderBlockApi {
 impl BlockProvider for DogecoinProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
+            Self::ApiBitcoreIo => {
+                endpoint_dogecoin_mainnet_api_bitcore_io()
+                    .send_request_json()
+                    .await
+            }
             Self::ApiBlockchairCom => {
                 endpoint_dogecoin_mainnet_api_blockchair_com()
                     .send_request_json()
@@ -218,8 +222,8 @@ mod test {
     #[test]
     fn test_names() {
         assert_eq!(
-            BitcoinMainnetProviderBlockApi::ApiBitapsCom.to_string(),
-            "bitcoin_api_bitaps_com_mainnet"
+            BitcoinMainnetProviderBlockApi::ApiBitcoreIo.to_string(),
+            "bitcoin_api_bitcore_io_mainnet"
         );
         assert_eq!(
             BitcoinMainnetProviderBlockApi::ApiBlockchairCom.to_string(),
@@ -247,6 +251,10 @@ mod test {
             "bitcoin_mempool_testnet"
         );
 
+        assert_eq!(
+            DogecoinProviderBlockApi::ApiBitcoreIo.to_string(),
+            "dogecoin_api_bitcore_io_mainnet"
+        );
         assert_eq!(
             DogecoinProviderBlockApi::ApiBlockchairCom.to_string(),
             "dogecoin_api_blockchair_com_mainnet"
@@ -280,13 +288,13 @@ mod test {
         use super::*;
 
         #[tokio::test]
-        async fn test_api_bitaps_com_mainnet() {
+        async fn test_api_bitcore_io_mainnet() {
             test_utils::mock_bitcoin_mainnet_outcalls();
             run_test(
-                BitcoinMainnetProviderBlockApi::ApiBitapsCom,
-                vec![(endpoint_bitcoin_mainnet_api_bitaps_com(), 1)],
+                BitcoinMainnetProviderBlockApi::ApiBitcoreIo,
+                vec![(endpoint_bitcoin_mainnet_api_bitcore_io(), 1)],
                 json!({
-                    "height": 700001,
+                    "height": 700009,
                 }),
             )
             .await;
@@ -373,6 +381,19 @@ mod test {
 
     mod dogecoin_provider_block_api {
         use super::*;
+
+        #[tokio::test]
+        async fn test_api_bitcore_io_mainnet() {
+            test_utils::mock_dogecoin_mainnet_outcalls();
+            run_test(
+                DogecoinProviderBlockApi::ApiBitcoreIo,
+                vec![(endpoint_dogecoin_mainnet_api_bitcore_io(), 1)],
+                json!({
+                    "height": 5931100,
+                }),
+            )
+            .await;
+        }
 
         #[tokio::test]
         async fn test_api_blockchair_com_mainnet() {

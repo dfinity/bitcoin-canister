@@ -2,27 +2,29 @@ use crate::config::Network;
 use crate::transform_bitcoin_mempool;
 use crate::{
     http::{HttpRequestConfig, TransformFnWrapper},
-    print, transform_bitcoin_mainnet_api_bitaps_com, transform_bitcoin_mainnet_api_blockchair_com,
-    transform_bitcoin_mainnet_api_blockcypher_com, transform_bitcoin_mainnet_blockchain_info,
-    transform_bitcoin_mainnet_blockstream_info, transform_dogecoin_mainnet_api_blockchair_com,
-    transform_dogecoin_mainnet_api_blockcypher_com, transform_dogecoin_mainnet_psy_protocol,
+    print, transform_bitcoin_mainnet_api_bitcore_io,
+    transform_bitcoin_mainnet_api_blockchair_com, transform_bitcoin_mainnet_api_blockcypher_com,
+    transform_bitcoin_mainnet_blockchain_info, transform_bitcoin_mainnet_blockstream_info,
+    transform_dogecoin_mainnet_api_bitcore_io,
+    transform_dogecoin_mainnet_api_blockchair_com, transform_dogecoin_mainnet_api_blockcypher_com,
+    transform_dogecoin_mainnet_psy_protocol,
 };
 use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
 use serde_json::json;
 
-/// Creates a config for fetching mainnet block data from api.bitaps.com.
-pub fn endpoint_bitcoin_mainnet_api_bitaps_com() -> HttpRequestConfig {
+
+/// Creates a config for fetching mainnet block data from api.bitcore.io.
+pub fn endpoint_bitcoin_mainnet_api_bitcore_io() -> HttpRequestConfig {
     HttpRequestConfig::new(
-        "https://api.bitaps.com/btc/v1/blockchain/block/last",
+        "https://api.bitcore.io/api/BTC/mainnet/block?limit=1",
         Some(TransformFnWrapper {
-            name: "transform_bitcoin_mainnet_api_bitaps_com",
-            func: transform_bitcoin_mainnet_api_bitaps_com,
+            name: "transform_bitcoin_mainnet_api_bitcore_io",
+            func: transform_bitcoin_mainnet_api_bitcore_io,
         }),
         |raw| {
             apply_to_body_json(raw, |json| {
-                let data = json["data"].clone();
                 json!({
-                    "height": data["height"].as_u64(),
+                    "height": json[0]["height"].as_u64(),
                 })
             })
         },
@@ -148,6 +150,24 @@ pub fn endpoint_bitcoin_mainnet_mempool() -> HttpRequestConfig {
 /// Creates a config for fetching testnet block data from api.blockcypher.com.
 pub fn endpoint_bitcoin_testnet_mempool() -> HttpRequestConfig {
     endpoint_bitcoin_mempool(Network::BitcoinTestnet)
+}
+
+/// Creates a config for fetching Dogecoin mainnet block data from api.bitcore.io.
+pub fn endpoint_dogecoin_mainnet_api_bitcore_io() -> HttpRequestConfig {
+    HttpRequestConfig::new(
+        "https://api.bitcore.io/api/DOGE/mainnet/block?limit=1",
+        Some(TransformFnWrapper {
+            name: "transform_dogecoin_mainnet_api_bitcore_io",
+            func: transform_dogecoin_mainnet_api_bitcore_io,
+        }),
+        |raw| {
+            apply_to_body_json(raw, |json| {
+                json!({
+                    "height": json[0]["height"].as_u64(),
+                })
+            })
+        },
+    )
 }
 
 /// Creates a config for fetching Dogecoin mainnet block data from api.blockchair.com.
@@ -288,13 +308,13 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_api_bitaps_com_block_mainnet() {
+    async fn test_api_bitcore_io_block_mainnet() {
         run_http_request_test(
-            endpoint_bitcoin_mainnet_api_bitaps_com(),
-            "https://api.bitaps.com/btc/v1/blockchain/block/last",
-            test_utils::BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE,
+            endpoint_bitcoin_mainnet_api_bitcore_io(),
+            "https://api.bitcore.io/api/BTC/mainnet/block?limit=1",
+            test_utils::BITCOIN_MAINNET_API_BITCORE_IO_RESPONSE,
             json!({
-                "height": 700001,
+                "height": 700009,
             }),
         )
         .await;
@@ -347,6 +367,19 @@ mod test {
             test_utils::BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE,
             json!({
                 "height": 700005,
+            }),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn test_dogecoin_api_bitcore_io_block() {
+        run_http_request_test(
+            endpoint_dogecoin_mainnet_api_bitcore_io(),
+            "https://api.bitcore.io/api/DOGE/mainnet/block?limit=1",
+            test_utils::DOGECOIN_MAINNET_API_BITCORE_IO_RESPONSE,
+            json!({
+                "height": 5931100,
             }),
         )
         .await;
@@ -429,12 +462,13 @@ mod test {
         assert_eq!(
             names,
             vec![
-                "transform_bitcoin_mainnet_api_bitaps_com",
+                "transform_bitcoin_mainnet_api_bitcore_io",
                 "transform_bitcoin_mainnet_api_blockchair_com",
                 "transform_bitcoin_mainnet_api_blockcypher_com",
                 "transform_bitcoin_mainnet_blockchain_info",
                 "transform_bitcoin_mainnet_blockstream_info",
                 "transform_bitcoin_mempool",
+                "transform_dogecoin_mainnet_api_bitcore_io",
                 "transform_dogecoin_mainnet_api_blockchair_com",
                 "transform_dogecoin_mainnet_api_blockcypher_com",
                 "transform_dogecoin_mainnet_psy_protocol",
@@ -446,11 +480,13 @@ mod test {
     async fn test_http_response_404() {
         let expected_status = candid::Nat::from(404u16);
         let test_cases = [
+            endpoint_bitcoin_mainnet_api_bitcore_io(),
             endpoint_bitcoin_mainnet_api_blockchair_com(),
             endpoint_bitcoin_mainnet_api_blockcypher_com(),
             endpoint_bitcoin_mainnet_blockchain_info(),
             endpoint_bitcoin_mainnet_blockstream_info(),
             endpoint_bitcoin_testnet_mempool(),
+            endpoint_dogecoin_mainnet_api_bitcore_io(),
             endpoint_dogecoin_mainnet_api_blockchair_com(),
             endpoint_dogecoin_mainnet_api_blockcypher_com(),
             endpoint_dogecoin_mainnet_psy_protocol(),

@@ -171,7 +171,7 @@ impl Config {
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
                 explorers: [
-                    BitcoinMainnetProviderBlockApi::ApiBitapsCom,
+                    BitcoinMainnetProviderBlockApi::ApiBitcoreIo,
                     BitcoinMainnetProviderBlockApi::ApiBlockchairCom,
                     BitcoinMainnetProviderBlockApi::ApiBlockcypherCom,
                     BitcoinMainnetProviderBlockApi::BlockchainInfo,
@@ -208,6 +208,7 @@ impl Config {
                 canister_principal: canister.canister_principal(),
                 subnet_type: canister.subnet_type(),
                 explorers: [
+                    DogecoinProviderBlockApi::ApiBitcoreIo,
                     DogecoinProviderBlockApi::ApiBlockchairCom,
                     DogecoinProviderBlockApi::ApiBlockcypherCom,
                     DogecoinProviderBlockApi::PsyProtocol,
