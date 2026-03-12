@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-03-12] - 2026-03-12
+
 ## [release/2026-02-18] - 2026-02-18
 
 ### Added
@@ -294,3 +296,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2022-12-02]: https://github.com/dfinity/bitcoin-canister/releases/tag/release/2022-12-02
 
 [release/2026-02-18]: https://github.com/dfinity/bitcoin-canister/compare/ic-btc-canister/release/2025-12-03...ic-btc-canister/release/2026-02-18
+
+[release/2026-03-12]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-03-06...release/2026-03-12
