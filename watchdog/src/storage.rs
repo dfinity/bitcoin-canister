@@ -1,6 +1,8 @@
 use crate::config::{Canister, Config};
 use crate::fetch::BlockInfo;
-use crate::{CanisterCallErrors, API_ACCESS_TARGET, BLOCK_INFO_DATA, CANISTER_CALL_ERRORS, CANISTER_HEIGHT};
+use crate::{
+    CanisterCallErrors, API_ACCESS_TARGET, BLOCK_INFO_DATA, CANISTER_CALL_ERRORS, CANISTER_HEIGHT,
+};
 use ic_btc_interface::Flag;
 use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
 use ic_stable_structures::{Cell, DefaultMemoryImpl};
