@@ -119,6 +119,9 @@ check_metric_names() {
     "api_access_target"
     "explorer_height"
     "available_explorers"
+    "canister_call_errors_get_blockchain_info"
+    "canister_call_errors_get_config"
+    "canister_call_errors_set_config"
   )
 
   metrics=$(get_watchdog_canister_metrics)
