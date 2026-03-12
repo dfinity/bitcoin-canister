@@ -111,7 +111,7 @@ async fn fetch_block_height() {
     if canister_height.is_none() {
         print(&format!(
             "Error getting canister {} main chain height.",
-            storage::get_config().canister_principal
+            storage::get_canister().canister_principal()
         ));
     }
 }

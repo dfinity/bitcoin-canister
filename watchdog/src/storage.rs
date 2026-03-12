@@ -28,6 +28,11 @@ pub fn get_config() -> Config {
     CONFIG.with(|cell| cell.borrow().get().clone())
 }
 
+/// Returns the monitored canister without cloning the full config.
+pub fn get_canister() -> Canister {
+    CONFIG.with(|cell| cell.borrow().get().canister)
+}
+
 /// Sets the configuration in the stable storage.
 pub fn set_config(config: Config) {
     CONFIG.with(|cell| cell.borrow_mut().set(config));

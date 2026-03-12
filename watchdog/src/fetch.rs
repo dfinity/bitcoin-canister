@@ -82,7 +82,7 @@ pub async fn fetch_all_providers_data() -> Vec<BlockInfo> {
 /// Fetches the canister main chain height via the `get_blockchain_info` endpoint.
 #[cfg(target_arch = "wasm32")]
 pub async fn fetch_canister_height() -> Option<u64> {
-    let id = storage::get_config().canister_principal;
+    let id = storage::get_canister().canister_principal();
     let result = ic_cdk::call::Call::bounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await
