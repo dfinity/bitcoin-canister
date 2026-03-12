@@ -79,7 +79,7 @@ download_latest_release
 dfx start --background --clean
 
 # Deploy the latest release.
-dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(variant { upgrade })"
+dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(variant { init = record { target = variant { bitcoin_mainnet } }})"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
 
