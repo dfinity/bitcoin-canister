@@ -21,7 +21,7 @@ pushd "$SCRIPT_DIR"
 # Run dfx stop if we run into errors and remove the downloaded wasm.
 trap 'dfx stop & rm ${REFERENCE_CANISTER_NAME}.wasm.gz' EXIT SIGINT
 
-# Get the URL of the latest release for watchdog-canister.
+# Get the URL of the latest release for watchdog canister.
 get_latest_release_url() {
   local page=1
   local url
@@ -44,7 +44,7 @@ get_latest_release_url() {
     fi
 
     # Extract the URL of the first release.
-    url=$(grep -m 1 "browser_download_url.*watchdog-canister.wasm.gz" <<< "$api_response" | cut -d '"' -f 4)
+    url=$(grep -m 1 "browser_download_url.*watchdog.wasm.gz" <<< "$api_response" | cut -d '"' -f 4)
 
     if [ -n "$url" ]; then
       echo "$url"
@@ -65,7 +65,7 @@ download_latest_release() {
   url=$(get_latest_release_url)
 
   if [ -n "$url" ]; then
-    echo "Found watchdog-canister.wasm.gz at URL: $url"
+    echo "Found watchdog.wasm.gz at URL: $url"
     if wget -O "${REFERENCE_CANISTER_NAME}.wasm.gz" "$url"; then
       echo "Download successful."
     else
@@ -78,20 +78,10 @@ download_latest_release
 
 dfx start --background --clean
 
-# Update candid to accept old init argument type for deploying the old release.
-# TODO(mducroux): remove this line in the next release.
-sed -i.bak 's/service : (watchdog_arg) -> {/service : (bitcoin_network) -> {/' ../candid.did
-
 # Deploy the latest release.
-# TODO (mducroux): The new watchdog canister currently expects 'bitcoin_mainnet' as its argument, whereas the previous
-# TODO (mducroux): release uses 'mainnet'. Update this line in the next release.
-dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(variant { mainnet })"
+dfx deploy --no-wallet ${REFERENCE_CANISTER_NAME} --argument "(variant { upgrade })"
 
 dfx canister stop ${REFERENCE_CANISTER_NAME}
-
-# Restore candid to use new init argument type for the upgrade.
-# TODO(mducroux): remove this line in the next release.
-mv ../candid.did.bak ../candid.did
 
 # Update the local dfx configuration to point to the 'watchdog' canister
 # in the current branch, rather than the reference canister.
