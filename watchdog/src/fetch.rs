@@ -86,15 +86,19 @@ pub async fn fetch_canister_height() -> Option<u64> {
     let result = ic_cdk::call::Call::bounded_wait(id, "get_blockchain_info")
         .with_args(&())
         .await
-        .map_err(|err| print(&format!("Error calling get_blockchain_info: {:?}", err)))
+        .map_err(|err| {
+            storage::inc_get_blockchain_info_errors();
+            print(&format!("Error calling get_blockchain_info: {:?}", err));
+        })
         .ok()?;
     let info: ic_btc_interface::BlockchainInfo = result
         .candid()
         .map_err(|err| {
+            storage::inc_get_blockchain_info_errors();
             print(&format!(
                 "Error decoding get_blockchain_info result: {:?}",
                 err
-            ))
+            ));
         })
         .ok()?;
     Some(info.height as u64)

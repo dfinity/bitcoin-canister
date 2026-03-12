@@ -40,6 +40,27 @@ thread_local! {
 
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
+
+    /// Error counters for calls to the monitored canister.
+    static CANISTER_CALL_ERRORS: RefCell<CanisterCallErrors> = const { RefCell::new(CanisterCallErrors::new()) };
+}
+
+/// Tracks error counts for calls to the monitored canister.
+#[derive(Clone, Debug, Default)]
+pub struct CanisterCallErrors {
+    pub get_blockchain_info: u64,
+    pub get_config: u64,
+    pub set_config: u64,
+}
+
+impl CanisterCallErrors {
+    const fn new() -> Self {
+        Self {
+            get_blockchain_info: 0,
+            get_config: 0,
+            set_config: 0,
+        }
+    }
 }
 
 /// This function is called when the canister is created.
