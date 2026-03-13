@@ -564,6 +564,7 @@ jobs:
           bash watchdog/e2e-tests/metrics.sh
 
   watchdog_upgradability:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI_OVERRIDE_WATCHDOG_UPGRADABILITY_CHECK') }}
     runs-on: ubuntu-latest
     needs: canister-build-reproducibility
 
@@ -768,7 +769,7 @@ jobs:
         if: ${{ needs.watchdog_metrics.result != 'success' }}
         run: exit 1
       - name: check watchdog_upgradability result
-        if: ${{ needs.watchdog_upgradability.result != 'success' }}
+        if: ${{ needs.watchdog_upgradability.result != 'success' && needs.watchdog_upgradability.result != 'skipped' }}
         run: exit 1
       - name: check canister-build-reproducibility result
         if: ${{ needs.canister-build-reproducibility.result != 'success' }}

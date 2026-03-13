@@ -3,7 +3,7 @@
 # Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
 # When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
 use_prebuilt_watchdog_wasm() {
-  if [[ -f ../../wasms/watchdog.wasm.gz ]]; then
+  if [[ -f ../wasms/watchdog.wasm.gz ]]; then
     sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
   fi
 }
