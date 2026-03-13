@@ -54,8 +54,6 @@ impl std::fmt::Display for BitcoinBlockApi {
 /// Providers that serve Bitcoin mainnet block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Display, EnumString, EnumIter)]
 pub enum BitcoinMainnetProviderBlockApi {
-    #[strum(serialize = "bitcoin_canister")]
-    BitcoinCanister,
     #[strum(serialize = "bitcoin_api_bitcore_io_mainnet")]
     ApiBitcoreIo,
     #[strum(serialize = "bitcoin_api_blockchair_com_mainnet")]
@@ -74,7 +72,6 @@ pub enum BitcoinMainnetProviderBlockApi {
 impl BlockProvider for BitcoinMainnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
             Self::ApiBitcoreIo => {
                 endpoint_bitcoin_mainnet_api_bitcore_io()
                     .send_request_json()
@@ -112,8 +109,6 @@ impl BlockProvider for BitcoinMainnetProviderBlockApi {
 /// Providers that serve testnet Bitcoin block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Display, EnumString, EnumIter)]
 pub enum BitcoinTestnetProviderBlockApi {
-    #[strum(serialize = "bitcoin_canister")]
-    BitcoinCanister,
     #[strum(serialize = "bitcoin_mempool_testnet")]
     Mempool,
 }
@@ -122,7 +117,6 @@ pub enum BitcoinTestnetProviderBlockApi {
 impl BlockProvider for BitcoinTestnetProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            Self::BitcoinCanister => endpoint_bitcoin_canister().send_request_json().await,
             Self::Mempool => endpoint_bitcoin_testnet_mempool().send_request_json().await,
         }
     }
@@ -135,8 +129,6 @@ impl BlockProvider for BitcoinTestnetProviderBlockApi {
 /// Providers that serve Dogecoin block data.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Display, EnumString, EnumIter)]
 pub enum DogecoinProviderBlockApi {
-    #[strum(serialize = "dogecoin_canister")]
-    DogecoinCanister,
     #[strum(serialize = "dogecoin_api_bitcore_io_mainnet")]
     ApiBitcoreIo,
     #[strum(serialize = "dogecoin_api_blockchair_com_mainnet")]
@@ -151,7 +143,6 @@ pub enum DogecoinProviderBlockApi {
 impl BlockProvider for DogecoinProviderBlockApi {
     async fn fetch_data(&self) -> serde_json::Value {
         match self {
-            Self::DogecoinCanister => endpoint_dogecoin_canister().send_request_json().await,
             Self::ApiBitcoreIo => {
                 endpoint_dogecoin_mainnet_api_bitcore_io()
                     .send_request_json()
@@ -256,11 +247,6 @@ mod test {
         );
 
         assert_eq!(
-            BitcoinMainnetProviderBlockApi::BitcoinCanister.to_string(),
-            "bitcoin_canister"
-        );
-
-        assert_eq!(
             BitcoinTestnetProviderBlockApi::Mempool.to_string(),
             "bitcoin_mempool_testnet"
         );
@@ -280,11 +266,6 @@ mod test {
         assert_eq!(
             DogecoinProviderBlockApi::PsyProtocol.to_string(),
             "dogecoin_psy_protocol_mainnet"
-        );
-
-        assert_eq!(
-            DogecoinProviderBlockApi::DogecoinCanister.to_string(),
-            "dogecoin_canister"
         );
     }
 
@@ -340,19 +321,6 @@ mod test {
                 vec![(endpoint_bitcoin_mainnet_api_blockcypher_com(), 1)],
                 json!({
                     "height": 700003,
-                }),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn test_bitcoin_canister_mainnet() {
-            test_utils::mock_bitcoin_mainnet_outcalls();
-            run_test(
-                BitcoinMainnetProviderBlockApi::BitcoinCanister,
-                vec![(endpoint_bitcoin_canister(), 1)],
-                json!({
-                    "height": 700007,
                 }),
             )
             .await;
@@ -461,19 +429,6 @@ mod test {
                 vec![(endpoint_dogecoin_mainnet_psy_protocol(), 1)],
                 json!({
                     "height": 5931072,
-                }),
-            )
-            .await;
-        }
-
-        #[tokio::test]
-        async fn test_dogecoin_canister_mainnet() {
-            test_utils::mock_dogecoin_mainnet_outcalls();
-            run_test(
-                DogecoinProviderBlockApi::DogecoinCanister,
-                vec![(endpoint_dogecoin_canister(), 1)],
-                json!({
-                    "height": 5931098,
                 }),
             )
             .await;

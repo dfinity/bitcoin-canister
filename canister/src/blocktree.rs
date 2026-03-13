@@ -27,7 +27,6 @@ impl<'a, Block> BlockChain<'a, Block> {
         }
     }
 
-    /// This is only useful for tests to simplify the creation of a `BlockChain`.
     pub fn new_with_successors(first: &'a Block, successors: Vec<&'a Block>) -> Self {
         Self { first, successors }
     }
