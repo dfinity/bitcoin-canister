@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [release/2026-03-13] - 2026-03-13
+## [watchdog/release/2026-03-13] - 2026-03-13
 
 ### Changed
 
@@ -20,23 +20,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Rename `HealthStatus` field names `canister_height` and `explorer_height` ([#492](https://github.com/dfinity/bitcoin-canister/pull/492))
 
 
-## [release/2026-01-30] - 2026-01-30
+## [watchdog/release/2026-01-30] - 2026-01-30
 
 ### Added
 
-- Add `health_status_v2` endpoint (#450)
+- Add `health_status_v2` endpoint ([#450](https://github.com/dfinity/bitcoin-canister/pull/450))
 
 ### Changed
 
-- Refactor explorer logic (#456)
+- Refactor explorer logic ([#456](https://github.com/dfinity/bitcoin-canister/pull/456))
 
 ### Removed
 
-- Remove retrieving latest block hash (#459)
+- Remove retrieving latest block hash ([#459](https://github.com/dfinity/bitcoin-canister/pull/459))
 
-- Remove deprecated method counter (#455)
+- Remove deprecated method counter ([#455](https://github.com/dfinity/bitcoin-canister/pull/455))
 
-- Remove blockexplorer.one from list of providers (#454)
+- Remove blockexplorer.one from list of providers ([#454](https://github.com/dfinity/bitcoin-canister/pull/454))
 
 ## [2025-12-03 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2025-12-03)
 
