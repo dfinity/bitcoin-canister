@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-03-13] - 2026-03-13
+
+### Changed
+
+- Use `get_blockchain_info` canister endpoint to retrieve monitored canister height ([#484](https://github.com/dfinity/bitcoin-canister/pull/484))
+
+- Replace api_bitaps with api_bitcore provider ([#500](https://github.com/dfinity/bitcoin-canister/pull/500))
+
+- Replace tokenview explorer with psy protocol ([#493](https://github.com/dfinity/bitcoin-canister/pull/493))
+
+- Update watchdog CHANGELOG.md release/2025-12-03 ([#475](https://github.com/dfinity/bitcoin-canister/pull/475))
+
+
+### Fixed
+
+- Rename `HealthStatus` field names `canister_height` and `explorer_height` ([#492](https://github.com/dfinity/bitcoin-canister/pull/492))
+
+- Only use pre-built wasms if present ([#488](https://github.com/dfinity/bitcoin-canister/pull/488))
+
+- Use wasms from reproducible build for various e2e tests ([#473](https://github.com/dfinity/bitcoin-canister/pull/473))
+
+
 ## [release/2026-01-30] - 2026-01-30
 
 ### Added
@@ -101,3 +123,5 @@ Chores:
 - create watchdog canister
 
 [release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30
+
+[watchdog/release/2026-03-13]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2026-01-30...watchdog/release/2026-03-13
