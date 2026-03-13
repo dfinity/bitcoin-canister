@@ -116,6 +116,6 @@ Chores:
 
 - create watchdog canister
 
-[watchdog/release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30
+[release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30
 
-[watchdog/release/2026-03-13]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2026-01-30...watchdog/release/2026-03-13
+[release/2026-03-13]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2026-01-30...watchdog/release/2026-03-13
