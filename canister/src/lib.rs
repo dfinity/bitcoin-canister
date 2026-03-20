@@ -247,12 +247,12 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
             })
             .or_else(|e| {
                 print(&format!(
-                    "Failed to read state: {:?}. Trying different format...",
+                    "Failed to read state: {:?}. Trying old state format...",
                     e
                 ));
                 read_memory_with_old_state()
             })
-            .expect("Failed to read state into array.")
+            .expect("Failed to read state.")
     };
 
     set_state(state);
@@ -398,9 +398,6 @@ mod test {
         #[strategy(1..250u32)] num_blocks: u32,
         #[strategy(1..100u32)] num_transactions_in_block: u32,
     ) {
-        // Reset stable memory for each test case to avoid errors related to UTXOs being inserted twice
-        memory::set_memory(ic_stable_structures::DefaultMemoryImpl::default());
-
         let network = Network::Regtest;
 
         init(InitConfig {
@@ -786,5 +783,52 @@ mod test {
 
             with_state(|s| assert_eq!(s.fees, expected_fees));
         }
+    }
+
+    #[test]
+    fn test_post_upgrade_state_conversion() {
+        memory::set_memory(ic_stable_structures::DefaultMemoryImpl::default());
+        let network = Network::Regtest;
+        init(InitConfig {
+            stability_threshold: Some(144),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let blocks = build_regtest_chain(3, 4);
+
+        // Insert all the blocks. Note that we skip the genesis block, as that
+        // is already included as part of initializing the state.
+        for block in blocks[1..].iter() {
+            with_state_mut(|s| {
+                crate::state::insert_block(s, block.clone()).unwrap();
+                crate::state::ingest_stable_blocks_into_utxoset(s);
+            });
+        }
+
+        // Take out the state (which also clears the `STATE` singleton).
+        // The state here explicitly uses BlockTree<Block> instead of BlockTree<CachedBlock>.
+        let old_state: state::GenericState<blocktree::BlockTree<Block>> = STATE
+            .with(|cell| cell.take().unwrap())
+            .map_tree(|tree| tree.map(&|block: blocktree::CachedBlock| block.block()));
+
+        // Serialize the state to bytes
+        let mut state_bytes = vec![];
+        ciborium::ser::into_writer(&old_state, &mut state_bytes).unwrap();
+
+        // Write state (of BlockTree<Block>) into stable memory
+        let memory = memory::get_upgrades_memory();
+        memory::write(&memory, 0, &state_bytes);
+
+        // Run postupgrade hook
+        post_upgrade(None);
+
+        // The state after going through proper post_upgrade handling is using
+        // BlockTree<CachedBlock> internally. To assert equivalence to old_state
+        // we need to convert it to the same type as the old state.
+        let new_state = STATE
+            .with(|cell| cell.take().unwrap())
+            .map_tree(|tree| tree.map(&|block: blocktree::CachedBlock| block.block()));
+        assert!(new_state == old_state);
     }
 }
