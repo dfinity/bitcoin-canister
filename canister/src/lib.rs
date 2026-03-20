@@ -398,6 +398,9 @@ mod test {
         #[strategy(1..250u32)] num_blocks: u32,
         #[strategy(1..100u32)] num_transactions_in_block: u32,
     ) {
+        // Reset stable memory for each test case to avoid errors related to UTXOs being inserted twice
+        memory::set_memory(ic_stable_structures::DefaultMemoryImpl::default());
+
         let network = Network::Regtest;
 
         init(InitConfig {
