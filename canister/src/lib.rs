@@ -220,7 +220,40 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     memory.read(4, &mut state_bytes);
 
     // Deserialize and set the state.
-    let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+    let state: State = {
+        let read_memory_with_old_state = || {
+            ciborium::de::from_reader(&*state_bytes).map(
+                |state: state::GenericState<blocktree::BlockTree<Block>>| {
+                    let cache = unstable_blocks::BlocksCacheInStableMem::new(
+                        state.network(),
+                        memory::get_unstable_blocks_memory(),
+                    );
+                    state.map_tree(|tree| tree.into_cached(cache))
+                },
+            )
+        };
+
+        let read_memory = || ciborium::de::from_reader(&*state_bytes);
+
+        read_memory()
+            .map(|mut state: State| {
+                let cache = unstable_blocks::BlocksCacheInStableMem::new(
+                    state.network(),
+                    memory::get_unstable_blocks_memory(),
+                );
+                // Reset cache to stable memory
+                state.replace_unstable_blocks_cache(cache);
+                state
+            })
+            .or_else(|e| {
+                print(&format!(
+                    "Failed to read state: {:?}. Trying different format...",
+                    e
+                ));
+                read_memory_with_old_state()
+            })
+            .expect("Failed to read state into array.")
+    };
 
     set_state(state);
 
