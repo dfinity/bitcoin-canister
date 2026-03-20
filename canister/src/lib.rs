@@ -43,9 +43,6 @@ use std::convert::TryInto;
 use std::{cell::RefCell, cmp::max};
 use utxo_set::UtxoSet;
 
-/// WASM page size is 64KB
-const WASM_PAGE_SIZE: u64 = 1 << 15;
-
 /// The maximum number of blocks the canister can be behind the tip to be considered synced.
 const SYNCED_THRESHOLD: u32 = 2;
 

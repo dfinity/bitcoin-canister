@@ -1,5 +1,5 @@
-use ic_doge_interface::Network;
-use ic_doge_types::{Block, BlockHash};
+use ic_btc_interface::Network;
+use ic_btc_types::{Block, BlockHash};
 use ic_stable_structures::StableBTreeMap;
 use std::fmt;
 
@@ -66,7 +66,7 @@ impl BlocksCache for BlocksCacheInStableMem {
     fn get(&self, block_hash: &BlockHash) -> Option<Block> {
         use bitcoin::consensus::Decodable;
         let bytes = self.map.get(block_hash)?;
-        let block = bitcoin::dogecoin::Block::consensus_decode(&mut bytes.as_slice()).ok()?;
+        let block = bitcoin::Block::consensus_decode(&mut bytes.as_slice()).ok()?;
         Some(Block::new(block))
     }
     fn is_empty(&self) -> bool {
@@ -84,7 +84,7 @@ impl BlocksCache for BlocksCacheInStableMem {
             .map(|entry| {
                 use bitcoin::consensus::Decodable;
                 let (hash, bytes) = entry.into_pair();
-                let block = bitcoin::dogecoin::Block::consensus_decode(&mut bytes.as_slice())
+                let block = bitcoin::Block::consensus_decode(&mut bytes.as_slice())
                     .ok()
                     .unwrap();
                 (hash, Block::new(block))
