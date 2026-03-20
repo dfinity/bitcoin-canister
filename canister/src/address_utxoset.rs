@@ -117,7 +117,7 @@ impl<'a> AddressUtxoSet<'a> {
 mod test {
     use super::*;
     use crate::{
-        test_utils::{BlockBuilder, TransactionBuilder},
+        test_utils::{BlockBuilder, TestBlocksCache, TransactionBuilder},
         types::into_bitcoin_network,
         unstable_blocks,
     };
@@ -143,7 +143,8 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        let unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let unstable_blocks = UnstableBlocks::new(cache, &utxo_set, 2, block_0.clone(), network);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
 
@@ -190,7 +191,9 @@ mod test {
             .with_transaction(tx.clone())
             .build();
 
-        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks =
+            UnstableBlocks::new(cache, &utxo_set, 2, block_0.clone(), network);
         unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
@@ -248,7 +251,9 @@ mod test {
 
         // Process the blocks.
         let utxo_set = UtxoSet::new(Network::Mainnet);
-        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks =
+            UnstableBlocks::new(cache, &utxo_set, 2, block_0.clone(), network);
         unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
         let mut address_1_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);

@@ -1,16 +1,59 @@
-use crate::{genesis_block, types::Address};
+use crate::{genesis_block, types::Address, unstable_blocks::BlocksCache};
 use bitcoin::{block::Header, Address as BitcoinAddress, Witness};
 use ic_btc_interface::Network;
 use ic_btc_test_utils::{
     random_p2pkh_address, BlockBuilder as ExternalBlockBuilder,
     TransactionBuilder as ExternalTransactionBuilder,
 };
-use ic_btc_types::{into_bitcoin_network, Block, OutPoint, Transaction};
+use ic_btc_types::{into_bitcoin_network, Block, BlockHash, OutPoint, Transaction};
 use ic_stable_structures::{Memory, StableBTreeMap, Storable};
 use std::{
+    collections::BTreeMap,
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TestBlocksCache {
+    pub network: Network,
+    map: BTreeMap<BlockHash, Block>,
+}
+
+impl TestBlocksCache {
+    pub fn new(network: Network) -> Self {
+        Self {
+            network,
+            map: Default::default(),
+        }
+    }
+    pub fn new_with(network: Network, map: BTreeMap<BlockHash, Block>) -> Self {
+        Self { network, map }
+    }
+}
+
+impl BlocksCache for TestBlocksCache {
+    fn insert(&mut self, block_hash: BlockHash, block: Block) -> bool {
+        self.map.insert(block_hash, block).is_none()
+    }
+    fn remove(&mut self, block_hash: &BlockHash) -> bool {
+        self.map.remove(block_hash).is_some()
+    }
+    fn get(&self, block_hash: &BlockHash) -> Option<Block> {
+        self.map.get(block_hash).cloned()
+    }
+    fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+    fn len(&self) -> u64 {
+        self.map.len() as u64
+    }
+    fn network(&self) -> Network {
+        self.network
+    }
+    fn collect(&self) -> std::collections::BTreeMap<BlockHash, Block> {
+        self.map.clone()
+    }
+}
 
 /// Builds a random chain with the given number of block and transactions.
 /// The genesis block used in the chain is also random.

@@ -1,7 +1,8 @@
-mod outpoints_cache;
-
 use crate::{
-    blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree, Depth, DifficultyBasedDepth},
+    blocktree::{
+        BlockChain, BlockDoesNotExtendTree, BlockTree, CachedBlock, ChainBlock, Depth,
+        DifficultyBasedDepth,
+    },
     runtime::print,
     types::{Address, TxOut},
     UtxoSet,
@@ -12,8 +13,11 @@ use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
 
+mod blocks_cache;
 mod next_block_headers;
+mod outpoints_cache;
 use self::next_block_headers::NextBlockHeaders;
+pub use blocks_cache::{BlocksCache, BlocksCacheInStableMem};
 
 /// Max allowed depth difference between the two longest branches
 /// in the unstable block tree on `Testnet` and `Regtest`.
@@ -62,17 +66,44 @@ pub fn testnet_unstable_max_depth_difference(
 ///   depth(block) ≥ stability_threshold
 ///   ∀ b', height(b') = height(b): depth(b) - depth(b’) ≥ stability_threshold
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct UnstableBlocks {
+pub struct GenericUnstableBlocks<Tree> {
     stability_threshold: u32,
-    tree: BlockTree<Block>,
+    tree: Tree,
     outpoints_cache: OutPointsCache,
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
 }
 
+impl<A> GenericUnstableBlocks<A> {
+    pub fn map_tree<B, F: FnOnce(A) -> B>(self, f: F) -> GenericUnstableBlocks<B> {
+        let GenericUnstableBlocks {
+            stability_threshold,
+            tree,
+            outpoints_cache,
+            network,
+            next_block_headers,
+        } = self;
+        GenericUnstableBlocks {
+            stability_threshold,
+            tree: f(tree),
+            outpoints_cache,
+            network,
+            next_block_headers,
+        }
+    }
+}
+
+pub type UnstableBlocks = GenericUnstableBlocks<BlockTree<CachedBlock>>;
+
 impl UnstableBlocks {
-    pub fn new(utxos: &UtxoSet, stability_threshold: u32, anchor: Block, network: Network) -> Self {
+    pub fn new<Cache: blocks_cache::BlocksCache + 'static>(
+        blocks_cache: Cache,
+        utxos: &UtxoSet,
+        stability_threshold: u32,
+        anchor: Block,
+        network: Network,
+    ) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
         outpoints_cache
@@ -81,11 +112,16 @@ impl UnstableBlocks {
 
         Self {
             stability_threshold,
-            tree: BlockTree::new(anchor),
+            tree: BlockTree::new_with_cache(blocks_cache, anchor),
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
         }
+    }
+
+    /// Replace the blocks cache with the given one
+    pub fn replace_blocks_cache<Cache: BlocksCache + 'static>(&mut self, blocks_cache: Cache) {
+        self.tree.replace_blocks_cache(blocks_cache)
     }
 
     /// Retrieves the `TxOut` associated with the given `outpoint`, along with its height.
@@ -114,7 +150,7 @@ impl UnstableBlocks {
     }
 
     pub fn anchor_difficulty(&self) -> u128 {
-        self.tree.root().difficulty(self.network)
+        self.tree.root().difficulty()
     }
 
     pub fn normalized_stability_threshold(&self) -> u128 {
@@ -135,10 +171,9 @@ impl UnstableBlocks {
         self.network
     }
 
-    /// Returns all blocks in the tree with their respective depths
-    /// separated by heights.
-    pub fn blocks_with_depths_by_heights(&self) -> Vec<Vec<(&Block, u32)>> {
-        self.tree.blocks_with_depths_by_heights()
+    /// Returns the hashes of all blocks in the tree with their respective depths separated by heights.
+    pub fn block_hashes_with_depths_by_heights(&self) -> Vec<Vec<(&BlockHash, u32)>> {
+        self.tree.block_hashes_with_depths_by_heights()
     }
 
     /// Returns the depth of the unstable block tree.
@@ -148,7 +183,7 @@ impl UnstableBlocks {
 
     /// Returns the difficulty-based depth of the unstable block tree.
     pub fn blocks_difficulty_based_depth(&self) -> DifficultyBasedDepth {
-        self.tree.difficulty_based_depth(self.network)
+        self.tree.difficulty_based_depth()
     }
 
     /// Returns depth in BlockTree of Block with given BlockHash.
@@ -239,7 +274,7 @@ impl UnstableBlocks {
 }
 
 /// Returns a reference to the `anchor` block iff ∃ a child `C` of `anchor` that is stable.
-pub fn peek(blocks: &UnstableBlocks) -> Option<&Block> {
+pub fn peek(blocks: &UnstableBlocks) -> Option<&CachedBlock> {
     get_stable_child(blocks).map(|_| blocks.tree.root())
 }
 
@@ -255,14 +290,14 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
 
     // Remove the outpoints of obsolete blocks from the cache.
     for block in tree.blocks() {
-        blocks.outpoints_cache.remove(block);
+        blocks.outpoints_cache.remove(&block.block());
     }
 
     blocks.next_block_headers.remove_until_height(stable_height);
 
     // The block returned here is the previous anchor block. The new
     // anchor block was its child (see above).
-    Some(tree.into_root())
+    Some(tree.into_root_and_remove_from_cache())
 }
 
 /// Pushes a new block into the store.
@@ -284,7 +319,7 @@ pub fn push(
         .insert(utxos, &block, height)
         .expect("inserting to outpoints cache must succeed.");
 
-    parent_block_tree.extend(block)?;
+    parent_block_tree.extend_cached(block)?;
 
     blocks.next_block_headers.remove(&block_hash);
 
@@ -299,14 +334,14 @@ pub fn push(
 /// difficulties are tied, the longest branch (by block count) wins. If
 /// branches still tie on both criteria, the chain ends at the fork point
 /// (contested tip).
-pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, Block> {
-    blocks.tree.main_chain_by_difficulty(blocks.network)
+pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, CachedBlock> {
+    blocks.tree.main_chain_by_difficulty()
 }
 
 /// Returns the length of the "main chain".
 /// See `get_main_chain` for what defines a main chain.
 pub fn get_main_chain_length(blocks: &UnstableBlocks) -> usize {
-    blocks.tree.main_chain_length_by_difficulty(blocks.network)
+    blocks.tree.main_chain_length_by_difficulty()
 }
 
 pub fn get_block_hashes(blocks: &UnstableBlocks) -> Vec<BlockHash> {
@@ -323,7 +358,7 @@ pub fn blocks_count(blocks: &UnstableBlocks) -> usize {
 pub fn get_chain_with_tip<'a>(
     blocks: &'a UnstableBlocks,
     tip: &BlockHash,
-) -> Option<(BlockChain<'a, Block>, Vec<&'a Block>)> {
+) -> Option<(BlockChain<'a, CachedBlock>, Vec<&'a CachedBlock>)> {
     blocks.tree.get_chain_with_tip(tip)
 }
 
@@ -337,7 +372,7 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
         .children()
         .iter()
         .enumerate()
-        .map(|(idx, child)| (child.difficulty_based_depth(network), idx))
+        .map(|(idx, child)| (child.difficulty_based_depth(), idx))
         .collect();
     difficulty_based_depths.sort_by_key(|(difficulty_based_depth, _)| *difficulty_based_depth);
 
@@ -422,16 +457,21 @@ fn get_stable_child(blocks: &UnstableBlocks) -> Option<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utils::{BlockBuilder, BlockChainBuilder};
+    use crate::test_utils::{BlockBuilder, BlockChainBuilder, TestBlocksCache};
     use ic_btc_interface::Network;
     use proptest::proptest;
+
+    fn peek(blocks: &UnstableBlocks) -> Option<Block> {
+        super::peek(blocks).map(|block| block.block())
+    }
 
     #[test]
     fn empty() {
         let anchor = BlockBuilder::genesis().build();
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, anchor, network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(cache, &utxos, 1, anchor, network);
         assert_eq!(peek(&unstable_blocks), None);
         assert_eq!(pop(&mut unstable_blocks, 0), None);
     }
@@ -443,7 +483,8 @@ mod test {
         let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
         let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 2, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1).unwrap();
         assert_eq!(peek(&forest), None);
@@ -453,7 +494,7 @@ mod test {
 
         // Block 0 (the anchor) now has one stable child (Block 1).
         // Block 0 should be returned when calling `pop`.
-        assert_eq!(peek(&forest), Some(&block_0));
+        assert_eq!(peek(&forest), Some(block_0.clone()));
         assert_eq!(pop(&mut forest, 0), Some(block_0));
 
         // Block 1 is now the anchor. It doesn't have stable
@@ -474,7 +515,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 7, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 7, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
@@ -487,16 +529,16 @@ mod test {
         // normalized_stability_threshold is 20 * 7 = 140 and it does not have
         // any siblings. Hence, block_0 should be returned when calling `pop`.
         assert_eq!(
-            forest.tree.children()[0].difficulty_based_depth(network),
+            forest.tree.children()[0].difficulty_based_depth(),
             DifficultyBasedDepth::new(145)
         );
 
-        assert_eq!(peek(&forest), Some(&block_0));
+        assert_eq!(peek(&forest), Some(block_0.clone()));
         assert_eq!(pop(&mut forest, 0), Some(block_0));
 
         // block_1 (the anchor) now has one stable child (block_2).
         // block_1 should be returned when calling `pop`.
-        assert_eq!(peek(&forest), Some(&block_1));
+        assert_eq!(peek(&forest), Some(block_1.clone()));
         assert_eq!(pop(&mut forest, 0), Some(block_1));
 
         // block_2 is now the anchor. It doesn't have stable
@@ -513,7 +555,8 @@ mod test {
 
         let network = Network::Regtest;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 2, genesis_block.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 2, genesis_block.clone(), network);
 
         push(&mut forest, &utxos, block).unwrap();
         push(&mut forest, &utxos, forked_block.clone()).unwrap();
@@ -536,14 +579,14 @@ mod test {
         push(&mut forest, &utxos, block_2).unwrap();
         //Now, fork2 has a difficulty_based_depth of 3, while fork1 has a difficulty_based_depth of 1,
         //hence we can get a stable child.
-        assert_eq!(peek(&forest), Some(&genesis_block));
+        assert_eq!(peek(&forest), Some(genesis_block.clone()));
         assert_eq!(pop(&mut forest, 0), Some(genesis_block));
-        assert_eq!(forest.tree.root(), &forked_block);
+        assert_eq!(&forest.tree.root().block(), &forked_block);
 
         //fork2 is still stable, hence we can get a stable child.
-        assert_eq!(peek(&forest), Some(&forked_block));
+        assert_eq!(peek(&forest), Some(forked_block.clone()));
         assert_eq!(pop(&mut forest, 0), Some(forked_block));
-        assert_eq!(forest.tree.root(), &block_1);
+        assert_eq!(&forest.tree.root().block(), &block_1);
 
         // No stable children for fork2.
         assert_eq!(peek(&forest), None);
@@ -560,7 +603,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 3, genesis_block.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 3, genesis_block.clone(), network);
 
         push(&mut forest, &utxos, fork1_block.clone()).unwrap();
         push(&mut forest, &utxos, fork2_block.clone()).unwrap();
@@ -569,11 +613,11 @@ mod test {
         // while fork2 has difficulty_based_depth 5, while normalized_stability_threshold
         // is 3 * 4 = 12. Hence, we shouldn't get anything.
         assert_eq!(
-            forest.tree.children()[0].difficulty_based_depth(network),
+            forest.tree.children()[0].difficulty_based_depth(),
             DifficultyBasedDepth::new(10)
         );
         assert_eq!(
-            forest.tree.children()[1].difficulty_based_depth(network),
+            forest.tree.children()[1].difficulty_based_depth(),
             DifficultyBasedDepth::new(5)
         );
 
@@ -597,28 +641,28 @@ mod test {
         // 30 - 11 > normalized_stability_threshold. So we can get a
         // stable child, and fork2_block should be a new anchor.
         assert_eq!(
-            forest.tree.children()[0].difficulty_based_depth(network),
+            forest.tree.children()[0].difficulty_based_depth(),
             DifficultyBasedDepth::new(11)
         );
         assert_eq!(
-            forest.tree.children()[1].difficulty_based_depth(network),
+            forest.tree.children()[1].difficulty_based_depth(),
             DifficultyBasedDepth::new(30)
         );
 
-        assert_eq!(peek(&forest), Some(&genesis_block));
+        assert_eq!(peek(&forest), Some(genesis_block.clone()));
         assert_eq!(pop(&mut forest, 0), Some(genesis_block));
-        assert_eq!(forest.tree.root(), &fork2_block);
+        assert_eq!(&forest.tree.root().block(), &fork2_block);
 
         // fork2_block should have a stable child block_2, because
         // its difficulty_based_depth is 25,
         // normalized_stability_threshold is 3 * 5 = 15,
         // and it does not have any siblings.
         assert_eq!(
-            forest.tree.children()[0].difficulty_based_depth(network),
+            forest.tree.children()[0].difficulty_based_depth(),
             DifficultyBasedDepth::new(25)
         );
 
-        assert_eq!(peek(&forest), Some(&fork2_block));
+        assert_eq!(peek(&forest), Some(fork2_block.clone()));
         assert_eq!(pop(&mut forest, 0), Some(fork2_block));
 
         // No stable child for block_2, because it does not have any children.
@@ -635,13 +679,13 @@ mod test {
         // normalized_stability_threshold is 3 * 25 = 75,
         // hence difficulty_based_depth >= normalized_stability_threshold.
         assert_eq!(
-            forest.tree.children()[0].difficulty_based_depth(network),
+            forest.tree.children()[0].difficulty_based_depth(),
             DifficultyBasedDepth::new(75)
         );
 
-        assert_eq!(peek(&forest), Some(&block_2));
+        assert_eq!(peek(&forest), Some(block_2.clone()));
         assert_eq!(pop(&mut forest, 0), Some(block_2));
-        assert_eq!(forest.tree.root(), &block_3);
+        assert_eq!(&forest.tree.root().block(), &block_3);
 
         // No stable child for block_3, because it does not have any children.
         assert_eq!(peek(&forest), None);
@@ -656,16 +700,41 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 0, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 0, block_0.clone(), network);
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
 
-        assert_eq!(peek(&forest), Some(&block_0));
+        assert_eq!(peek(&forest), Some(block_0.clone()));
         assert_eq!(pop(&mut forest, 0), Some(block_0));
-        assert_eq!(peek(&forest), Some(&block_1));
+        assert_eq!(peek(&forest), Some(block_1.clone()));
         assert_eq!(pop(&mut forest, 0), Some(block_1));
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest, 0), None);
+    }
+
+    fn get_main_chain(blocks: &UnstableBlocks) -> Vec<Block> {
+        super::get_main_chain(blocks)
+            .into_chain()
+            .into_iter()
+            .map(|block| block.block())
+            .collect()
+    }
+
+    fn get_chain_with_tip(
+        blocks: &UnstableBlocks,
+        block_hash: &BlockHash,
+    ) -> Option<(Vec<Block>, Vec<Block>)> {
+        super::get_chain_with_tip(blocks, block_hash).map(|(chain, tips)| {
+            (
+                chain
+                    .into_chain()
+                    .into_iter()
+                    .map(|block| block.block())
+                    .collect(),
+                tips.into_iter().map(|tip| tip.block()).collect(),
+            )
+        })
     }
 
     // Creating a forest that looks like this:
@@ -681,31 +750,29 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2])
+            vec![block_0.clone(), block_1.clone(), block_2.clone()]
         );
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1]),
+            (vec![block_0.clone()], vec![block_1.clone()]),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
-                vec![&block_2]
+                vec![block_0.clone(), block_1.clone()],
+                vec![block_2.clone()]
             ),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
-            (
-                BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2]),
-                vec![]
-            ),
+            (vec![block_0, block_1, block_2.clone()], vec![]),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
     }
@@ -724,28 +791,26 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2.clone()).unwrap();
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0.clone()]);
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1, &block_2]),
+            (
+                vec![block_0.clone()],
+                vec![block_1.clone(), block_2.clone()]
+            ),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
-            (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
-                vec![]
-            ),
+            (vec![block_0.clone(), block_1.clone()], vec![]),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
-            (
-                BlockChain::new_with_successors(&block_0, vec![&block_2]),
-                vec![]
-            ),
+            (vec![block_0, block_2.clone()], vec![]),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
     }
@@ -765,39 +830,37 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2.clone()).unwrap();
         push(&mut forest, &utxos, block_3.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_2, &block_3])
+            vec![block_0.clone(), block_2.clone(), block_3.clone()]
         );
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1, &block_2]),
+            (
+                vec![block_0.clone()],
+                vec![block_1.clone(), block_2.clone()]
+            ),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
-            (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
-                vec![]
-            ),
+            (vec![block_0.clone(), block_1.clone()], vec![]),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_2]),
-                vec![&block_3]
+                vec![block_0.clone(), block_2.clone()],
+                vec![block_3.clone()]
             ),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
         assert_eq!(
-            (
-                BlockChain::new_with_successors(&block_0, vec![&block_2, &block_3]),
-                vec![]
-            ),
+            (vec![block_0, block_2, block_3.clone()], vec![]),
             get_chain_with_tip(&forest, block_3.block_hash()).unwrap()
         );
     }
@@ -820,7 +883,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2.clone()).unwrap();
@@ -829,31 +893,31 @@ mod test {
         push(&mut forest, &utxos, block_b.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_1])
+            vec![block_0.clone(), block_1.clone()]
         );
 
         assert_eq!(
-            (BlockChain::new(&block_0), vec![&block_1]),
+            (vec![block_0.clone()], vec![block_1.clone()]),
             get_chain_with_tip(&forest, block_0.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1]),
-                vec![&block_2, &block_a]
+                vec![block_0.clone(), block_1.clone()],
+                vec![block_2.clone(), block_a.clone()]
             ),
             get_chain_with_tip(&forest, block_1.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1, &block_2]),
-                vec![&block_3]
+                vec![block_0.clone(), block_1.clone(), block_2.clone()],
+                vec![block_3.clone()]
             ),
             get_chain_with_tip(&forest, block_2.block_hash()).unwrap()
         );
         assert_eq!(
             (
-                BlockChain::new_with_successors(&block_0, vec![&block_1, &block_a]),
-                vec![&block_b]
+                vec![block_0.clone(), block_1.clone(), block_a.clone()],
+                vec![block_b.clone()]
             ),
             get_chain_with_tip(&forest, block_a.block_hash()).unwrap()
         );
@@ -884,7 +948,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_x).unwrap();
         push(&mut forest, &utxos, block_y).unwrap();
@@ -894,7 +959,7 @@ mod test {
         push(&mut forest, &utxos, block_3).unwrap();
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0.clone()]);
 
         // Now add block c to b.
         let block_c = BlockBuilder::with_prev_header(block_b.header()).build();
@@ -903,7 +968,7 @@ mod test {
         // Now the main chain should be "1 -> a -> b -> c"
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_1, &block_a, &block_b, &block_c])
+            vec![block_0, block_1, block_a, block_b, block_c]
         );
     }
 
@@ -922,7 +987,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_1).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
@@ -932,7 +998,7 @@ mod test {
         push(&mut forest, &utxos, block_x).unwrap();
         push(&mut forest, &utxos, block_y).unwrap();
         push(&mut forest, &utxos, block_z).unwrap();
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0]);
     }
 
     #[test]
@@ -940,9 +1006,10 @@ mod test {
         let block_0 = BlockBuilder::genesis().build();
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0]);
     }
 
     // Linear chain with varying difficulties: the entire chain is "main".
@@ -960,7 +1027,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
@@ -968,7 +1036,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c])
+            vec![block_0, block_a, block_b, block_c]
         );
         assert_eq!(get_main_chain_length(&forest), 4);
     }
@@ -989,12 +1057,13 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0]);
         assert_eq!(get_main_chain_length(&forest), 1);
     }
 
@@ -1023,7 +1092,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
@@ -1031,10 +1101,7 @@ mod test {
         push(&mut forest, &utxos, block_d).unwrap();
         push(&mut forest, &utxos, block_e).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a, block_b]);
         assert_eq!(get_main_chain_length(&forest), 3);
     }
 
@@ -1058,16 +1125,14 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a, block_b]);
         assert_eq!(get_main_chain_length(&forest), 3);
     }
 
@@ -1095,25 +1160,20 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0.clone(), block_a]);
         assert_eq!(get_main_chain_length(&forest), 2);
 
         let block_c =
             BlockBuilder::with_prev_header(block_b.header()).build_with_mock_difficulty(20);
         push(&mut forest, &utxos, block_c.clone()).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_b, &block_c])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_b, block_c]);
         assert_eq!(get_main_chain_length(&forest), 3);
     }
 
@@ -1138,14 +1198,15 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
         push(&mut forest, &utxos, block_d).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0]);
         assert_eq!(get_main_chain_length(&forest), 1);
     }
 
@@ -1167,16 +1228,14 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a]);
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
@@ -1201,7 +1260,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
@@ -1210,7 +1270,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c])
+            vec![block_0, block_a, block_b, block_c]
         );
         assert_eq!(get_main_chain_length(&forest), 4);
     }
@@ -1252,7 +1312,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_x).unwrap();
@@ -1265,7 +1326,7 @@ mod test {
 
         assert_eq!(
             get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_b, &block_c, &block_d])
+            vec![block_0, block_a, block_b, block_c, block_d]
         );
         assert_eq!(get_main_chain_length(&forest), 5);
     }
@@ -1299,7 +1360,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a).unwrap();
         push(&mut forest, &utxos, block_d.clone()).unwrap();
@@ -1307,10 +1369,7 @@ mod test {
         push(&mut forest, &utxos, block_c).unwrap();
         push(&mut forest, &utxos, block_e).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_d])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_d]);
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
@@ -1333,16 +1392,14 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a]);
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
@@ -1365,13 +1422,14 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0]);
         assert_eq!(get_main_chain_length(&forest), 1);
     }
 
@@ -1399,22 +1457,20 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut forest = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
 
-        assert_eq!(get_main_chain(&forest), BlockChain::new(&block_0));
+        assert_eq!(get_main_chain(&forest), vec![block_0.clone()]);
         assert_eq!(get_main_chain_length(&forest), 1);
 
         let block_c =
             BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(5);
         push(&mut forest, &utxos, block_c.clone()).unwrap();
 
-        assert_eq!(
-            get_main_chain(&forest),
-            BlockChain::new_with_successors(&block_0, vec![&block_a, &block_c])
-        );
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a, block_c]);
         assert_eq!(get_main_chain_length(&forest), 3);
     }
 
@@ -1423,7 +1479,8 @@ mod test {
         let genesis = BlockBuilder::genesis().build();
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut unstable_blocks = UnstableBlocks::new(&utxos, 2, genesis.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(cache, &utxos, 2, genesis.clone(), network);
 
         let block_0 = BlockBuilder::with_prev_header(genesis.header()).build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
@@ -1504,8 +1561,14 @@ mod test {
             .with_difficulty(remaining_blocks_difficulty, 1..)
             .build();
 
-        let mut unstable_blocks =
-            UnstableBlocks::new(&utxos, stability_threshold, chain[0].clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(
+            cache,
+            &utxos,
+            stability_threshold,
+            chain[0].clone(),
+            network,
+        );
 
         // Sanity check that the difficulties are set correctly.
         assert_eq!(chain[0].mock_difficulty, Some(anchor_block_difficulty));
@@ -1539,7 +1602,7 @@ mod test {
         // Even though the chain's difficulty-based depth doesn't exceed the normalized stability
         // threshold, the anchor block can now be popped because the chain's length has exceeded
         // the maximum allowed.
-        assert_eq!(peek(&unstable_blocks), Some(&chain[0]));
+        assert_eq!(peek(&unstable_blocks), Some(chain[0].clone()));
     }
 
     #[test]
@@ -1573,8 +1636,14 @@ mod test {
             .build();
 
         // Insert all blocks from both chains.
-        let mut unstable_blocks =
-            UnstableBlocks::new(&utxos, stability_threshold, chain_a[0].clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(
+            cache,
+            &utxos,
+            stability_threshold,
+            chain_a[0].clone(),
+            network,
+        );
         for block in chain_a.iter().skip(1).chain(chain_b.iter()) {
             push(&mut unstable_blocks, &utxos, block.clone()).unwrap();
         }
@@ -1607,7 +1676,7 @@ mod test {
         assert!(new_depth_difference >= initial_depth_diff);
 
         // Since the depth condition is now met, `chain_a[0]` should be stable.
-        assert_eq!(peek(&unstable_blocks), Some(&chain_a[0]));
+        assert_eq!(peek(&unstable_blocks), Some(chain_a[0].clone()));
 
         // Extend `B` by one block.
         let new_block = BlockBuilder::with_prev_header(chain_b.last().unwrap().header()).build();
@@ -1624,7 +1693,8 @@ mod test {
 
         let network = Network::Mainnet;
         let utxos = UtxoSet::new(network);
-        let mut unstable_blocks = UnstableBlocks::new(&utxos, 1, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         for i in 1..block_num {
             let block = BlockBuilder::with_prev_header(&headers[i - 1]).build();
@@ -1648,7 +1718,8 @@ mod test {
         // blocks are in unstable blocks, hence the result should be an empty iterator.
         assert!(unstable_blocks
             .get_block_headers_in_range(stable_height, range)
-            .eq([].iter()));
+            .next()
+            .is_none())
     }
 
     #[test]
@@ -1665,7 +1736,7 @@ mod test {
                 let mut result = unstable_blocks.get_block_headers_in_range(0, std::ops::RangeInclusive::new(start_range as u32, end_range as u32)).peekable();
 
                 for expected_result in headers.iter().take(end_range + 1).skip(start_range){
-                    assert_eq!(expected_result, *result.peek().unwrap());
+                    assert_eq!(&expected_result, result.peek().unwrap());
                     result.next();
                 }
             }
