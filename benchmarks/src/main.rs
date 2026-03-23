@@ -435,9 +435,11 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
     assert_chain_height(blocks_to_insert);
 
     bench_fn(|| {
-        ic_btc_canister::get_current_fee_percentiles_without_fees(GetCurrentFeePercentilesRequest {
-            network: NetworkInRequest::Regtest,
-        });
+        ic_btc_canister::get_current_fee_percentiles_without_fees(
+            GetCurrentFeePercentilesRequest {
+                network: NetworkInRequest::Regtest,
+            },
+        );
     })
 }
 
