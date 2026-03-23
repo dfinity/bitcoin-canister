@@ -819,9 +819,12 @@ mod test {
         let mut state_bytes = vec![];
         ciborium::ser::into_writer(&old_state, &mut state_bytes).unwrap();
 
-        // Write state (of BlockTree<Block>) into stable memory
+        // Write state (of BlockTree<Block>) into stable memory with length prefix,
+        // matching the format used by pre_upgrade.
         let memory = memory::get_upgrades_memory();
-        memory::write(&memory, 0, &state_bytes);
+        let len = state_bytes.len() as u32;
+        memory::write(&memory, 0, &len.to_le_bytes());
+        memory::write(&memory, 4, &state_bytes);
 
         // Run postupgrade hook
         post_upgrade(None);
