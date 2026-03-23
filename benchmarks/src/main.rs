@@ -119,11 +119,8 @@ fn insert_block_headers() -> BenchResult {
     // Insert the blocks.
     with_state_mut(|s| {
         for i in 0..blocks_to_insert {
-            ic_btc_canister::state::insert_block(
-                s,
-                TESTNET_BLOCKS.with(|b| b.borrow()[i as usize].clone()),
-            )
-            .unwrap();
+            ic_btc_canister::state::insert_block(s, TESTNET_BLOCKS.with(|b| b.borrow()[i].clone()))
+                .unwrap();
         }
     });
 
@@ -135,7 +132,7 @@ fn insert_block_headers() -> BenchResult {
         let mut next_block_headers = vec![];
         for i in blocks_to_insert..blocks_to_insert + block_headers_to_insert {
             let mut block_header_blob = vec![];
-            Header::consensus_encode(blocks[i as usize].header(), &mut block_header_blob).unwrap();
+            Header::consensus_encode(blocks[i].header(), &mut block_header_blob).unwrap();
             next_block_headers.push(BlockHeaderBlob::from(block_header_blob));
         }
 
@@ -209,7 +206,7 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
         }
     });
 
-    assert_chain_height(blocks_to_insert);
+    assert_chain_height(blocks_to_insert - 1);
 
     bench_fn(|| {
         ic_btc_canister::pre_upgrade();
