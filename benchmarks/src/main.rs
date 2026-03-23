@@ -371,7 +371,7 @@ fn bitcoin_get_balance() -> BenchResult {
     assert_chain_height(blocks_to_insert);
 
     bench_fn(|| {
-        ic_btc_canister::get_balance(GetBalanceRequest {
+        ic_btc_canister::get_balance_query(GetBalanceRequest {
             address: ADDRESS.to_string(),
             network: NetworkInRequest::Regtest,
             min_confirmations: None,
@@ -403,7 +403,7 @@ fn bitcoin_get_utxos() -> BenchResult {
     assert_chain_height(blocks_to_insert);
 
     bench_fn(|| {
-        ic_btc_canister::get_utxos(GetUtxosRequest {
+        ic_btc_canister::get_utxos_query(GetUtxosRequest {
             address: ADDRESS.to_string(),
             network: NetworkInRequest::Regtest,
             filter: None,
@@ -435,7 +435,7 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
     assert_chain_height(blocks_to_insert);
 
     bench_fn(|| {
-        ic_btc_canister::get_current_fee_percentiles(GetCurrentFeePercentilesRequest {
+        ic_btc_canister::get_current_fee_percentiles_without_fees(GetCurrentFeePercentilesRequest {
             network: NetworkInRequest::Regtest,
         });
     })
@@ -464,7 +464,7 @@ fn bitcoin_get_block_headers() -> BenchResult {
     assert_chain_height(blocks_to_insert);
 
     bench_fn(|| {
-        ic_btc_canister::get_block_headers(GetBlockHeadersRequest {
+        ic_btc_canister::get_block_headers_without_fees(GetBlockHeadersRequest {
             start_height: 0,
             end_height: None,
             network: NetworkInRequest::Regtest,
