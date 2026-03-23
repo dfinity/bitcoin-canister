@@ -18,6 +18,9 @@ thread_local! {
     static TESTNET_BLOCKS: RefCell<Vec<Block>> =  const { RefCell::new(vec![])};
 }
 
+// Asserts that all blocks have been inserted so benchmarks are not silently run on a partial chain.
+// If block insertion hits the instruction limit, the IC will trap, silently leaving fewer blocks than expected.
+// Without this check, the benchmark could still run and report misleadingly low instruction counts.
 fn assert_chain_height(expected: usize) {
     with_state(|s| {
         let chain_len = main_chain_height(s) as usize;
@@ -54,6 +57,8 @@ fn init() {
 // Benchmarks inserting the first 300 blocks of the Bitcoin testnet.
 #[bench(raw)]
 fn insert_300_blocks() -> BenchResult {
+    let blocks_to_insert = 300;
+
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Testnet),
         stability_threshold: Some(144),
@@ -62,22 +67,24 @@ fn insert_300_blocks() -> BenchResult {
 
     let result = bench_fn(|| {
         with_state_mut(|s| {
-            for i in 0..300 {
+            for i in 0..blocks_to_insert {
                 ic_btc_canister::state::insert_block(
                     s,
-                    TESTNET_BLOCKS.with(|b| b.borrow()[i as usize].clone()),
+                    TESTNET_BLOCKS.with(|b| b.borrow()[i].clone()),
                 )
                 .unwrap();
             }
         });
     });
-    assert_chain_height(300);
+    assert_chain_height(blocks_to_insert);
     result
 }
 
 // Benchmarks gettings the metrics when there are many unstable blocks..
 #[bench(raw)]
 fn get_metrics() -> BenchResult {
+    let blocks_to_insert = 3000;
+
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Testnet),
         stability_threshold: Some(3000),
@@ -85,16 +92,13 @@ fn get_metrics() -> BenchResult {
     });
 
     with_state_mut(|s| {
-        for i in 0..3000 {
-            ic_btc_canister::state::insert_block(
-                s,
-                TESTNET_BLOCKS.with(|b| b.borrow()[i as usize].clone()),
-            )
-            .unwrap();
+        for i in 0..blocks_to_insert {
+            ic_btc_canister::state::insert_block(s, TESTNET_BLOCKS.with(|b| b.borrow()[i].clone()))
+                .unwrap();
         }
     });
 
-    assert_chain_height(3000);
+    assert_chain_height(blocks_to_insert);
 
     bench_fn(|| {
         ic_btc_canister::get_metrics();
