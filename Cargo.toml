@@ -3,6 +3,7 @@
 members = [
     # Production crates
     "canister",
+    "ic-cdk-bitcoin-canister",
     "interface",
     "types",
     "validation",
