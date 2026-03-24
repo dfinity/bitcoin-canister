@@ -170,6 +170,15 @@ pub fn get_block_headers(
     Ok(res)
 }
 
+/// Returns block headers without charging cycles, for use in benchmarks.
+#[cfg(feature = "canbench-rs")]
+pub fn get_block_headers_without_fees(
+    request: GetBlockHeadersRequest,
+) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
+    let (res, _) = get_block_headers_internal(&request)?;
+    Ok(res)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
