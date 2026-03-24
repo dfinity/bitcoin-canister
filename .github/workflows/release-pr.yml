@@ -10,11 +10,11 @@ on:
         options:
           - ic-btc-canister  # Date-based, uses git-cliff
           - watchdog         # Date-based, uses git-cliff
-          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
+          - library-crates   # Semver (ic-btc-interface, ic-cdk-bitcoin-canister & ic-btc-validation), uses release-plz
 
 # Creates a Release PR for a specific package:
 # - ic-btc-canister, watchdog: via git-cliff (date-based)
-# - library-crates: via release-plz (semver) - includes ic-btc-interface & ic-btc-validation
+# - library-crates: via release-plz (semver) - includes ic-btc-interface, ic-cdk-bitcoin-canister & ic-btc-validation
 
 jobs:
   # ===== Canister Release PR (date-based) =====
@@ -111,7 +111,7 @@ jobs:
           fetch-depth: 0
 
       - name: Create Release PR (release-plz)
-        # Creates a single PR for ic-btc-interface and ic-btc-validation
+        # Creates a single PR for ic-btc-interface, ic-cdk-bitcoin-canister and ic-btc-validation
         uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
         with:
           command: release-pr
