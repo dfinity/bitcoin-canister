@@ -1,8 +1,8 @@
 use candid::Principal;
 use cargo_metadata::MetadataCommand;
 use ic_btc_interface::{CanisterArg, Fees, Flag, InitConfig, Network, NetworkInRequest};
-use pocket_ic::{PocketIcBuilder, call_candid};
 use pocket_ic::common::rest::RawEffectivePrincipal;
+use pocket_ic::{PocketIcBuilder, call_candid};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::Once;
@@ -50,7 +50,10 @@ fn cargo_build_canister() -> Vec<u8> {
         .join("cdk-bitcoin-canister.wasm");
 
     std::fs::read(&wasm_path).unwrap_or_else(|e| {
-        panic!("failed to read compiled Wasm file from {:?}: {}", &wasm_path, e)
+        panic!(
+            "failed to read compiled Wasm file from {:?}: {}",
+            &wasm_path, e
+        )
     })
 }
 
@@ -64,8 +67,7 @@ fn load_btc_canister_wasm() -> Vec<u8> {
             .unwrap_or_else(|e| panic!("failed to read WASM from {path}: {e}"));
     }
 
-    let repo_root = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("../..");
+    let repo_root = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("../..");
     let output = Command::new("bash")
         .arg(repo_root.join("scripts/build-canister.sh"))
         .arg("ic-btc-canister")
@@ -76,8 +78,7 @@ fn load_btc_canister_wasm() -> Vec<u8> {
         .expect("failed to run build-canister.sh");
     assert!(output.status.success(), "build-canister.sh failed");
 
-    let wasm_path = repo_root
-        .join("target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz");
+    let wasm_path = repo_root.join("target/wasm32-unknown-unknown/release/ic-btc-canister.wasm.gz");
     std::fs::read(&wasm_path)
         .unwrap_or_else(|e| panic!("failed to read WASM from {:?}: {e}", wasm_path))
 }
@@ -150,5 +151,12 @@ fn test_network(network: NetworkInRequest, btc_id: Principal, init_arg: Canister
     pic.add_cycles(btc_id, 10_000_000_000_000u128);
     let encoded_args = candid::encode_one(init_arg).expect("failed to encode init args");
     pic.install_canister(btc_id, btc_canister_wasm.clone(), encoded_args, None);
-    let () = call_candid(&pic, canister_id, RawEffectivePrincipal::None, "execute_all_methods", (network,)).unwrap();
+    let () = call_candid(
+        &pic,
+        canister_id,
+        RawEffectivePrincipal::None,
+        "execute_all_methods",
+        (network,),
+    )
+    .unwrap();
 }
