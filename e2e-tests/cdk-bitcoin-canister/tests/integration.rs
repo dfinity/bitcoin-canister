@@ -7,10 +7,18 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::Once;
 
-/// Builds the test canister binary for wasm32 and returns the compiled WASM bytes.
-fn cargo_build_canister() -> Vec<u8> {
+/// Returns the test canister WASM bytes.
+///
+/// If `CDK_BITCOIN_CANISTER_WASM_PATH` is set (CI), reads from that path.
+/// Otherwise, builds locally via `cargo build`.
+fn load_test_canister_wasm() -> Vec<u8> {
     static LOG_INIT: Once = Once::new();
     LOG_INIT.call_once(env_logger::init);
+
+    if let Ok(path) = std::env::var("CDK_BITCOIN_CANISTER_WASM_PATH") {
+        return std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("failed to read WASM from {path}: {e}"));
+    }
 
     let dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let cargo_toml_path = dir.join("Cargo.toml");
@@ -137,7 +145,7 @@ fn test_bitcoin_canister() {
 }
 
 fn test_network(network: NetworkInRequest, btc_id: Principal, init_arg: CanisterArg) {
-    let wasm = cargo_build_canister();
+    let wasm = load_test_canister_wasm();
     let pic = PocketIcBuilder::new()
         .with_bitcoin_subnet()
         .with_application_subnet()

@@ -660,10 +660,15 @@ jobs:
           name: wasms
           path: ./wasms
 
+      - name: Build test canister WASM
+        run: |
+          cargo build --target wasm32-unknown-unknown --bin cdk-bitcoin-canister --release
+
       - name: Run cdk-bitcoin-canister e2e tests
         run: cargo test --release -p e2e-cdk-bitcoin-canister
         env:
           IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
+          CDK_BITCOIN_CANISTER_WASM_PATH: target/wasm32-unknown-unknown/release/cdk-bitcoin-canister.wasm
 
   check-canister-wasm-endpoints:
     runs-on: ubuntu-latest
