@@ -8,7 +8,7 @@ use crate::{
     transform_dogecoin_mainnet_api_blockchair_com, transform_dogecoin_mainnet_api_blockcypher_com,
     transform_dogecoin_mainnet_psy_protocol,
 };
-use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
+use ic_management_canister_types::{HttpRequestResult, TransformArgs};
 use serde_json::json;
 
 /// Creates a config for fetching mainnet block data from api.bitcore.io.
