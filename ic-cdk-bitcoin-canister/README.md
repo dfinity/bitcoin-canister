@@ -1,8 +1,8 @@
 [![Documentation](https://docs.rs/ic-cdk-bitcoin-canister/badge.svg)](https://docs.rs/ic-cdk-bitcoin-canister/)
 [![Crates.io](https://img.shields.io/crates/v/ic-cdk-bitcoin-canister.svg)](https://crates.io/crates/ic-cdk-bitcoin-canister)
-[![License](https://img.shields.io/crates/l/ic-cdk-bitcoin-canister.svg)](https://github.com/dfinity/bitcoin-canister/blob/main/LICENSE)
+[![License](https://img.shields.io/crates/l/ic-cdk-bitcoin-canister.svg)](https://github.com/dfinity/bitcoin-canister/blob/master/LICENSE)
 [![Downloads](https://img.shields.io/crates/d/ic-cdk-bitcoin-canister.svg)](https://crates.io/crates/ic-cdk-bitcoin-canister)
-[![CI](https://github.com/dfinity/bitcoin-canister/actions/workflows/ci.yml/badge.svg)](https://github.com/dfinity/bitcoin-canister/actions/workflows/ci.yml)
+[![CI](https://github.com/dfinity/bitcoin-canister/actions/workflows/workflow.yml/badge.svg)](https://github.com/dfinity/bitcoin-canister/actions/workflows/workflow.yml)
 
 # ic-cdk-bitcoin-canister
 
