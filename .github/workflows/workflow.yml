@@ -95,7 +95,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks -- --color always
+          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister -- --color always
         env:
           RUST_BACKTRACE: 1
 
@@ -626,6 +626,45 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  e2e-cdk-bitcoin-canister:
+    runs-on: ubuntu-latest
+    needs: canister-build-reproducibility
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${RUST_VERSION} --no-self-update
+          rustup default ${RUST_VERSION}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install PocketIC
+        run: |
+          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-linux.gz
+          gzip -d pocket-ic-x86_64-linux.gz
+          mv pocket-ic-x86_64-linux pocket-ic
+          chmod +x pocket-ic
+          mv pocket-ic ./canister/
+
+      - name: Download WASMs
+        uses: actions/download-artifact@v4
+        with:
+          name: wasms
+          path: ./wasms
+
+      - name: Run cdk-bitcoin-canister e2e tests
+        run: cargo test --release -p e2e-cdk-bitcoin-canister
+        env:
+          IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
+
   check-canister-wasm-endpoints:
     runs-on: ubuntu-latest
     needs: canister-build-reproducibility
@@ -731,6 +770,7 @@ jobs:
         watchdog_metrics,
         watchdog_upgradability,
         canister-build-reproducibility,
+        e2e-cdk-bitcoin-canister,
         bitcoin_canister_metadata,
         candid-compatibility,
         docsrs
@@ -793,6 +833,9 @@ jobs:
         run: exit 1
       - name: check canister-build-reproducibility result
         if: ${{ needs.canister-build-reproducibility.result != 'success' }}
+        run: exit 1
+      - name: check e2e-cdk-bitcoin-canister result
+        if: ${{ needs.e2e-cdk-bitcoin-canister.result != 'success' }}
         run: exit 1
       - name: check candid-compatibility result
         if: ${{ needs.candid-compatibility.result != 'success' && needs.candid-compatibility.result != 'skipped' }}
