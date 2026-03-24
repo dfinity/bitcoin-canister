@@ -1,0 +1,23 @@
+[package]
+name = "e2e-cdk-bitcoin-canister"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# The binary is the test canister (compiled to WASM via cargo_build_canister).
+[[bin]]
+name = "cdk-bitcoin-canister"
+path = "src/main.rs"
+
+[dependencies]
+candid = { workspace = true }
+ic-cdk = "0.20.0"
+ic-cdk-bitcoin-canister = { path = "../../ic-cdk-bitcoin-canister" }
+
+[dev-dependencies]
+candid = { workspace = true }
+cargo_metadata = "0.23.1"
+env_logger = "0.11.9"
+ic-btc-interface = { workspace = true }
+pocket-ic = { workspace = true }
+reqwest = { version = "0.13.2", features = ["blocking"] }
