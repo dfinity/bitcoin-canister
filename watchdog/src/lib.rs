@@ -22,11 +22,8 @@ use crate::{
     types::{CandidHttpRequest, CandidHttpResponse},
 };
 use ic_btc_interface::Flag;
-use ic_cdk::{
-    init,
-    management_canister::{HttpRequestResult, TransformArgs},
-    post_upgrade, query,
-};
+use ic_cdk::{init, post_upgrade, query};
+use ic_management_canister_types::{HttpRequestResult, TransformArgs};
 use ic_cdk_timers::TimerId;
 use serde_bytes::ByteBuf;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};

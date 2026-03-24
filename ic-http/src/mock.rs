@@ -1,5 +1,5 @@
 use ic_cdk::call::{CallRejected, CallResult, RejectCode};
-use ic_cdk::management_canister::{HttpRequestArgs, HttpRequestResult, TransformArgs};
+use ic_management_canister_types::{HttpRequestArgs, HttpRequestResult, TransformArgs};
 use std::time::Duration;
 
 /// Represents a mock HTTP request and its corresponding response.

@@ -1,5 +1,5 @@
 use ic_cdk::call::RejectCode;
-use ic_cdk::management_canister::{HttpRequestResult, TransformArgs};
+use ic_management_canister_types::{HttpRequestResult, TransformArgs};
 use std::time::{Duration, Instant};
 
 const STATUS_CODE_OK: u64 = 200;
