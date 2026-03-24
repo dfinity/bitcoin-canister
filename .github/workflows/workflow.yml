@@ -689,6 +689,25 @@ jobs:
           chmod +x scripts/check-candid-compatibility.sh
           DID_CHECK_REV=${{ github.event.pull_request.base.sha }} \
             ./scripts/check-candid-compatibility.sh
+
+  docsrs:
+    name: docsrs
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install nightly Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+      - name: Build docs (docs.rs simulation)
+        run: |
+          RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo +nightly doc --no-deps --all-features --target wasm32-unknown-unknown \
+            -p ic-btc-interface \
+            -p ic-btc-validation \
+            -p ic-cdk-bitcoin-canister
+
   checks-pass:
     # Always run this job!
     if: always()
@@ -714,6 +733,7 @@ jobs:
         canister-build-reproducibility,
         bitcoin_canister_metadata,
         candid-compatibility,
+        docsrs
       ]
     runs-on: ubuntu-latest
     steps:
@@ -776,4 +796,7 @@ jobs:
         run: exit 1
       - name: check candid-compatibility result
         if: ${{ needs.candid-compatibility.result != 'success' && needs.candid-compatibility.result != 'skipped' }}
+        run: exit 1
+      - name: check docsrs result
+        if: ${{ needs.docsrs.result != 'success' }}
         run: exit 1
