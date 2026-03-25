@@ -18,5 +18,5 @@ default-target = "wasm32-unknown-unknown"
 
 [dependencies]
 candid = "0.10.24"
-ic-btc-interface = { path = "../interface", version = "0.4.0" }
+ic-btc-interface = { workspace = true }
 ic-cdk = { workspace = true }

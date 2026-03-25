@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 publish = false
 
-# The binary is the test canister (compiled to WASM via cargo_build_canister).
 [[bin]]
 name = "cdk-bitcoin-canister"
 path = "src/main.rs"
