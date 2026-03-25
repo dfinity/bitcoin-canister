@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 candid = "0.10.0"
-ic-cdk = "0.20.0"
+ic-cdk = { workspace = true }
 ic-http = { path = "../../../" }
 ic-management-canister-types = "0.7.1"
 serde = { workspace = true, features = ["derive"] }

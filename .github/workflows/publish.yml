@@ -1,14 +1,14 @@
-name: Publish ic-btc-interface crate to crates.io
+name: Publish crates to crates.io
 
 on:
   workflow_dispatch
 
-# Publishes ic-btc-interface to crates.io
-# Run this after merging the release PR created by release-plz
+# Publishes crates managed by release-plz (ic-btc-interface, ic-cdk-bitcoin-canister) to crates.io.
+# Run this after merging the release PR created by release-plz.
 
 jobs:
   publish:
-    name: Publish ic-btc-interface crate
+    name: Publish crates
     runs-on: ubuntu-latest
 
     permissions:

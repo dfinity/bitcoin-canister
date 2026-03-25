@@ -95,7 +95,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks -- --color always
+          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister -- --color always
         env:
           RUST_BACKTRACE: 1
 
@@ -626,6 +626,50 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+  e2e-cdk-bitcoin-canister:
+    runs-on: ubuntu-latest
+    needs: canister-build-reproducibility
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
+
+      - name: Install Rust
+        run: |
+          rustup update ${RUST_VERSION} --no-self-update
+          rustup default ${RUST_VERSION}
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install PocketIC
+        run: |
+          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-linux.gz
+          gzip -d pocket-ic-x86_64-linux.gz
+          mv pocket-ic-x86_64-linux pocket-ic
+          chmod +x pocket-ic
+          mv pocket-ic ./canister/
+
+      - name: Download WASMs
+        uses: actions/download-artifact@v4
+        with:
+          name: wasms
+          path: ./wasms
+
+      - name: Build test canister WASM
+        run: |
+          cargo build --target wasm32-unknown-unknown --bin cdk-bitcoin-canister --release
+
+      - name: Run cdk-bitcoin-canister e2e tests
+        run: cargo test --release -p e2e-cdk-bitcoin-canister
+        env:
+          IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
+          CDK_BITCOIN_CANISTER_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/cdk-bitcoin-canister.wasm
+
   check-canister-wasm-endpoints:
     runs-on: ubuntu-latest
     needs: canister-build-reproducibility
@@ -689,6 +733,25 @@ jobs:
           chmod +x scripts/check-candid-compatibility.sh
           DID_CHECK_REV=${{ github.event.pull_request.base.sha }} \
             ./scripts/check-candid-compatibility.sh
+
+  docsrs:
+    name: docsrs
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install nightly Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+      - name: Build docs (docs.rs simulation)
+        run: |
+          RUSTDOCFLAGS="--cfg docsrs -D warnings" cargo +nightly doc --no-deps --all-features --target wasm32-unknown-unknown \
+            -p ic-btc-interface \
+            -p ic-btc-validation \
+            -p ic-cdk-bitcoin-canister
+
   checks-pass:
     # Always run this job!
     if: always()
@@ -712,8 +775,10 @@ jobs:
         watchdog_metrics,
         watchdog_upgradability,
         canister-build-reproducibility,
+        e2e-cdk-bitcoin-canister,
         bitcoin_canister_metadata,
         candid-compatibility,
+        docsrs
       ]
     runs-on: ubuntu-latest
     steps:
@@ -774,6 +839,12 @@ jobs:
       - name: check canister-build-reproducibility result
         if: ${{ needs.canister-build-reproducibility.result != 'success' }}
         run: exit 1
+      - name: check e2e-cdk-bitcoin-canister result
+        if: ${{ needs.e2e-cdk-bitcoin-canister.result != 'success' }}
+        run: exit 1
       - name: check candid-compatibility result
         if: ${{ needs.candid-compatibility.result != 'success' && needs.candid-compatibility.result != 'skipped' }}
+        run: exit 1
+      - name: check docsrs result
+        if: ${{ needs.docsrs.result != 'success' }}
         run: exit 1

@@ -40,6 +40,15 @@ publish = true # enable `cargo publish`
 git_tag_enable = true
 
 [[package]]
+name = "ic-cdk-bitcoin-canister"
+release = true
+changelog_update = true
+changelog_path = "ic-cdk-bitcoin-canister/CHANGELOG.md"
+semver_check = true
+publish = true
+git_tag_enable = true
+
+[[package]]
 name = "ic-btc-validation"
 release = false # TODO(DEFI-2211): create release once ticket is addressed
 changelog_update = false
