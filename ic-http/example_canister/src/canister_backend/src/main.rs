@@ -1,4 +1,4 @@
-use ic_cdk::management_canister::{HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs};
+use ic_management_canister_types::{HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs};
 
 const ZERO_CYCLES: u128 = 0;
 
@@ -18,7 +18,7 @@ fn parse_json(body: Vec<u8>) -> serde_json::Value {
 }
 
 /// Apply a transform function to the quote HTTP response.
-#[ic_cdk_macros::query]
+#[ic_cdk::query]
 fn transform_quote(raw: TransformArgs) -> HttpRequestResult {
     let mut response = HttpRequestResult {
         status: raw.response.status.clone(),
@@ -67,7 +67,7 @@ async fn fetch(request: HttpRequestArgs) -> String {
 }
 
 /// Fetch a quote from the dummyjson.com API.
-#[ic_cdk_macros::update]
+#[ic_cdk::update]
 async fn fetch_quote() -> String {
     let request = build_quote_request("https://dummyjson.com/quotes/1");
     fetch(request).await
