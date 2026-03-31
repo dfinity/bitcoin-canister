@@ -7,9 +7,13 @@ mod send_transaction;
 pub(crate) mod set_config;
 pub use fee_percentiles::get_current_fee_percentiles;
 pub(crate) use fee_percentiles::get_current_fee_percentiles_impl;
+#[cfg(feature = "canbench-rs")]
+pub use fee_percentiles::get_current_fee_percentiles_without_fees;
 pub use get_balance::get_balance;
 pub use get_balance::get_balance_query;
 pub use get_block_headers::get_block_headers;
+#[cfg(feature = "canbench-rs")]
+pub use get_block_headers::get_block_headers_without_fees;
 pub use get_utxos::get_utxos;
 pub use get_utxos::get_utxos_query;
 pub use metrics::get_metrics;

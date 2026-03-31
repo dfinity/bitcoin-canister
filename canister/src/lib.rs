@@ -122,6 +122,16 @@ pub fn get_current_fee_percentiles(
     api::get_current_fee_percentiles()
 }
 
+#[cfg(feature = "canbench-rs")]
+pub fn get_current_fee_percentiles_without_fees(
+    request: GetCurrentFeePercentilesRequest,
+) -> Vec<MillisatoshiPerByte> {
+    verify_api_access();
+    verify_network(request.network.into());
+    verify_synced();
+    api::get_current_fee_percentiles_without_fees()
+}
+
 pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
     verify_api_access();
     verify_network(request.network.into());
@@ -157,6 +167,16 @@ pub fn get_block_headers(
     verify_network(request.network.into());
     verify_synced();
     api::get_block_headers(request)
+}
+
+#[cfg(feature = "canbench-rs")]
+pub fn get_block_headers_without_fees(
+    request: GetBlockHeadersRequest,
+) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
+    verify_api_access();
+    verify_network(request.network.into());
+    verify_synced();
+    api::get_block_headers_without_fees(request)
 }
 
 pub fn get_config() -> Config {
