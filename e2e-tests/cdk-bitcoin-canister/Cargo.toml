@@ -1,0 +1,21 @@
+[package]
+name = "e2e-cdk-bitcoin-canister"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "cdk-bitcoin-canister"
+path = "src/main.rs"
+
+[dependencies]
+candid = { workspace = true }
+ic-cdk = { workspace = true }
+ic-cdk-bitcoin-canister = { path = "../../ic-cdk-bitcoin-canister" }
+
+[dev-dependencies]
+candid = { workspace = true }
+cargo_metadata = "0.23.1"
+env_logger = "0.11.9"
+ic-btc-interface = { workspace = true }
+pocket-ic = { workspace = true }
