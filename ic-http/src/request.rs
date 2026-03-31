@@ -1,5 +1,5 @@
 use crate::transform::create_transform_context;
-use ic_cdk::management_canister::{
+use ic_management_canister_types::{
     HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs, TransformContext,
 };
 

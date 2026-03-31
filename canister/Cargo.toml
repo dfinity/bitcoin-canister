@@ -39,6 +39,7 @@ byteorder = { workspace = true }
 candid_parser = { workspace = true }
 ic-btc-test-utils = { workspace = true }
 ic-btc-types = { workspace = true, features = ["mock_difficulty"] }
+ic-management-canister-types = "0.7.1"
 maplit = "1.0.2"
 pocket-ic = { workspace = true }
 proptest = { workspace = true }
