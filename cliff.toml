@@ -2,7 +2,7 @@
 # https://git-cliff.org/docs/configuration
 #
 # Used by:
-# - release-plz: for ic-btc-interface and ic-btc-validation (semver)
+# - release-plz: for ic-btc-interface, ic-cdk-bitcoin-canister, and ic-btc-validation (semver)
 # - release-pr.yml workflow: for ic-btc-canister and watchdog (date-based)
 
 [changelog]

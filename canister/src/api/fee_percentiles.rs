@@ -35,6 +35,12 @@ pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
     res
 }
 
+/// Returns the fee percentiles without charging cycles, for use in benchmarks.
+#[cfg(feature = "canbench-rs")]
+pub fn get_current_fee_percentiles_without_fees() -> Vec<MillisatoshiPerByte> {
+    with_state_mut(|s| get_current_fee_percentiles_with_number_of_transactions(s, NUM_TRANSACTIONS))
+}
+
 pub(crate) fn get_current_fee_percentiles_impl(state: &mut State) -> Vec<MillisatoshiPerByte> {
     get_current_fee_percentiles_with_number_of_transactions(state, NUM_TRANSACTIONS)
 }

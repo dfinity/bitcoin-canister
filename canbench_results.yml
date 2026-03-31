@@ -1,4 +1,32 @@
 benches:
+  bitcoin_get_balance:
+    total:
+      calls: 1
+      instructions: 8846786
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
+  bitcoin_get_block_headers:
+    total:
+      calls: 1
+      instructions: 2769048
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
+  bitcoin_get_current_fee_percentiles:
+    total:
+      calls: 1
+      instructions: 3540615
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
+  bitcoin_get_utxos:
+    total:
+      calls: 1
+      instructions: 12802387
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
   get_blockchain_info_many_branches:
     total:
       calls: 1
