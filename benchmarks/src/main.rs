@@ -233,7 +233,7 @@ fn get_blockchain_info_single_chain() -> BenchResult {
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000), // Set larger than blocks_to_insert to ensure inserted blocks form a long unstable chain
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
@@ -272,7 +272,7 @@ fn get_blockchain_info_with_forks() -> BenchResult {
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000), // Set larger than blocks_to_insert to ensure inserted blocks form a long unstable chain
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
@@ -329,7 +329,7 @@ fn get_blockchain_info_many_branches() -> BenchResult {
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000), // Set larger than blocks_to_insert to ensure inserted blocks form a long unstable chain
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
@@ -398,7 +398,7 @@ fn bench_get_balance(all_outputs_to_address: bool) -> BenchResult {
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000),
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
@@ -452,7 +452,7 @@ fn bench_get_utxos(all_outputs_to_address: bool) -> BenchResult {
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000),
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
@@ -495,7 +495,7 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000),
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
@@ -542,7 +542,7 @@ fn bitcoin_get_block_headers_stress() -> BenchResult {
 fn bench_get_block_headers(blocks_to_insert: usize) -> BenchResult {
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(blocks_to_insert as u128 + 1000),
+        stability_threshold: Some(blocks_to_insert as u128),
         ..Default::default()
     });
 
