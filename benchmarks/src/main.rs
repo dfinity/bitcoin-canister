@@ -227,8 +227,8 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
 // Benchmarks `get_blockchain_info` on a single linear chain (typical mainnet scenario).
 #[bench(raw)]
 fn get_blockchain_info_single_chain() -> BenchResult {
-    let blocks_to_insert: usize = 100;
-    let num_transactions_per_block: usize = 3000;
+    let blocks_to_insert: usize = 1000;
+    let num_transactions_per_block: usize = 300;
     let num_outputs_per_transaction: usize = 3;
 
     ic_btc_canister::init(InitConfig {
@@ -266,8 +266,8 @@ fn get_blockchain_info_single_chain() -> BenchResult {
 // Benchmarks `get_blockchain_info` with a main chain and a few short forks.
 #[bench(raw)]
 fn get_blockchain_info_with_forks() -> BenchResult {
-    let blocks_to_insert: usize = 100;
-    let num_transactions_per_block: usize = 3000;
+    let blocks_to_insert: usize = 1000;
+    let num_transactions_per_block: usize = 300;
     let num_outputs_per_transaction: usize = 3;
 
     ic_btc_canister::init(InitConfig {
@@ -323,8 +323,8 @@ fn get_blockchain_info_with_forks() -> BenchResult {
 // Benchmarks `get_blockchain_info` with many branches of varying lengths (testnet-like scenario).
 #[bench(raw)]
 fn get_blockchain_info_many_branches() -> BenchResult {
-    let blocks_to_insert = 100;
-    let num_transactions_per_block: usize = 3000;
+    let blocks_to_insert = 1000;
+    let num_transactions_per_block: usize = 300;
     let num_outputs_per_transaction: usize = 3;
 
     ic_btc_canister::init(InitConfig {
@@ -352,8 +352,8 @@ fn get_blockchain_info_many_branches() -> BenchResult {
         }
     });
 
-    // Add 49 forks at every 10th block, with varying lengths (5 to 14 blocks).
-    for i in 0..49usize {
+    // Add forks at every 10th block, with varying lengths (5 to 14 blocks).
+    for i in 0..(blocks_to_insert / 10) - 1 {
         let fork_point = i * 10;
         let fork_len = 5 + (i % 10);
         let fork = build_chain_from(
