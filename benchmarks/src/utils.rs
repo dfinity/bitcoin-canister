@@ -82,6 +82,16 @@ pub fn build_chain_from(
                     },
                     None,
                 );
+                // Spend one coinbase output to `address` to exercise UTXO removal.
+                if i == 0 {
+                    tx = tx.with_input(
+                        bitcoin::OutPoint {
+                            txid: prev_txid,
+                            vout: 0,
+                        },
+                        None,
+                    );
+                }
                 for _ in 0..num_outputs_per_transaction {
                     tx = tx.with_output(output_address, *value_counter);
                     *value_counter += 1;
