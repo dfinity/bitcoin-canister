@@ -58,8 +58,9 @@ pub fn build_chain_from(
             *value_counter += 1;
         }
         // Extra funding outputs for the next block's non-coinbase transactions.
+        // These go to `address` so that spending them exercises UTXO removal.
         for _ in 0..extra_txs {
-            coinbase = coinbase.with_output(&dummy_address, *value_counter);
+            coinbase = coinbase.with_output(address, *value_counter);
             *value_counter += 1;
         }
         let coinbase_tx = coinbase.build();
