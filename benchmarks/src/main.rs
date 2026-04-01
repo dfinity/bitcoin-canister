@@ -14,6 +14,17 @@ use ic_cdk::init;
 use std::cell::RefCell;
 use std::str::FromStr;
 
+mod utils;
+use utils::build_chain_from;
+
+const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
+
+fn parsed_address() -> bitcoin::Address {
+    bitcoin::Address::from_str(ADDRESS)
+        .unwrap()
+        .assume_checked()
+}
+
 thread_local! {
     static TESTNET_BLOCKS: RefCell<Vec<Block>> =  const { RefCell::new(vec![])};
 }
@@ -216,7 +227,9 @@ fn pre_upgrade_with_many_unstable_blocks() -> BenchResult {
 // Benchmarks `get_blockchain_info` on a single linear chain (typical mainnet scenario).
 #[bench(raw)]
 fn get_blockchain_info_single_chain() -> BenchResult {
-    let blocks_to_insert: usize = 1000;
+    let blocks_to_insert: usize = 100;
+    let num_transactions_per_block: usize = 3000;
+    let num_outputs_per_transaction: usize = 3;
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
@@ -224,9 +237,18 @@ fn get_blockchain_info_single_chain() -> BenchResult {
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        false,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
@@ -244,7 +266,9 @@ fn get_blockchain_info_single_chain() -> BenchResult {
 // Benchmarks `get_blockchain_info` with a main chain and a few short forks.
 #[bench(raw)]
 fn get_blockchain_info_with_forks() -> BenchResult {
-    let blocks_to_insert: usize = 1000;
+    let blocks_to_insert: usize = 100;
+    let num_transactions_per_block: usize = 3000;
+    let num_outputs_per_transaction: usize = 3;
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
@@ -252,9 +276,18 @@ fn get_blockchain_info_with_forks() -> BenchResult {
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        false,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
@@ -264,7 +297,15 @@ fn get_blockchain_info_with_forks() -> BenchResult {
 
     // Add 5 forks at various heights, each 10 blocks long.
     for &fork_point in &[200, 400, 500, 600, 700] {
-        let fork = build_chain_from(*chain[fork_point].header(), 10, &mut counter);
+        let fork = build_chain_from(
+            *chain[fork_point].header(),
+            10,
+            num_transactions_per_block,
+            num_outputs_per_transaction,
+            false,
+            &address,
+            &mut counter,
+        );
         with_state_mut(|s| {
             for block in &fork {
                 ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
@@ -282,7 +323,9 @@ fn get_blockchain_info_with_forks() -> BenchResult {
 // Benchmarks `get_blockchain_info` with many branches of varying lengths (testnet-like scenario).
 #[bench(raw)]
 fn get_blockchain_info_many_branches() -> BenchResult {
-    let blocks_to_insert = 500;
+    let blocks_to_insert = 100;
+    let num_transactions_per_block: usize = 3000;
+    let num_outputs_per_transaction: usize = 3;
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
@@ -290,9 +333,18 @@ fn get_blockchain_info_many_branches() -> BenchResult {
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        false,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
@@ -304,7 +356,15 @@ fn get_blockchain_info_many_branches() -> BenchResult {
     for i in 0..49usize {
         let fork_point = i * 10;
         let fork_len = 5 + (i % 10);
-        let fork = build_chain_from(*chain[fork_point].header(), fork_len, &mut counter);
+        let fork = build_chain_from(
+            *chain[fork_point].header(),
+            fork_len,
+            num_transactions_per_block,
+            num_outputs_per_transaction,
+            false,
+            &address,
+            &mut counter,
+        );
         with_state_mut(|s| {
             for block in &fork {
                 ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
@@ -319,38 +379,22 @@ fn get_blockchain_info_many_branches() -> BenchResult {
     })
 }
 
-/// Builds a chain of `num_blocks` blocks extending from the given header.
-/// Each block has a unique coinbase transaction (using `value_counter` for unique outputs).
-/// Address used by `build_chain_from` for coinbase outputs.
-const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
-
-fn build_chain_from(prev_header: Header, num_blocks: usize, value_counter: &mut u64) -> Vec<Block> {
-    let address = bitcoin::Address::from_str(ADDRESS)
-        .unwrap()
-        .assume_checked();
-
-    let mut blocks = Vec::with_capacity(num_blocks);
-    let mut prev = prev_header;
-    for _ in 0..num_blocks {
-        let block = Block::new(
-            BlockBuilder::with_prev_header(prev)
-                .with_transaction(
-                    TransactionBuilder::coinbase()
-                        .with_output(&address, *value_counter)
-                        .build(),
-                )
-                .build(),
-        );
-        prev = *block.header();
-        blocks.push(block);
-        *value_counter += 1;
-    }
-    blocks
+// Baseline: only coinbase outputs go to ADDRESS.
+#[bench(raw)]
+fn bitcoin_get_balance_baseline() -> BenchResult {
+    bench_get_balance(false)
 }
 
+// Stress: all outputs go to ADDRESS.
 #[bench(raw)]
-fn bitcoin_get_balance() -> BenchResult {
-    let blocks_to_insert: usize = 1000;
+fn bitcoin_get_balance_stress() -> BenchResult {
+    bench_get_balance(true)
+}
+
+fn bench_get_balance(all_outputs_to_address: bool) -> BenchResult {
+    let blocks_to_insert = 100;
+    let num_transactions_per_block = 3000;
+    let num_outputs_per_transaction = 3;
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
@@ -358,9 +402,18 @@ fn bitcoin_get_balance() -> BenchResult {
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        all_outputs_to_address,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
@@ -380,9 +433,22 @@ fn bitcoin_get_balance() -> BenchResult {
     })
 }
 
+// Baseline: only coinbase outputs go to ADDRESS.
 #[bench(raw)]
-fn bitcoin_get_utxos() -> BenchResult {
-    let blocks_to_insert: usize = 1000;
+fn bitcoin_get_utxos_baseline() -> BenchResult {
+    bench_get_utxos(false)
+}
+
+// Stress: all outputs go to ADDRESS.
+#[bench(raw)]
+fn bitcoin_get_utxos_stress() -> BenchResult {
+    bench_get_utxos(true)
+}
+
+fn bench_get_utxos(all_outputs_to_address: bool) -> BenchResult {
+    let blocks_to_insert = 100;
+    let num_transactions_per_block = 3000;
+    let num_outputs_per_transaction = 3;
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
@@ -390,9 +456,18 @@ fn bitcoin_get_utxos() -> BenchResult {
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        all_outputs_to_address,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
@@ -414,7 +489,9 @@ fn bitcoin_get_utxos() -> BenchResult {
 
 #[bench(raw)]
 fn bitcoin_get_current_fee_percentiles() -> BenchResult {
-    let blocks_to_insert: usize = 1000;
+    let blocks_to_insert = 100;
+    let num_transactions_per_block = 3000;
+    let num_outputs_per_transaction = 3;
 
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
@@ -422,9 +499,18 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        false,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
@@ -444,18 +530,34 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
 }
 
 #[bench(raw)]
-fn bitcoin_get_block_headers() -> BenchResult {
-    let blocks_to_insert: usize = 1000;
+fn bitcoin_get_block_headers_baseline() -> BenchResult {
+    bench_get_block_headers(100)
+}
 
+#[bench(raw)]
+fn bitcoin_get_block_headers_stress() -> BenchResult {
+    bench_get_block_headers(5000)
+}
+
+fn bench_get_block_headers(blocks_to_insert: usize) -> BenchResult {
     ic_btc_canister::init(InitConfig {
         network: Some(Network::Regtest),
-        stability_threshold: Some(2000),
+        stability_threshold: Some(blocks_to_insert as u128 + 1000),
         ..Default::default()
     });
 
+    let address = parsed_address();
     let genesis = genesis_block(bitcoin::Network::Regtest);
     let mut counter = 1u64;
-    let chain = build_chain_from(genesis.header, blocks_to_insert, &mut counter);
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        1,
+        1,
+        false,
+        &address,
+        &mut counter,
+    );
 
     with_state_mut(|s| {
         for block in &chain {
