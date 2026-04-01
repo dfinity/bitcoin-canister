@@ -1,50 +1,71 @@
 benches:
-  bitcoin_get_balance:
+  bitcoin_get_balance_baseline:
     total:
       calls: 1
-      instructions: 8846786
+      instructions: 2897115
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
-  bitcoin_get_block_headers:
+  bitcoin_get_balance_stress:
     total:
       calls: 1
-      instructions: 2769048
+      instructions: 4219529179
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
+  bitcoin_get_block_headers_baseline:
+    total:
+      calls: 1
+      instructions: 566324
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes: {}
+  bitcoin_get_block_headers_stress:
+    total:
+      calls: 1
+      instructions: 12544803
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_current_fee_percentiles:
     total:
       calls: 1
-      instructions: 3540615
+      instructions: 160564812
+      heap_increase: 2
+      stable_memory_increase: 0
+    scopes: {}
+  bitcoin_get_utxos_baseline:
+    total:
+      calls: 1
+      instructions: 4008450
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
-  bitcoin_get_utxos:
+  bitcoin_get_utxos_stress:
     total:
       calls: 1
-      instructions: 12802387
-      heap_increase: 0
+      instructions: 8256540506
+      heap_increase: 1247
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_many_branches:
     total:
       calls: 1
-      instructions: 2161036
+      instructions: 31220421
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_single_chain:
     total:
       calls: 1
-      instructions: 2615266
+      instructions: 29501062
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_with_forks:
     total:
       calls: 1
-      instructions: 2705933
+      instructions: 29597377
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
