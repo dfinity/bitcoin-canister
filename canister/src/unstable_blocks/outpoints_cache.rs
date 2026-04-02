@@ -1,6 +1,5 @@
 use crate::{
     types::{Address, TxOut},
-    utxo_set::count_utxos_in_block,
     UtxoSet,
 };
 use ic_btc_interface::Height;
@@ -84,6 +83,7 @@ impl OutPointsCache {
         let mut tx_outs: BTreeMap<OutPoint, TxOutInfo> = BTreeMap::new();
         let mut removed_outpoints = BTreeMap::new();
         let mut added_outpoints = BTreeMap::new();
+        let mut utxo_delta: i64 = 0;
 
         // The inputs of a transaction contain outpoints that reference the previous
         // outputs that it is consuming. These outputs can be retrieved from a number
@@ -97,6 +97,11 @@ impl OutPointsCache {
         //    The assumption here is that this cache already contains all the outpoints
         //    referenced by the unstable blocks.
         for tx in block.txdata() {
+            utxo_delta += tx.output().len() as i64;
+            if !tx.is_coinbase() {
+                utxo_delta -= tx.input().len() as i64;
+            }
+
             for input in tx.input() {
                 if input.previous_output.is_null() {
                     continue;
@@ -170,8 +175,7 @@ impl OutPointsCache {
             .insert(*block.block_hash(), added_outpoints);
         self.removed_outpoints
             .insert(*block.block_hash(), removed_outpoints);
-        self.utxo_deltas
-            .insert(*block.block_hash(), count_utxos_in_block(block));
+        self.utxo_deltas.insert(*block.block_hash(), utxo_delta);
 
         Ok(())
     }
