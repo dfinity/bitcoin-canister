@@ -569,8 +569,8 @@ mod test {
     use super::*;
     use crate::{
         address_utxoset::AddressUtxoSet,
-        genesis_block, runtime,
-        test_utils::{build_chain, BlockBuilder, TransactionBuilder},
+        runtime,
+        test_utils::{BlockBuilder, TransactionBuilder},
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::{
@@ -1272,5 +1272,4 @@ mod test {
             .sum::<usize>();
         num_inputs + num_outputs
     }
-
 }
