@@ -421,16 +421,14 @@ fn bench_get_balance(num_outputs_to_address_per_block: usize) -> BenchResult {
 
     assert_chain_height(blocks_to_insert);
 
-    let result = bench_fn(|| {
+    bench_fn(|| {
         ic_btc_canister::get_balance_query(GetBalanceRequest {
             address: ADDRESS.to_string(),
             network: NetworkInRequest::Regtest,
             min_confirmations: None,
         })
         .unwrap();
-    });
-
-    result
+    })
 }
 
 #[bench(raw)]
