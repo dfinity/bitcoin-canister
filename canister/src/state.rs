@@ -289,15 +289,17 @@ pub fn blockchain_info(state: &State) -> crate::types::BlockchainInfo {
     let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
     let tip_block = main_chain.tip();
 
+    let mut utxos_length = state.utxos.utxos_len() as i64;
+    for block in main_chain.into_chain() {
+        utxos_length += state.unstable_blocks.get_net_utxo_delta(block.block_hash());
+    }
+
     crate::types::BlockchainInfo {
         height: main_chain_height(state),
         block_hash: tip_block.block_hash().to_vec(),
         timestamp: tip_block.header().time,
         difficulty: tip_block.difficulty(state.network()),
-        utxos_length: crate::utxo_set::count_utxos_in_blocks(
-            state.utxos.utxos_len(),
-            main_chain.into_chain(),
-        ),
+        utxos_length: utxos_length.max(0) as u64,
     }
 }
 
