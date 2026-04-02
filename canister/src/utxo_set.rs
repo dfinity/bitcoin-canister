@@ -441,23 +441,18 @@ impl UtxoSet {
     }
 }
 
-/// Counts the net UTXOs created by the given blocks, added to a base count.
+/// Returns the net UTXO count change for a single block.
 ///
-/// Each output creates a UTXO; each input (except coinbase) spends a UTXO.
-pub fn count_utxos_in_blocks<'a>(
-    base_count: u64,
-    blocks: impl IntoIterator<Item = &'a Block>,
-) -> u64 {
-    let mut total = base_count as i64;
-    for block in blocks {
-        for tx in block.txdata() {
-            total += tx.output().len() as i64;
-            if !tx.is_coinbase() {
-                total -= tx.input().len() as i64;
-            }
+/// Each output creates a UTXO; each non-coinbase input spends a UTXO.
+pub fn count_utxos_in_block(block: &Block) -> i64 {
+    let mut total: i64 = 0;
+    for tx in block.txdata() {
+        total += tx.output().len() as i64;
+        if !tx.is_coinbase() {
+            total -= tx.input().len() as i64;
         }
     }
-    total.max(0) as u64
+    total
 }
 
 fn init_address_utxos(
@@ -1293,46 +1288,37 @@ mod test {
     }
 
     #[test]
-    fn count_utxos_in_blocks_empty() {
-        assert_eq!(count_utxos_in_blocks(0, vec![]), 0);
-        assert_eq!(count_utxos_in_blocks(5, vec![]), 5);
-    }
-
-    #[test]
-    fn count_utxos_in_blocks_genesis_only() {
+    fn count_utxos_in_block_genesis_only() {
         let genesis = genesis_block(Network::Regtest);
-        let blocks: Vec<&Block> = vec![&genesis];
-        assert_eq!(count_utxos_in_blocks(0, blocks), 1);
+        assert_eq!(count_utxos_in_block(&genesis), 1);
     }
 
     #[test]
-    fn count_utxos_in_blocks_chain_of_coinbase_blocks() {
+    fn count_utxos_in_block_chain_of_coinbase_blocks() {
         let network = Network::Regtest;
         let blocks = build_chain(network, 3, 1);
-        let blocks_refs: Vec<&Block> = blocks.iter().collect();
-        // Genesis + 2 blocks, each with 1 coinbase output. Total = 3 UTXOs.
-        assert_eq!(count_utxos_in_blocks(0, blocks_refs), 3);
+        // Each block has 1 coinbase output → delta = +1 per block.
+        for block in &blocks {
+            assert_eq!(count_utxos_in_block(block), 1);
+        }
     }
 
     #[test]
-    fn count_utxos_in_blocks_with_spending_transactions() {
+    fn count_utxos_in_block_with_spending_transactions() {
         let network = Network::Regtest;
         let address: Address = random_p2pkh_address(into_bitcoin_network(network)).into();
-        let mut blocks: Vec<Block> = vec![];
 
-        // Block 1 (genesis): coinbase with 1 output → +1. Running total: 1.
+        // Block 1 (genesis): coinbase with 1 output → delta = +1.
         let coinbase_tx = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
-        blocks.push(
-            BlockBuilder::genesis()
-                .with_transaction(coinbase_tx.clone())
-                .build(),
-        );
-        assert_eq!(count_utxos_in_blocks(0, &blocks), 1);
+        let block_0 = BlockBuilder::genesis()
+            .with_transaction(coinbase_tx.clone())
+            .build();
+        assert_eq!(count_utxos_in_block(&block_0), 1);
 
         // Block 2: coinbase (1 output) + spend_tx (1 input, 3 outputs).
-        // Net: +1 + (3 - 1) = +3. Running total: 4.
+        // Delta: +1 + (3 - 1) = +3.
         let coinbase_tx_2 = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
@@ -1342,17 +1328,14 @@ mod test {
             .with_output(&address, 300)
             .with_output(&address, 400)
             .build();
-        blocks.push(
-            BlockBuilder::with_prev_header(blocks.last().unwrap().header())
-                .with_transaction(coinbase_tx_2)
-                .with_transaction(spend_tx.clone())
-                .build(),
-        );
-        assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
-        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
+        let block_1 = BlockBuilder::with_prev_header(block_0.header())
+            .with_transaction(coinbase_tx_2)
+            .with_transaction(spend_tx.clone())
+            .build();
+        assert_eq!(count_utxos_in_block(&block_1), 3);
 
         // Block 3: coinbase (1 output) + spend_tx_2 (2 inputs, 1 output).
-        // Net: +1 + (1 - 2) = 0. Running total: 4.
+        // Delta: +1 + (1 - 2) = 0.
         let coinbase_tx_3 = TransactionBuilder::coinbase()
             .with_output(&address, 1000)
             .build();
@@ -1361,14 +1344,17 @@ mod test {
             .with_input(OutPoint::new(spend_tx.txid(), 1))
             .with_output(&address, 600)
             .build();
-        blocks.push(
-            BlockBuilder::with_prev_header(blocks.last().unwrap().header())
-                .with_transaction(coinbase_tx_3)
-                .with_transaction(spend_tx_2)
-                .build(),
-        );
-        assert_eq!(count_utxos_in_blocks(0, &blocks), 4);
-        assert_eq!(count_utxos_in_blocks(1, &blocks[1..]), 4);
-        assert_eq!(count_utxos_in_blocks(4, &blocks[2..]), 4);
+        let block_2 = BlockBuilder::with_prev_header(block_1.header())
+            .with_transaction(coinbase_tx_3)
+            .with_transaction(spend_tx_2)
+            .build();
+        assert_eq!(count_utxos_in_block(&block_2), 0);
+
+        // Verify cumulative: base(0) + 1 + 3 + 0 = 4.
+        let total: i64 = [&block_0, &block_1, &block_2]
+            .iter()
+            .map(|b| count_utxos_in_block(b))
+            .sum();
+        assert_eq!(total, 4);
     }
 }
