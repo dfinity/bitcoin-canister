@@ -570,7 +570,7 @@ mod test {
     use crate::{
         address_utxoset::AddressUtxoSet,
         runtime,
-        test_utils::{build_chain, BlockBuilder, TestBlocksCache, TransactionBuilder},
+        test_utils::{BlockBuilder, TestBlocksCache, TransactionBuilder},
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::{
