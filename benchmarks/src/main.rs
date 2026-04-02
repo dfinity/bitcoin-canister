@@ -245,7 +245,7 @@ fn get_blockchain_info_single_chain() -> BenchResult {
         blocks_to_insert,
         num_transactions_per_block,
         num_outputs_per_transaction,
-        false,
+        0,
         &address,
         &mut counter,
     );
@@ -284,7 +284,7 @@ fn get_blockchain_info_with_forks() -> BenchResult {
         blocks_to_insert,
         num_transactions_per_block,
         num_outputs_per_transaction,
-        false,
+        0,
         &address,
         &mut counter,
     );
@@ -302,7 +302,7 @@ fn get_blockchain_info_with_forks() -> BenchResult {
             10,
             num_transactions_per_block,
             num_outputs_per_transaction,
-            false,
+            0,
             &address,
             &mut counter,
         );
@@ -341,7 +341,7 @@ fn get_blockchain_info_many_branches() -> BenchResult {
         blocks_to_insert,
         num_transactions_per_block,
         num_outputs_per_transaction,
-        false,
+        0,
         &address,
         &mut counter,
     );
@@ -361,7 +361,7 @@ fn get_blockchain_info_many_branches() -> BenchResult {
             fork_len,
             num_transactions_per_block,
             num_outputs_per_transaction,
-            false,
+            0,
             &address,
             &mut counter,
         );
@@ -379,19 +379,17 @@ fn get_blockchain_info_many_branches() -> BenchResult {
     })
 }
 
-// Baseline: only coinbase outputs go to ADDRESS.
 #[bench(raw)]
 fn bitcoin_get_balance_baseline() -> BenchResult {
-    bench_get_balance(false)
+    bench_get_balance(3)
 }
 
-// Stress: all outputs go to ADDRESS.
 #[bench(raw)]
 fn bitcoin_get_balance_stress() -> BenchResult {
-    bench_get_balance(true)
+    bench_get_balance(100)
 }
 
-fn bench_get_balance(all_outputs_to_address: bool) -> BenchResult {
+fn bench_get_balance(num_outputs_to_address_per_block: usize) -> BenchResult {
     let blocks_to_insert = 100;
     let num_transactions_per_block = 3000;
     let num_outputs_per_transaction = 3;
@@ -410,7 +408,7 @@ fn bench_get_balance(all_outputs_to_address: bool) -> BenchResult {
         blocks_to_insert,
         num_transactions_per_block,
         num_outputs_per_transaction,
-        all_outputs_to_address,
+        num_outputs_to_address_per_block,
         &address,
         &mut counter,
     );
@@ -423,29 +421,31 @@ fn bench_get_balance(all_outputs_to_address: bool) -> BenchResult {
 
     assert_chain_height(blocks_to_insert);
 
-    bench_fn(|| {
+    let result = bench_fn(|| {
         ic_btc_canister::get_balance_query(GetBalanceRequest {
             address: ADDRESS.to_string(),
             network: NetworkInRequest::Regtest,
             min_confirmations: None,
         })
         .unwrap();
-    })
+    });
+
+    result
 }
 
-// Baseline: only coinbase outputs go to ADDRESS.
 #[bench(raw)]
 fn bitcoin_get_utxos_baseline() -> BenchResult {
-    bench_get_utxos(false)
+    bench_get_utxos(3)
 }
 
-// Stress: all outputs go to ADDRESS.
 #[bench(raw)]
 fn bitcoin_get_utxos_stress() -> BenchResult {
-    bench_get_utxos(true)
+    // This is larger than MAX_UTXOS_PER_RESPONSE = 1000 (see canister/src/api/get_utxos.rs:22)
+    // and will trigger pagination.
+    bench_get_utxos(100)
 }
 
-fn bench_get_utxos(all_outputs_to_address: bool) -> BenchResult {
+fn bench_get_utxos(num_outputs_to_address_per_block: usize) -> BenchResult {
     let blocks_to_insert = 100;
     let num_transactions_per_block = 3000;
     let num_outputs_per_transaction = 3;
@@ -464,7 +464,7 @@ fn bench_get_utxos(all_outputs_to_address: bool) -> BenchResult {
         blocks_to_insert,
         num_transactions_per_block,
         num_outputs_per_transaction,
-        all_outputs_to_address,
+        num_outputs_to_address_per_block,
         &address,
         &mut counter,
     );
@@ -477,14 +477,32 @@ fn bench_get_utxos(all_outputs_to_address: bool) -> BenchResult {
 
     assert_chain_height(blocks_to_insert);
 
-    bench_fn(|| {
-        ic_btc_canister::get_utxos_query(GetUtxosRequest {
-            address: ADDRESS.to_string(),
-            network: NetworkInRequest::Regtest,
-            filter: None,
-        })
-        .unwrap();
-    })
+    let mut total_utxos = 0;
+    let result = bench_fn(|| {
+        total_utxos = 0;
+        let mut page = None;
+        loop {
+            let response = ic_btc_canister::get_utxos_query(GetUtxosRequest {
+                address: ADDRESS.to_string(),
+                network: NetworkInRequest::Regtest,
+                filter: page.map(ic_btc_interface::UtxosFilterInRequest::Page),
+            })
+            .unwrap();
+            total_utxos += response.utxos.len();
+            match response.next_page {
+                Some(next) => page = Some(next),
+                None => break,
+            }
+        }
+    });
+
+    let expected_utxos = blocks_to_insert * num_outputs_to_address_per_block;
+    assert_eq!(
+        total_utxos, expected_utxos,
+        "Expected {} UTXOs for the address, got {}.",
+        expected_utxos, total_utxos
+    );
+    result
 }
 
 #[bench(raw)]
@@ -507,7 +525,7 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
         blocks_to_insert,
         num_transactions_per_block,
         num_outputs_per_transaction,
-        false,
+        0,
         &address,
         &mut counter,
     );
@@ -554,7 +572,7 @@ fn bench_get_block_headers(blocks_to_insert: usize) -> BenchResult {
         blocks_to_insert,
         1,
         1,
-        false,
+        0,
         &address,
         &mut counter,
     );
