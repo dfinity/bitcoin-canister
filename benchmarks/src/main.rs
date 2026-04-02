@@ -440,8 +440,6 @@ fn bitcoin_get_utxos_baseline() -> BenchResult {
 
 #[bench(raw)]
 fn bitcoin_get_utxos_stress() -> BenchResult {
-    // This is larger than MAX_UTXOS_PER_RESPONSE = 1000 (see canister/src/api/get_utxos.rs:22)
-    // and will trigger pagination.
     bench_get_utxos(100)
 }
 
