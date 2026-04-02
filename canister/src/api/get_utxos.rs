@@ -232,7 +232,7 @@ fn get_utxos_from_chain(
         }
         tip_block_hash = block.block_hash();
         tip_block_height = state.utxos.next_height() + (i as u32);
-        address_utxos.apply_block(&block.block());
+        address_utxos.apply_block(block.block_hash());
     }
     stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 
