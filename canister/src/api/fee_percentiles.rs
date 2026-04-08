@@ -679,23 +679,21 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
             // Every block on the main chain should have cached fees.
             for block in main_chain.into_chain() {
-                let cached = state
-                    .unstable_blocks
-                    .get_block_fees(block.block_hash());
+                let cached = state.unstable_blocks.get_block_fees(block.block_hash());
                 // The genesis block (anchor) has no cached fees (it was inserted
                 // via `new`, not `push`). All other blocks should have fees.
                 if block.txdata().iter().any(|tx| !tx.is_coinbase()) {
-                    assert!(cached.is_some(), "block {} should have cached fees", block.block_hash());
+                    assert!(
+                        cached.is_some(),
+                        "block {} should have cached fees",
+                        block.block_hash()
+                    );
                 }
             }
 
             // Verify the cached fees match what get_fees_per_byte returns.
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
-            let fees = get_fees_per_byte(
-                main_chain.into_chain(),
-                &state.unstable_blocks,
-                10_000,
-            );
+            let fees = get_fees_per_byte(main_chain.into_chain(), &state.unstable_blocks, 10_000);
             assert_eq!(fees.len(), number_of_blocks as usize);
             assert_eq!(fees, vec![33, 25, 16, 8, 0]);
         });
@@ -756,7 +754,10 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
             for block in main_chain.into_chain() {
                 assert!(
-                    state.unstable_blocks.get_block_fees(block.block_hash()).is_none(),
+                    state
+                        .unstable_blocks
+                        .get_block_fees(block.block_hash())
+                        .is_none(),
                     "block fees should be empty after simulated upgrade"
                 );
             }

@@ -70,7 +70,7 @@ pub struct UnstableBlocks {
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
-    // Pre-computed fee rates (millisatoshi per vbyte) for each block's transactions.
+    // Fee rates (millisatoshi per vbyte) for each block's transactions.
     #[serde(default)]
     block_fees: BTreeMap<BlockHash, Vec<MillisatoshiPerByte>>,
 }
