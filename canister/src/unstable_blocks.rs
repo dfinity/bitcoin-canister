@@ -294,8 +294,7 @@ pub fn push(
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
     let block_hash = *block.block_hash();
-
-    let (_, depth) = blocks
+    let (parent_block_tree, depth) = blocks
         .tree
         .find_mut(&block.header().prev_blockhash.into())
         .ok_or(BlockDoesNotExtendTree(block_hash))?;
@@ -309,7 +308,7 @@ pub fn push(
         .expect("inserting to outpoints cache must succeed.");
     blocks.block_fees.insert(block_hash, fees);
 
-    blocks.tree.extend(block)?;
+    parent_block_tree.extend(block)?;
 
     blocks.next_block_headers.remove(&block_hash);
 
