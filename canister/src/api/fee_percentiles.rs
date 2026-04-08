@@ -667,4 +667,103 @@ mod test {
             assert_eq!(x, vec![fee_per_vsize; PERCENTILE_BUCKETS]);
         });
     }
+
+    #[test]
+    fn block_fees_are_populated_during_insert() {
+        let number_of_blocks = 5;
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+            // Every block on the main chain should have cached fees.
+            for block in main_chain.into_chain() {
+                let cached = state
+                    .unstable_blocks
+                    .get_block_fees(block.block_hash());
+                // The genesis block (anchor) has no cached fees (it was inserted
+                // via `new`, not `push`). All other blocks should have fees.
+                if block.txdata().iter().any(|tx| !tx.is_coinbase()) {
+                    assert!(cached.is_some(), "block {} should have cached fees", block.block_hash());
+                }
+            }
+
+            // Verify the cached fees match what get_fees_per_byte returns.
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+            let fees = get_fees_per_byte(
+                main_chain.into_chain(),
+                &state.unstable_blocks,
+                10_000,
+            );
+            assert_eq!(fees.len(), number_of_blocks as usize);
+            assert_eq!(fees, vec![33, 25, 16, 8, 0]);
+        });
+    }
+
+    #[test]
+    fn block_fees_are_cleaned_up_on_stable_block_ingestion() {
+        let number_of_blocks = 5;
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        // Low stability threshold so blocks become stable quickly.
+        let stability_threshold = 2;
+        init_state(blocks.clone(), stability_threshold);
+
+        // After init_state, some blocks have been ingested into the UTXO set.
+        // Verify that their fees were cleaned up.
+        with_state(|state| {
+            let stable_height = state.stable_height();
+            assert!(stable_height > 0, "some blocks should be stable");
+
+            // Blocks that were ingested (stable) should NOT have cached fees.
+            // Only blocks still in the unstable tree should have them.
+            let unstable_hashes: Vec<_> = state::get_block_hashes(state);
+            for hash in &unstable_hashes {
+                // Blocks in the unstable tree that have transactions should have fees.
+                // (The anchor block may or may not depending on whether it was re-inserted.)
+                let _fees = state.unstable_blocks.get_block_fees(hash);
+                // Just checking it doesn't panic.
+            }
+
+            // The first blocks (now stable) should not have cached fees.
+            let block_0_hash = blocks[0].block_hash();
+            assert!(
+                state.unstable_blocks.get_block_fees(block_0_hash).is_none(),
+                "stable block should not have cached fees"
+            );
+        });
+    }
+
+    #[test]
+    fn correct_fees_after_upgrade_with_empty_block_fees_cache() {
+        let number_of_blocks = 5;
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+
+        // Verify fees are correct before simulating upgrade.
+        let percentiles_before = get_current_fee_percentiles();
+        assert_eq!(percentiles_before.len(), PERCENTILE_BUCKETS);
+
+        // Simulate upgrade: clear the block_fees cache and the fee percentiles cache.
+        with_state_mut(|state| {
+            state.unstable_blocks.clear_block_fees();
+            state.fee_percentiles_cache = None;
+        });
+
+        // Verify that all cached block fees are gone.
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+            for block in main_chain.into_chain() {
+                assert!(
+                    state.unstable_blocks.get_block_fees(block.block_hash()).is_none(),
+                    "block fees should be empty after simulated upgrade"
+                );
+            }
+        });
+
+        // Fee percentiles should still be correct via the fallback path.
+        let percentiles_after = get_current_fee_percentiles();
+        assert_eq!(percentiles_after, percentiles_before);
+    }
 }

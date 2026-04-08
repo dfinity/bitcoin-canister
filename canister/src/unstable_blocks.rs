@@ -120,6 +120,12 @@ impl UnstableBlocks {
         self.block_fees.get(block_hash).map(|v| v.as_slice())
     }
 
+    /// Clears all cached block fees. Used in tests to simulate post-upgrade state.
+    #[cfg(test)]
+    pub fn clear_block_fees(&mut self) {
+        self.block_fees.clear();
+    }
+
     pub fn stability_threshold(&self) -> u32 {
         self.stability_threshold
     }
