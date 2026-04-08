@@ -9,7 +9,6 @@ pub use fee_percentiles::get_current_fee_percentiles;
 pub(crate) use fee_percentiles::get_current_fee_percentiles_impl;
 #[cfg(feature = "canbench-rs")]
 pub use fee_percentiles::get_current_fee_percentiles_without_fees;
-pub(crate) use fee_percentiles::get_tx_fee_per_byte;
 pub use get_balance::get_balance;
 pub use get_balance::get_balance_query;
 pub use get_block_headers::get_block_headers;

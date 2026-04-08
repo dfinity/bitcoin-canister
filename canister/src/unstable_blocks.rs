@@ -79,7 +79,7 @@ impl UnstableBlocks {
     pub fn new(utxos: &UtxoSet, stability_threshold: u32, anchor: Block, network: Network) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
-        outpoints_cache
+        let _anchor_fees = outpoints_cache
             .insert(utxos, &anchor, utxos.next_height())
             .expect("anchor block must be valid.");
 
@@ -302,17 +302,11 @@ pub fn push(
 
     let height = utxos.next_height() + depth + 1;
 
-    blocks
+    // Insert outpoints and compute fee rates in a single pass.
+    let fees = blocks
         .outpoints_cache
         .insert(utxos, &block, height)
         .expect("inserting to outpoints cache must succeed.");
-
-    // Pre-compute fee rates now that the outpoints cache is populated.
-    let fees = block
-        .txdata()
-        .iter()
-        .filter_map(|tx| crate::api::get_tx_fee_per_byte(tx, blocks))
-        .collect();
     blocks.block_fees.insert(block_hash, fees);
 
     blocks.tree.extend(block)?;

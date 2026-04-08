@@ -124,7 +124,7 @@ fn get_fees_per_byte(
 }
 
 /// Computes the fees per byte of the given transaction.
-pub(crate) fn get_tx_fee_per_byte(
+fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
 ) -> Option<MillisatoshiPerByte> {

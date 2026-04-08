@@ -2,7 +2,7 @@ use crate::{
     types::{Address, TxOut},
     UtxoSet,
 };
-use ic_btc_interface::Height;
+use ic_btc_interface::{Height, MillisatoshiPerByte};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -73,17 +73,21 @@ impl OutPointsCache {
     }
 
     /// Inserts the outpoints in a block, along with their transaction outputs, into the cache.
+    ///
+    /// Also computes and returns fee rates (millisatoshi per byte) for non-coinbase
+    /// transactions as a byproduct of the input value lookups already performed here.
     pub fn insert(
         &mut self,
         utxos: &UtxoSet,
         block: &Block,
         height: Height,
-    ) -> Result<(), TxOutNotFound> {
+    ) -> Result<Vec<MillisatoshiPerByte>, TxOutNotFound> {
         // A map to store all the transaction outputs referenced by the given block.
         let mut tx_outs: BTreeMap<OutPoint, TxOutInfo> = BTreeMap::new();
         let mut removed_outpoints = BTreeMap::new();
         let mut added_outpoints = BTreeMap::new();
         let mut utxo_delta: i64 = 0;
+        let mut block_fees = Vec::new();
 
         // The inputs of a transaction contain outpoints that reference the previous
         // outputs that it is consuming. These outputs can be retrieved from a number
@@ -101,6 +105,8 @@ impl OutPointsCache {
             if !tx.is_coinbase() {
                 utxo_delta -= tx.input().len() as i64;
             }
+
+            let mut input_sum: u64 = 0;
 
             for input in tx.input() {
                 if input.previous_output.is_null() {
@@ -123,6 +129,8 @@ impl OutPointsCache {
                             .ok_or_else(|| TxOutNotFound(outpoint.clone()))?,
                     },
                 };
+
+                input_sum += txout.value;
 
                 if let Ok(address) = Address::from_script(
                     bitcoin::Script::from_bytes(&txout.script_pubkey),
@@ -161,6 +169,14 @@ impl OutPointsCache {
                 });
                 entry.count += 1;
             }
+
+            // Compute fee rate for non-coinbase transactions.
+            if !tx.is_coinbase() && tx.vsize() > 0 {
+                let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
+                let fee_satoshi = input_sum - output_sum;
+                block_fees
+                    .push(((1000 * fee_satoshi) / tx.vsize() as u64) as MillisatoshiPerByte);
+            }
         }
 
         // Merge all the transaction outputs of this block into the cache.
@@ -177,7 +193,7 @@ impl OutPointsCache {
             .insert(*block.block_hash(), removed_outpoints);
         self.utxo_deltas.insert(*block.block_hash(), utxo_delta);
 
-        Ok(())
+        Ok(block_fees)
     }
 
     /// Removes the outpoints of a block from the cache.
