@@ -614,6 +614,7 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
 /// Returns `None` if `vsize` is zero.
 pub fn fee_rate_per_vbyte(fee_satoshi: u64, vsize: usize) -> Option<MillisatoshiPerByte> {
     if vsize > 0 {
+        // Don't use floating point division to avoid non-determinism.
         Some(((1000 * fee_satoshi) / vsize as u64) as MillisatoshiPerByte)
     } else {
         None
