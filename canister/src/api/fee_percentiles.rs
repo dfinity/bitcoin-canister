@@ -84,28 +84,26 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     fee_percentiles
 }
 
-/// Computes the fees per byte of the last `number_of_transactions` transactions on the main chain.
-/// Fees are returned in a reversed order, starting with the most recent ones, followed by the older ones.
-/// Eg. for transactions [..., Tn-2, Tn-1, Tn] fees would be [Fn, Fn-1, Fn-2, ...].
+/// Returns the fees per byte of the last `number_of_transactions` transactions on the main chain.
+/// Reads pre-computed fee rates from the block_fees cache in unstable blocks.
+/// Fees are returned starting with the most recent transactions.
 fn get_fees_per_byte(
     main_chain: Vec<&Block>,
     unstable_blocks: &UnstableBlocks,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let mut fees = Vec::new();
-    let mut tx_i = 0;
+    let mut tx_count: u32 = 0;
     for block in main_chain.iter().rev() {
-        if tx_i >= number_of_transactions {
+        if tx_count >= number_of_transactions {
             break;
         }
-        for tx in block.txdata() {
-            if tx_i >= number_of_transactions {
-                break;
-            }
-            if !tx.is_coinbase() {
-                tx_i += 1;
-            }
-            if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
+        if let Some(block_fee_rates) = unstable_blocks.get_block_fees(block.block_hash()) {
+            for &fee in block_fee_rates {
+                if tx_count >= number_of_transactions {
+                    break;
+                }
+                tx_count += 1;
                 fees.push(fee);
             }
         }
@@ -114,7 +112,7 @@ fn get_fees_per_byte(
 }
 
 /// Computes the fees per byte of the given transaction.
-fn get_tx_fee_per_byte(
+pub(crate) fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
 ) -> Option<MillisatoshiPerByte> {

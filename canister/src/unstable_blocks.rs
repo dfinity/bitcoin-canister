@@ -7,10 +7,11 @@ use crate::{
     UtxoSet,
 };
 use bitcoin::block::Header;
-use ic_btc_interface::{Height, Network};
+use ic_btc_interface::{Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::OutPointsCache;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 mod next_block_headers;
 use self::next_block_headers::NextBlockHeaders;
@@ -69,6 +70,9 @@ pub struct UnstableBlocks {
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
+    // Pre-computed fee rates (millisatoshi per vbyte) for each block's transactions.
+    #[serde(default)]
+    block_fees: BTreeMap<BlockHash, Vec<MillisatoshiPerByte>>,
 }
 
 impl UnstableBlocks {
@@ -85,6 +89,7 @@ impl UnstableBlocks {
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
+            block_fees: BTreeMap::new(),
         }
     }
 
@@ -108,6 +113,11 @@ impl UnstableBlocks {
     /// Returns the net UTXO count change for the given block (added - removed).
     pub fn get_net_utxo_delta(&self, block_hash: &BlockHash) -> i64 {
         self.outpoints_cache.get_net_utxo_delta(block_hash)
+    }
+
+    /// Returns the pre-computed fee rates for the given block.
+    pub fn get_block_fees(&self, block_hash: &BlockHash) -> Option<&[MillisatoshiPerByte]> {
+        self.block_fees.get(block_hash).map(|v| v.as_slice())
     }
 
     pub fn stability_threshold(&self) -> u32 {
@@ -258,9 +268,10 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
     let mut tree = blocks.tree.remove_child(stable_child_idx);
     std::mem::swap(&mut tree, &mut blocks.tree);
 
-    // Remove the outpoints of obsolete blocks from the cache.
+    // Remove the outpoints and fees of obsolete blocks from the cache.
     for block in tree.blocks() {
         blocks.outpoints_cache.remove(block);
+        blocks.block_fees.remove(block.block_hash());
     }
 
     blocks.next_block_headers.remove_until_height(stable_height);
@@ -277,7 +288,8 @@ pub fn push(
     block: Block,
 ) -> Result<(), BlockDoesNotExtendTree> {
     let block_hash = *block.block_hash();
-    let (parent_block_tree, depth) = blocks
+
+    let (_, depth) = blocks
         .tree
         .find_mut(&block.header().prev_blockhash.into())
         .ok_or(BlockDoesNotExtendTree(block_hash))?;
@@ -289,7 +301,15 @@ pub fn push(
         .insert(utxos, &block, height)
         .expect("inserting to outpoints cache must succeed.");
 
-    parent_block_tree.extend(block)?;
+    // Pre-compute fee rates now that the outpoints cache is populated.
+    let fees = block
+        .txdata()
+        .iter()
+        .filter_map(|tx| crate::api::get_tx_fee_per_byte(tx, blocks))
+        .collect();
+    blocks.block_fees.insert(block_hash, fees);
+
+    blocks.tree.extend(block)?;
 
     blocks.next_block_headers.remove(&block_hash);
 

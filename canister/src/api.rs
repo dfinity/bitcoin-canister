@@ -7,6 +7,7 @@ mod send_transaction;
 pub(crate) mod set_config;
 pub use fee_percentiles::get_current_fee_percentiles;
 pub(crate) use fee_percentiles::get_current_fee_percentiles_impl;
+pub(crate) use fee_percentiles::get_tx_fee_per_byte;
 #[cfg(feature = "canbench-rs")]
 pub use fee_percentiles::get_current_fee_percentiles_without_fees;
 pub use get_balance::get_balance;
