@@ -86,6 +86,8 @@ fn get_current_fee_percentiles_with_number_of_transactions(
 
 /// Returns the fees per byte of the last `number_of_transactions` transactions on the main chain.
 /// Reads pre-computed fee rates from the block_fees cache in unstable blocks.
+/// Falls back to computing fees from transactions directly for blocks without
+/// cached fees (e.g. blocks already in the tree at upgrade time).
 /// Fees are returned starting with the most recent transactions.
 fn get_fees_per_byte(
     main_chain: Vec<&Block>,
@@ -98,14 +100,24 @@ fn get_fees_per_byte(
         if tx_count >= number_of_transactions {
             break;
         }
-        if let Some(block_fee_rates) = unstable_blocks.get_block_fees(block.block_hash()) {
-            for &fee in block_fee_rates {
-                if tx_count >= number_of_transactions {
-                    break;
-                }
-                tx_count += 1;
-                fees.push(fee);
+
+        // Use cached fees if available, otherwise compute from transactions.
+        let block_fee_rates: Vec<MillisatoshiPerByte> =
+            match unstable_blocks.get_block_fees(block.block_hash()) {
+                Some(cached) => cached.to_vec(),
+                None => block
+                    .txdata()
+                    .iter()
+                    .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
+                    .collect(),
+            };
+
+        for &fee in &block_fee_rates {
+            if tx_count >= number_of_transactions {
+                break;
             }
+            tx_count += 1;
+            fees.push(fee);
         }
     }
     fees
