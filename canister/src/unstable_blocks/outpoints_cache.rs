@@ -173,9 +173,10 @@ impl OutPointsCache {
             // Compute fee rate for non-coinbase transactions.
             if !tx.is_coinbase() {
                 let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
-                let fee_satoshi = input_sum - output_sum;
-                if let Some(rate) = crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize()) {
-                    block_fees.push(rate);
+                if let Some(fee_satoshi) = input_sum.checked_sub(output_sum) {
+                    if let Some(rate) = crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize()) {
+                        block_fees.push(rate);
+                    }
                 }
             }
         }

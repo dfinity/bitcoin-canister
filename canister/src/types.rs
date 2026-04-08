@@ -609,7 +609,7 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     }
 }
 
-/// Computes the fee rate in millisatoshi per byte for a transaction
+/// Computes the fee rate in millisatoshi per vbyte for a transaction
 /// given its total fee in satoshi and its virtual size.
 /// Returns `None` if `vsize` is zero.
 pub fn fee_rate_per_vbyte(fee_satoshi: u64, vsize: usize) -> Option<MillisatoshiPerByte> {

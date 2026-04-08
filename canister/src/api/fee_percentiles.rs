@@ -146,7 +146,8 @@ fn get_tx_fee_per_byte(
             .value;
     }
     let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
-    crate::types::fee_rate_per_vbyte(input_sum - output_sum, tx.vsize())
+    let fee_satoshi = input_sum.checked_sub(output_sum)?;
+    crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize())
 }
 
 /// Compute percentiles of input values.
