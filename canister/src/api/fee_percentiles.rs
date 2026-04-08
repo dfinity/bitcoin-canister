@@ -136,26 +136,17 @@ fn get_tx_fee_per_byte(
         return None;
     }
 
-    let mut satoshi = 0;
+    let mut input_sum: u64 = 0;
     for tx_in in tx.input() {
         let outpoint = (&tx_in.previous_output).into();
-        satoshi += unstable_blocks
+        input_sum += unstable_blocks
             .get_tx_out(&outpoint)
             .unwrap_or_else(|| panic!("tx out of outpoint {:?} must exist", outpoint))
             .0
             .value;
     }
-    for tx_out in tx.output() {
-        satoshi -= tx_out.value.to_sat();
-    }
-
-    if tx.vsize() > 0 {
-        // Don't use floating point division to avoid non-determinism.
-        Some(((1000 * satoshi) / tx.vsize() as u64) as MillisatoshiPerByte)
-    } else {
-        // Calculating fee is not possible for a zero-size invalid transaction.
-        None
-    }
+    let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
+    crate::types::fee_rate_per_vbyte(input_sum - output_sum, tx.vsize())
 }
 
 /// Compute percentiles of input values.

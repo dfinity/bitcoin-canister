@@ -6,8 +6,8 @@ use candid::CandidType;
 use datasize::DataSize;
 use ic_btc_interface::{
     Address as AddressStr, GetBalanceRequest as PublicGetBalanceRequest,
-    GetUtxosRequest as PublicGetUtxosRequest, Height, Network, Satoshi, UtxosFilter,
-    UtxosFilterInRequest,
+    GetUtxosRequest as PublicGetUtxosRequest, Height, MillisatoshiPerByte, Network, Satoshi,
+    UtxosFilter, UtxosFilterInRequest,
 };
 use ic_btc_types::{BlockHash, OutPoint, Txid};
 use ic_stable_structures::{
@@ -606,6 +606,17 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
         Network::Mainnet => BitcoinNetwork::Bitcoin,
         Network::Testnet => BitcoinNetwork::Testnet4,
         Network::Regtest => BitcoinNetwork::Regtest,
+    }
+}
+
+/// Computes the fee rate in millisatoshi per byte for a transaction
+/// given its total fee in satoshi and its virtual size.
+/// Returns `None` if `vsize` is zero.
+pub fn fee_rate_per_vbyte(fee_satoshi: u64, vsize: usize) -> Option<MillisatoshiPerByte> {
+    if vsize > 0 {
+        Some(((1000 * fee_satoshi) / vsize as u64) as MillisatoshiPerByte)
+    } else {
+        None
     }
 }
 
