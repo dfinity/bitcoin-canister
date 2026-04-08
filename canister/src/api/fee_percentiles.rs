@@ -7,6 +7,7 @@ use crate::{
 };
 use ic_btc_interface::MillisatoshiPerByte;
 use ic_btc_types::{Block, Transaction};
+use std::borrow::Cow;
 
 /// The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
@@ -102,17 +103,19 @@ fn get_fees_per_byte(
         }
 
         // Use cached fees if available, otherwise compute from transactions.
-        let block_fee_rates: Vec<MillisatoshiPerByte> =
+        let block_fee_rates: Cow<'_, [MillisatoshiPerByte]> =
             match unstable_blocks.get_block_fees(block.block_hash()) {
-                Some(cached) => cached.to_vec(),
-                None => block
-                    .txdata()
-                    .iter()
-                    .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
-                    .collect(),
+                Some(cached) => Cow::Borrowed(cached),
+                None => Cow::Owned(
+                    block
+                        .txdata()
+                        .iter()
+                        .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
+                        .collect(),
+                ),
             };
 
-        for &fee in &block_fee_rates {
+        for &fee in block_fee_rates.iter() {
             if tx_count >= number_of_transactions {
                 break;
             }
