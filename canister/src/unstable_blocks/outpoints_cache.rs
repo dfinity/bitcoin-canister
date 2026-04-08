@@ -174,8 +174,7 @@ impl OutPointsCache {
             if !tx.is_coinbase() && tx.vsize() > 0 {
                 let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
                 let fee_satoshi = input_sum - output_sum;
-                block_fees
-                    .push(((1000 * fee_satoshi) / tx.vsize() as u64) as MillisatoshiPerByte);
+                block_fees.push(((1000 * fee_satoshi) / tx.vsize() as u64) as MillisatoshiPerByte);
             }
         }
 
