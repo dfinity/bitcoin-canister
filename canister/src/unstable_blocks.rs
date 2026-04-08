@@ -72,7 +72,7 @@ pub struct UnstableBlocks {
     next_block_headers: NextBlockHeaders,
     // Fee rates (millisatoshi per vbyte) for each block's transactions.
     #[serde(default)]
-    block_fees: BTreeMap<BlockHash, Vec<MillisatoshiPerByte>>,
+    block_fee_rates: BTreeMap<BlockHash, Vec<MillisatoshiPerByte>>,
 }
 
 impl UnstableBlocks {
@@ -89,7 +89,7 @@ impl UnstableBlocks {
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
-            block_fees: BTreeMap::new(),
+            block_fee_rates: BTreeMap::new(),
         }
     }
 
@@ -117,13 +117,13 @@ impl UnstableBlocks {
 
     /// Returns the pre-computed fee rates for the given block.
     pub fn get_block_fees(&self, block_hash: &BlockHash) -> Option<&[MillisatoshiPerByte]> {
-        self.block_fees.get(block_hash).map(|v| v.as_slice())
+        self.block_fee_rates.get(block_hash).map(|v| v.as_slice())
     }
 
-    /// Clears all cached block fees. Used in tests to simulate post-upgrade state.
+    /// Clears all cached block fee rates. Used in tests to simulate post-upgrade state.
     #[cfg(test)]
     pub fn clear_block_fees(&mut self) {
-        self.block_fees.clear();
+        self.block_fee_rates.clear();
     }
 
     pub fn stability_threshold(&self) -> u32 {
@@ -274,10 +274,10 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
     let mut tree = blocks.tree.remove_child(stable_child_idx);
     std::mem::swap(&mut tree, &mut blocks.tree);
 
-    // Remove the outpoints and fees of obsolete blocks from the cache.
+    // Remove the outpoints and fee rates of obsolete blocks from the cache.
     for block in tree.blocks() {
         blocks.outpoints_cache.remove(block);
-        blocks.block_fees.remove(block.block_hash());
+        blocks.block_fee_rates.remove(block.block_hash());
     }
 
     blocks.next_block_headers.remove_until_height(stable_height);
@@ -306,7 +306,7 @@ pub fn push(
         .outpoints_cache
         .insert(utxos, &block, height)
         .expect("inserting to outpoints cache must succeed.");
-    blocks.block_fees.insert(block_hash, fees);
+    blocks.block_fee_rates.insert(block_hash, fees);
 
     parent_block_tree.extend(block)?;
 
