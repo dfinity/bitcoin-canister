@@ -39,12 +39,12 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - name: Download WASM artifacts
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const allArtifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
@@ -78,7 +78,7 @@ jobs:
           echo "WASM_SHA256=$(shasum -a 256 ./wasms/${{ env.WASM_NAME }} | cut -d ' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@80e6af7a2ec7f280fffe2d0a9d3a12a9d11d86e9 # v2.75.1
         with:
           tool: git-cliff
 
@@ -125,7 +125,7 @@ jobs:
           echo "EOF" >> "$GITHUB_ENV"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
