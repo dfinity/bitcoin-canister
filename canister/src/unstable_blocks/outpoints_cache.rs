@@ -74,7 +74,7 @@ impl OutPointsCache {
 
     /// Inserts the outpoints in a block, along with their transaction outputs, into the cache.
     ///
-    /// Also computes and returns fee rates (millisatoshi per byte) for non-coinbase
+    /// Also computes and returns fee rates (millisatoshi per vbyte) for non-coinbase
     /// transactions as a byproduct of the input value lookups already performed here.
     pub fn insert(
         &mut self,
