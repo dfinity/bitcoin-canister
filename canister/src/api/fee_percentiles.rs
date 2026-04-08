@@ -85,7 +85,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     fee_percentiles
 }
 
-/// Returns the fees per byte of the last `number_of_transactions` transactions on the main chain.
+/// Returns the fees per vbyte of the last `number_of_transactions` transactions on the main chain.
 /// Reads pre-computed fee rates from the block_fees cache in unstable blocks.
 /// Falls back to computing fees from transactions directly for blocks without
 /// cached fees (e.g. blocks already in the tree at upgrade time).
@@ -126,7 +126,7 @@ fn get_fees_per_byte(
     fees
 }
 
-/// Computes the fees per byte of the given transaction.
+/// Computes the fees per vbyte of the given transaction.
 fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
