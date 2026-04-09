@@ -87,8 +87,7 @@ impl OutPointsCache {
         let mut removed_outpoints = BTreeMap::new();
         let mut added_outpoints = BTreeMap::new();
         let mut utxo_delta: i64 = 0;
-        let mut block_fee_rates =
-            Vec::with_capacity(block.txdata().len().checked_sub(1).unwrap_or(0));
+        let mut block_fee_rates = Vec::with_capacity(block.txdata().len().saturating_sub(1));
 
         // The inputs of a transaction contain outpoints that reference the previous
         // outputs that it is consuming. These outputs can be retrieved from a number

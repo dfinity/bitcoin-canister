@@ -705,8 +705,8 @@ mod test {
         // After init_state, some blocks have been ingested into the UTXO set.
         // Verify that stable blocks had their fees cleaned up and unstable blocks kept theirs.
         with_state(|state| {
-            let unstable_chain = unstable_blocks::get_main_chain(&state.unstable_blocks)
-                .into_chain();
+            let unstable_chain =
+                unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
             let num_stable = blocks.len() - unstable_chain.len();
             assert!(num_stable > 0, "some blocks should be stable");
 
