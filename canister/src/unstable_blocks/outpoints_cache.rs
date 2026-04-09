@@ -87,7 +87,8 @@ impl OutPointsCache {
         let mut removed_outpoints = BTreeMap::new();
         let mut added_outpoints = BTreeMap::new();
         let mut utxo_delta: i64 = 0;
-        let mut block_fees = Vec::with_capacity(block.txdata().len());
+        let mut block_fee_rates =
+            Vec::with_capacity(block.txdata().len().checked_sub(1).unwrap_or(0));
 
         // The inputs of a transaction contain outpoints that reference the previous
         // outputs that it is consuming. These outputs can be retrieved from a number
@@ -175,7 +176,7 @@ impl OutPointsCache {
                 let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
                 if let Some(fee_satoshi) = input_sum.checked_sub(output_sum) {
                     if let Some(rate) = crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize()) {
-                        block_fees.push(rate);
+                        block_fee_rates.push(rate);
                     }
                 }
             }
@@ -195,7 +196,7 @@ impl OutPointsCache {
             .insert(*block.block_hash(), removed_outpoints);
         self.utxo_deltas.insert(*block.block_hash(), utxo_delta);
 
-        Ok(block_fees)
+        Ok(block_fee_rates)
     }
 
     /// Removes the outpoints of a block from the cache.

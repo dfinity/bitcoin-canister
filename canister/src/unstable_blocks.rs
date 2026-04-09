@@ -79,7 +79,7 @@ impl UnstableBlocks {
     pub fn new(utxos: &UtxoSet, stability_threshold: u32, anchor: Block, network: Network) -> Self {
         // Create a cache of the transaction outputs, starting with the given anchor block.
         let mut outpoints_cache = OutPointsCache::new();
-        let _anchor_fees = outpoints_cache
+        outpoints_cache
             .insert(utxos, &anchor, utxos.next_height())
             .expect("anchor block must be valid.");
 
@@ -115,14 +115,14 @@ impl UnstableBlocks {
         self.outpoints_cache.get_net_utxo_delta(block_hash)
     }
 
-    /// Returns the pre-computed fee rates for the given block.
-    pub fn get_block_fees(&self, block_hash: &BlockHash) -> Option<&[MillisatoshiPerByte]> {
+    /// Returns the fee rates for the given block.
+    pub fn get_block_fee_rates(&self, block_hash: &BlockHash) -> Option<&[MillisatoshiPerByte]> {
         self.block_fee_rates.get(block_hash).map(|v| v.as_slice())
     }
 
     /// Clears all cached block fee rates. Used in tests to simulate post-upgrade state.
     #[cfg(test)]
-    pub fn clear_block_fees(&mut self) {
+    pub fn clear_block_fee_rates(&mut self) {
         self.block_fee_rates.clear();
     }
 
