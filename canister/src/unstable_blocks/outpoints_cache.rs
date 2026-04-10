@@ -18,6 +18,10 @@ pub struct OutPointsCache {
 
     /// Caches the outpoints removed for each address in a block.
     removed_outpoints: BTreeMap<BlockHash, BTreeMap<Address, Vec<OutPoint>>>,
+
+    /// Caches the net UTXO count change per block (outputs created - inputs spent).
+    #[serde(default)]
+    utxo_deltas: BTreeMap<BlockHash, i64>,
 }
 
 impl OutPointsCache {
@@ -26,6 +30,7 @@ impl OutPointsCache {
             tx_outs: BTreeMap::new(),
             added_outpoints: BTreeMap::new(),
             removed_outpoints: BTreeMap::new(),
+            utxo_deltas: BTreeMap::new(),
         }
     }
 
@@ -55,6 +60,11 @@ impl OutPointsCache {
             .unwrap_or(&[])
     }
 
+    /// Returns the net UTXO count change for the given block (outputs created - inputs spent).
+    pub fn get_net_utxo_delta(&self, block_hash: &BlockHash) -> i64 {
+        self.utxo_deltas.get(block_hash).copied().unwrap_or(0)
+    }
+
     /// Retrieves the `TxOut` associated with the given `outpoint`, along with its height.
     pub fn get_tx_out(&self, outpoint: &OutPoint) -> Option<(&TxOut, Height)> {
         self.tx_outs
@@ -73,6 +83,7 @@ impl OutPointsCache {
         let mut tx_outs: BTreeMap<OutPoint, TxOutInfo> = BTreeMap::new();
         let mut removed_outpoints = BTreeMap::new();
         let mut added_outpoints = BTreeMap::new();
+        let mut utxo_delta: i64 = 0;
 
         // The inputs of a transaction contain outpoints that reference the previous
         // outputs that it is consuming. These outputs can be retrieved from a number
@@ -86,6 +97,11 @@ impl OutPointsCache {
         //    The assumption here is that this cache already contains all the outpoints
         //    referenced by the unstable blocks.
         for tx in block.txdata() {
+            utxo_delta += tx.output().len() as i64;
+            if !tx.is_coinbase() {
+                utxo_delta -= tx.input().len() as i64;
+            }
+
             for input in tx.input() {
                 if input.previous_output.is_null() {
                     continue;
@@ -159,6 +175,7 @@ impl OutPointsCache {
             .insert(*block.block_hash(), added_outpoints);
         self.removed_outpoints
             .insert(*block.block_hash(), removed_outpoints);
+        self.utxo_deltas.insert(*block.block_hash(), utxo_delta);
 
         Ok(())
     }
@@ -209,6 +226,7 @@ impl OutPointsCache {
         let block_hash = block.block_hash();
         self.added_outpoints.remove(block_hash);
         self.removed_outpoints.remove(block_hash);
+        self.utxo_deltas.remove(block_hash);
     }
 }
 
@@ -346,6 +364,10 @@ mod test {
                         address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
+                utxo_deltas: maplit::btreemap! {
+                    *block_0.block_hash() => 1,
+                    *block_1.block_hash() => 1, // coinbase(1 output) + spend(1 input, 1 output) = +1
+                },
             }
         );
 
@@ -382,6 +404,9 @@ mod test {
                         address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
+                utxo_deltas: maplit::btreemap! {
+                    *block_1.block_hash() => 1,
+                },
             }
         );
 
@@ -392,7 +417,8 @@ mod test {
             OutPointsCache {
                 tx_outs: maplit::btreemap! {},
                 added_outpoints: maplit::btreemap! {},
-                removed_outpoints: maplit::btreemap! {}
+                removed_outpoints: maplit::btreemap! {},
+                utxo_deltas: maplit::btreemap! {},
             }
         );
     }
@@ -502,6 +528,9 @@ mod test {
                 },
                 removed_outpoints: maplit::btreemap! {
                     *block_0.block_hash() => maplit::btreemap! {}
+                },
+                utxo_deltas: maplit::btreemap! {
+                    *block_0.block_hash() => 1,
                 },
             }
         );

@@ -105,6 +105,11 @@ impl UnstableBlocks {
             .get_removed_outpoints(block_hash, address)
     }
 
+    /// Returns the net UTXO count change for the given block (added - removed).
+    pub fn get_net_utxo_delta(&self, block_hash: &BlockHash) -> i64 {
+        self.outpoints_cache.get_net_utxo_delta(block_hash)
+    }
+
     pub fn stability_threshold(&self) -> u32 {
         self.stability_threshold
     }
