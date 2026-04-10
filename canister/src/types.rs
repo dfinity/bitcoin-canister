@@ -609,6 +609,15 @@ pub fn into_bitcoin_network(network: Network) -> BitcoinNetwork {
     }
 }
 
+/// Per-block metrics.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct BlockMetrics {
+    /// Fee rates (millisatoshi per vbyte) for non-coinbase transactions.
+    pub fee_rates: Vec<MillisatoshiPerByte>,
+    /// Net UTXO count change (outputs created - inputs spent).
+    pub utxo_delta: i64,
+}
+
 /// Computes the fee rate in millisatoshi per vbyte for a transaction
 /// given its total fee in satoshi and its virtual size.
 /// Returns `None` if `vsize` is zero.

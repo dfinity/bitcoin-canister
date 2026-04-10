@@ -747,9 +747,9 @@ mod test {
         let percentiles_before = get_current_fee_percentiles();
         assert_eq!(percentiles_before.len(), PERCENTILE_BUCKETS);
 
-        // Simulate upgrade: clear the block_fee_rates cache and the fee percentiles cache.
+        // Simulate upgrade: clear the block_metrics cache and the fee percentiles cache.
         with_state_mut(|state| {
-            state.unstable_blocks.clear_block_fee_rates();
+            state.unstable_blocks.clear_block_metrics();
             state.fee_percentiles_cache = None;
         });
 

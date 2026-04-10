@@ -1,11 +1,135 @@
 use crate::{
-    types::{Address, TxOut},
+    types::{Address, BlockMetrics, TxOut},
     UtxoSet,
 };
-use ic_btc_interface::{Height, MillisatoshiPerByte};
+use ic_btc_interface::Height;
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+/// Caches a block's outpoints and computes [`BlockMetrics`] in a single pass.
+pub fn insert_outpoints(
+    cache: &mut OutPointsCache,
+    utxos: &UtxoSet,
+    block: &Block,
+    height: Height,
+) -> Result<BlockMetrics, TxOutNotFound> {
+    let mut tx_outs: BTreeMap<OutPoint, TxOutInfo> = BTreeMap::new();
+    let mut removed_outpoints = BTreeMap::new();
+    let mut added_outpoints = BTreeMap::new();
+    let mut utxo_delta: i64 = 0;
+    let mut fee_rates = Vec::with_capacity(block.txdata().len().saturating_sub(1));
+
+    // The inputs of a transaction contain outpoints that reference the previous
+    // outputs that it is consuming. These outputs can be retrieved from a number
+    // of sources:
+    //
+    // 1. From the UTXO set, if the outpoint references a tx in a stable block.
+    //
+    // 2. From the block, if the outpoint references a previous tx in the same block.
+    //
+    // 3. From the cache itself, if the outpoint references a tx in an unstable block.
+    //    The assumption here is that this cache already contains all the outpoints
+    //    referenced by the unstable blocks.
+    for tx in block.txdata() {
+        utxo_delta += tx.output().len() as i64;
+        if !tx.is_coinbase() {
+            utxo_delta -= tx.input().len() as i64;
+        }
+
+        let mut input_sum: u64 = 0;
+
+        for input in tx.input() {
+            if input.previous_output.is_null() {
+                continue;
+            }
+
+            let outpoint = (&input.previous_output).into();
+
+            // Lookup the `TxOut` in the current cache.
+            let (txout, height) = match cache.get_tx_out(&outpoint) {
+                Some((txout, height)) => (txout.clone(), height),
+
+                // Lookup the `TxOut` in the current block.
+                None => match tx_outs.get(&outpoint) {
+                    Some(e) => (e.txout.clone(), e.height),
+
+                    // Lookup the `TxOut` in the UTXO set.
+                    None => utxos
+                        .get_utxo(&outpoint)
+                        .ok_or_else(|| TxOutNotFound(outpoint.clone()))?,
+                },
+            };
+
+            input_sum += txout.value;
+
+            if let Ok(address) = Address::from_script(
+                bitcoin::Script::from_bytes(&txout.script_pubkey),
+                utxos.network(),
+            ) {
+                let entry = removed_outpoints.entry(address).or_insert(vec![]);
+                entry.push(outpoint.clone());
+            }
+
+            let entry = tx_outs.entry(outpoint).or_insert(TxOutInfo {
+                txout,
+                height,
+                count: 0,
+            });
+            entry.count += 1;
+        }
+
+        for (i, txout) in tx.output().iter().enumerate() {
+            let outpoint = OutPoint {
+                txid: tx.txid(),
+                vout: i as u32,
+            };
+
+            if let Ok(address) = Address::from_script(&txout.script_pubkey, utxos.network()) {
+                let entry = added_outpoints.entry(address).or_insert(vec![]);
+                entry.push(outpoint.clone());
+            }
+
+            let entry = tx_outs.entry(outpoint.clone()).or_insert(TxOutInfo {
+                txout: txout.into(),
+                height,
+                count: 0,
+            });
+            entry.count += 1;
+        }
+
+        // Compute fee rate for non-coinbase transactions.
+        if !tx.is_coinbase() {
+            let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
+            if let Some(fee_satoshi) = input_sum.checked_sub(output_sum) {
+                if let Some(rate) = crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize()) {
+                    fee_rates.push(rate);
+                }
+            }
+        }
+    }
+
+    // Merge all the transaction outputs of this block into the cache.
+    for (outpoint, tx_out_info) in tx_outs {
+        cache
+            .tx_outs
+            .entry(outpoint)
+            .and_modify(|t| t.count += tx_out_info.count)
+            .or_insert(tx_out_info);
+    }
+
+    cache
+        .added_outpoints
+        .insert(*block.block_hash(), added_outpoints);
+    cache
+        .removed_outpoints
+        .insert(*block.block_hash(), removed_outpoints);
+
+    Ok(BlockMetrics {
+        fee_rates,
+        utxo_delta,
+    })
+}
 
 /// A cache maintaining data related to outpoints in unstable blocks.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -18,10 +142,6 @@ pub struct OutPointsCache {
 
     /// Caches the outpoints removed for each address in a block.
     removed_outpoints: BTreeMap<BlockHash, BTreeMap<Address, Vec<OutPoint>>>,
-
-    /// Caches the net UTXO count change per block (outputs created - inputs spent).
-    #[serde(default)]
-    utxo_deltas: BTreeMap<BlockHash, i64>,
 }
 
 impl OutPointsCache {
@@ -30,7 +150,6 @@ impl OutPointsCache {
             tx_outs: BTreeMap::new(),
             added_outpoints: BTreeMap::new(),
             removed_outpoints: BTreeMap::new(),
-            utxo_deltas: BTreeMap::new(),
         }
     }
 
@@ -60,142 +179,11 @@ impl OutPointsCache {
             .unwrap_or(&[])
     }
 
-    /// Returns the net UTXO count change for the given block (outputs created - inputs spent).
-    pub fn get_net_utxo_delta(&self, block_hash: &BlockHash) -> i64 {
-        self.utxo_deltas.get(block_hash).copied().unwrap_or(0)
-    }
-
     /// Retrieves the `TxOut` associated with the given `outpoint`, along with its height.
     pub fn get_tx_out(&self, outpoint: &OutPoint) -> Option<(&TxOut, Height)> {
         self.tx_outs
             .get(outpoint)
             .map(|info| (&info.txout, info.height))
-    }
-
-    /// Inserts the outpoints in a block, along with their transaction outputs, into the cache.
-    ///
-    /// Also computes and returns fee rates (millisatoshi per vbyte) for non-coinbase
-    /// transactions as a byproduct of the input value lookups already performed here.
-    pub fn insert(
-        &mut self,
-        utxos: &UtxoSet,
-        block: &Block,
-        height: Height,
-    ) -> Result<Vec<MillisatoshiPerByte>, TxOutNotFound> {
-        // A map to store all the transaction outputs referenced by the given block.
-        let mut tx_outs: BTreeMap<OutPoint, TxOutInfo> = BTreeMap::new();
-        let mut removed_outpoints = BTreeMap::new();
-        let mut added_outpoints = BTreeMap::new();
-        let mut utxo_delta: i64 = 0;
-        let mut block_fee_rates = Vec::with_capacity(block.txdata().len().saturating_sub(1));
-
-        // The inputs of a transaction contain outpoints that reference the previous
-        // outputs that it is consuming. These outputs can be retrieved from a number
-        // of sources:
-        //
-        // 1. From the UTXO set, if the outpoint references a tx in a stable block.
-        //
-        // 2. From the block, if the outpoint references a previous tx in the same block.
-        //
-        // 3. From the cache itself, if the outpoint references a tx in an unstable block.
-        //    The assumption here is that this cache already contains all the outpoints
-        //    referenced by the unstable blocks.
-        for tx in block.txdata() {
-            utxo_delta += tx.output().len() as i64;
-            if !tx.is_coinbase() {
-                utxo_delta -= tx.input().len() as i64;
-            }
-
-            let mut input_sum: u64 = 0;
-
-            for input in tx.input() {
-                if input.previous_output.is_null() {
-                    continue;
-                }
-
-                let outpoint = (&input.previous_output).into();
-
-                // Lookup the `TxOut` in the current cache.
-                let (txout, height) = match self.get_tx_out(&outpoint) {
-                    Some((txout, height)) => (txout.clone(), height),
-
-                    // Lookup the `TxOut` in the current block.
-                    None => match tx_outs.get(&outpoint) {
-                        Some(e) => (e.txout.clone(), e.height),
-
-                        // Lookup the `TxOut` in the UTXO set.
-                        None => utxos
-                            .get_utxo(&outpoint)
-                            .ok_or_else(|| TxOutNotFound(outpoint.clone()))?,
-                    },
-                };
-
-                input_sum += txout.value;
-
-                if let Ok(address) = Address::from_script(
-                    bitcoin::Script::from_bytes(&txout.script_pubkey),
-                    utxos.network(),
-                ) {
-                    let entry = removed_outpoints.entry(address).or_insert(vec![]);
-                    entry.push(outpoint.clone());
-                }
-
-                let entry = tx_outs.entry(outpoint).or_insert(TxOutInfo {
-                    txout,
-                    height,
-                    count: 0,
-                });
-                entry.count += 1;
-            }
-
-            // Outputs can be inserted as-is into the cache, maintaining a count of how
-            // many we inserted into the cache that reference them.
-            for (i, txout) in tx.output().iter().enumerate() {
-                let outpoint = OutPoint {
-                    txid: tx.txid(),
-                    vout: i as u32,
-                };
-
-                if let Ok(address) = Address::from_script(&txout.script_pubkey, utxos.network()) {
-                    let entry = added_outpoints.entry(address).or_insert(vec![]);
-                    entry.push(outpoint.clone());
-                }
-
-                // Retrieve the associated entry in the cache and increment its count.
-                let entry = tx_outs.entry(outpoint.clone()).or_insert(TxOutInfo {
-                    txout: txout.into(),
-                    height,
-                    count: 0,
-                });
-                entry.count += 1;
-            }
-
-            // Compute fee rate for non-coinbase transactions.
-            if !tx.is_coinbase() {
-                let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
-                if let Some(fee_satoshi) = input_sum.checked_sub(output_sum) {
-                    if let Some(rate) = crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize()) {
-                        block_fee_rates.push(rate);
-                    }
-                }
-            }
-        }
-
-        // Merge all the transaction outputs of this block into the cache.
-        for (outpoint, tx_out_info) in tx_outs {
-            self.tx_outs
-                .entry(outpoint)
-                .and_modify(|t| t.count += tx_out_info.count)
-                .or_insert(tx_out_info);
-        }
-
-        self.added_outpoints
-            .insert(*block.block_hash(), added_outpoints);
-        self.removed_outpoints
-            .insert(*block.block_hash(), removed_outpoints);
-        self.utxo_deltas.insert(*block.block_hash(), utxo_delta);
-
-        Ok(block_fee_rates)
     }
 
     /// Removes the outpoints of a block from the cache.
@@ -244,7 +232,6 @@ impl OutPointsCache {
         let block_hash = block.block_hash();
         self.added_outpoints.remove(block_hash);
         self.removed_outpoints.remove(block_hash);
-        self.utxo_deltas.remove(block_hash);
     }
 }
 
@@ -302,7 +289,7 @@ mod test {
         let mut cache = OutPointsCache::new();
 
         // Insert the genesis block and verify
-        cache.insert(&utxos, &block_0, 0).unwrap();
+        insert_outpoints(&mut cache, &utxos, &block_0, 0).unwrap();
 
         // The cache contains the outpoint of block 0.
         let outpoint_0 = OutPoint {
@@ -334,7 +321,7 @@ mod test {
             .with_transaction(tx_1.clone())
             .build();
 
-        cache.insert(&utxos, &block_1, 1).unwrap();
+        insert_outpoints(&mut cache, &utxos, &block_1, 1).unwrap();
 
         let outpoint_coinbase_1 = OutPoint {
             txid: tx_coinbase_block_1.txid(),
@@ -382,10 +369,6 @@ mod test {
                         address_1.clone() => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
-                utxo_deltas: maplit::btreemap! {
-                    *block_0.block_hash() => 1,
-                    *block_1.block_hash() => 1, // coinbase(1 output) + spend(1 input, 1 output) = +1
-                },
             }
         );
 
@@ -422,9 +405,6 @@ mod test {
                         address_1 => vec![OutPoint::new(tx_0.txid(), 0)]
                     },
                 },
-                utxo_deltas: maplit::btreemap! {
-                    *block_1.block_hash() => 1,
-                },
             }
         );
 
@@ -436,7 +416,6 @@ mod test {
                 tx_outs: maplit::btreemap! {},
                 added_outpoints: maplit::btreemap! {},
                 removed_outpoints: maplit::btreemap! {},
-                utxo_deltas: maplit::btreemap! {},
             }
         );
     }
@@ -475,7 +454,7 @@ mod test {
             .build();
 
         assert_eq!(
-            cache.insert(&utxos, &block_1, 1),
+            insert_outpoints(&mut cache, &utxos, &block_1, 1),
             Err(TxOutNotFound(outpoint_0))
         );
     }
@@ -497,7 +476,7 @@ mod test {
         let utxos = UtxoSet::new(network);
         let mut cache = OutPointsCache::new();
 
-        cache.insert(&utxos, &block_0, 0).unwrap();
+        insert_outpoints(&mut cache, &utxos, &block_0, 0).unwrap();
 
         // The outpoint of block 0.
         let outpoint_0 = OutPoint {
@@ -524,7 +503,7 @@ mod test {
 
         // Inserting the block fails, as its referencing a faulty outpoint.
         assert_eq!(
-            cache.insert(&utxos, &block_1, 1),
+            insert_outpoints(&mut cache, &utxos, &block_1, 1),
             Err(TxOutNotFound(faulty_outpoint))
         );
 
@@ -546,9 +525,6 @@ mod test {
                 },
                 removed_outpoints: maplit::btreemap! {
                     *block_0.block_hash() => maplit::btreemap! {}
-                },
-                utxo_deltas: maplit::btreemap! {
-                    *block_0.block_hash() => 1,
                 },
             }
         );

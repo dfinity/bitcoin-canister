@@ -3,13 +3,13 @@ mod outpoints_cache;
 use crate::{
     blocktree::{BlockChain, BlockDoesNotExtendTree, BlockTree, Depth, DifficultyBasedDepth},
     runtime::print,
-    types::{Address, TxOut},
+    types::{Address, BlockMetrics, TxOut},
     UtxoSet,
 };
 use bitcoin::block::Header;
 use ic_btc_interface::{Height, MillisatoshiPerByte, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
-use outpoints_cache::OutPointsCache;
+use outpoints_cache::{insert_outpoints, OutPointsCache};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -70,18 +70,21 @@ pub struct UnstableBlocks {
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
-    // Fee rates (millisatoshi per vbyte) for each block's transactions.
+    // Per-block metrics (fee rates, UTXO delta, etc.) computed during block processing.
     #[serde(default)]
-    block_fee_rates: BTreeMap<BlockHash, Vec<MillisatoshiPerByte>>,
+    block_metrics: BTreeMap<BlockHash, BlockMetrics>,
 }
 
 impl UnstableBlocks {
     pub fn new(utxos: &UtxoSet, stability_threshold: u32, anchor: Block, network: Network) -> Self {
-        // Create a cache of the transaction outputs, starting with the given anchor block.
+        // Process the anchor block: populate the outpoints cache and compute metrics.
         let mut outpoints_cache = OutPointsCache::new();
-        outpoints_cache
-            .insert(utxos, &anchor, utxos.next_height())
-            .expect("anchor block must be valid.");
+        let anchor_metrics =
+            insert_outpoints(&mut outpoints_cache, utxos, &anchor, utxos.next_height())
+                .expect("anchor block must be valid.");
+
+        let mut block_metrics = BTreeMap::new();
+        block_metrics.insert(*anchor.block_hash(), anchor_metrics);
 
         Self {
             stability_threshold,
@@ -89,7 +92,7 @@ impl UnstableBlocks {
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
-            block_fee_rates: BTreeMap::new(),
+            block_metrics,
         }
     }
 
@@ -112,18 +115,23 @@ impl UnstableBlocks {
 
     /// Returns the net UTXO count change for the given block (added - removed).
     pub fn get_net_utxo_delta(&self, block_hash: &BlockHash) -> i64 {
-        self.outpoints_cache.get_net_utxo_delta(block_hash)
+        self.block_metrics
+            .get(block_hash)
+            .map(|m| m.utxo_delta)
+            .unwrap_or(0)
     }
 
     /// Returns the fee rates for the given block.
     pub fn get_block_fee_rates(&self, block_hash: &BlockHash) -> Option<&[MillisatoshiPerByte]> {
-        self.block_fee_rates.get(block_hash).map(|v| v.as_slice())
+        self.block_metrics
+            .get(block_hash)
+            .map(|m| m.fee_rates.as_slice())
     }
 
-    /// Clears all cached block fee rates. Used in tests to simulate post-upgrade state.
+    /// Clears all cached block metrics. Used in tests to simulate post-upgrade state.
     #[cfg(test)]
-    pub fn clear_block_fee_rates(&mut self) {
-        self.block_fee_rates.clear();
+    pub fn clear_block_metrics(&mut self) {
+        self.block_metrics.clear();
     }
 
     pub fn stability_threshold(&self) -> u32 {
@@ -274,10 +282,10 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
     let mut tree = blocks.tree.remove_child(stable_child_idx);
     std::mem::swap(&mut tree, &mut blocks.tree);
 
-    // Remove the outpoints and fee rates of obsolete blocks from the cache.
+    // Remove the outpoints and metrics of obsolete blocks from the cache.
     for block in tree.blocks() {
         blocks.outpoints_cache.remove(block);
-        blocks.block_fee_rates.remove(block.block_hash());
+        blocks.block_metrics.remove(block.block_hash());
     }
 
     blocks.next_block_headers.remove_until_height(stable_height);
@@ -301,12 +309,10 @@ pub fn push(
 
     let height = utxos.next_height() + depth + 1;
 
-    // Insert outpoints and compute fee rates in a single pass.
-    let fees = blocks
-        .outpoints_cache
-        .insert(utxos, &block, height)
-        .expect("inserting to outpoints cache must succeed.");
-    blocks.block_fee_rates.insert(block_hash, fees);
+    // Process the block in a single pass: populate the outpoints cache and compute metrics.
+    let metrics = insert_outpoints(&mut blocks.outpoints_cache, utxos, &block, height)
+        .expect("processing block must succeed.");
+    blocks.block_metrics.insert(block_hash, metrics);
 
     parent_block_tree.extend(block)?;
 
