@@ -16,7 +16,7 @@ benches:
   bitcoin_get_block_headers_baseline:
     total:
       calls: 1
-      instructions: 535970
+      instructions: 535464
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
@@ -30,68 +30,68 @@ benches:
   bitcoin_get_current_fee_percentiles:
     total:
       calls: 1
-      instructions: 332904
+      instructions: 332616
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_utxos_baseline:
     total:
       calls: 1
-      instructions: 7801052
+      instructions: 7800973
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_utxos_stress:
     total:
       calls: 1
-      instructions: 4671927301
+      instructions: 4671926538
       heap_increase: 35
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_many_branches:
     total:
       calls: 1
-      instructions: 5346062
+      instructions: 5346346
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_single_chain:
     total:
       calls: 1
-      instructions: 3555455
+      instructions: 3555104
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_with_forks:
     total:
       calls: 1
-      instructions: 3651079
+      instructions: 3651191
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_metrics:
     total:
       calls: 1
-      instructions: 10108897
+      instructions: 10110508
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   insert_300_blocks:
     total:
       calls: 1
-      instructions: 419581318
-      heap_increase: 13
+      instructions: 419119801
+      heap_increase: 12
       stable_memory_increase: 0
     scopes:
       validate:
         calls: 300
-        instructions: 368056051
-        heap_increase: 3
+        instructions: 368051471
+        heap_increase: 4
         stable_memory_increase: 0
       validate_block:
         calls: 300
-        instructions: 18301834
-        heap_increase: 1
+        instructions: 18305370
+        heap_increase: 2
         stable_memory_increase: 0
       validate_block/check_merkle_root:
         calls: 300
@@ -100,117 +100,117 @@ benches:
         stable_memory_increase: 0
       validate_block/ensure_unique_transactions:
         calls: 300
-        instructions: 8464054
+        instructions: 8467029
         heap_increase: 0
         stable_memory_increase: 0
       validate_header:
         calls: 300
-        instructions: 348635387
+        instructions: 348627018
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_headers:
     total:
       calls: 1
-      instructions: 2847923749
+      instructions: 2847921608
       heap_increase: 0
       stable_memory_increase: 0
     scopes:
       validate_header:
         calls: 100
-        instructions: 2805796833
+        instructions: 2805794633
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_headers_multiple_times:
     total:
       calls: 1
-      instructions: 10299667441
+      instructions: 10299636424
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
       validate_header:
         calls: 1000
-        instructions: 8994733160
+        instructions: 8994711182
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_with_10k_transactions:
     total:
       calls: 1
-      instructions: 1385300487
+      instructions: 1385300187
       heap_increase: 73
       stable_memory_increase: 0
     scopes:
       validate:
         calls: 1
-        instructions: 149626193
+        instructions: 149625740
         heap_increase: 20
         stable_memory_increase: 0
       validate_block:
         calls: 1
-        instructions: 149520377
+        instructions: 149519946
         heap_increase: 20
         stable_memory_increase: 0
       validate_block/check_merkle_root:
         calls: 1
-        instructions: 70700188
+        instructions: 70700320
         heap_increase: 0
         stable_memory_increase: 0
       validate_block/ensure_unique_transactions:
         calls: 1
-        instructions: 78815499
+        instructions: 78815068
         heap_increase: 20
         stable_memory_increase: 0
       validate_header:
         calls: 1
-        instructions: 102962
+        instructions: 102940
         heap_increase: 0
         stable_memory_increase: 0
   insert_block_with_1k_transactions:
     total:
       calls: 1
-      instructions: 114485451
+      instructions: 114485268
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
       validate:
         calls: 1
-        instructions: 15141385
+        instructions: 15141281
         heap_increase: 2
         stable_memory_increase: 0
       validate_block:
         calls: 1
-        instructions: 15035569
+        instructions: 15035487
         heap_increase: 2
         stable_memory_increase: 0
       validate_block/check_merkle_root:
         calls: 1
-        instructions: 7117672
+        instructions: 7117870
         heap_increase: 0
         stable_memory_increase: 0
       validate_block/ensure_unique_transactions:
         calls: 1
-        instructions: 7913207
+        instructions: 7913059
         heap_increase: 2
         stable_memory_increase: 0
       validate_header:
         calls: 1
-        instructions: 102962
+        instructions: 102940
         heap_increase: 0
         stable_memory_increase: 0
   pre_upgrade_with_many_unstable_blocks:
     total:
       calls: 1
-      instructions: 5412471948
+      instructions: 5377789603
       heap_increase: 4088
       stable_memory_increase: 1792
     scopes:
       serialize_blocktree_flatten:
         calls: 1
-        instructions: 186219
+        instructions: 187325
         heap_increase: 0
         stable_memory_increase: 0
       serialize_blocktree_serialize_seq:
         calls: 1
-        instructions: 1929069386
+        instructions: 1917674254
         heap_increase: 2039
         stable_memory_increase: 0
 version: 0.4.0
