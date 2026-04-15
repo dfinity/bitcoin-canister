@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-04-15] - 2026-04-15
+
+### Added
+
+- Add `utxo_deltas` cache for improved `get_blockchain_info` performance ([#513](https://github.com/dfinity/bitcoin-canister/pull/513))
+
+- Add benchmarks for `bitcoin_get_*` endpoints ([#508](https://github.com/dfinity/bitcoin-canister/pull/508))
+
+
+### Changed
+
+- Move block metrics to `CachedBlock` ([#516](https://github.com/dfinity/bitcoin-canister/pull/516))
+
+- Cherry pick `dfinity/dogecoin-canister@c947b5c` cache unstable blocks in stable memory ([#506](https://github.com/dfinity/bitcoin-canister/pull/506))
+
+- Cache tx fee rates in heap memory ([#514](https://github.com/dfinity/bitcoin-canister/pull/514))
+
+- Bump ic-cdk to v0.20.0 ([#510](https://github.com/dfinity/bitcoin-canister/pull/510))
+
+
 ## [release/2026-03-06] - 2026-03-06
 
 ### Added
@@ -303,3 +323,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2026-02-18]: https://github.com/dfinity/bitcoin-canister/compare/release/2025-12-03...release/2026-02-18
 
 [release/2026-03-06]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-02-18...release/2026-03-06
+
+[release/2026-04-15]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-03-06...release/2026-04-15
