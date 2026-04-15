@@ -612,7 +612,7 @@ impl<Block: ChainBlock> BlockTree<Block> {
 
     /// Returns a `BlockTree` where the hash of the root matches the hash of the provided `block`
     /// if it exists, and `None` otherwise.
-    pub(crate) fn find(&self, block_hash: &BlockHash) -> Option<&BlockTree<Block>> {
+    fn find(&self, block_hash: &BlockHash) -> Option<&BlockTree<Block>> {
         if self.root.block_hash() == block_hash {
             return Some(self);
         }

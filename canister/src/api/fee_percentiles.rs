@@ -104,18 +104,17 @@ fn get_fees_per_byte(
         }
 
         // Use cached fees if available, otherwise compute from transactions.
-        let block_fee_rates: Cow<'_, [MillisatoshiPerByte]> =
-            match unstable_blocks.get_block_fee_rates(block.block_hash()) {
-                Some(cached) => Cow::Borrowed(cached),
-                None => Cow::Owned(
-                    block
-                        .block()
-                        .txdata()
-                        .iter()
-                        .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
-                        .collect(),
-                ),
-            };
+        let block_fee_rates: Cow<'_, [MillisatoshiPerByte]> = match block.fee_rates() {
+            Some(cached) => Cow::Borrowed(cached),
+            None => Cow::Owned(
+                block
+                    .block()
+                    .txdata()
+                    .iter()
+                    .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
+                    .collect(),
+            ),
+        };
 
         for &fee in block_fee_rates.iter() {
             if tx_count >= number_of_transactions {
@@ -680,10 +679,7 @@ mod test {
             // Collect them (most recent first) to compare against get_fees_per_byte.
             let mut cached_fees: Vec<MillisatoshiPerByte> = Vec::new();
             for block in chain.iter().rev() {
-                if let Some(rates) = state
-                    .unstable_blocks
-                    .get_block_fee_rates(block.block_hash())
-                {
+                if let Some(rates) = block.fee_rates() {
                     cached_fees.extend_from_slice(rates);
                 }
             }
@@ -694,47 +690,6 @@ mod test {
             let fee_rates =
                 get_fees_per_byte(main_chain.into_chain(), &state.unstable_blocks, 10_000);
             assert_eq!(fee_rates, cached_fees);
-        });
-    }
-
-    #[test]
-    fn block_fee_rates_are_cleaned_up_on_stable_block_ingestion() {
-        let number_of_blocks = 10;
-        let blocks = generate_blocks(10_000, number_of_blocks);
-        let stability_threshold = 5;
-        init_state(blocks.clone(), stability_threshold);
-
-        // After init_state, some blocks have been ingested into the UTXO set.
-        // Verify that stable blocks had their fees cleaned up and unstable blocks kept theirs.
-        with_state(|state| {
-            let unstable_chain =
-                unstable_blocks::get_main_chain(&state.unstable_blocks).into_chain();
-            let num_stable = blocks.len() - unstable_chain.len();
-            assert!(num_stable > 0, "some blocks should be stable");
-
-            // Stable blocks (popped from the unstable tree) should NOT have cached fees.
-            for block in &blocks[..num_stable] {
-                assert!(
-                    state
-                        .unstable_blocks
-                        .get_block_fee_rates(block.block_hash())
-                        .is_none(),
-                    "stable block {} should not have cached fees",
-                    block.block_hash()
-                );
-            }
-
-            // Unstable blocks (excluding the anchor) should have cached fees.
-            for block in unstable_chain.iter().skip(1) {
-                assert!(
-                    state
-                        .unstable_blocks
-                        .get_block_fee_rates(block.block_hash())
-                        .is_some(),
-                    "unstable block {} should have cached fees",
-                    block.block_hash()
-                );
-            }
         });
     }
 
@@ -760,10 +715,7 @@ mod test {
             let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
             for block in main_chain.into_chain() {
                 assert!(
-                    state
-                        .unstable_blocks
-                        .get_block_fee_rates(block.block_hash())
-                        .is_none(),
+                    block.fee_rates().is_none(),
                     "block fees should be empty after simulated upgrade"
                 );
             }

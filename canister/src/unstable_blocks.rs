@@ -8,7 +8,7 @@ use crate::{
     UtxoSet,
 };
 use bitcoin::block::Header;
-use ic_btc_interface::{Height, MillisatoshiPerByte, Network};
+use ic_btc_interface::{Height, Network};
 use ic_btc_types::{Block, BlockHash, OutPoint};
 use outpoints_cache::{insert_outpoints, OutPointsCache};
 use serde::{Deserialize, Serialize};
@@ -142,21 +142,6 @@ impl UnstableBlocks {
     pub fn get_removed_outpoints(&self, block_hash: &BlockHash, address: &Address) -> &[OutPoint] {
         self.outpoints_cache
             .get_removed_outpoints(block_hash, address)
-    }
-
-    /// Returns the net UTXO count change for the given block (added - removed).
-    pub fn get_net_utxo_delta(&self, block_hash: &BlockHash) -> i64 {
-        self.tree
-            .find(block_hash)
-            .map(|subtree| subtree.root().utxo_delta())
-            .unwrap_or(0)
-    }
-
-    /// Returns the fee rates for the given block.
-    pub fn get_block_fee_rates(&self, block_hash: &BlockHash) -> Option<&[MillisatoshiPerByte]> {
-        self.tree
-            .find(block_hash)
-            .and_then(|subtree| subtree.root().fee_rates())
     }
 
     /// Clears all cached block metrics. Used in tests to simulate post-upgrade state.

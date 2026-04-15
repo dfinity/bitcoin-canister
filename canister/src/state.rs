@@ -339,7 +339,7 @@ pub fn blockchain_info(state: &State) -> crate::types::BlockchainInfo {
 
     let mut utxos_length = state.utxos.utxos_len() as i64;
     for block in main_chain.into_chain() {
-        utxos_length += state.unstable_blocks.get_net_utxo_delta(block.block_hash());
+        utxos_length += block.utxo_delta();
     }
 
     crate::types::BlockchainInfo {
