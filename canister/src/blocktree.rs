@@ -1,5 +1,7 @@
+use crate::types::BlockMetrics;
 use crate::unstable_blocks::BlocksCache;
 use bitcoin::block::Header;
+use ic_btc_interface::MillisatoshiPerByte;
 use ic_btc_types::{Block, BlockHash};
 use std::fmt;
 mod serde;
@@ -16,6 +18,11 @@ pub struct CachedBlock {
     difficulty: u128,
     block_hash: BlockHash,
     header: Header,
+    /// Fee rates (millisatoshi per vbyte) for non-coinbase transactions.
+    /// `None` when not yet computed (e.g., after deserialization).
+    fee_rates: Option<Vec<MillisatoshiPerByte>>,
+    /// Net UTXO count change (outputs created - inputs spent).
+    utxo_delta: i64,
 }
 
 impl PartialEq for CachedBlock {
@@ -37,11 +44,31 @@ impl CachedBlock {
             difficulty,
             block_hash,
             header,
+            fee_rates: None,
+            utxo_delta: 0,
         }
     }
 
     pub fn block(&self) -> Block {
         self.cache.borrow().get(&self.block_hash).unwrap()
+    }
+
+    pub fn set_metrics(&mut self, metrics: BlockMetrics) {
+        self.fee_rates = Some(metrics.fee_rates);
+        self.utxo_delta = metrics.utxo_delta;
+    }
+
+    pub fn fee_rates(&self) -> Option<&[MillisatoshiPerByte]> {
+        self.fee_rates.as_deref()
+    }
+
+    pub fn utxo_delta(&self) -> i64 {
+        self.utxo_delta
+    }
+
+    fn clear_metrics(&mut self) {
+        self.fee_rates = None;
+        self.utxo_delta = 0;
     }
 }
 
@@ -233,8 +260,25 @@ impl BlockTree<CachedBlock> {
         self.root.cache.clone()
     }
 
-    pub fn extend_cached(&mut self, block: Block) -> Result<(), BlockDoesNotExtendTree> {
-        self.extend(CachedBlock::new_cached(self.cache(), block))
+    pub fn extend_cached(
+        &mut self,
+        block: Block,
+        metrics: BlockMetrics,
+    ) -> Result<(), BlockDoesNotExtendTree> {
+        let mut cached = CachedBlock::new_cached(self.cache(), block);
+        cached.set_metrics(metrics);
+        self.extend(cached)
+    }
+
+    pub fn set_root_metrics(&mut self, metrics: BlockMetrics) {
+        self.root.set_metrics(metrics);
+    }
+
+    pub fn clear_all_metrics(&mut self) {
+        self.root.clear_metrics();
+        for child in &mut self.children {
+            child.clear_all_metrics();
+        }
     }
 
     pub fn into_root_and_remove_from_cache(self) -> Block {
@@ -713,7 +757,9 @@ mod test {
             // Each one of these should be a separate fork.
             let block = BlockBuilder::with_prev_header(&genesis_block_header).build();
             children.push(CachedBlock::new_cached(block_tree.cache(), block.clone()));
-            block_tree.extend_cached(block).unwrap();
+            block_tree
+                .extend_cached(block, BlockMetrics::default())
+                .unwrap();
         }
 
         assert_eq!(block_tree.children.len(), 4);
@@ -736,7 +782,9 @@ mod test {
         let mut block_tree = test_tree(blocks[0].clone());
 
         for block in blocks.iter().skip(1) {
-            block_tree.extend_cached(block.clone()).unwrap();
+            block_tree
+                .extend_cached(block.clone(), BlockMetrics::default())
+                .unwrap();
         }
 
         for (i, block) in blocks.iter().enumerate() {
@@ -775,7 +823,9 @@ mod test {
             }
 
             for block in blocks.iter().skip(1) {
-                block_tree.extend_cached(block.clone()).unwrap();
+                block_tree
+                    .extend_cached(block.clone(), BlockMetrics::default())
+                    .unwrap();
             }
 
             for (i, block) in blocks.iter().enumerate() {
@@ -826,6 +876,7 @@ mod test {
                 .extend_cached(
                     BlockBuilder::with_prev_header(&genesis_block_header)
                         .build_with_mock_difficulty(i),
+                    BlockMetrics::default(),
                 )
                 .unwrap();
         }
@@ -877,7 +928,9 @@ mod test {
 
         for (i, block) in chain.iter().enumerate().skip(1) {
             expected_blocks_with_depths_by_heights[i].push((block, (chain_len - i) as u32));
-            block_tree.extend_cached(block.clone()).unwrap();
+            block_tree
+                .extend_cached(block.clone(), BlockMetrics::default())
+                .unwrap();
         }
 
         let actual_block_hashes_with_depths_by_heights =
@@ -903,9 +956,15 @@ mod test {
         let fork = BlockChainBuilder::fork(&chain[0], 2).build();
 
         let mut block_tree = test_tree(chain[0].clone());
-        block_tree.extend_cached(chain[1].clone()).unwrap();
-        block_tree.extend_cached(fork[0].clone()).unwrap();
-        block_tree.extend_cached(fork[1].clone()).unwrap();
+        block_tree
+            .extend_cached(chain[1].clone(), BlockMetrics::default())
+            .unwrap();
+        block_tree
+            .extend_cached(fork[0].clone(), BlockMetrics::default())
+            .unwrap();
+        block_tree
+            .extend_cached(fork[1].clone(), BlockMetrics::default())
+            .unwrap();
 
         let block_hashes_with_depths_by_heights = block_tree.block_hashes_with_depths_by_heights();
 
@@ -952,7 +1011,7 @@ mod test {
         fn grow_tree(chain: Vec<Block>) -> BlockTree {
             let mut tree = test_tree(chain[0].clone());
             for block in chain.into_iter().skip(1) {
-                tree.extend_cached(block).unwrap();
+                tree.extend_cached(block, BlockMetrics::default()).unwrap();
             }
             tree
         }

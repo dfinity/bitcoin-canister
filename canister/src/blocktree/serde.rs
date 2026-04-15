@@ -160,6 +160,8 @@ impl<'de> TreeVisitor<'de, CachedBlock> for CachedBlockTreeVisitor {
                     block_hash,
                     difficulty,
                     header,
+                    fee_rates: None,
+                    utxo_delta: 0,
                 };
                 (block, size)
             })
