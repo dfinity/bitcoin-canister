@@ -1,4 +1,5 @@
 use crate::{
+    blocktree::ChainBlock,
     charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, AddressParseError, GetBalanceRequest},

@@ -4,7 +4,7 @@ use crate::{
     unstable_blocks::UnstableBlocks,
     UtxoSet,
 };
-use ic_btc_types::{Block, OutPoint};
+use ic_btc_types::{BlockHash, OutPoint};
 use std::{collections::BTreeSet, sync::Arc};
 
 /// A struct that tracks the UTXO set of a given address.
@@ -44,17 +44,17 @@ impl<'a> AddressUtxoSet<'a> {
         }
     }
 
-    pub fn apply_block(&mut self, block: &Block) {
+    pub fn apply_block(&mut self, block_hash: &BlockHash) {
         for outpoint in self
             .unstable_blocks
-            .get_removed_outpoints(block.block_hash(), &self.address)
+            .get_removed_outpoints(block_hash, &self.address)
         {
             self.removed_outpoints.insert(outpoint.clone());
         }
 
         for outpoint in self
             .unstable_blocks
-            .get_added_outpoints(block.block_hash(), &self.address)
+            .get_added_outpoints(block_hash, &self.address)
         {
             let (txout, height) = self
                 .unstable_blocks
@@ -117,7 +117,7 @@ impl<'a> AddressUtxoSet<'a> {
 mod test {
     use super::*;
     use crate::{
-        test_utils::{BlockBuilder, TransactionBuilder},
+        test_utils::{BlockBuilder, TestBlocksCache, TransactionBuilder},
         types::into_bitcoin_network,
         unstable_blocks,
     };
@@ -143,11 +143,12 @@ mod test {
             .with_transaction(coinbase_tx.clone())
             .build();
 
-        let unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let unstable_blocks = UnstableBlocks::new(cache, &utxo_set, 2, block_0.clone(), network);
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
 
-        address_utxo_set.apply_block(&block_0);
+        address_utxo_set.apply_block(block_0.block_hash());
 
         // Address should have that data.
         assert_eq!(
@@ -190,18 +191,20 @@ mod test {
             .with_transaction(tx.clone())
             .build();
 
-        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks =
+            UnstableBlocks::new(cache, &utxo_set, 2, block_0.clone(), network);
         unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
         let mut address_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
-        address_utxo_set.apply_block(&block_0);
-        address_utxo_set.apply_block(&block_1);
+        address_utxo_set.apply_block(block_0.block_hash());
+        address_utxo_set.apply_block(block_1.block_hash());
 
         assert_eq!(address_utxo_set.into_iter(None).collect::<Vec<_>>(), vec![]);
 
         let mut address_2_utxo_set = AddressUtxoSet::new(address_2, &utxo_set, &unstable_blocks);
-        address_2_utxo_set.apply_block(&block_0);
-        address_2_utxo_set.apply_block(&block_1);
+        address_2_utxo_set.apply_block(block_0.block_hash());
+        address_2_utxo_set.apply_block(block_1.block_hash());
 
         assert_eq!(
             address_2_utxo_set.into_iter(None).collect::<Vec<_>>(),
@@ -248,16 +251,18 @@ mod test {
 
         // Process the blocks.
         let utxo_set = UtxoSet::new(Network::Mainnet);
-        let mut unstable_blocks = UnstableBlocks::new(&utxo_set, 2, block_0.clone(), network);
+        let cache = TestBlocksCache::new(network);
+        let mut unstable_blocks =
+            UnstableBlocks::new(cache, &utxo_set, 2, block_0.clone(), network);
         unstable_blocks::push(&mut unstable_blocks, &utxo_set, block_1.clone()).unwrap();
 
         let mut address_1_utxo_set = AddressUtxoSet::new(address_1, &utxo_set, &unstable_blocks);
-        address_1_utxo_set.apply_block(&block_0);
-        address_1_utxo_set.apply_block(&block_1);
+        address_1_utxo_set.apply_block(block_0.block_hash());
+        address_1_utxo_set.apply_block(block_1.block_hash());
 
         let mut address_2_utxo_set = AddressUtxoSet::new(address_2, &utxo_set, &unstable_blocks);
-        address_2_utxo_set.apply_block(&block_0);
-        address_2_utxo_set.apply_block(&block_1);
+        address_2_utxo_set.apply_block(block_0.block_hash());
+        address_2_utxo_set.apply_block(block_1.block_hash());
 
         // Address 1 should have one UTXO corresponding to the remaining amount
         // it gave back to itself.

@@ -1,4 +1,5 @@
 use crate::{
+    blocktree::{CachedBlock, ChainBlock},
     charge_cycles,
     runtime::{performance_counter, print},
     state::{FeePercentilesCache, State},
@@ -6,7 +7,7 @@ use crate::{
     verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_interface::MillisatoshiPerByte;
-use ic_btc_types::{Block, Transaction};
+use ic_btc_types::Transaction;
 use std::borrow::Cow;
 
 /// The number of transactions to include in the percentiles calculation.
@@ -91,7 +92,7 @@ fn get_current_fee_percentiles_with_number_of_transactions(
 /// cached fees (e.g. blocks already in the tree at upgrade time).
 /// Fees are returned starting with the most recent transactions.
 fn get_fees_per_byte(
-    main_chain: Vec<&Block>,
+    main_chain: Vec<&CachedBlock>,
     unstable_blocks: &UnstableBlocks,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
@@ -108,6 +109,7 @@ fn get_fees_per_byte(
                 Some(cached) => Cow::Borrowed(cached),
                 None => Cow::Owned(
                     block
+                        .block()
                         .txdata()
                         .iter()
                         .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
@@ -185,7 +187,7 @@ mod test {
     use bitcoin::Witness;
     use ic_btc_interface::{Fees, InitConfig, Network, Satoshi};
     use ic_btc_test_utils::random_p2pkh_address;
-    use ic_btc_types::OutPoint;
+    use ic_btc_types::{Block, OutPoint};
     use std::iter::FromIterator;
 
     /// Covers an inclusive range of `[0, 100]` percentiles.
