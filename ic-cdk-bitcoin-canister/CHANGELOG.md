@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [unreleased]
 
+## [0.2.1] - 2026-04-15
+
+### Changed
+
+- Migrate the `ic-cdk-bitcoin-canister` crate from the `@dfinity/cdk-rs` repo ([#509](https://github.com/dfinity/bitcoin-canister/pull/509))
+
+
+[0.2.1]: https://github.com/dfinity/bitcoin-canister/compare/0.2.0...0.2.1
+
+
 ## [0.2.0] - 2026-03-23
 
 ### Added
