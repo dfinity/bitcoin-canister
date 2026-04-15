@@ -2,36 +2,36 @@ benches:
   bitcoin_get_balance_baseline:
     total:
       calls: 1
-      instructions: 6322996
+      instructions: 6322733
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_balance_stress:
     total:
       calls: 1
-      instructions: 254446186
+      instructions: 254445975
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_block_headers_baseline:
     total:
       calls: 1
-      instructions: 535503
+      instructions: 535464
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_block_headers_stress:
     total:
       calls: 1
-      instructions: 12511993
+      instructions: 12511954
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_current_fee_percentiles:
     total:
       calls: 1
-      instructions: 172619641
-      heap_increase: 2
+      instructions: 332616
+      heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_utxos_baseline:
