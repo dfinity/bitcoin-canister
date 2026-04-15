@@ -7,7 +7,7 @@ use crate::{
     verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_interface::MillisatoshiPerByte;
-use ic_btc_types::{Block, Transaction};
+use ic_btc_types::Transaction;
 use std::borrow::Cow;
 
 /// The number of transactions to include in the percentiles calculation.
@@ -109,6 +109,7 @@ fn get_fees_per_byte(
                 Some(cached) => Cow::Borrowed(cached),
                 None => Cow::Owned(
                     block
+                        .block()
                         .txdata()
                         .iter()
                         .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))

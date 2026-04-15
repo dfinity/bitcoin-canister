@@ -87,6 +87,7 @@ impl<A> GenericUnstableBlocks<A> {
             outpoints_cache,
             network,
             next_block_headers,
+            block_metrics,
         } = self;
         GenericUnstableBlocks {
             stability_threshold,
@@ -94,6 +95,7 @@ impl<A> GenericUnstableBlocks<A> {
             outpoints_cache,
             network,
             next_block_headers,
+            block_metrics,
         }
     }
 }
@@ -101,7 +103,13 @@ impl<A> GenericUnstableBlocks<A> {
 pub type UnstableBlocks = GenericUnstableBlocks<BlockTree<CachedBlock>>;
 
 impl UnstableBlocks {
-    pub fn new<Cache: blocks_cache::BlocksCache + 'static>(blocks_cache: Cache, utxos: &UtxoSet, stability_threshold: u32, anchor: Block, network: Network) -> Self {
+    pub fn new<Cache: blocks_cache::BlocksCache + 'static>(
+        blocks_cache: Cache,
+        utxos: &UtxoSet,
+        stability_threshold: u32,
+        anchor: Block,
+        network: Network,
+    ) -> Self {
         // Process the anchor block: populate the outpoints cache and compute metrics.
         let mut outpoints_cache = OutPointsCache::new();
         let anchor_metrics =
