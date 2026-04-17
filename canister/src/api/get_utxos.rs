@@ -824,12 +824,12 @@ mod test {
         );
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
-        let tx = TransactionBuilder::new()
+        let tx_to_address_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
-            .with_transaction(tx.clone())
+            .with_transaction(tx_to_address_2.clone())
             .build();
 
         with_state_mut(|state| {
@@ -846,7 +846,7 @@ mod test {
             GetUtxosResponse {
                 utxos: vec![Utxo {
                     outpoint: OutPoint {
-                        txid: tx.txid().into(),
+                        txid: tx_to_address_2.txid().into(),
                         vout: 0,
                     },
                     value: 1000,
@@ -886,8 +886,9 @@ mod test {
             state::insert_block(state, block_1_prime.clone()).unwrap();
         });
 
-        // Because block 1 and block 1' contest with each other, neither of them are included
-        // in the UTXOs. Only the UTXOs of block 0 are returned.
+        // Block 1 was received first, so it wins the tie with block 1'.
+        // The main chain is genesis -> block_0 -> block_1.
+        // address 2 still has the UTXO from block_1.
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
@@ -895,9 +896,16 @@ mod test {
             })
             .unwrap(),
             GetUtxosResponse {
-                utxos: vec![],
-                tip_block_hash: block_0.block_hash().to_vec(),
-                tip_height: 1,
+                utxos: vec![Utxo {
+                    outpoint: OutPoint {
+                        txid: tx_to_address_2.txid().into(),
+                        vout: 0,
+                    },
+                    value: 1000,
+                    height: 2,
+                }],
+                tip_block_hash: block_1.block_hash().to_vec(),
+                tip_height: 2,
                 next_page: None,
             }
         );
@@ -909,8 +917,8 @@ mod test {
             .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
-                tip_block_hash: block_0.block_hash().to_vec(),
-                tip_height: 1,
+                tip_block_hash: block_1.block_hash().to_vec(),
+                tip_height: 2,
                 next_page: None,
             }
         );
@@ -920,7 +928,12 @@ mod test {
                 filter: None,
             })
             .unwrap(),
-            block_0_utxos
+            GetUtxosResponse {
+                utxos: vec![],
+                tip_block_hash: block_1.block_hash().to_vec(),
+                tip_height: 2,
+                next_page: None,
+            }
         );
 
         // Now extend block 1' with another block that transfers the funds to address 4.
@@ -1428,9 +1441,10 @@ mod test {
             }
         });
 
-        // Because the forks are of equal length, `A`, the root of the fork,
-        // is considered the tip at zero confirmations.
-        assert_tip_at_confirmations(0, chain[0].block_hash());
+        // With the first-received-child-wins rule, the first fork (chain)
+        // is chosen as the main chain. All blocks have stability count >= 0,
+        // so the tip at zero confirmations is F.
+        assert_tip_at_confirmations(0, chain[5].block_hash());
 
         // Extend the first fork by one block.
         let chain_6 = BlockBuilder::with_prev_header(chain[5].header()).build();

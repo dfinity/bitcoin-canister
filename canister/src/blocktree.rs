@@ -480,7 +480,7 @@ impl<Block: ChainBlock> BlockTree<Block> {
     /// At each node, the child subtree with the strictly highest accumulated
     /// difficulty is followed. When accumulated difficulties are tied, the
     /// deeper subtree (by block count) wins. If children still tie on both
-    /// criteria, the chain ends at this node (contested tip).
+    /// criteria, the child that was received first is chosen.
     ///
     /// Runs in O(n) time where n is the number of blocks in the tree.
     pub fn main_chain_by_difficulty(&self) -> BlockChain<'_, Block> {
@@ -502,34 +502,21 @@ impl<Block: ChainBlock> BlockTree<Block> {
 
         let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
         let mut best_chain: Vec<&Block> = vec![];
-        let mut contested = false;
 
         for child in self.children.iter() {
             let (child_diff, child_depth, child_chain) = child.main_chain_by_difficulty_inner();
             let key = (child_diff, child_depth);
 
-            match key.cmp(&best_key) {
-                std::cmp::Ordering::Greater => {
-                    best_key = key;
-                    best_chain = child_chain;
-                    contested = false;
-                }
-                std::cmp::Ordering::Equal => {
-                    contested = true;
-                }
-                std::cmp::Ordering::Less => {}
+            if key > best_key {
+                best_key = key;
+                best_chain = child_chain;
             }
         }
 
         let total_difficulty = self_difficulty + best_key.0;
         let total_depth = 1 + best_key.1;
-
-        if contested {
-            (total_difficulty, total_depth, vec![&self.root])
-        } else {
-            best_chain.push(&self.root);
-            (total_difficulty, total_depth, best_chain)
-        }
+        best_chain.push(&self.root);
+        (total_difficulty, total_depth, best_chain)
     }
 
     /// Returns the length of the main chain determined by most accumulated
@@ -553,34 +540,21 @@ impl<Block: ChainBlock> BlockTree<Block> {
 
         let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
         let mut best_length = 0;
-        let mut contested = false;
 
         for child in self.children.iter() {
             let (child_diff, child_depth, child_len) =
                 child.main_chain_length_by_difficulty_inner();
             let key = (child_diff, child_depth);
 
-            match key.cmp(&best_key) {
-                std::cmp::Ordering::Greater => {
-                    best_key = key;
-                    best_length = child_len;
-                    contested = false;
-                }
-                std::cmp::Ordering::Equal => {
-                    contested = true;
-                }
-                std::cmp::Ordering::Less => {}
+            if key > best_key {
+                best_key = key;
+                best_length = child_len;
             }
         }
 
         let total_difficulty = self_difficulty + best_key.0;
         let total_depth = 1 + best_key.1;
-
-        if contested {
-            (total_difficulty, total_depth, 1)
-        } else {
-            (total_difficulty, total_depth, 1 + best_length)
-        }
+        (total_difficulty, total_depth, 1 + best_length)
     }
 
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
