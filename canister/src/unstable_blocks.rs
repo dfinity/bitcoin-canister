@@ -340,8 +340,8 @@ pub fn push(
 /// following Bitcoin's consensus rule. At each fork, the branch with the
 /// strictly highest accumulated difficulty is followed. When accumulated
 /// difficulties are tied, the longest branch (by block count) wins. If
-/// branches still tie on both criteria, the chain ends at the fork point
-/// (contested tip).
+/// branches still tie on both criteria, the branch that was received first
+/// is chosen.
 pub fn get_main_chain(blocks: &UnstableBlocks) -> BlockChain<'_, CachedBlock> {
     blocks.tree.main_chain_by_difficulty()
 }
@@ -790,7 +790,8 @@ mod test {
     // * -> 1
     // * -> 2
     //
-    // Both blocks 1 and 2 contest with each other -> main chain is empty.
+    // Both blocks 1 and 2 tie on (difficulty, depth). Block 1 was received
+    // first, so it wins. Main chain = [*, 1].
     #[test]
     fn get_main_chain_two_contesting_trees() {
         let block_0 = BlockBuilder::genesis().build();
@@ -804,7 +805,10 @@ mod test {
 
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2.clone()).unwrap();
-        assert_eq!(get_main_chain(&forest), vec![block_0.clone()]);
+        assert_eq!(
+            get_main_chain(&forest),
+            vec![block_0.clone(), block_1.clone()]
+        );
 
         assert_eq!(
             (
@@ -878,8 +882,8 @@ mod test {
     // * -> 1 -> 2 -> 3
     //       \-> a -> b
     //
-    // "1" should be returned in this case, as its the longest chain
-    // without a contested tip.
+    // Block 2 was received before block a, so it wins the tie at block 1.
+    // Main chain = [*, 1, 2, 3].
     #[test]
     fn get_main_chain_fork_at_first_block() {
         let block_0 = BlockBuilder::genesis().build();
@@ -901,7 +905,12 @@ mod test {
         push(&mut forest, &utxos, block_b.clone()).unwrap();
         assert_eq!(
             get_main_chain(&forest),
-            vec![block_0.clone(), block_1.clone()]
+            vec![
+                block_0.clone(),
+                block_1.clone(),
+                block_2.clone(),
+                block_3.clone()
+            ]
         );
 
         assert_eq!(
@@ -937,11 +946,11 @@ mod test {
     //       \-> a -> b
     //   -> x -> y -> z
     //
-    // All blocks are contested.
+    // block_x is the first child of the root, and ties with block_1's
+    // subtree, so x wins. Main chain = [*, x, y, z].
     //
     // Then add block `c` that extends block `b`, at that point
-    // `1 -> a -> b -> c` becomes the only longest chain, and therefore
-    // the "main" chain.
+    // `1 -> a -> b -> c` has greater depth and becomes the main chain.
     #[test]
     fn get_main_chain_multiple_forks() {
         let block_0 = BlockBuilder::genesis().build();
@@ -959,15 +968,18 @@ mod test {
         let cache = TestBlocksCache::new(network);
         let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
-        push(&mut forest, &utxos, block_x).unwrap();
-        push(&mut forest, &utxos, block_y).unwrap();
-        push(&mut forest, &utxos, block_z).unwrap();
+        push(&mut forest, &utxos, block_x.clone()).unwrap();
+        push(&mut forest, &utxos, block_y.clone()).unwrap();
+        push(&mut forest, &utxos, block_z.clone()).unwrap();
         push(&mut forest, &utxos, block_1.clone()).unwrap();
         push(&mut forest, &utxos, block_2).unwrap();
         push(&mut forest, &utxos, block_3).unwrap();
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b.clone()).unwrap();
-        assert_eq!(get_main_chain(&forest), vec![block_0.clone()]);
+        assert_eq!(
+            get_main_chain(&forest),
+            vec![block_0.clone(), block_x, block_y, block_z]
+        );
 
         // Now add block c to b.
         let block_c = BlockBuilder::with_prev_header(block_b.header()).build();
@@ -998,15 +1010,18 @@ mod test {
         let cache = TestBlocksCache::new(network);
         let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
-        push(&mut forest, &utxos, block_1).unwrap();
-        push(&mut forest, &utxos, block_2).unwrap();
-        push(&mut forest, &utxos, block_3).unwrap();
+        push(&mut forest, &utxos, block_1.clone()).unwrap();
+        push(&mut forest, &utxos, block_2.clone()).unwrap();
+        push(&mut forest, &utxos, block_3.clone()).unwrap();
         push(&mut forest, &utxos, block_a).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_x).unwrap();
         push(&mut forest, &utxos, block_y).unwrap();
         push(&mut forest, &utxos, block_z).unwrap();
-        assert_eq!(get_main_chain(&forest), vec![block_0]);
+        assert_eq!(
+            get_main_chain(&forest),
+            vec![block_0, block_1, block_2, block_3]
+        );
     }
 
     #[test]
@@ -1049,12 +1064,12 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 4);
     }
 
-    // Two children with equal difficulty and equal depth: contested.
+    // Two children with equal difficulty and equal depth: first child wins.
     //
     // * (d=5) -> A (d=10)
     //         -> B (d=10)
     //
-    // Main chain = [*], length 1.
+    // A was received first. Main chain = [*, A], length 2.
     #[test]
     fn get_main_chain_equal_difficulty_fork() {
         let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(5);
@@ -1068,11 +1083,11 @@ mod test {
         let cache = TestBlocksCache::new(network);
         let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
-        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
 
-        assert_eq!(get_main_chain(&forest), vec![block_0]);
-        assert_eq!(get_main_chain_length(&forest), 1);
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a]);
+        assert_eq!(get_main_chain_length(&forest), 2);
     }
 
     // Difficulty-based main chain selection: the fork with higher accumulated
@@ -1185,13 +1200,13 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 3);
     }
 
-    // Contested fork with equal difficulty AND equal depth.
+    // Fork with equal difficulty AND equal depth: first child wins.
     //
     // * (d=1) -> A (d=50) -> C (d=10)
     //         -> B (d=20) -> D (d=40)
     //
     // A's branch: (diff=60, depth=2). B's branch: (diff=60, depth=2). Tied.
-    // Main chain = [*], length 1.
+    // A was received first. Main chain = [*, A, C], length 3.
     #[test]
     fn get_main_chain_difficulty_fully_contested() {
         let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
@@ -1209,13 +1224,13 @@ mod test {
         let cache = TestBlocksCache::new(network);
         let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
-        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
-        push(&mut forest, &utxos, block_c).unwrap();
+        push(&mut forest, &utxos, block_c.clone()).unwrap();
         push(&mut forest, &utxos, block_d).unwrap();
 
-        assert_eq!(get_main_chain(&forest), vec![block_0]);
-        assert_eq!(get_main_chain_length(&forest), 1);
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a, block_c]);
+        assert_eq!(get_main_chain_length(&forest), 3);
     }
 
     // Contested deeper in the tree: the main chain stops at the inner fork.
@@ -1223,7 +1238,8 @@ mod test {
     // * (d=5) -> A (d=10) -> B (d=20)
     //                     -> C (d=20)
     //
-    // At A, B and C tie on (diff=20, depth=1). Main chain = [*, A], length 2.
+    // At A, B and C tie on (diff=20, depth=1). First child B wins.
+    // Main chain = [*, A, B], length 3.
     #[test]
     fn get_main_chain_contested_deeper_fork() {
         let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(5);
@@ -1240,11 +1256,11 @@ mod test {
         let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
         push(&mut forest, &utxos, block_a.clone()).unwrap();
-        push(&mut forest, &utxos, block_b).unwrap();
+        push(&mut forest, &utxos, block_b.clone()).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(get_main_chain(&forest), vec![block_0, block_a]);
-        assert_eq!(get_main_chain_length(&forest), 2);
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a, block_b]);
+        assert_eq!(get_main_chain_length(&forest), 3);
     }
 
     // Longer branch wins on accumulated difficulty.
@@ -1417,7 +1433,7 @@ mod test {
     //   / | \
     //  A  B  C  (d=10, 10, 3)
     //
-    // A and B tie. Main chain = [*], length 1.
+    // A and B tie. First child A wins. Main chain = [*, A], length 2.
     #[test]
     fn get_main_chain_three_children_two_tie() {
         let block_0 = BlockBuilder::genesis().build_with_mock_difficulty(1);
@@ -1433,21 +1449,21 @@ mod test {
         let cache = TestBlocksCache::new(network);
         let mut forest = UnstableBlocks::new(cache, &utxos, 1, block_0.clone(), network);
 
-        push(&mut forest, &utxos, block_a).unwrap();
+        push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
         push(&mut forest, &utxos, block_c).unwrap();
 
-        assert_eq!(get_main_chain(&forest), vec![block_0]);
-        assert_eq!(get_main_chain_length(&forest), 1);
+        assert_eq!(get_main_chain(&forest), vec![block_0, block_a]);
+        assert_eq!(get_main_chain_length(&forest), 2);
     }
 
-    // Adding a block resolves a previously contested fork.
+    // Adding a block to a tied fork.
     //
     // Before:
     //   * (d=1) -> A (d=10)
     //           -> B (d=10)
     //
-    // Contested. Main chain = [*].
+    // A was received first, wins the tie. Main chain = [*, A], length 2.
     //
     // After extending A with C (d=5):
     //   * (d=1) -> A (d=10) -> C (d=5)
@@ -1471,8 +1487,11 @@ mod test {
         push(&mut forest, &utxos, block_a.clone()).unwrap();
         push(&mut forest, &utxos, block_b).unwrap();
 
-        assert_eq!(get_main_chain(&forest), vec![block_0.clone()]);
-        assert_eq!(get_main_chain_length(&forest), 1);
+        assert_eq!(
+            get_main_chain(&forest),
+            vec![block_0.clone(), block_a.clone()]
+        );
+        assert_eq!(get_main_chain_length(&forest), 2);
 
         let block_c =
             BlockBuilder::with_prev_header(block_a.header()).build_with_mock_difficulty(5);
