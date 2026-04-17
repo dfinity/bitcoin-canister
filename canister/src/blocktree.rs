@@ -503,6 +503,9 @@ impl<Block: ChainBlock> BlockTree<Block> {
         let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
         let mut best_chain: Vec<&Block> = vec![];
 
+        // Children are ordered by insertion time (`extend` appends via `push`).
+        // Using strict `>` means the first child that sets `best_key` is kept
+        // on ties, so the earliest-received branch wins.
         for child in self.children.iter() {
             let (child_diff, child_depth, child_chain) = child.main_chain_by_difficulty_inner();
             let key = (child_diff, child_depth);
@@ -541,6 +544,8 @@ impl<Block: ChainBlock> BlockTree<Block> {
         let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
         let mut best_length = 0;
 
+        // Same tiebreaker logic as `main_chain_by_difficulty_inner`: strict `>`
+        // keeps the first child on ties.
         for child in self.children.iter() {
             let (child_diff, child_depth, child_len) =
                 child.main_chain_length_by_difficulty_inner();
