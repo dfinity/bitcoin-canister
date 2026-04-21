@@ -992,7 +992,10 @@ mod test {
         );
     }
 
-    // Same as the above test, with a different insertion order.
+    // Same forest as the above test, but inserts 1 → 2 → 3 before x → y → z.
+    // The 1-subtree and the x-subtree tie on both accumulated difficulty and
+    // depth, so the tiebreak picks the earliest-received branch — now 1 → 2 → 3.
+    // Main chain = [*, 1, 2, 3].
     #[test]
     fn get_main_chain_multiple_forks_2() {
         let block_0 = BlockBuilder::genesis().build();
