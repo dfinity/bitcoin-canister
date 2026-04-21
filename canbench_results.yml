@@ -2,84 +2,84 @@ benches:
   bitcoin_get_balance_baseline:
     total:
       calls: 1
-      instructions: 6189038
+      instructions: 6187041
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_balance_stress:
     total:
       calls: 1
-      instructions: 254311743
+      instructions: 254309746
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_block_headers_baseline:
     total:
       calls: 1
-      instructions: 372270
+      instructions: 368673
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_block_headers_stress:
     total:
       calls: 1
-      instructions: 2857996
+      instructions: 2677999
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_current_fee_percentiles:
     total:
       calls: 1
-      instructions: 47246
+      instructions: 45249
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_utxos_baseline:
     total:
       calls: 1
-      instructions: 7816291
+      instructions: 7814294
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   bitcoin_get_utxos_stress:
     total:
       calls: 1
-      instructions: 4686318652
+      instructions: 4686302255
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_many_branches:
     total:
       calls: 1
-      instructions: 887844
+      instructions: 849028
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_single_chain:
     total:
       calls: 1
-      instructions: 376638
+      instructions: 356641
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_blockchain_info_with_forks:
     total:
       calls: 1
-      instructions: 407334
+      instructions: 386332
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   get_metrics:
     total:
       calls: 1
-      instructions: 3522936
+      instructions: 3426762
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
   insert_300_blocks:
     total:
       calls: 1
-      instructions: 441231719
+      instructions: 441228119
       heap_increase: 9
       stable_memory_increase: 0
     scopes:
@@ -111,7 +111,7 @@ benches:
   insert_block_headers:
     total:
       calls: 1
-      instructions: 2844071043
+      instructions: 2844068643
       heap_increase: 0
       stable_memory_increase: 0
     scopes:
@@ -123,7 +123,7 @@ benches:
   insert_block_headers_multiple_times:
     total:
       calls: 1
-      instructions: 10300806046
+      instructions: 10300782046
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
@@ -135,7 +135,7 @@ benches:
   insert_block_with_10k_transactions:
     total:
       calls: 1
-      instructions: 1402364466
+      instructions: 1402364454
       heap_increase: 74
       stable_memory_increase: 0
     scopes:
@@ -167,7 +167,7 @@ benches:
   insert_block_with_1k_transactions:
     total:
       calls: 1
-      instructions: 116137706
+      instructions: 116137694
       heap_increase: 7
       stable_memory_increase: 0
     scopes:
@@ -199,7 +199,7 @@ benches:
   pre_upgrade_with_many_unstable_blocks:
     total:
       calls: 1
-      instructions: 3383555132
+      instructions: 3383555127
       heap_increase: 1538
       stable_memory_increase: 1024
     scopes:
