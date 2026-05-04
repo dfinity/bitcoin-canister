@@ -809,7 +809,7 @@ impl Fees {
 /// It is defined as the chain with the most accumulated proof-of-work (difficulty),
 /// following Bitcoin's consensus rule. When accumulated difficulties are tied,
 /// the longest branch (by block count) wins. If branches still tie on both
-/// criteria, the chain ends at the fork point (contested tip).
+/// criteria, the branch that was received first is chosen.
 #[derive(CandidType, Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct BlockchainInfo {
     /// The height of the main chain tip.
