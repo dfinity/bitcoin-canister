@@ -836,6 +836,20 @@ mod test {
             state::insert_block(state, block_1.clone()).unwrap();
         });
 
+        let block_1_utxos = GetUtxosResponse {
+            utxos: vec![Utxo {
+                outpoint: OutPoint {
+                    txid: tx_to_address_2.txid().into(),
+                    vout: 0,
+                },
+                value: 1000,
+                height: 2,
+            }],
+            tip_block_hash: block_1.block_hash().to_vec(),
+            tip_height: 2,
+            next_page: None,
+        };
+
         // address 2 should now have the UTXO while address 1 has no UTXOs.
         assert_eq!(
             get_utxos(GetUtxosRequest {
@@ -843,19 +857,7 @@ mod test {
                 filter: None,
             })
             .unwrap(),
-            GetUtxosResponse {
-                utxos: vec![Utxo {
-                    outpoint: OutPoint {
-                        txid: tx_to_address_2.txid().into(),
-                        vout: 0,
-                    },
-                    value: 1000,
-                    height: 2,
-                }],
-                tip_block_hash: block_1.block_hash().to_vec(),
-                tip_height: 2,
-                next_page: None,
-            }
+            block_1_utxos
         );
 
         assert_eq!(
@@ -872,7 +874,7 @@ mod test {
             }
         );
 
-        // Extend block 0 (again) with block 1 that spends the 1000 satoshis to address 3
+        // Extend block 0 (again) with block 1' that spends the 1000 satoshis to address 3.
         // This causes a fork.
         let tx = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
@@ -895,19 +897,7 @@ mod test {
                 filter: None,
             })
             .unwrap(),
-            GetUtxosResponse {
-                utxos: vec![Utxo {
-                    outpoint: OutPoint {
-                        txid: tx_to_address_2.txid().into(),
-                        vout: 0,
-                    },
-                    value: 1000,
-                    height: 2,
-                }],
-                tip_block_hash: block_1.block_hash().to_vec(),
-                tip_height: 2,
-                next_page: None,
-            }
+            block_1_utxos
         );
         assert_eq!(
             get_utxos(GetUtxosRequest {
