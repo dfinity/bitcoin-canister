@@ -15,9 +15,9 @@ To this end, it provides a low-level API with a small set of functions, which se
 
 ## Useful Links
 
-* [Documentation](https://internetcomputer.org/docs/current/developer-docs/integrations/bitcoin/)
+* [Documentation](https://docs.internetcomputer.org/guides/chain-fusion/bitcoin)
+* [Quickstart](https://docs.internetcomputer.org/guides/chain-fusion/bitcoin#development-setup): Use the [`bitcoin-starter`](https://github.com/dfinity/icp-cli-templates/tree/main/bitcoin-starter) template with a local Bitcoin regtest instance.
+* [`basic_bitcoin`](https://icp.ninja/projects/basic-bitcoin) example on ICP Ninja.
 * [Interface Specification](/INTERFACE_SPECIFICATION.md)
-* [Example: `basic_bitcoin` on ICP Ninja](https://icp.ninja/projects/basic-bitcoin)
-* [Tutorial: Use the `basic_bitcoin` example with a local Bitcoin regtest instance](https://internetcomputer.org/docs/build-on-btc/using-regtest)
 
 For developers contributing to this repo, please see the [development guide](/development-guide.md).
