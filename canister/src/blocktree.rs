@@ -530,36 +530,36 @@ impl<Block: ChainBlock> BlockTree<Block> {
     ///
     /// Runs in O(n) time where n is the number of blocks in the tree.
     pub fn main_chain_length_by_difficulty(&self) -> usize {
-        self.main_chain_length_by_difficulty_inner().2
+        self.main_chain_length_by_difficulty_inner().1
     }
 
-    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_length).
-    fn main_chain_length_by_difficulty_inner(&self) -> (DifficultyBasedDepth, usize, usize) {
+    /// Bottom-up DFS returning (accumulated_difficulty, main_chain_length).
+    ///
+    /// Same logic as [`main_chain_by_difficulty_inner`](Self::main_chain_by_difficulty_inner),
+    /// but avoids the per-node `Vec<&Block>` allocation since only the chain
+    /// length is needed.
+    fn main_chain_length_by_difficulty_inner(&self) -> (DifficultyBasedDepth, usize) {
         let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty());
 
         if self.children.is_empty() {
-            return (self_difficulty, 1, 1);
+            return (self_difficulty, 1);
         }
 
         let mut best_key = (DifficultyBasedDepth::new(0), 0usize);
-        let mut best_length = 0;
 
         // Same tiebreaker logic as `main_chain_by_difficulty_inner`: strict `>`
         // keeps the first child on ties.
         for child in self.children.iter() {
-            let (child_diff, child_depth, child_len) =
-                child.main_chain_length_by_difficulty_inner();
-            let key = (child_diff, child_depth);
+            let key = child.main_chain_length_by_difficulty_inner();
 
             if key > best_key {
                 best_key = key;
-                best_length = child_len;
             }
         }
 
         let total_difficulty = self_difficulty + best_key.0;
         let total_depth = 1 + best_key.1;
-        (total_difficulty, total_depth, 1 + best_length)
+        (total_difficulty, total_depth)
     }
 
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`
