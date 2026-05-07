@@ -22,22 +22,42 @@ use crate::{
     types::{CandidHttpRequest, CandidHttpResponse},
 };
 use ic_btc_interface::Flag;
-use ic_cdk::{
-    init,
-    management_canister::{HttpRequestResult, TransformArgs},
-    post_upgrade, query,
-};
+use ic_cdk::{init, post_upgrade, query};
 use ic_cdk_timers::TimerId;
+use ic_management_canister_types::{HttpRequestResult, TransformArgs};
 use serde_bytes::ByteBuf;
-use std::convert::TryFrom;
 use std::{cell::RefCell, collections::HashMap, future::Future, time::Duration};
 
 thread_local! {
     /// The local storage for the data fetched from the external APIs.
     static BLOCK_INFO_DATA: RefCell<HashMap<String, BlockInfo>> = RefCell::new(HashMap::new());
 
+    /// The last fetched main chain height of the monitored canister.
+    static CANISTER_HEIGHT: RefCell<Option<u64>> = const { RefCell::new(None) };
+
     /// The local storage for the API access target.
     static API_ACCESS_TARGET: RefCell<Option<Flag>> = const { RefCell::new(None) };
+
+    /// Error counters for calls to the monitored canister.
+    static CANISTER_CALL_ERRORS: RefCell<CanisterCallErrors> = const { RefCell::new(CanisterCallErrors::new()) };
+}
+
+/// Tracks error counts for calls to the monitored canister.
+#[derive(Clone, Debug, Default)]
+pub struct CanisterCallErrors {
+    pub get_blockchain_info: u64,
+    pub get_config: u64,
+    pub set_config: u64,
+}
+
+impl CanisterCallErrors {
+    const fn new() -> Self {
+        Self {
+            get_blockchain_info: 0,
+            get_config: 0,
+            set_config: 0,
+        }
+    }
 }
 
 /// This function is called when the canister is created.
@@ -75,30 +95,37 @@ fn start_block_info_fetch_loop() {
     );
 }
 
-/// Fetches the data from the external APIs and stores it in the local storage.
-async fn fetch_block_info_data() {
-    let data = crate::fetch::fetch_all_data().await;
-    data.into_iter().for_each(crate::storage::insert_block_info);
+/// Fetches the data from the external APIs and canister monitored and stores it in the local storage.
+async fn fetch_block_height() {
+    let (explorer_data, canister_height) = futures::join!(
+        fetch::fetch_all_providers_data(),
+        fetch::fetch_canister_height(),
+    );
+    for info in explorer_data {
+        storage::insert_block_info(info);
+    }
+    storage::set_canister_height(canister_height);
+    if canister_height.is_none() {
+        print(&format!(
+            "Error getting canister {} main chain height.",
+            storage::get_canister().canister_principal()
+        ));
+    }
 }
 
-/// Periodically fetches data and sets the API access to the canister monitored.
+/// Periodically fetches the latest block height and sets the API access to the canister monitored.
 async fn tick() {
-    fetch_block_info_data().await;
+    fetch_block_height().await;
     crate::api_access::synchronise_api_access().await;
 }
 
 /// Returns the health status of the canister monitored (for Bitcoin only).
 #[query]
 fn health_status() -> LegacyHealthStatus {
-    let network = storage::get_canister().network();
+    let network = storage::get_config().network;
     match network {
         Network::BitcoinMainnet | Network::BitcoinTestnet => {
-            LegacyHealthStatus::try_from(health::health_status()).unwrap_or_else(|e| {
-                panic!(
-                    "Failed to convert health status for Bitcoin network: {}",
-                    e.reason
-                )
-            })
+            LegacyHealthStatus::from(health::health_status())
         }
         _ => panic!("health_status can only be called for Bitcoin networks"),
     }
@@ -158,13 +185,8 @@ fn set_timer(delay: Duration, future: impl Future<Output = ()> + 'static) -> Tim
 // to the downstream code which creates HTTP requests with transform functions.
 
 #[query]
-fn transform_bitcoin_canister(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_bitcoin_canister().transform(raw)
-}
-
-#[query]
-fn transform_bitcoin_mainnet_api_bitaps_com(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_bitcoin_mainnet_api_bitaps_com().transform(raw)
+fn transform_bitcoin_mainnet_api_bitcore_io(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_bitcoin_mainnet_api_bitcore_io().transform(raw)
 }
 
 #[query]
@@ -193,8 +215,8 @@ fn transform_bitcoin_mempool(raw: TransformArgs) -> HttpRequestResult {
 }
 
 #[query]
-fn transform_dogecoin_canister(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_canister().transform(raw)
+fn transform_dogecoin_mainnet_api_bitcore_io(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_api_bitcore_io().transform(raw)
 }
 
 #[query]
@@ -208,8 +230,8 @@ fn transform_dogecoin_mainnet_api_blockcypher_com(raw: TransformArgs) -> HttpReq
 }
 
 #[query]
-fn transform_dogecoin_mainnet_tokenview(raw: TransformArgs) -> HttpRequestResult {
-    endpoint_dogecoin_mainnet_tokenview().transform(raw)
+fn transform_dogecoin_mainnet_psy_protocol(raw: TransformArgs) -> HttpRequestResult {
+    endpoint_dogecoin_mainnet_psy_protocol().transform(raw)
 }
 
 #[cfg(test)]

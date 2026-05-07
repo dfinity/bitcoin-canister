@@ -3,6 +3,7 @@
 members = [
     # Production crates
     "canister",
+    "ic-cdk-bitcoin-canister",
     "interface",
     "types",
     "validation",
@@ -15,6 +16,7 @@ members = [
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
     "e2e-tests/scenario-3",
+    "e2e-tests/cdk-bitcoin-canister",
     "e2e-tests/disable-api-if-not-fully-synced-flag",
     "test-utils",
     "ic-http",
@@ -27,7 +29,7 @@ resolver = "2"
 assert_matches = "1.5.0"
 bitcoin = { package = "bitcoin-dogecoin", version = "0.32.7-doge.0" }
 byteorder = "1.4.3"
-canbench-rs = "0.4.0"
+canbench-rs = "0.4.1"
 candid = "0.10.6"
 candid_parser = "0.1.4"
 ciborium = "0.2.1"
@@ -41,7 +43,7 @@ ic-btc-interface = { path = "./interface" }
 ic-btc-test-utils = { path = "./test-utils" }
 ic-btc-types = { path = "./types" }
 ic-btc-validation = { path = "./validation" }
-ic-cdk = "0.19.0"
+ic-cdk = "0.20.0"
 ic-http = { path = "./ic-http" }
 ic-metrics-encoder = "1.0.0"
 ic-stable-structures = "0.7.2"

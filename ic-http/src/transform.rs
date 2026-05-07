@@ -1,7 +1,7 @@
-use ic_cdk::management_canister::{HttpRequestResult, TransformArgs, TransformContext};
+use ic_management_canister_types::{HttpRequestResult, TransformArgs, TransformContext};
 
 #[cfg(not(target_arch = "wasm32"))]
-use {candid::Principal, ic_cdk::management_canister::TransformFunc};
+use {candid::Principal, ic_management_canister_types::TransformFunc};
 
 #[cfg(not(target_arch = "wasm32"))]
 pub type TransformFn = dyn Fn(TransformArgs) -> HttpRequestResult + 'static;
@@ -18,10 +18,10 @@ where
     #[cfg(target_arch = "wasm32")]
     {
         TransformContext {
-            function: ic_cdk::management_canister::TransformFunc::new(
-                ic_cdk::api::canister_self(),
-                candid_function_name.to_string(),
-            ),
+            function: ic_management_canister_types::TransformFunc(candid::Func {
+                principal: ic_cdk::api::canister_self(),
+                method: candid_function_name.to_string(),
+            }),
             context,
         }
     }
@@ -44,7 +44,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use ic_cdk::management_canister::HttpRequestArgs;
+    use ic_management_canister_types::HttpRequestArgs;
 
     /// A test transform function.
     fn transform_function_1(arg: TransformArgs) -> HttpRequestResult {

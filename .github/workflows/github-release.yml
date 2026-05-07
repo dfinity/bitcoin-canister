@@ -8,12 +8,12 @@ on:
         required: true
         type: choice
         options:
-          - ic-btc-canister # Creates ic-btc-canister/release/YYYY-MM-DD
+          - ic-btc-canister # Creates release/YYYY-MM-DD
           - watchdog        # Creates watchdog/release/YYYY-MM-DD
 
 # Creates GitHub releases for date-based canisters:
-# - ic-btc-canister: date-based tag with WASM artifact
-# - watchdog: date-based tag with WASM artifact
+# - ic-btc-canister: tag release/YYYY-MM-DD with WASM artifact
+# - watchdog: tag watchdog/release/YYYY-MM-DD with WASM artifact
 
 jobs:
   canister-release:
@@ -30,19 +30,21 @@ jobs:
             echo "WASM_NAME=ic-btc-canister.wasm.gz" >> "$GITHUB_ENV"
             echo "INCLUDE_PATH=canister/**" >> "$GITHUB_ENV"
             echo "CANDID_PATH=canister/candid.did" >> "$GITHUB_ENV"
+            echo "TAG_PREFIX=release/" >> "$GITHUB_ENV"
           else
             echo "WASM_NAME=watchdog.wasm.gz" >> "$GITHUB_ENV"
             echo "INCLUDE_PATH=watchdog/**" >> "$GITHUB_ENV"
             echo "CANDID_PATH=watchdog/candid.did" >> "$GITHUB_ENV"
+            echo "TAG_PREFIX=watchdog/release/" >> "$GITHUB_ENV"
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - name: Download WASM artifacts
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           script: |
             const allArtifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
@@ -76,26 +78,24 @@ jobs:
           echo "WASM_SHA256=$(shasum -a 256 ./wasms/${{ env.WASM_NAME }} | cut -d ' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@80e6af7a2ec7f280fffe2d0a9d3a12a9d11d86e9 # v2.75.1
         with:
           tool: git-cliff
 
       - name: Generate release tag and notes
         run: |
           RELEASE_DATE=$(date +%Y-%m-%d)
-          RELEASE_TAG="${{ inputs.release_type }}/release/${RELEASE_DATE}"
+          RELEASE_TAG="${{ env.TAG_PREFIX }}${RELEASE_DATE}"
           echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
           echo "RELEASE_DATE=$RELEASE_DATE" >> "$GITHUB_ENV"
           
-          # Find previous tag: prefer <package>/release/*, fallback to release/*
-          PREV_TAG=$(git tag --list '${{ inputs.release_type }}/release/*' --sort=-version:refname | head -n1)
-          if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(git tag --list 'release/*' --sort=-version:refname | head -n1)
-          fi
+          # Find previous tag for this package (release/* or watchdog/release/*)
+          PREV_TAG=$(git tag --list '${{ env.TAG_PREFIX }}*' --sort=-version:refname | head -n1)
           
           # Generate changelog with git-cliff (scoped to package directory)
           # Strip the version title line (e.g., "## [release/2026-01-21] - 2026-01-21")
           CHANGELOG=$(git-cliff --config cliff.toml \
+            --tag-pattern "${{ env.TAG_PREFIX }}.*" \
             --include-path "${{ env.INCLUDE_PATH }}" \
             --unreleased \
             --tag "$RELEASE_TAG" \
@@ -125,11 +125,11 @@ jobs:
           echo "EOF" >> "$GITHUB_ENV"
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         with:
           draft: true
           tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ inputs.release_type }}/release/${{ env.RELEASE_DATE }}
+          name: ${{ env.RELEASE_TAG }}
           body: ${{ env.RELEASE_BODY }}
           files: |
             wasms/${{ env.WASM_NAME }}

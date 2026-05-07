@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 
-# Function to deploy the watchdog canister for mainnet bitcoin_canister.
+# Configure dfx.json to use pre-built WASM from wasms/ when present (e.g. in CI).
+# When wasms/ is not present (local dev), dfx.json is left unchanged and the build step runs.
+use_prebuilt_watchdog_wasm() {
+  if [[ -f ../wasms/watchdog.wasm.gz ]]; then
+    sed -i.bak 's|"wasm": "../../target/wasm32-unknown-unknown/release/watchdog.wasm.gz"|"wasm": "../../wasms/watchdog.wasm.gz"|' dfx.json
+  fi
+}
+
+# Function to deploy the watchdog canister for mainnet bitcoin_canister using pre-built WASM.
 deploy_watchdog_canister_bitcoin_mainnet() {
+  use_prebuilt_watchdog_wasm
   dfx deploy --no-wallet watchdog --argument "(variant { init = record { target = (variant { bitcoin_mainnet } ) } } )"
 }
 
@@ -52,23 +61,47 @@ check_health_status_fields() {
   done
 }
 
-# Function to check if health status data is available.
+# Function to check if explorer data is available in health status.
 check_health_status_data() {
   ITERATIONS=15
   DELAY_SEC=2
-  has_enough_data=0
+  has_explorer_data=0
   for ((i=1; i<=ITERATIONS; i++))
   do
     health_status=$(dfx canister call watchdog health_status --query)
-    if ! [[ $health_status == *"height_status = variant { not_enough_data }"* ]]; then
-      has_enough_data=1
+    if ! [[ $health_status == *"height_target = null"* ]]; then
+      has_explorer_data=1
       break
     fi
     sleep $DELAY_SEC
   done
-  if [ $has_enough_data -eq 0 ]; then
-    echo "FAIL: Not enough data in health status of ${0##*/}"
+  if [ $has_explorer_data -eq 0 ]; then
+    echo "FAIL: height_target is null in health status of ${0##*/}"
     exit 4
+  fi
+}
+
+# Function to check for presence of specific fields in the health status v2
+# and that explorer_height is not null.
+check_health_status_v2_fields() {
+  FIELDS=(
+    "canister_height"
+    "explorer_height"
+    "height_status"
+    "explorers"
+  )
+
+  health_status=$(dfx canister call watchdog health_status_v2 --query)
+  for field in "${FIELDS[@]}"; do
+    if ! [[ $health_status == *"$field = "* ]]; then
+      echo "FAIL: $field not found in health_status_v2 of ${0##*/}"
+      exit 3
+    fi
+  done
+
+  if [[ $health_status == *"explorer_height = null"* ]]; then
+    echo "FAIL: explorer_height is null in health_status_v2 of ${0##*/}"
+    exit 3
   fi
 }
 
@@ -86,6 +119,9 @@ check_metric_names() {
     "api_access_target"
     "explorer_height"
     "available_explorers"
+    "canister_call_errors_get_blockchain_info"
+    "canister_call_errors_get_config"
+    "canister_call_errors_set_config"
   )
 
   metrics=$(get_watchdog_canister_metrics)

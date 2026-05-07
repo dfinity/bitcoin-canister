@@ -10,11 +10,11 @@ on:
         options:
           - ic-btc-canister  # Date-based, uses git-cliff
           - watchdog         # Date-based, uses git-cliff
-          - library-crates   # Semver (ic-btc-interface & ic-btc-validation), uses release-plz
+          - library-crates   # Semver (ic-btc-interface, ic-cdk-bitcoin-canister & ic-btc-validation), uses release-plz
 
 # Creates a Release PR for a specific package:
 # - ic-btc-canister, watchdog: via git-cliff (date-based)
-# - library-crates: via release-plz (semver) - includes ic-btc-interface & ic-btc-validation
+# - library-crates: via release-plz (semver) - includes ic-btc-interface, ic-cdk-bitcoin-canister & ic-btc-validation
 
 jobs:
   # ===== Canister Release PR (date-based) =====
@@ -33,18 +33,20 @@ jobs:
           if [ "${{ inputs.package }}" = "ic-btc-canister" ]; then
             echo "INCLUDE_PATH=canister/**" >> "$GITHUB_ENV"
             echo "CHANGELOG_PATH=canister/CHANGELOG.md" >> "$GITHUB_ENV"
+            echo "TAG_PREFIX=release/" >> "$GITHUB_ENV"
           else
             echo "INCLUDE_PATH=watchdog/**" >> "$GITHUB_ENV"
             echo "CHANGELOG_PATH=watchdog/CHANGELOG.md" >> "$GITHUB_ENV"
+            echo "TAG_PREFIX=watchdog/release/" >> "$GITHUB_ENV"
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@80e6af7a2ec7f280fffe2d0a9d3a12a9d11d86e9 # v2.75.1
         with:
           tool: git-cliff
 
@@ -55,14 +57,14 @@ jobs:
 
       - name: Update CHANGELOG
         run: |
-          # Get the previous release tag
-          PREV_TAG=$(git tag --list '${{ inputs.package }}/release/*' --sort=-version:refname | head -n1)
-          NEW_TAG="${{ inputs.package }}/release/${{ env.RELEASE_DATE }}"
+          # Get the previous release tag (release/* or watchdog/release/*)
+          PREV_TAG=$(git tag --list '${{ env.TAG_PREFIX }}*' --sort=-version:refname | head -n1)
+          NEW_TAG="${{ env.TAG_PREFIX }}${{ env.RELEASE_DATE }}"
           
           # Prepend new changelog entry
           git-cliff --config cliff.toml \
             --include-path "${{ env.INCLUDE_PATH }}" \
-            --tag-pattern "${{ inputs.package }}/release/.*" \
+            --tag-pattern "${{ env.TAG_PREFIX }}.*" \
             --prepend "${{ env.CHANGELOG_PATH }}" \
             --unreleased \
             --tag "$NEW_TAG"
@@ -70,25 +72,25 @@ jobs:
           # Append footer link for the new release
           if [ -n "$PREV_TAG" ]; then
             echo "" >> "${{ env.CHANGELOG_PATH }}"
-            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> "${{ env.CHANGELOG_PATH }}"
+            echo "[$NEW_TAG]: https://github.com/dfinity/bitcoin-canister/compare/${PREV_TAG}...${NEW_TAG}" >> "${{ env.CHANGELOG_PATH }}"
           else
             echo "" >> "${{ env.CHANGELOG_PATH }}"
-            echo "[release/${{ env.RELEASE_DATE }}]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> "${{ env.CHANGELOG_PATH }}"
+            echo "[$NEW_TAG]: https://github.com/dfinity/bitcoin-canister/releases/tag/${NEW_TAG}" >> "${{ env.CHANGELOG_PATH }}"
           fi
 
       - name: Create PR
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore(${{ inputs.package }}): update changelog for release/${{ env.RELEASE_DATE }}"
-          title: "chore(${{ inputs.package }}): release/${{ env.RELEASE_DATE }}"
+          commit-message: "chore(${{ inputs.package }}): update changelog for ${{ env.TAG_PREFIX }}${{ env.RELEASE_DATE }}"
+          title: "chore(${{ inputs.package }}): ${{ env.TAG_PREFIX }}${{ env.RELEASE_DATE }}"
           body: |
-            ## ${{ inputs.package }} release/${{ env.RELEASE_DATE }}
+            ## ${{ inputs.package }} ${{ env.TAG_PREFIX }}${{ env.RELEASE_DATE }}
 
             This PR updates the changelog for ${{ inputs.package }}.
 
             After merging, run the **Create GitHub Releases** workflow with `${{ inputs.package }}` selected.
-          branch: ${{ inputs.package }}/release/${{ env.RELEASE_DATE }}
+          branch: ${{ env.TAG_PREFIX }}${{ env.RELEASE_DATE }}
           labels: release
           draft: true
 
@@ -104,12 +106,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - name: Create Release PR (release-plz)
-        # Creates a single PR for ic-btc-interface and ic-btc-validation
+        # Creates a single PR for ic-btc-interface, ic-cdk-bitcoin-canister and ic-btc-validation
         uses: release-plz/action@5ab144c9d67d4346240190d0f95ed08668677928 # v0.5.121
         with:
           command: release-pr

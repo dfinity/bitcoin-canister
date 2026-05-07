@@ -22,5 +22,8 @@ check_health_status_fields
 # Check if health status data is available.
 check_health_status_data
 
+# Check health_status_v2 has specific fields and non-null values.
+check_health_status_v2_fields
+
 # Echo success message.
 echo "SUCCESS: Health status check completed successfully for ${0##*/}"

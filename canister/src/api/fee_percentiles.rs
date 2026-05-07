@@ -1,4 +1,5 @@
 use crate::{
+    blocktree::{CachedBlock, ChainBlock},
     charge_cycles,
     runtime::{performance_counter, print},
     state::{FeePercentilesCache, State},
@@ -6,7 +7,8 @@ use crate::{
     verify_has_enough_cycles, with_state, with_state_mut,
 };
 use ic_btc_interface::MillisatoshiPerByte;
-use ic_btc_types::{Block, Transaction};
+use ic_btc_types::Transaction;
+use std::borrow::Cow;
 
 /// The number of transactions to include in the percentiles calculation.
 const NUM_TRANSACTIONS: u32 = 10_000;
@@ -32,6 +34,12 @@ pub fn get_current_fee_percentiles() -> Vec<MillisatoshiPerByte> {
         ins_total
     ));
     res
+}
+
+/// Returns the fee percentiles without charging cycles, for use in benchmarks.
+#[cfg(feature = "canbench-rs")]
+pub fn get_current_fee_percentiles_without_fees() -> Vec<MillisatoshiPerByte> {
+    with_state_mut(|s| get_current_fee_percentiles_with_number_of_transactions(s, NUM_TRANSACTIONS))
 }
 
 pub(crate) fn get_current_fee_percentiles_impl(state: &mut State) -> Vec<MillisatoshiPerByte> {
@@ -78,36 +86,48 @@ fn get_current_fee_percentiles_with_number_of_transactions(
     fee_percentiles
 }
 
-/// Computes the fees per byte of the last `number_of_transactions` transactions on the main chain.
-/// Fees are returned in a reversed order, starting with the most recent ones, followed by the older ones.
-/// Eg. for transactions [..., Tn-2, Tn-1, Tn] fees would be [Fn, Fn-1, Fn-2, ...].
+/// Returns the fees per vbyte of the last `number_of_transactions` transactions on the main chain.
+/// Reads pre-computed fee rates from the block_fees cache in unstable blocks.
+/// Falls back to computing fees from transactions directly for blocks without
+/// cached fees (e.g. blocks already in the tree at upgrade time).
+/// Fees are returned starting with the most recent transactions.
 fn get_fees_per_byte(
-    main_chain: Vec<&Block>,
+    main_chain: Vec<&CachedBlock>,
     unstable_blocks: &UnstableBlocks,
     number_of_transactions: u32,
 ) -> Vec<MillisatoshiPerByte> {
     let mut fees = Vec::new();
-    let mut tx_i = 0;
+    let mut tx_count: u32 = 0;
     for block in main_chain.iter().rev() {
-        if tx_i >= number_of_transactions {
+        if tx_count >= number_of_transactions {
             break;
         }
-        for tx in block.txdata() {
-            if tx_i >= number_of_transactions {
+
+        // Use cached fees if available, otherwise compute from transactions.
+        let block_fee_rates: Cow<'_, [MillisatoshiPerByte]> = match block.fee_rates() {
+            Some(cached) => Cow::Borrowed(cached),
+            None => Cow::Owned(
+                block
+                    .block()
+                    .txdata()
+                    .iter()
+                    .filter_map(|tx| get_tx_fee_per_byte(tx, unstable_blocks))
+                    .collect(),
+            ),
+        };
+
+        for &fee in block_fee_rates.iter() {
+            if tx_count >= number_of_transactions {
                 break;
             }
-            if !tx.is_coinbase() {
-                tx_i += 1;
-            }
-            if let Some(fee) = get_tx_fee_per_byte(tx, unstable_blocks) {
-                fees.push(fee);
-            }
+            tx_count += 1;
+            fees.push(fee);
         }
     }
     fees
 }
 
-/// Computes the fees per byte of the given transaction.
+/// Computes the fees per vbyte of the given transaction.
 fn get_tx_fee_per_byte(
     tx: &Transaction,
     unstable_blocks: &UnstableBlocks,
@@ -117,26 +137,18 @@ fn get_tx_fee_per_byte(
         return None;
     }
 
-    let mut satoshi = 0;
+    let mut input_sum: u64 = 0;
     for tx_in in tx.input() {
         let outpoint = (&tx_in.previous_output).into();
-        satoshi += unstable_blocks
+        input_sum += unstable_blocks
             .get_tx_out(&outpoint)
             .unwrap_or_else(|| panic!("tx out of outpoint {:?} must exist", outpoint))
             .0
             .value;
     }
-    for tx_out in tx.output() {
-        satoshi -= tx_out.value.to_sat();
-    }
-
-    if tx.vsize() > 0 {
-        // Don't use floating point division to avoid non-determinism.
-        Some(((1000 * satoshi) / tx.vsize() as u64) as MillisatoshiPerByte)
-    } else {
-        // Calculating fee is not possible for a zero-size invalid transaction.
-        None
-    }
+    let output_sum: u64 = tx.output().iter().map(|o| o.value.to_sat()).sum();
+    let fee_satoshi = input_sum.checked_sub(output_sum)?;
+    crate::types::fee_rate_per_vbyte(fee_satoshi, tx.vsize())
 }
 
 /// Compute percentiles of input values.
@@ -174,7 +186,7 @@ mod test {
     use bitcoin::Witness;
     use ic_btc_interface::{Fees, InitConfig, Network, Satoshi};
     use ic_btc_test_utils::random_p2pkh_address;
-    use ic_btc_types::OutPoint;
+    use ic_btc_types::{Block, OutPoint};
     use std::iter::FromIterator;
 
     /// Covers an inclusive range of `[0, 100]` percentiles.
@@ -650,5 +662,67 @@ mod test {
             assert_ne!(x, vec![fee_per_total_size; PERCENTILE_BUCKETS]);
             assert_eq!(x, vec![fee_per_vsize; PERCENTILE_BUCKETS]);
         });
+    }
+
+    #[test]
+    fn block_fee_rates_are_populated_during_insert() {
+        let number_of_blocks = 5;
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+            let chain = main_chain.into_chain();
+
+            // Every block on the main chain should have cached fees except the genesis block.
+            // Collect them (most recent first) to compare against get_fees_per_byte.
+            let mut cached_fees: Vec<MillisatoshiPerByte> = Vec::new();
+            for block in chain.iter().rev() {
+                if let Some(rates) = block.fee_rates() {
+                    cached_fees.extend_from_slice(rates);
+                }
+            }
+            assert_eq!(cached_fees.len(), number_of_blocks as usize);
+
+            // Verify the cached fees match what get_fees_per_byte returns.
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+            let fee_rates =
+                get_fees_per_byte(main_chain.into_chain(), &state.unstable_blocks, 10_000);
+            assert_eq!(fee_rates, cached_fees);
+        });
+    }
+
+    #[test]
+    fn correct_fees_after_upgrade_with_empty_block_fee_rates_cache() {
+        let number_of_blocks = 5;
+        let blocks = generate_blocks(10_000, number_of_blocks);
+        let stability_threshold = blocks.len() as u128;
+        init_state(blocks, stability_threshold);
+
+        // Verify fees are correct before simulating upgrade.
+        let percentiles_before = get_current_fee_percentiles();
+        assert_eq!(percentiles_before.len(), PERCENTILE_BUCKETS);
+
+        // Simulate upgrade: clear the block_metrics cache and the fee percentiles cache.
+        with_state_mut(|state| {
+            state.unstable_blocks.clear_block_metrics();
+            state.fee_percentiles_cache = None;
+        });
+
+        // Verify that all cached block fees are gone.
+        with_state(|state| {
+            let main_chain = unstable_blocks::get_main_chain(&state.unstable_blocks);
+            for block in main_chain.into_chain() {
+                assert!(
+                    block.fee_rates().is_none(),
+                    "block fees should be empty after simulated upgrade"
+                );
+            }
+        });
+
+        // Fee percentiles should still be correct via the fallback path.
+        let percentiles_after = get_current_fee_percentiles();
+        assert_eq!(percentiles_after, percentiles_before);
     }
 }

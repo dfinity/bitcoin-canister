@@ -2,7 +2,7 @@ use crate::{
     mock::{hash, Mock},
     transform::TransformFn,
 };
-use ic_cdk::management_canister::{HttpRequestArgs, HttpRequestResult, TransformArgs};
+use ic_management_canister_types::{HttpRequestArgs, HttpRequestResult, TransformArgs};
 use std::collections::HashMap;
 use std::sync::RwLock;
 

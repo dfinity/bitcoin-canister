@@ -4,23 +4,39 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [release/2026-01-30] - 2026-01-30
-
-### Added
-
-- Add `health_status_v2` endpoint (#450)
+## [watchdog/release/2026-03-13] - 2026-03-13
 
 ### Changed
 
-- Refactor explorer logic (#456)
+- Use `get_blockchain_info` canister endpoint to retrieve monitored canister height ([#484](https://github.com/dfinity/bitcoin-canister/pull/484))
+
+- Replace api_bitaps with api_bitcore provider ([#500](https://github.com/dfinity/bitcoin-canister/pull/500))
+
+- Replace tokenview explorer with psy protocol ([#493](https://github.com/dfinity/bitcoin-canister/pull/493))
+
+
+### Fixed
+
+- Rename `HealthStatus` field names `canister_height` and `explorer_height` ([#492](https://github.com/dfinity/bitcoin-canister/pull/492))
+
+
+## [watchdog/release/2026-01-30] - 2026-01-30
+
+### Added
+
+- Add `health_status_v2` endpoint ([#450](https://github.com/dfinity/bitcoin-canister/pull/450))
+
+### Changed
+
+- Refactor explorer logic ([#456](https://github.com/dfinity/bitcoin-canister/pull/456))
 
 ### Removed
 
-- Remove retrieving latest block hash (#459)
+- Remove retrieving latest block hash ([#459](https://github.com/dfinity/bitcoin-canister/pull/459))
 
-- Remove deprecated method counter (#455)
+- Remove deprecated method counter ([#455](https://github.com/dfinity/bitcoin-canister/pull/455))
 
-- Remove blockexplorer.one from list of providers (#454)
+- Remove blockexplorer.one from list of providers ([#454](https://github.com/dfinity/bitcoin-canister/pull/454))
 
 ## [2025-12-03 Release](https://github.com/dfinity/bitcoin-canister/releases/tag/release%2F2025-12-03)
 
@@ -100,4 +116,6 @@ Chores:
 
 - create watchdog canister
 
-[release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30
+[watchdog/release/2026-01-30]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2025-12-03...watchdog/release/2026-01-30
+
+[watchdog/release/2026-03-13]: https://github.com/dfinity/bitcoin-canister/compare/watchdog/release/2026-01-30...watchdog/release/2026-03-13

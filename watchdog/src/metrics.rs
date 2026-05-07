@@ -36,8 +36,8 @@ pub fn get_metrics() -> CandidHttpResponse {
 
 /// Encodes the metrics in the Prometheus format.
 fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
-    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
+    let canister = config.canister;
     let (bitcoin_mainnet, bitcoin_testnet, dogecoin_mainnet) = match canister.network() {
         Network::BitcoinMainnet => (1.0, 0.0, 0.0),
         Network::BitcoinTestnet => (0.0, 1.0, 0.0),
@@ -66,12 +66,12 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
     let health = crate::health::health_status();
     w.encode_gauge(
         "canister_height",
-        health.height_source.map(|x| x as f64).unwrap_or(NO_VALUE),
+        health.canister_height.map(|x| x as f64).unwrap_or(NO_VALUE),
         "Main chain height of the canister.",
     )?;
     w.encode_gauge(
         "height_target",
-        health.height_target.map(|x| x as f64).unwrap_or(NO_VALUE),
+        health.explorer_height.map(|x| x as f64).unwrap_or(NO_VALUE),
         "Height target derived from explorer heights.",
     )?;
     w.encode_gauge(
@@ -126,6 +126,23 @@ fn encode_metrics(w: &mut MetricsEncoder<Vec<u8>>) -> std::io::Result<()> {
         "available_explorers",
         available_explorers_count as f64,
         "The number of available explorers to compare against.",
+    )?;
+
+    let errors = crate::storage::get_canister_call_errors();
+    w.encode_counter(
+        "canister_call_errors_get_blockchain_info",
+        errors.get_blockchain_info as f64,
+        "The number of errors when calling get_blockchain_info on the monitored canister.",
+    )?;
+    w.encode_counter(
+        "canister_call_errors_get_config",
+        errors.get_config as f64,
+        "The number of errors when calling get_config on the monitored canister.",
+    )?;
+    w.encode_counter(
+        "canister_call_errors_set_config",
+        errors.set_config as f64,
+        "The number of errors when calling set_config on the monitored canister.",
     )?;
 
     Ok(())

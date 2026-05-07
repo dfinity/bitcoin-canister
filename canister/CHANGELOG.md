@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-04-15] - 2026-04-15
+
+### Added
+
+- Add `utxo_deltas` cache for improved `get_blockchain_info` performance ([#513](https://github.com/dfinity/bitcoin-canister/pull/513))
+
+- Add benchmarks for `bitcoin_get_*` endpoints ([#508](https://github.com/dfinity/bitcoin-canister/pull/508))
+
+
+### Changed
+
+- Move block metrics to `CachedBlock` ([#516](https://github.com/dfinity/bitcoin-canister/pull/516))
+
+- Cherry pick `dfinity/dogecoin-canister@c947b5c` cache unstable blocks in stable memory ([#506](https://github.com/dfinity/bitcoin-canister/pull/506))
+
+- Cache tx fee rates in heap memory ([#514](https://github.com/dfinity/bitcoin-canister/pull/514))
+
+- Bump ic-cdk to v0.20.0 ([#510](https://github.com/dfinity/bitcoin-canister/pull/510))
+
+
+## [release/2026-03-06] - 2026-03-06
+
+### Added
+
+- Add most accumulated difficulty criterion in main chain selection ([#490](https://github.com/dfinity/bitcoin-canister/pull/490))
+
+### Changed
+
+- Move CanisterArg to ic-btc-interface ([#495](https://github.com/dfinity/bitcoin-canister/pull/495))
+
+## [release/2026-02-18] - 2026-02-18
+
+### Added
+
+- Add `get_blockchain_info` endpoint ([#483](https://github.com/dfinity/bitcoin-canister/pull/483))
+- Add network validation for addresses in get_balance and get_utxos requests ([#458](https://github.com/dfinity/bitcoin-canister/pull/458))
+- Add canister_arg to initialize and upgrade canister ([#457](https://github.com/dfinity/bitcoin-canister/pull/457))
+
 ## [release/2025-12-03] - 2025-12-03
 
 ### Changed
@@ -281,3 +319,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2022-12-20]: https://github.com/dfinity/bitcoin-canister/compare/release/2022-12-02...release/2022-12-20
 
 [release/2022-12-02]: https://github.com/dfinity/bitcoin-canister/releases/tag/release/2022-12-02
+
+[release/2026-02-18]: https://github.com/dfinity/bitcoin-canister/compare/release/2025-12-03...release/2026-02-18
+
+[release/2026-03-06]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-02-18...release/2026-03-06
+
+[release/2026-04-15]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-03-06...release/2026-04-15

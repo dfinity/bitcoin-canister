@@ -1,12 +1,12 @@
 use crate::endpoints::*;
 use crate::http::HttpRequestConfig;
 
-/// Mocks all the Bitcoin mainnet outcalls to be successful.
+/// Mocks all the Bitcoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_mainnet_outcalls() {
     let mocks = [
         (
-            endpoint_bitcoin_mainnet_api_bitaps_com(),
-            BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE,
+            endpoint_bitcoin_mainnet_api_bitcore_io(),
+            BITCOIN_MAINNET_API_BITCORE_IO_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_api_blockchair_com(),
@@ -15,10 +15,6 @@ pub fn mock_bitcoin_mainnet_outcalls() {
         (
             endpoint_bitcoin_mainnet_api_blockcypher_com(),
             BITCOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
-        ),
-        (
-            endpoint_bitcoin_canister(),
-            BITCOIN_MAINNET_CANISTER_RESPONSE,
         ),
         (
             endpoint_bitcoin_mainnet_blockchain_info(),
@@ -43,18 +39,12 @@ pub fn mock_bitcoin_mainnet_outcalls() {
     }
 }
 
-/// Mocks all the Bitcoin testnet outcalls to be successful.
+/// Mocks all the Bitcoin testnet HTTP explorer outcalls to be successful.
 pub fn mock_bitcoin_testnet_outcalls() {
-    let mocks = [
-        (
-            endpoint_bitcoin_canister(),
-            BITCOIN_TESTNET_CANISTER_RESPONSE,
-        ),
-        (
-            endpoint_bitcoin_testnet_mempool(),
-            BITCOIN_TESTNET_MEMPOOL_RESPONSE,
-        ),
-    ];
+    let mocks = [(
+        endpoint_bitcoin_testnet_mempool(),
+        BITCOIN_TESTNET_MEMPOOL_RESPONSE,
+    )];
     for (config, response_body) in mocks {
         let request = config.request();
         let mock_response = ic_http::create_response()
@@ -65,9 +55,13 @@ pub fn mock_bitcoin_testnet_outcalls() {
     }
 }
 
-/// Mocks all the Dogecoin mainnet outcalls to be successful.
+/// Mocks all the Dogecoin mainnet HTTP explorer outcalls to be successful.
 pub fn mock_dogecoin_mainnet_outcalls() {
     let mocks = [
+        (
+            endpoint_dogecoin_mainnet_api_bitcore_io(),
+            DOGECOIN_MAINNET_API_BITCORE_IO_RESPONSE,
+        ),
         (
             endpoint_dogecoin_mainnet_api_blockchair_com(),
             DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE,
@@ -77,12 +71,8 @@ pub fn mock_dogecoin_mainnet_outcalls() {
             DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE,
         ),
         (
-            endpoint_dogecoin_canister(),
-            DOGECOIN_MAINNET_CANISTER_RESPONSE,
-        ),
-        (
-            endpoint_dogecoin_mainnet_tokenview(),
-            DOGECOIN_MAINNET_TOKENVIEW_RESPONSE,
+            endpoint_dogecoin_mainnet_psy_protocol(),
+            DOGECOIN_MAINNET_PSY_PROTOCOL_RESPONSE,
         ),
     ];
     for (config, response_body) in mocks {
@@ -97,21 +87,21 @@ pub fn mock_dogecoin_mainnet_outcalls() {
 
 fn all_mock_outcalls() -> Vec<HttpRequestConfig> {
     vec![
+        endpoint_bitcoin_mainnet_api_bitcore_io(),
         endpoint_bitcoin_mainnet_api_blockchair_com(),
         endpoint_bitcoin_mainnet_api_blockcypher_com(),
-        endpoint_bitcoin_canister(),
         endpoint_bitcoin_mainnet_blockchain_info(),
         endpoint_bitcoin_mainnet_blockstream_info(),
+        endpoint_dogecoin_mainnet_api_bitcore_io(),
         endpoint_dogecoin_mainnet_api_blockchair_com(),
         endpoint_dogecoin_mainnet_api_blockcypher_com(),
-        endpoint_dogecoin_canister(),
-        endpoint_dogecoin_mainnet_tokenview(),
+        endpoint_dogecoin_mainnet_psy_protocol(),
         endpoint_bitcoin_mainnet_mempool(),
         endpoint_bitcoin_testnet_mempool(),
     ]
 }
 
-/// Mocks all the outcalls to fail with status code 404.
+/// Mocks all the HTTP explorer outcalls to fail with status code 404.
 pub fn mock_all_outcalls_404() {
     for config in all_mock_outcalls() {
         let request = config.request();
@@ -134,16 +124,27 @@ pub fn mock_all_outcalls_abusing_api() {
 
 pub const DONT_ABUSE_THE_API: &str = r#"Don't abuse the API. Please contact support."#;
 
-// https://api.bitaps.com/btc/v1/blockchain/block/last
-pub const BITCOIN_MAINNET_API_BITAPS_COM_RESPONSE: &str = r#"{
-    "data": {
-        "height": 700001,
-        "hash": "0000000000000000000aaa111111111111111111111111111111111111111111",
-        "header": "AGAAILqkI+SFlsu4FRCwVNiwU3Eku+N/g9sEAAAAAAAAAAAAH1tWFGtObfxfaOeXVwH9txRFHWS4V+N24n9AyliR1S4Yvghko4kGFwdzNef9XA4=",
-        "adjustedTimestamp": 1678294552
-    },
-    "time": 0.0018
-}"#;
+// https://api.bitcore.io/api/BTC/mainnet/block?limit=1
+pub const BITCOIN_MAINNET_API_BITCORE_IO_RESPONSE: &str = r#"[
+    {
+        "chain": "BTC",
+        "network": "mainnet",
+        "hash": "000000000000000000008be250ccc80da6c16b76b1803a0b12681df71c390988",
+        "height": 700009,
+        "version": 537919488,
+        "size": 749743,
+        "merkleRoot": "ec96bdffb2fdfe1de67caa017a8aff057f01b42e39350ca17a2ba5122d868c70",
+        "time": "2026-03-10T10:31:35.000Z",
+        "timeNormalized": "2026-03-10T10:31:35.000Z",
+        "nonce": 1995573277,
+        "bits": 386003148,
+        "previousBlockHash": "000000000000000000013fd0007073a3637515b501d56da32b538ecd508a6e4b",
+        "nextBlockHash": "",
+        "reward": 313014557,
+        "transactionCount": 5048,
+        "feeData": {"feeTotal":514557,"mean":0.5580776616275406,"median":0.1935483870967742,"mode":0.1935483870967742}
+    }
+]"#;
 
 // https://api.blockchair.com/bitcoin/stats
 pub const BITCOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
@@ -217,44 +218,33 @@ pub const BITCOIN_MAINNET_BLOCKCHAIN_INFO_RESPONSE: &str = r#"700004"#;
 // https://blockstream.info/api/blocks/tip/height
 pub const BITCOIN_MAINNET_BLOCKSTREAM_INFO_RESPONSE: &str = r#"700005"#;
 
-// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-// https://axowo-ciaaa-aaaad-acs7q-cai.raw.icp0.io/metrics (staging)
-pub const BITCOIN_MAINNET_CANISTER_RESPONSE: &str = r#"{
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 700007 1680014894644
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 782801 1680014894644
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 86798838 1680014894644
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 86294218 1680014894644
-}"#;
-
 // https://mempool.space/api/blocks/tip/height
 pub const BITCOIN_MAINNET_MEMPOOL_RESPONSE: &str = r#"700008"#;
 
-// https://ghsi2-tqaaa-aaaan-aaaca-cai.raw.ic0.app/metrics
-pub const BITCOIN_TESTNET_CANISTER_RESPONSE: &str = r#"{
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 55001 1682533330541
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 2430866 1682533330541
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 28755498 1682533330541
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 28388537 1682533330541
-}"#;
-
 // https://mempool.space/testnet4/api/blocks/tip/height
 pub const BITCOIN_TESTNET_MEMPOOL_RESPONSE: &str = r#"55002"#;
+
+// https://api.bitcore.io/api/DOGE/mainnet/block?limit=1
+pub const DOGECOIN_MAINNET_API_BITCORE_IO_RESPONSE: &str = r#"[
+    {
+        "chain": "DOGE",
+        "network": "mainnet",
+        "hash": "8e27a6b7b5505f1d3fad75190598997c3217f9b4fbc79ca925ce5b75d8aca6a3",
+        "height": 5931100,
+        "version": 6422788,
+        "size": 32640,
+        "merkleRoot": "d6a05d89139116f2d2a715a088ab002d6b2b974eb1669dca41a34ba8bd6b9a45",
+        "time": "2026-03-10T08:52:32.000Z",
+        "timeNormalized": "2026-03-10T08:52:32.000Z",
+        "nonce": 0,
+        "bits": 436245300,
+        "previousBlockHash": "36c92c28151d7b890814ab800b79ae5d39dc817f2056e492368755dfea00eab5",
+        "nextBlockHash": "",
+        "reward": 1000571856878,
+        "transactionCount": 88,
+        "feeData": {"feeTotal":571856878,"mean":19869.43776817445,"median":2000,"mode":2000}
+    }
+]"#;
 
 // https://api.blockchair.com/dogecoin/stats
 pub const DOGECOIN_MAINNET_API_BLOCKCHAIR_COM_RESPONSE: &str = r#"{
@@ -342,41 +332,5 @@ pub const DOGECOIN_MAINNET_API_BLOCKCYPHER_COM_RESPONSE: &str = r#"{
     "last_fork_hash": "5f1e661913de85c9fee78fdd998eefeef3284d28ed3c069e96af6414fa8be377"
 }"#;
 
-// https://gordg-fyaaa-aaaan-aaadq-cai.raw.ic0.app/metrics
-// https://bhuiy-ciaaa-aaaad-abwea-cai.raw.icp0.io/metrics
-pub const DOGECOIN_MAINNET_CANISTER_RESPONSE: &str = r#"
-    # HELP main_chain_height Height of the main chain.
-    # TYPE main_chain_height gauge
-    main_chain_height 5931098 1761310299589
-    # HELP stable_height The height of the latest stable block.
-    # TYPE stable_height gauge
-    stable_height 5930458 1761310299589
-    # HELP utxos_length The number of UTXOs in the set.
-    # TYPE utxos_length gauge
-    utxos_length 202812896 1761310299589
-    # HELP address_utxos_length The number of UTXOs that are owned by supported addresses.
-    # TYPE address_utxos_length gauge
-    address_utxos_length 202383805 1761310299589
-"#;
-
-// https://doge.tokenview.io/api/chainstat/doge
-pub const DOGECOIN_MAINNET_TOKENVIEW_RESPONSE: &str = r#"{
-    "code": 1,
-    "msg": "成功",
-    "enMsg": "SUCCESS",
-    "data": {
-        "priceUsd": "0.112765",
-        "changeUsd24h": "1.08",
-        "totalSupply": "151482236295.70523",
-        "sentValue24H": "4864251870.993262",
-        "hashrate": "3172090662519395.0",
-        "addressCount": "111151004.0",
-        "difficulty": "46047401.610852025",
-        "block_no": "5931072",
-        "txCount24H": 15704,
-        "size": "121449476",
-        "holders": 7164346,
-        "txCount": 406888172,
-        "turnoverRate": "3.21"
-    }
-}"#;
+// https://doge-electrs-demo.qed.me/blocks/tip/height
+pub const DOGECOIN_MAINNET_PSY_PROTOCOL_RESPONSE: &str = r#"5931072"#;

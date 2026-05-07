@@ -1,8 +1,8 @@
 use crate::config::SubnetType;
 use ic_cdk::call::CallResult;
 #[cfg(target_arch = "wasm32")]
-use ic_cdk::management_canister::cost_http_request;
-use ic_cdk::management_canister::{HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs};
+use ic_cdk_management_canister::cost_http_request;
+use ic_management_canister_types::{HttpHeader, HttpRequestArgs, HttpRequestResult, TransformArgs};
 use serde_json::json;
 
 pub type TransformFn = fn(TransformArgs) -> HttpRequestResult;

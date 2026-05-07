@@ -15,8 +15,11 @@ dfx start --background --clean
 # Deploy the canister that returns the blocks.
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
+# Configure dfx.json to use pre-built WASM
+use_prebuilt_bitcoin_wasm
+
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
-# And enabling 'disable_api_if_not_fully_synced'. 
+# And enabling 'disable_api_if_not_fully_synced'.
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };
@@ -114,8 +117,8 @@ dfx start --background --clean
 dfx deploy --no-wallet e2e-disable-api-if-not-fully-synced-flag
 
 # Deploy the bitcoin canister, setting the blocks_source to be the source above.
-# And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make 
-# influence behaviour of the canister. 
+# And disabling 'disable_api_if_not_fully_synced'. Hence, it should not make
+# influence behaviour of the canister.
 dfx deploy --no-wallet bitcoin --argument "(variant {init = record {
   stability_threshold = opt 1;
   network = opt variant { regtest };

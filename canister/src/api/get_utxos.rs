@@ -1,12 +1,12 @@
 use crate::{
-    blocktree::BlockChain,
+    blocktree::{BlockChain, CachedBlock, ChainBlock},
     charge_cycles,
     runtime::{performance_counter, print},
     types::{Address, AddressParseError, GetUtxosRequest, Page, Utxo},
     unstable_blocks, verify_has_enough_cycles, with_state, with_state_mut, State,
 };
 use ic_btc_interface::{GetUtxosError, GetUtxosResponse, Utxo as PublicUtxo, UtxosFilter};
-use ic_btc_types::{Block, BlockHash, OutPoint, Txid};
+use ic_btc_types::{BlockHash, OutPoint, Txid};
 use serde_bytes::ByteBuf;
 
 // The maximum number of UTXOs that are allowed to be included in a single
@@ -174,16 +174,16 @@ fn get_utxos_internal(
 //    stability_count(b) = d(b) if |D(b)| = 0 and d(b) - max_{b' ∈ D(b)} d(b') otherwise.
 // ```
 fn get_stability_count(
-    blocks_with_depths_on_the_same_height: &[(&Block, u32)],
+    blocks_with_depths_on_the_same_height: &[(&BlockHash, u32)],
     target_block: &BlockHash,
 ) -> i32 {
     let mut max_depth_of_the_other_blocks = 0;
     let mut target_block_depth = 0;
-    for (block, depth) in blocks_with_depths_on_the_same_height.iter() {
-        if block.block_hash() != target_block {
-            max_depth_of_the_other_blocks = std::cmp::max(max_depth_of_the_other_blocks, *depth);
+    for &(block_hash, depth) in blocks_with_depths_on_the_same_height.iter() {
+        if block_hash != target_block {
+            max_depth_of_the_other_blocks = std::cmp::max(max_depth_of_the_other_blocks, depth);
         } else {
-            target_block_depth = *depth;
+            target_block_depth = depth;
         }
     }
     target_block_depth as i32 - max_depth_of_the_other_blocks as i32
@@ -193,7 +193,7 @@ fn get_utxos_from_chain(
     state: &State,
     address: &str,
     min_confirmations: u32,
-    chain: BlockChain<Block>,
+    chain: BlockChain<CachedBlock>,
     offset: Option<Utxo>,
     utxo_limit: usize,
 ) -> Result<(GetUtxosResponse, Stats), GetUtxosError> {
@@ -218,7 +218,7 @@ fn get_utxos_from_chain(
     let mut tip_block_hash = chain.first().block_hash();
     let mut tip_block_height = state.utxos.next_height();
 
-    let blocks_with_depths_by_heights = state.unstable_blocks.blocks_with_depths_by_heights();
+    let blocks_with_depths_by_heights = state.unstable_blocks.block_hashes_with_depths_by_heights();
 
     // Apply unstable blocks to the UTXO set.
     let ins_start = performance_counter();
@@ -232,7 +232,7 @@ fn get_utxos_from_chain(
         }
         tip_block_hash = block.block_hash();
         tip_block_height = state.utxos.next_height() + (i as u32);
-        address_utxos.apply_block(block);
+        address_utxos.apply_block(block.block_hash());
     }
     stats.ins_apply_unstable_blocks = performance_counter() - ins_start;
 
@@ -291,7 +291,7 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, runtime, state,
-        test_utils::{BlockBuilder, BlockChainBuilder, TransactionBuilder},
+        test_utils::{BlockBuilder, BlockChainBuilder, TestBlocksCache, TransactionBuilder},
         types::into_bitcoin_network,
         with_state_mut,
     };
@@ -824,17 +824,31 @@ mod test {
         );
 
         // Extend block 0 with block 1 that spends the 1000 satoshis and gives them to address 2.
-        let tx = TransactionBuilder::new()
+        let tx_to_address_2 = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
             .with_output(&address_2, 1000)
             .build();
         let block_1 = BlockBuilder::with_prev_header(block_0.header())
-            .with_transaction(tx.clone())
+            .with_transaction(tx_to_address_2.clone())
             .build();
 
         with_state_mut(|state| {
             state::insert_block(state, block_1.clone()).unwrap();
         });
+
+        let block_1_utxos = GetUtxosResponse {
+            utxos: vec![Utxo {
+                outpoint: OutPoint {
+                    txid: tx_to_address_2.txid().into(),
+                    vout: 0,
+                },
+                value: 1000,
+                height: 2,
+            }],
+            tip_block_hash: block_1.block_hash().to_vec(),
+            tip_height: 2,
+            next_page: None,
+        };
 
         // address 2 should now have the UTXO while address 1 has no UTXOs.
         assert_eq!(
@@ -843,19 +857,7 @@ mod test {
                 filter: None,
             })
             .unwrap(),
-            GetUtxosResponse {
-                utxos: vec![Utxo {
-                    outpoint: OutPoint {
-                        txid: tx.txid().into(),
-                        vout: 0,
-                    },
-                    value: 1000,
-                    height: 2,
-                }],
-                tip_block_hash: block_1.block_hash().to_vec(),
-                tip_height: 2,
-                next_page: None,
-            }
+            block_1_utxos
         );
 
         assert_eq!(
@@ -872,7 +874,7 @@ mod test {
             }
         );
 
-        // Extend block 0 (again) with block 1 that spends the 1000 satoshis to address 3
+        // Extend block 0 (again) with block 1' that spends the 1000 satoshis to address 3.
         // This causes a fork.
         let tx = TransactionBuilder::new()
             .with_input(ic_btc_types::OutPoint::new(coinbase_tx.txid(), 0))
@@ -886,20 +888,16 @@ mod test {
             state::insert_block(state, block_1_prime.clone()).unwrap();
         });
 
-        // Because block 1 and block 1' contest with each other, neither of them are included
-        // in the UTXOs. Only the UTXOs of block 0 are returned.
+        // Block 1 was received first, so it wins the tie with block 1'.
+        // The main chain is genesis -> block_0 -> block_1.
+        // address 2 still has the UTXO from block_1.
         assert_eq!(
             get_utxos(GetUtxosRequest {
                 address: address_2.to_string(),
                 filter: None,
             })
             .unwrap(),
-            GetUtxosResponse {
-                utxos: vec![],
-                tip_block_hash: block_0.block_hash().to_vec(),
-                tip_height: 1,
-                next_page: None,
-            }
+            block_1_utxos
         );
         assert_eq!(
             get_utxos(GetUtxosRequest {
@@ -909,8 +907,8 @@ mod test {
             .unwrap(),
             GetUtxosResponse {
                 utxos: vec![],
-                tip_block_hash: block_0.block_hash().to_vec(),
-                tip_height: 1,
+                tip_block_hash: block_1.block_hash().to_vec(),
+                tip_height: 2,
                 next_page: None,
             }
         );
@@ -920,7 +918,12 @@ mod test {
                 filter: None,
             })
             .unwrap(),
-            block_0_utxos
+            GetUtxosResponse {
+                utxos: vec![],
+                tip_block_hash: block_1.block_hash().to_vec(),
+                tip_height: 2,
+                next_page: None,
+            }
         );
 
         // Now extend block 1' with another block that transfers the funds to address 4.
@@ -1098,7 +1101,8 @@ mod test {
             .with_transaction(tx)
             .build();
 
-        let mut state = State::new(2, network, block_0);
+        let cache = TestBlocksCache::new(network);
+        let mut state = State::new(cache, 2, network, block_0);
         state::insert_block(&mut state, block_1.clone()).unwrap();
 
         // Address 1 should have no UTXOs at zero confirmations.
@@ -1143,7 +1147,8 @@ mod test {
                 block_builder = block_builder.with_transaction(transaction.clone());
             }
             let block_0 = block_builder.build();
-            let state = State::new(2, network, block_0.clone());
+            let cache = TestBlocksCache::new(network);
+            let state = State::new(cache, 2, network, block_0.clone());
             let tip_block_hash = block_0.block_hash();
 
             let utxo_set = get_utxos_internal(
@@ -1254,7 +1259,8 @@ mod test {
                 prev_block = Some(block);
             }
 
-            let mut state = State::new(2, network, blocks[0].clone());
+        let cache = TestBlocksCache::new(network);
+            let mut state = State::new(cache, 2, network, blocks[0].clone());
             for block in blocks[1..].iter() {
                 state::insert_block(&mut state, block.clone()).unwrap();
             }
@@ -1364,7 +1370,7 @@ mod test {
     #[test]
     fn test_get_stability_count_single_block_on_height() {
         let block = BlockBuilder::genesis().build();
-        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block, 1)];
+        let blocks_with_depths: Vec<(&BlockHash, u32)> = vec![(block.block_hash(), 1)];
         // Stability count should be 1.
         assert_eq!(
             get_stability_count(&blocks_with_depths, block.block_hash()),
@@ -1378,7 +1384,11 @@ mod test {
         let block2 = BlockBuilder::genesis().build();
         let block3 = BlockBuilder::genesis().build();
 
-        let blocks_with_depths: Vec<(&Block, u32)> = vec![(&block1, 5), (&block2, 7), (&block3, 3)];
+        let blocks_with_depths: Vec<(&BlockHash, u32)> = vec![
+            (block1.block_hash(), 5),
+            (block2.block_hash(), 7),
+            (block3.block_hash(), 3),
+        ];
         // The stability_count of block1 should be 5 - 7 = -2.
         assert_eq!(
             get_stability_count(&blocks_with_depths, block1.block_hash()),
@@ -1421,9 +1431,10 @@ mod test {
             }
         });
 
-        // Because the forks are of equal length, `A`, the root of the fork,
-        // is considered the tip at zero confirmations.
-        assert_tip_at_confirmations(0, chain[0].block_hash());
+        // With the first-received-child-wins rule, the first fork (chain)
+        // is chosen as the main chain. All blocks have stability count >= 0,
+        // so the tip at zero confirmations is F.
+        assert_tip_at_confirmations(0, chain[5].block_hash());
 
         // Extend the first fork by one block.
         let chain_6 = BlockBuilder::with_prev_header(chain[5].header()).build();

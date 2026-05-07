@@ -27,8 +27,8 @@ use crate::{
 pub use api::get_metrics;
 pub use api::send_transaction;
 pub use api::set_config;
-use candid::{CandidType, Deserialize};
 pub use heartbeat::heartbeat;
+pub use ic_btc_interface::CanisterArg;
 use ic_btc_interface::{
     Config, Flag, GetBalanceError, GetBalanceRequest, GetBlockHeadersError, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosError, GetUtxosRequest,
@@ -87,20 +87,17 @@ fn reset_syncing_state(state: &mut State) {
     state.syncing_state.response_to_process = None;
 }
 
-#[derive(CandidType, Deserialize)]
-pub enum CanisterArg {
-    #[serde(rename = "init")]
-    Init(InitConfig),
-    #[serde(rename = "upgrade")]
-    Upgrade(Option<SetConfigRequest>),
-}
-
 /// Initializes the state of the Bitcoin canister.
 pub fn init(init_config: InitConfig) {
     print("Running init...");
 
     let config = Config::from(init_config);
+    let cache = unstable_blocks::BlocksCacheInStableMem::new(
+        config.network,
+        memory::get_unstable_blocks_memory(),
+    );
     set_state(State::new(
+        cache,
         config
             .stability_threshold
             .try_into()
@@ -128,6 +125,16 @@ pub fn get_current_fee_percentiles(
     verify_network(request.network.into());
     verify_synced();
     api::get_current_fee_percentiles()
+}
+
+#[cfg(feature = "canbench-rs")]
+pub fn get_current_fee_percentiles_without_fees(
+    request: GetCurrentFeePercentilesRequest,
+) -> Vec<MillisatoshiPerByte> {
+    verify_api_access();
+    verify_network(request.network.into());
+    verify_synced();
+    api::get_current_fee_percentiles_without_fees()
 }
 
 pub fn get_balance(request: GetBalanceRequest) -> Result<Satoshi, GetBalanceError> {
@@ -167,6 +174,16 @@ pub fn get_block_headers(
     api::get_block_headers(request)
 }
 
+#[cfg(feature = "canbench-rs")]
+pub fn get_block_headers_without_fees(
+    request: GetBlockHeadersRequest,
+) -> Result<GetBlockHeadersResponse, GetBlockHeadersError> {
+    verify_api_access();
+    verify_network(request.network.into());
+    verify_synced();
+    api::get_block_headers_without_fees(request)
+}
+
 pub fn get_config() -> Config {
     with_state(|s| Config {
         stability_threshold: s.unstable_blocks.stability_threshold() as u128,
@@ -180,6 +197,10 @@ pub fn get_config() -> Config {
         burn_cycles: s.burn_cycles,
         lazily_evaluate_fee_percentiles: s.lazily_evaluate_fee_percentiles,
     })
+}
+
+pub fn get_blockchain_info() -> types::BlockchainInfo {
+    with_state(state::blockchain_info)
 }
 
 pub fn pre_upgrade() {
@@ -219,7 +240,40 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     memory.read(4, &mut state_bytes);
 
     // Deserialize and set the state.
-    let state: State = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
+    let state: State = {
+        let read_memory_with_old_state = || {
+            ciborium::de::from_reader(&*state_bytes).map(
+                |state: state::GenericState<blocktree::BlockTree<Block>>| {
+                    let cache = unstable_blocks::BlocksCacheInStableMem::new(
+                        state.network(),
+                        memory::get_unstable_blocks_memory(),
+                    );
+                    state.map_tree(|tree| tree.into_cached(cache))
+                },
+            )
+        };
+
+        let read_memory = || ciborium::de::from_reader(&*state_bytes);
+
+        read_memory()
+            .map(|mut state: State| {
+                let cache = unstable_blocks::BlocksCacheInStableMem::new(
+                    state.network(),
+                    memory::get_unstable_blocks_memory(),
+                );
+                // Reset cache to stable memory
+                state.replace_unstable_blocks_cache(cache);
+                state
+            })
+            .or_else(|e| {
+                print(&format!(
+                    "Failed to read state: {:?}. Trying old state format...",
+                    e
+                ));
+                read_memory_with_old_state()
+            })
+            .expect("Failed to read state.")
+    };
 
     set_state(state);
 
@@ -346,20 +400,27 @@ mod test {
                 ..Default::default()
             });
 
+           let cache = unstable_blocks::BlocksCacheInStableMem::new(
+               network,
+               crate::memory::get_unstable_blocks_memory()
+            );
             with_state(|state| {
                 assert!(
-                    *state == State::new(stability_threshold as u32, network, genesis_block(network))
+                    *state == State::new(cache, stability_threshold as u32, network, genesis_block(network))
                 );
             });
         }
     }
 
-    #[test_strategy::proptest(ProptestConfig::with_cases(1))]
+    #[test_strategy::proptest(ProptestConfig::with_cases(10))]
     fn upgrade(
         #[strategy(1..100u128)] stability_threshold: u128,
         #[strategy(1..250u32)] num_blocks: u32,
         #[strategy(1..100u32)] num_transactions_in_block: u32,
     ) {
+        // Reset stable memory for each test case to avoid errors related to UTXOs being inserted twice
+        memory::set_memory(ic_stable_structures::DefaultMemoryImpl::default());
+
         let network = Network::Regtest;
 
         init(InitConfig {
@@ -690,6 +751,39 @@ mod test {
     }
 
     #[test]
+    fn get_blockchain_info_returns_correct_info() {
+        let network = Network::Mainnet;
+        init(InitConfig {
+            stability_threshold: Some(1),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let genesis = genesis_block(network);
+        let tip_info = get_blockchain_info();
+
+        // After init, the tip is the Bitcoin genesis block for the configured network.
+        assert_eq!(tip_info.height, 0);
+        assert_eq!(tip_info.block_hash, genesis.block_hash().to_vec());
+        assert_eq!(tip_info.timestamp, genesis.header().time);
+        assert_eq!(tip_info.difficulty, genesis.difficulty(network));
+        // Genesis block has 1 coinbase output.
+        assert_eq!(tip_info.utxos_length, 1);
+    }
+
+    #[test]
+    fn get_blockchain_info_succeeds_when_api_disabled() {
+        init(InitConfig {
+            api_access: Some(Flag::Disabled),
+            ..Default::default()
+        });
+
+        let info = get_blockchain_info();
+        assert_eq!(info.height, 0);
+        assert_eq!(info.utxos_length, 1);
+    }
+
+    #[test]
     fn init_applies_default_fees_when_not_explicitly_provided() {
         let custom = Fees {
             get_utxos_base: 123,
@@ -712,5 +806,55 @@ mod test {
 
             with_state(|s| assert_eq!(s.fees, expected_fees));
         }
+    }
+
+    #[test]
+    fn test_post_upgrade_state_conversion() {
+        memory::set_memory(ic_stable_structures::DefaultMemoryImpl::default());
+        let network = Network::Regtest;
+        init(InitConfig {
+            stability_threshold: Some(144),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let blocks = build_regtest_chain(3, 4);
+
+        // Insert all the blocks. Note that we skip the genesis block, as that
+        // is already included as part of initializing the state.
+        for block in blocks[1..].iter() {
+            with_state_mut(|s| {
+                crate::state::insert_block(s, block.clone()).unwrap();
+                crate::state::ingest_stable_blocks_into_utxoset(s);
+            });
+        }
+
+        // Take out the state (which also clears the `STATE` singleton).
+        // The state here explicitly uses BlockTree<Block> instead of BlockTree<CachedBlock>.
+        let old_state: state::GenericState<blocktree::BlockTree<Block>> = STATE
+            .with(|cell| cell.take().unwrap())
+            .map_tree(|tree| tree.map(&|block: blocktree::CachedBlock| block.block()));
+
+        // Serialize the state to bytes
+        let mut state_bytes = vec![];
+        ciborium::ser::into_writer(&old_state, &mut state_bytes).unwrap();
+
+        // Write state (of BlockTree<Block>) into stable memory with length prefix,
+        // matching the format used by pre_upgrade.
+        let memory = memory::get_upgrades_memory();
+        let len = state_bytes.len() as u32;
+        memory::write(&memory, 0, &len.to_le_bytes());
+        memory::write(&memory, 4, &state_bytes);
+
+        // Run postupgrade hook
+        post_upgrade(None);
+
+        // The state after going through proper post_upgrade handling is using
+        // BlockTree<CachedBlock> internally. To assert equivalence to old_state
+        // we need to convert it to the same type as the old state.
+        let new_state = STATE
+            .with(|cell| cell.take().unwrap())
+            .map_tree(|tree| tree.map(&|block: blocktree::CachedBlock| block.block()));
+        assert!(new_state == old_state);
     }
 }

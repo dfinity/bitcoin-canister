@@ -17,11 +17,17 @@ async fn get_target_canister_config() -> Option<CanisterConfig> {
     let result = ic_cdk::call::Call::unbounded_wait(id, "get_config")
         .with_args(&())
         .await
-        .map_err(|err| print(&format!("Error getting canister config: {:?}", err)))
+        .map_err(|err| {
+            crate::storage::inc_get_config_errors();
+            print(&format!("Error getting canister config: {:?}", err));
+        })
         .ok()?;
     let config = result
         .candid()
-        .map_err(|err| print(&format!("Error decoding get_config result: {:?}", err)))
+        .map_err(|err| {
+            crate::storage::inc_get_config_errors();
+            print(&format!("Error decoding get_config result: {:?}", err));
+        })
         .ok()?;
     Some(config)
 }
@@ -48,7 +54,10 @@ async fn update_api_access(target: Option<Flag>) {
     ic_cdk::call::Call::unbounded_wait(id, "set_config")
         .with_args(&(set_config_request,))
         .await
-        .map_err(|err| print(&format!("Error setting canister config: {:?}", err)))
+        .map_err(|err| {
+            crate::storage::inc_set_config_errors();
+            print(&format!("Error setting canister config: {:?}", err));
+        })
         .ok();
 }
 

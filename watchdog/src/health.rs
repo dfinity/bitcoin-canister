@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::fetch::{BlockInfo, BlockInfoConversionError, LegacyBlockInfo};
+use crate::fetch::{BlockInfo, LegacyBlockInfo};
 use candid::CandidType;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -48,10 +48,10 @@ pub struct LegacyHealthStatus {
 #[derive(Clone, Debug, PartialEq, Eq, CandidType)]
 pub struct HealthStatus {
     /// Main chain height of the canister.
-    pub height_source: Option<u64>,
+    pub canister_height: Option<u64>,
 
     /// Height target derived from explorer heights.
-    pub height_target: Option<u64>,
+    pub explorer_height: Option<u64>,
 
     /// Difference between canister height and target height.
     pub height_diff: Option<i64>,
@@ -63,32 +63,29 @@ pub struct HealthStatus {
     pub explorers: Vec<BlockInfo>,
 }
 
-impl TryFrom<HealthStatus> for LegacyHealthStatus {
-    type Error = BlockInfoConversionError;
-
-    fn try_from(status: HealthStatus) -> Result<LegacyHealthStatus, Self::Error> {
+impl From<HealthStatus> for LegacyHealthStatus {
+    fn from(status: HealthStatus) -> LegacyHealthStatus {
         let explorers = status
             .explorers
             .into_iter()
-            .map(LegacyBlockInfo::try_from)
-            .collect::<Result<Vec<LegacyBlockInfo>, Self::Error>>()?;
+            .filter_map(|b| LegacyBlockInfo::try_from(b).ok())
+            .collect();
 
-        Ok(LegacyHealthStatus {
-            height_source: status.height_source,
-            height_target: status.height_target,
+        LegacyHealthStatus {
+            height_source: status.canister_height,
+            height_target: status.explorer_height,
             height_diff: status.height_diff,
             height_status: status.height_status,
             explorers,
-        })
+        }
     }
 }
 
 /// Calculates the health status of a canister.
 pub fn health_status() -> HealthStatus {
-    let canister = crate::storage::get_canister();
     let config = crate::storage::get_config();
     compare(
-        crate::storage::get_block_info(&canister.provider().name()),
+        crate::storage::get_canister_height(),
         config
             .explorers
             .iter()
@@ -124,20 +121,23 @@ fn calculate_height_target(
 }
 
 /// Compares the source with the other explorers.
-fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config) -> HealthStatus {
-    let height_source = source.and_then(|block| block.height);
+fn compare(
+    canister_height: Option<u64>,
+    explorers: Vec<BlockInfo>,
+    config: Config,
+) -> HealthStatus {
     let heights = explorers
         .iter()
         .filter_map(|block| block.height)
         .collect::<Vec<_>>();
-    let height_target = calculate_height_target(
+    let explorer_height = calculate_height_target(
         &heights,
         config.min_explorers as usize,
         config.get_blocks_behind_threshold(),
         config.get_blocks_ahead_threshold(),
     );
-    let height_diff = height_source
-        .zip(height_target)
+    let height_diff = canister_height
+        .zip(explorer_height)
         .map(|(source, target)| source as i64 - target as i64);
     let height_status = height_diff.map_or(HeightStatus::NotEnoughData, |diff| {
         if diff < config.get_blocks_behind_threshold() {
@@ -150,8 +150,8 @@ fn compare(source: Option<BlockInfo>, explorers: Vec<BlockInfo>, config: Config)
     });
 
     HealthStatus {
-        height_source,
-        height_target,
+        canister_height,
+        explorer_height,
         height_diff,
         height_status,
         explorers,
@@ -274,15 +274,15 @@ mod test {
     #[test]
     fn test_compare_no_source_neither_explorers() {
         // Arrange
-        let source = None;
+        let canister_height = None;
         let other = vec![];
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: None,
-                height_target: None,
+                canister_height: None,
+                explorer_height: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![],
@@ -293,15 +293,15 @@ mod test {
     #[test]
     fn test_compare_no_explorers() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![];
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: None,
+                canister_height: Some(1_000),
+                explorer_height: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![],
@@ -312,7 +312,7 @@ mod test {
     #[test]
     fn test_compare_2_explorers_are_not_enough() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
@@ -320,10 +320,10 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: None,
+                canister_height: Some(1_000),
+                explorer_height: None,
                 height_diff: None,
                 height_status: HeightStatus::NotEnoughData,
                 explorers: vec![
@@ -337,7 +337,7 @@ mod test {
     #[test]
     fn test_compare_behind() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_006),
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 1_005),
@@ -346,10 +346,10 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: Some(1_005),
+                canister_height: Some(1_000),
+                explorer_height: Some(1_005),
                 height_diff: Some(-5),
                 height_status: HeightStatus::Behind,
                 explorers: vec![
@@ -364,7 +364,7 @@ mod test {
     #[test]
     fn test_compare_ahead() {
         // Arrange
-        let source = Some(BlockInfo::new("bitcoin_canister".to_string(), 1_000));
+        let canister_height = Some(1_000);
         let other = vec![
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 996),
             BlockInfo::new("bitcoin_api_blockchair_com_mainnet".to_string(), 995),
@@ -373,10 +373,10 @@ mod test {
 
         // Assert
         assert_eq!(
-            compare(source, other, crate::storage::get_config()),
+            compare(canister_height, other, crate::storage::get_config()),
             HealthStatus {
-                height_source: Some(1_000),
-                height_target: Some(995),
+                canister_height: Some(1_000),
+                explorer_height: Some(995),
                 height_diff: Some(5),
                 height_status: HeightStatus::Ahead,
                 explorers: vec![
