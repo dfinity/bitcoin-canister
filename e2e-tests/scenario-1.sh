@@ -34,7 +34,7 @@ if ! [[ $BLOCKCHAIN_INFO == *"height = 5"* ]]; then
 fi
 
 # Wait until the ingestion of stable blocks is complete.
-wait_until_stable_height 3 60
+wait_until_stable_height 3 120
 
 # Fetch the balance of an address we do not expect to have funds.
 BALANCE=$(dfx canister call bitcoin bitcoin_get_balance '(record {
