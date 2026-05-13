@@ -30,8 +30,6 @@ const ADDRESS_5: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 
 struct Setup {
     pic: PocketIc,
-    #[allow(dead_code)]
-    source_id: Principal,
     btc_id: Principal,
 }
 
@@ -61,11 +59,7 @@ impl Setup {
             None,
         );
 
-        Self {
-            pic,
-            source_id,
-            btc_id,
-        }
+        Self { pic, btc_id }
     }
 
     fn tick_until_main_chain_height(&self, target: u32, max_ticks: u32) {
