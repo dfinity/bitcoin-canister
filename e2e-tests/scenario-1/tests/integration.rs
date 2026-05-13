@@ -6,6 +6,7 @@ use ic_btc_interface::{
     InitConfig, Network, NetworkInRequest,
 };
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
+use scenario_1::{ADDRESS_1, ADDRESS_2, ADDRESS_5};
 use std::{path::PathBuf, process::Command};
 
 #[derive(CandidType)]
@@ -22,11 +23,6 @@ struct HttpResponse {
     headers: Vec<(String, String)>,
     body: ByteBuf,
 }
-
-// Addresses defined in src/main.rs
-const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
-const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
-const ADDRESS_5: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
 
 struct Setup {
     pic: PocketIc,
