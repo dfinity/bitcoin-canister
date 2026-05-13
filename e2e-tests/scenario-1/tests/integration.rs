@@ -157,6 +157,12 @@ impl Setup {
             )
             .ok()?;
         let response = candid::decode_one::<HttpResponse>(&bytes).ok()?;
+        assert_eq!(
+            response.status_code, 200,
+            "metrics endpoint returned {}: {}",
+            response.status_code,
+            String::from_utf8_lossy(&response.body)
+        );
         let body = String::from_utf8(response.body.into_vec()).ok()?;
         body.lines()
             .find(|line| line.starts_with("stable_height "))
