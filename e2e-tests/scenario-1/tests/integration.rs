@@ -156,8 +156,12 @@ impl Setup {
         let body = String::from_utf8(response.body.into_vec()).ok()?;
         // The metric is encoded as f64 but always a whole number; parse as f64 first
         // so this survives any encoder change that emits "3.0" instead of "3".
+        // Accept both unlabeled ("stable_height N") and labeled ("stable_height{...} N")
+        // forms so a future label addition doesn't silently break the match.
         body.lines()
-            .find(|line| line.starts_with("stable_height "))
+            .find(|line| {
+                line.starts_with("stable_height ") || line.starts_with("stable_height{")
+            })
             .and_then(|line| line.split_whitespace().nth(1))
             .and_then(|s| s.parse::<f64>().ok())
             .map(|v| v as u32)
