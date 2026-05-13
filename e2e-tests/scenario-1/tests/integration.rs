@@ -1,4 +1,5 @@
 use candid::{CandidType, Deserialize, Principal};
+use serde_bytes::ByteBuf;
 use ic_btc_interface::{
     BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
@@ -6,6 +7,21 @@ use ic_btc_interface::{
 };
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
 use std::{path::PathBuf, process::Command};
+
+#[derive(CandidType)]
+struct HttpRequest {
+    method: String,
+    url: String,
+    headers: Vec<(String, String)>,
+    body: ByteBuf,
+}
+
+#[derive(CandidType, Deserialize)]
+struct HttpResponse {
+    status_code: u16,
+    headers: Vec<(String, String)>,
+    body: ByteBuf,
+}
 
 // Addresses defined in src/main.rs
 const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
@@ -44,10 +60,6 @@ impl Setup {
         );
 
         Self { pic, btc_id }
-    }
-
-    fn tick(&self) {
-        self.pic.tick();
     }
 
     fn tick_until_main_chain_height(&self, target: u32, max_ticks: u32) {
@@ -110,6 +122,40 @@ impl Setup {
         req: GetCurrentFeePercentilesRequest,
     ) -> Vec<u64> {
         self.update("bitcoin_get_current_fee_percentiles", req)
+    }
+
+    fn tick_until_stable_height(&self, target: u32, max_ticks: u32) {
+        for _ in 0..max_ticks {
+            self.pic.tick();
+            if self.get_stable_height().map(|h| h >= target).unwrap_or(false) {
+                return;
+            }
+        }
+        panic!("timed out after {max_ticks} ticks waiting for stable height {target}");
+    }
+
+    fn get_stable_height(&self) -> Option<u32> {
+        let request = HttpRequest {
+            method: "GET".to_string(),
+            url: "/metrics".to_string(),
+            headers: vec![],
+            body: ByteBuf::new(),
+        };
+        let bytes = self
+            .pic
+            .query_call(
+                self.btc_id,
+                Principal::anonymous(),
+                "http_request",
+                candid::encode_one(request).unwrap(),
+            )
+            .ok()?;
+        let response = candid::decode_one::<HttpResponse>(&bytes).ok()?;
+        let body = String::from_utf8(response.body.into_vec()).ok()?;
+        body.lines()
+            .find(|line| line.starts_with("stable_height "))
+            .and_then(|line| line.split_whitespace().nth(1))
+            .and_then(|s| s.parse::<u32>().ok())
     }
 
     fn update_call_raw(
@@ -210,11 +256,9 @@ fn scenario_1() {
     let info = setup.get_blockchain_info();
     assert_eq!(info.height, 5, "expected blockchain height 5, got {}", info.height);
 
-    // Tick more to let stable-block processing complete (blocks 1–3 are stable with
-    // stability_threshold=2 once main_chain_height=5).
-    for _ in 0..100 {
-        setup.tick();
-    }
+    // Wait for stable-block processing to complete. With stability_threshold=2 and
+    // main_chain_height=5, blocks 1–3 should become stable.
+    setup.tick_until_stable_height(3, 200);
 
     // ADDRESS_1 has no balance: it transferred everything to ADDRESS_2 in block 2.
     assert_eq!(setup.bitcoin_get_balance(balance_req(ADDRESS_1, None)), 0);

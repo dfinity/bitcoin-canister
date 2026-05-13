@@ -14,3 +14,4 @@ serde = { workspace = true }
 candid = { workspace = true }
 ic-btc-interface = { workspace = true }
 pocket-ic = { workspace = true }
+serde_bytes = { workspace = true }
