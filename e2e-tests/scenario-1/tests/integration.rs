@@ -61,19 +61,7 @@ impl Setup {
     fn tick_until_main_chain_height(&self, target: u32, max_ticks: u32) {
         for _ in 0..max_ticks {
             self.pic.tick();
-            let reached = self
-                .pic
-                .query_call(
-                    self.btc_id,
-                    Principal::anonymous(),
-                    "get_blockchain_info",
-                    candid::encode_args(()).unwrap(),
-                )
-                .ok()
-                .and_then(|b| candid::decode_one::<BlockchainInfo>(&b).ok())
-                .map(|info| info.height >= target)
-                .unwrap_or(false);
-            if reached {
+            if self.get_blockchain_info().height >= target {
                 return;
             }
         }
