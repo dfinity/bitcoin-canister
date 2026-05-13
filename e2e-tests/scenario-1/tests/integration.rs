@@ -34,7 +34,7 @@ impl Setup {
         let source_wasm = load_wasm("E2E_SCENARIO_1_WASM_PATH", "scenario-1");
         let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
 
-        let pic = PocketIcBuilder::new().with_bitcoin_subnet().build();
+        let pic = PocketIcBuilder::new().with_application_subnet().build();
 
         let source_id = pic.create_canister();
         pic.add_cycles(source_id, 10_000_000_000_000);
