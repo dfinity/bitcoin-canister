@@ -1,5 +1,4 @@
 use candid::{CandidType, Deserialize, Principal};
-use serde_bytes::ByteBuf;
 use ic_btc_interface::{
     BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
@@ -7,6 +6,7 @@ use ic_btc_interface::{
 };
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
 use scenario_1::{ADDRESS_1, ADDRESS_2, ADDRESS_5};
+use serde_bytes::ByteBuf;
 use std::{path::PathBuf, process::Command};
 
 #[derive(CandidType)]
