@@ -1,14 +1,188 @@
-use e2e_scenario_1_pocketic::Setup;
+use candid::{CandidType, Deserialize, Principal};
 use ic_btc_interface::{
-    GetBalanceRequest, GetBlockHeadersRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest,
-    NetworkInRequest,
+    BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
+    GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
+    InitConfig, Network, NetworkInRequest,
 };
-use pocket_ic::RejectCode;
+use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
+use std::{path::PathBuf, process::Command};
 
-// Addresses defined in e2e-tests/scenario-1/src/main.rs
+// Addresses defined in src/main.rs
 const ADDRESS_1: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 const ADDRESS_2: &str = "bcrt1qxp8ercrmfxlu0s543najcj6fe6267j97tv7rgf";
 const ADDRESS_5: &str = "bcrt1qenhfslne5vdqld0djs0h0tfw225tkkzzc60exh";
+
+struct Setup {
+    pic: PocketIc,
+    btc_id: Principal,
+}
+
+impl Setup {
+    fn new() -> Self {
+        let source_wasm = load_wasm("E2E_SCENARIO_1_WASM_PATH", "scenario-1");
+        let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
+
+        let pic = PocketIcBuilder::new().with_bitcoin_subnet().build();
+
+        let source_id = pic.create_canister();
+        pic.add_cycles(source_id, 10_000_000_000_000);
+        pic.install_canister(source_id, source_wasm, vec![], None);
+
+        let btc_id = pic.create_canister();
+        pic.add_cycles(btc_id, 10_000_000_000_000);
+        pic.install_canister(
+            btc_id,
+            btc_wasm,
+            candid::encode_one(CanisterArg::Init(InitConfig {
+                stability_threshold: Some(2),
+                network: Some(Network::Regtest),
+                blocks_source: Some(source_id),
+                ..Default::default()
+            }))
+            .unwrap(),
+            None,
+        );
+
+        Self { pic, btc_id }
+    }
+
+    fn tick(&self) {
+        self.pic.tick();
+    }
+
+    fn tick_until_main_chain_height(&self, target: u32, max_ticks: u32) {
+        for _ in 0..max_ticks {
+            self.pic.tick();
+            let reached = self
+                .pic
+                .query_call(
+                    self.btc_id,
+                    Principal::anonymous(),
+                    "get_blockchain_info",
+                    candid::encode_args(()).unwrap(),
+                )
+                .ok()
+                .and_then(|b| candid::decode_one::<BlockchainInfo>(&b).ok())
+                .map(|info| info.height >= target)
+                .unwrap_or(false);
+            if reached {
+                return;
+            }
+        }
+        panic!("timed out after {max_ticks} ticks waiting for main chain height {target}");
+    }
+
+    fn get_blockchain_info(&self) -> BlockchainInfo {
+        let bytes = self
+            .pic
+            .query_call(
+                self.btc_id,
+                Principal::anonymous(),
+                "get_blockchain_info",
+                candid::encode_args(()).unwrap(),
+            )
+            .expect("get_blockchain_info query failed");
+        candid::decode_one(&bytes).expect("failed to decode BlockchainInfo")
+    }
+
+    fn bitcoin_get_balance(&self, req: GetBalanceRequest) -> u64 {
+        self.update("bitcoin_get_balance", req)
+    }
+
+    fn bitcoin_get_balance_query(&self, req: GetBalanceRequest) -> u64 {
+        self.query("bitcoin_get_balance_query", req)
+    }
+
+    fn bitcoin_get_utxos(&self, req: GetUtxosRequest) -> GetUtxosResponse {
+        self.update("bitcoin_get_utxos", req)
+    }
+
+    fn bitcoin_get_utxos_query(&self, req: GetUtxosRequest) -> GetUtxosResponse {
+        self.query("bitcoin_get_utxos_query", req)
+    }
+
+    fn bitcoin_get_block_headers(&self, req: GetBlockHeadersRequest) -> GetBlockHeadersResponse {
+        self.update("bitcoin_get_block_headers", req)
+    }
+
+    fn bitcoin_get_current_fee_percentiles(
+        &self,
+        req: GetCurrentFeePercentilesRequest,
+    ) -> Vec<u64> {
+        self.update("bitcoin_get_current_fee_percentiles", req)
+    }
+
+    fn update_call_raw(
+        &self,
+        method: &str,
+        arg: impl CandidType,
+    ) -> Result<Vec<u8>, RejectResponse> {
+        self.pic.update_call(
+            self.btc_id,
+            Principal::anonymous(),
+            method,
+            candid::encode_one(arg).unwrap(),
+        )
+    }
+
+    fn query<T: CandidType + for<'de> Deserialize<'de>>(
+        &self,
+        method: &str,
+        arg: impl CandidType,
+    ) -> T {
+        let bytes = self
+            .pic
+            .query_call(
+                self.btc_id,
+                Principal::anonymous(),
+                method,
+                candid::encode_one(arg).unwrap(),
+            )
+            .unwrap_or_else(|e| panic!("{method} query failed: {e:?}"));
+        candid::decode_one(&bytes).unwrap_or_else(|e| panic!("decode {method} response: {e}"))
+    }
+
+    fn update<T: CandidType + for<'de> Deserialize<'de>>(
+        &self,
+        method: &str,
+        arg: impl CandidType,
+    ) -> T {
+        let bytes = self
+            .pic
+            .update_call(
+                self.btc_id,
+                Principal::anonymous(),
+                method,
+                candid::encode_one(arg).unwrap(),
+            )
+            .unwrap_or_else(|e| panic!("{method} update call failed: {e:?}"));
+        candid::decode_one(&bytes).unwrap_or_else(|e| panic!("decode {method} response: {e}"))
+    }
+}
+
+fn load_wasm(env_var: &str, canister_name: &str) -> Vec<u8> {
+    if let Ok(path) = std::env::var(env_var) {
+        return std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("failed to read WASM from {path}: {e}"));
+    }
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = Command::new("bash")
+        .arg(repo_root.join("scripts/build-canister.sh"))
+        .arg(canister_name)
+        .current_dir(&repo_root)
+        .output()
+        .unwrap_or_else(|e| panic!("failed to spawn build-canister.sh for {canister_name}: {e}"));
+    assert!(
+        output.status.success(),
+        "build-canister.sh {canister_name} failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let wasm_path = repo_root.join(format!(
+        "target/wasm32-unknown-unknown/release/{canister_name}.wasm.gz"
+    ));
+    std::fs::read(&wasm_path)
+        .unwrap_or_else(|e| panic!("failed to read WASM from {wasm_path:?}: {e}"))
+}
 
 fn balance_req(address: &str, min_confirmations: Option<u32>) -> GetBalanceRequest {
     GetBalanceRequest {

@@ -9,3 +9,8 @@ candid = { workspace = true }
 ic-btc-test-utils = { workspace = true }
 ic-cdk = { workspace = true }
 serde = { workspace = true }
+
+[dev-dependencies]
+candid = { workspace = true }
+ic-btc-interface = { workspace = true }
+pocket-ic = { workspace = true }
