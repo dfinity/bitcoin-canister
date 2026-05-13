@@ -265,14 +265,17 @@ fn utxos_req(address: &str) -> GetUtxosRequest {
 fn scenario_1() {
     let setup = Setup::new();
 
-    // Wait until all 5 blocks have been ingested.
+    // Wait until all 5 blocks have been ingested. The scenario-1 canister serves 7
+    // GetSuccessors responses (one per heartbeat call); 500 ticks is a generous ceiling.
     setup.tick_until_main_chain_height(5, 500);
 
     let info = setup.get_blockchain_info();
     assert_eq!(info.height, 5, "expected blockchain height 5, got {}", info.height);
 
     // Wait for stable-block processing to complete. With stability_threshold=2 and
-    // main_chain_height=5, blocks 1–3 should become stable.
+    // main_chain_height=5, blocks 1–3 should become stable. Stable ingestion happens
+    // incrementally across heartbeats after the main chain advances, so a few dozen
+    // ticks typically suffice; 200 is a generous ceiling.
     setup.tick_until_stable_height(3, 200);
 
     // ADDRESS_1 has no balance: it transferred everything to ADDRESS_2 in block 2.
