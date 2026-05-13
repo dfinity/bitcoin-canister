@@ -111,7 +111,11 @@ impl Setup {
     fn tick_until_stable_height(&self, target: u32, max_ticks: u32) {
         for _ in 0..max_ticks {
             self.pic.tick();
-            if self.get_stable_height().map(|h| h >= target).unwrap_or(false) {
+            if self
+                .get_stable_height()
+                .map(|h| h >= target)
+                .unwrap_or(false)
+            {
                 return;
             }
         }
@@ -136,7 +140,8 @@ impl Setup {
             .ok()?;
         let response = candid::decode_one::<HttpResponse>(&bytes).ok()?;
         assert_eq!(
-            response.status_code, 200,
+            response.status_code,
+            200,
             "metrics endpoint returned {}: {}",
             response.status_code,
             String::from_utf8_lossy(&response.body)
@@ -147,9 +152,7 @@ impl Setup {
         // Accept both unlabeled ("stable_height N") and labeled ("stable_height{...} N")
         // forms so a future label addition doesn't silently break the match.
         body.lines()
-            .find(|line| {
-                line.starts_with("stable_height ") || line.starts_with("stable_height{")
-            })
+            .find(|line| line.starts_with("stable_height ") || line.starts_with("stable_height{"))
             .and_then(|line| line.split_whitespace().nth(1))
             .and_then(|s| s.parse::<f64>().ok())
             .map(|v| v as u32)
@@ -252,7 +255,11 @@ fn scenario_1() {
     setup.tick_until_main_chain_height(5, 500);
 
     let info = setup.get_blockchain_info();
-    assert_eq!(info.height, 5, "expected blockchain height 5, got {}", info.height);
+    assert_eq!(
+        info.height, 5,
+        "expected blockchain height 5, got {}",
+        info.height
+    );
 
     // Wait for stable-block processing to complete. With stability_threshold=2 and
     // main_chain_height=5, blocks 1–3 should become stable. Stable ingestion happens
@@ -262,7 +269,10 @@ fn scenario_1() {
 
     // ADDRESS_1 has no balance: it transferred everything to ADDRESS_2 in block 2.
     assert_eq!(setup.bitcoin_get_balance(balance_req(ADDRESS_1, None)), 0);
-    assert_eq!(setup.bitcoin_get_balance_query(balance_req(ADDRESS_1, None)), 0);
+    assert_eq!(
+        setup.bitcoin_get_balance_query(balance_req(ADDRESS_1, None)),
+        0
+    );
 
     // ADDRESS_2 with min_confirmations=2: block 5's spend is excluded (only 1 confirmation at
     // tip), so it still shows the 50 BTC received in block 2.
@@ -273,11 +283,26 @@ fn scenario_1() {
 
     // ADDRESS_2 UTXOs without filter: block 5 is included so all are spent.
     assert_eq!(setup.bitcoin_get_utxos(utxos_req(ADDRESS_2)).utxos.len(), 0);
-    assert_eq!(setup.bitcoin_get_utxos_query(utxos_req(ADDRESS_2)).utxos.len(), 0);
+    assert_eq!(
+        setup
+            .bitcoin_get_utxos_query(utxos_req(ADDRESS_2))
+            .utxos
+            .len(),
+        0
+    );
 
     // ADDRESS_5 has 10k UTXOs (received in block 5), but responses are capped at 1000.
-    assert_eq!(setup.bitcoin_get_utxos(utxos_req(ADDRESS_5)).utxos.len(), 1000);
-    assert_eq!(setup.bitcoin_get_utxos_query(utxos_req(ADDRESS_5)).utxos.len(), 1000);
+    assert_eq!(
+        setup.bitcoin_get_utxos(utxos_req(ADDRESS_5)).utxos.len(),
+        1000
+    );
+    assert_eq!(
+        setup
+            .bitcoin_get_utxos_query(utxos_req(ADDRESS_5))
+            .utxos
+            .len(),
+        1000
+    );
 
     // Calling query-only methods as replicated (update) calls must be rejected.
     let err = setup
@@ -291,8 +316,14 @@ fn scenario_1() {
     assert_eq!(err.reject_code, RejectCode::CanisterReject);
 
     // ADDRESS_5 balance.
-    assert_eq!(setup.bitcoin_get_balance(balance_req(ADDRESS_5, None)), 5_000_000_000);
-    assert_eq!(setup.bitcoin_get_balance_query(balance_req(ADDRESS_5, None)), 5_000_000_000);
+    assert_eq!(
+        setup.bitcoin_get_balance(balance_req(ADDRESS_5, None)),
+        5_000_000_000
+    );
+    assert_eq!(
+        setup.bitcoin_get_balance_query(balance_req(ADDRESS_5, None)),
+        5_000_000_000
+    );
 
     // Fee percentiles smoke test. The result is intentionally not asserted; these
     // calls exist only to exercise the endpoint for profiling, matching the
