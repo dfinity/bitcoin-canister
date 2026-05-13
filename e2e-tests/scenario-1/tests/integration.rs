@@ -294,7 +294,9 @@ fn scenario_1() {
     assert_eq!(setup.bitcoin_get_balance(balance_req(ADDRESS_5, None)), 5_000_000_000);
     assert_eq!(setup.bitcoin_get_balance_query(balance_req(ADDRESS_5, None)), 5_000_000_000);
 
-    // Fee percentiles smoke test.
+    // Fee percentiles smoke test. The result is intentionally not asserted; these
+    // calls exist only to exercise the endpoint for profiling, matching the
+    // behaviour of the original scenario-1.sh script.
     let fee_req = || GetCurrentFeePercentilesRequest {
         network: NetworkInRequest::Regtest,
     };
