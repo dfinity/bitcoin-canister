@@ -164,10 +164,13 @@ impl Setup {
             String::from_utf8_lossy(&response.body)
         );
         let body = String::from_utf8(response.body.into_vec()).ok()?;
+        // The metric is encoded as f64 but always a whole number; parse as f64 first
+        // so this survives any encoder change that emits "3.0" instead of "3".
         body.lines()
             .find(|line| line.starts_with("stable_height "))
             .and_then(|line| line.split_whitespace().nth(1))
-            .and_then(|s| s.parse::<u32>().ok())
+            .and_then(|s| s.parse::<f64>().ok())
+            .map(|v| v as u32)
     }
 
     fn update_call_raw(
