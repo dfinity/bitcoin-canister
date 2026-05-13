@@ -1,0 +1,10 @@
+[package]
+name = "e2e-scenario-1-pocketic"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+candid = { workspace = true }
+ic-btc-interface = { workspace = true }
+pocket-ic = { workspace = true }

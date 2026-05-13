@@ -1222,6 +1222,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "e2e-scenario-1-pocketic"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "ic-btc-interface",
+ "pocket-ic",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
