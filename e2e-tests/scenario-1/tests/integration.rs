@@ -1,4 +1,5 @@
 use candid::{CandidType, Deserialize, Principal};
+use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
     BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
@@ -8,21 +9,6 @@ use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
 use scenario_1::{ADDRESS_1, ADDRESS_2, ADDRESS_5};
 use serde_bytes::ByteBuf;
 use std::{path::PathBuf, process::Command};
-
-#[derive(CandidType)]
-struct HttpRequest {
-    method: String,
-    url: String,
-    headers: Vec<(String, String)>,
-    body: ByteBuf,
-}
-
-#[derive(CandidType, Deserialize)]
-struct HttpResponse {
-    status_code: u16,
-    headers: Vec<(String, String)>,
-    body: ByteBuf,
-}
 
 struct Setup {
     pic: PocketIc,
