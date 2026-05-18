@@ -98,18 +98,14 @@ impl Setup {
     fn tick_until_stable_height(&self, target: u32, max_ticks: u32) {
         for _ in 0..max_ticks {
             self.pic.tick();
-            if self
-                .get_stable_height()
-                .map(|h| h >= target)
-                .unwrap_or(false)
-            {
+            if self.get_stable_height() >= target {
                 return;
             }
         }
         panic!("timed out after {max_ticks} ticks waiting for stable height {target}");
     }
 
-    fn get_stable_height(&self) -> Option<u32> {
+    fn get_stable_height(&self) -> u32 {
         let request = HttpRequest {
             method: "GET".to_string(),
             url: "/metrics".to_string(),
@@ -124,8 +120,9 @@ impl Setup {
                 "http_request",
                 candid::encode_one(request).unwrap(),
             )
-            .ok()?;
-        let response = candid::decode_one::<HttpResponse>(&bytes).ok()?;
+            .expect("http_request /metrics query failed");
+        let response: HttpResponse =
+            candid::decode_one(&bytes).expect("failed to decode /metrics response");
         assert_eq!(
             response.status_code,
             200,
@@ -133,16 +130,24 @@ impl Setup {
             response.status_code,
             String::from_utf8_lossy(&response.body)
         );
-        let body = String::from_utf8(response.body.into_vec()).ok()?;
+        let body = String::from_utf8(response.body.into_vec())
+            .expect("/metrics body is not valid UTF-8");
         // The metric is encoded as f64 but always a whole number; parse as f64 first
         // so this survives any encoder change that emits "3.0" instead of "3".
         // Accept both unlabeled ("stable_height N") and labeled ("stable_height{...} N")
         // forms so a future label addition doesn't silently break the match.
-        body.lines()
+        let line = body
+            .lines()
             .find(|line| line.starts_with("stable_height ") || line.starts_with("stable_height{"))
-            .and_then(|line| line.split_whitespace().nth(1))
-            .and_then(|s| s.parse::<f64>().ok())
-            .map(|v| v as u32)
+            .expect("stable_height metric not found in /metrics output");
+        let value = line
+            .split_whitespace()
+            .nth(1)
+            .expect("stable_height line has no value field");
+        value
+            .parse::<f64>()
+            .unwrap_or_else(|e| panic!("failed to parse stable_height value {value:?}: {e}"))
+            as u32
     }
 
     fn update_call_raw(
