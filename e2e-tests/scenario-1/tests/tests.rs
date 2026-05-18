@@ -2,8 +2,8 @@ use candid::{CandidType, Deserialize, Principal};
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
     BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
-    GetBlockHeadersResponse, GetCurrentFeePercentilesRequest, GetUtxosRequest, GetUtxosResponse,
-    InitConfig, Network, NetworkInRequest,
+    GetBlockHeadersResponse, GetUtxosRequest, GetUtxosResponse, InitConfig, Network,
+    NetworkInRequest,
 };
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
 use scenario_1::{ADDRESS_1, ADDRESS_2, ADDRESS_5};
@@ -93,13 +93,6 @@ impl Setup {
 
     fn bitcoin_get_block_headers(&self, req: GetBlockHeadersRequest) -> GetBlockHeadersResponse {
         self.update("bitcoin_get_block_headers", req)
-    }
-
-    fn bitcoin_get_current_fee_percentiles(
-        &self,
-        req: GetCurrentFeePercentilesRequest,
-    ) -> Vec<u64> {
-        self.update("bitcoin_get_current_fee_percentiles", req)
     }
 
     fn tick_until_stable_height(&self, target: u32, max_ticks: u32) {
@@ -318,15 +311,6 @@ fn scenario_1() {
         setup.bitcoin_get_balance_query(balance_req(ADDRESS_5, None)),
         5_000_000_000
     );
-
-    // Fee percentiles smoke test. The result is intentionally not asserted; these
-    // calls exist only to exercise the endpoint for profiling, matching the
-    // behaviour of the original scenario-1.sh script.
-    let fee_req = || GetCurrentFeePercentilesRequest {
-        network: NetworkInRequest::Regtest,
-    };
-    setup.bitcoin_get_current_fee_percentiles(fee_req());
-    setup.bitcoin_get_current_fee_percentiles(fee_req());
 
     // Verify block headers. The scenario-1 canister chains 5 blocks onto the genesis block,
     // so get_block_headers returns 6 headers (genesis + blocks 1–5).
