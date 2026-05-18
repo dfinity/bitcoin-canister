@@ -20,13 +20,21 @@ impl Setup {
         let source_wasm = load_wasm("E2E_SCENARIO_1_WASM_PATH", "scenario-1");
         let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
 
-        let pic = PocketIcBuilder::new().with_application_subnet().build();
+        // Install the bitcoin canister on a bitcoin subnet to match production; the
+        // source canister is a test fixture and lives on a separate application subnet.
+        let pic = PocketIcBuilder::new()
+            .with_bitcoin_subnet()
+            .with_application_subnet()
+            .build();
+        let topology = pic.topology();
+        let bitcoin_subnet = topology.get_bitcoin().expect("bitcoin subnet not present");
+        let app_subnet = topology.get_app_subnets()[0];
 
-        let source_id = pic.create_canister();
+        let source_id = pic.create_canister_on_subnet(None, None, app_subnet);
         pic.add_cycles(source_id, 10_000_000_000_000);
         pic.install_canister(source_id, source_wasm, vec![], None);
 
-        let btc_id = pic.create_canister();
+        let btc_id = pic.create_canister_on_subnet(None, None, bitcoin_subnet);
         pic.add_cycles(btc_id, 10_000_000_000_000);
         pic.install_canister(
             btc_id,
