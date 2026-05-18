@@ -130,8 +130,8 @@ impl Setup {
             response.status_code,
             String::from_utf8_lossy(&response.body)
         );
-        let body = String::from_utf8(response.body.into_vec())
-            .expect("/metrics body is not valid UTF-8");
+        let body =
+            String::from_utf8(response.body.into_vec()).expect("/metrics body is not valid UTF-8");
         // The metric is encoded as f64 but always a whole number; parse as f64 first
         // so this survives any encoder change that emits "3.0" instead of "3".
         // Accept both unlabeled ("stable_height N") and labeled ("stable_height{...} N")
