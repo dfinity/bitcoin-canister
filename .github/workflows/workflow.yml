@@ -173,13 +173,10 @@ jobs:
           rustup default ${RUST_VERSION}
           rustup target add wasm32-unknown-unknown
 
-      - name: Install PocketIC
-        run: |
-          wget https://github.com/dfinity/pocketic/releases/download/$POCKET_IC_SERVER_VERSION/pocket-ic-x86_64-linux.gz
-          gzip -d pocket-ic-x86_64-linux.gz
-          mv pocket-ic-x86_64-linux pocket-ic
-          chmod +x pocket-ic
-          mv pocket-ic ./canister/
+      - name: Install PocketIC server
+        uses: dfinity/pocketic@20c33db1aa87cc6ece50857ac632c37acf5e0322 # main
+        with:
+          pocket-ic-server-version: ${{ env.POCKET_IC_SERVER_VERSION }}
 
       - name: Download WASMs
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
