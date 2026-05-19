@@ -13,5 +13,4 @@ serde = { workspace = true }
 [dev-dependencies]
 e2e-test-utils = { workspace = true }
 ic-btc-interface = { workspace = true }
-pocket-ic = { workspace = true }
 serde_bytes = { workspace = true }

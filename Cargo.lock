@@ -3796,7 +3796,6 @@ dependencies = [
  "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
- "pocket-ic",
  "serde",
 ]
 
@@ -3810,7 +3809,6 @@ dependencies = [
  "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
- "pocket-ic",
  "serde",
  "serde_bytes",
 ]
