@@ -6,14 +6,13 @@ use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use ic_cdk::{init, update};
 use serde::{Deserialize, Serialize};
+use scenario_2::ADDRESS;
 use std::cell::{Cell, RefCell};
 use std::str::FromStr;
 
 type BlockBlob = Vec<u8>;
 type BlockHeaderBlob = Vec<u8>;
 type BlockHash = Vec<u8>;
-
-const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 
 #[derive(CandidType, Clone, Copy, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 enum Network {
