@@ -7,8 +7,7 @@ use candid::{CandidType, Principal};
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
     BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
-    GetBlockHeadersResponse, GetUtxosRequest, GetUtxosResponse, InitConfig,
-    SendTransactionRequest,
+    GetBlockHeadersResponse, GetUtxosRequest, GetUtxosResponse, InitConfig, SendTransactionRequest,
 };
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectResponse};
 use serde::de::DeserializeOwned;
@@ -242,11 +241,7 @@ pub fn bitcoin_get_balance(pic: &PocketIc, btc_id: Principal, req: GetBalanceReq
     update(pic, btc_id, "bitcoin_get_balance", req)
 }
 
-pub fn bitcoin_get_balance_query(
-    pic: &PocketIc,
-    btc_id: Principal,
-    req: GetBalanceRequest,
-) -> u64 {
+pub fn bitcoin_get_balance_query(pic: &PocketIc, btc_id: Principal, req: GetBalanceRequest) -> u64 {
     query(pic, btc_id, "bitcoin_get_balance_query", req)
 }
 

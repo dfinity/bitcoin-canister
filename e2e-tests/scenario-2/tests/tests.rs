@@ -3,9 +3,7 @@ use e2e_test_utils::{
     install_canister_on_subnet, load_wasm, pocket_ic_with_bitcoin_subnet,
     tick_until_main_chain_height,
 };
-use ic_btc_interface::{
-    GetBalanceRequest, GetUtxosRequest, InitConfig, Network, NetworkInRequest,
-};
+use ic_btc_interface::{GetBalanceRequest, GetUtxosRequest, InitConfig, Network, NetworkInRequest};
 use scenario_2::ADDRESS;
 
 #[test]

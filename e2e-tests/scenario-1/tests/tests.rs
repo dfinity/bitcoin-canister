@@ -63,7 +63,10 @@ fn scenario_1() {
     tick_until_stable_height(&pic, btc_id, 3, 200);
 
     // ADDRESS_1 has no balance: it transferred everything to ADDRESS_2 in block 2.
-    assert_eq!(bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_1, None)), 0);
+    assert_eq!(
+        bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_1, None)),
+        0
+    );
     assert_eq!(
         bitcoin_get_balance_query(&pic, btc_id, balance_req(ADDRESS_1, None)),
         0
@@ -78,7 +81,9 @@ fn scenario_1() {
 
     // ADDRESS_2 UTXOs without filter: block 5 is included so all are spent.
     assert_eq!(
-        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_2)).utxos.len(),
+        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_2))
+            .utxos
+            .len(),
         0
     );
     assert_eq!(
@@ -90,7 +95,9 @@ fn scenario_1() {
 
     // ADDRESS_5 has 10k UTXOs (received in block 5), but responses are capped at 1000.
     assert_eq!(
-        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_5)).utxos.len(),
+        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_5))
+            .utxos
+            .len(),
         1000
     );
     assert_eq!(
@@ -101,8 +108,13 @@ fn scenario_1() {
     );
 
     // Calling query-only methods as replicated (update) calls must be rejected.
-    let err = update_raw(&pic, btc_id, "bitcoin_get_utxos_query", utxos_req(ADDRESS_5))
-        .expect_err("expected replicated bitcoin_get_utxos_query to be rejected");
+    let err = update_raw(
+        &pic,
+        btc_id,
+        "bitcoin_get_utxos_query",
+        utxos_req(ADDRESS_5),
+    )
+    .expect_err("expected replicated bitcoin_get_utxos_query to be rejected");
     assert_eq!(err.reject_code, RejectCode::CanisterReject);
 
     let err = update_raw(

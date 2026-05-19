@@ -5,8 +5,8 @@ use bitcoin::{
 use candid::CandidType;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use ic_cdk::{init, update};
-use serde::{Deserialize, Serialize};
 use scenario_2::ADDRESS;
+use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
 use std::str::FromStr;
 
