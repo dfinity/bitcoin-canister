@@ -153,9 +153,13 @@ jobs:
         env:
           SHELLCHECK_OPTS: -e SC1090 -e SC2119 -e SC1091
 
-  e2e-scenario-1:
+  e2e-scenario:
     runs-on: ubuntu-latest
     needs: canister-build-reproducibility
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: [scenario-1, scenario-2, scenario-3]
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -184,93 +188,15 @@ jobs:
           name: wasms
           path: ./wasms
 
-      - name: Build scenario-1 source canister WASM
-        run: bash scripts/build-canister.sh scenario-1
+      - name: Build ${{ matrix.scenario }} source canister WASM
+        run: bash scripts/build-canister.sh ${{ matrix.scenario }}
 
-      - name: Run scenario 1
-        run: cargo test --release -p scenario-1
+      - name: Run ${{ matrix.scenario }}
+        run: cargo test --release -p ${{ matrix.scenario }}
         env:
           IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
           E2E_SCENARIO_1_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-1.wasm.gz
-
-  e2e-scenario-2:
-    runs-on: ubuntu-latest
-    needs: canister-build-reproducibility
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
-
-      - name: Install Rust
-        run: |
-          rustup update ${RUST_VERSION} --no-self-update
-          rustup default ${RUST_VERSION}
-          rustup target add wasm32-unknown-unknown
-
-      - name: Install PocketIC server
-        uses: dfinity/pocketic@20c33db1aa87cc6ece50857ac632c37acf5e0322 # main
-        with:
-          pocket-ic-server-version: ${{ env.POCKET_IC_SERVER_VERSION }}
-
-      - name: Download WASMs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wasms
-          path: ./wasms
-
-      - name: Build scenario-2 source canister WASM
-        run: bash scripts/build-canister.sh scenario-2
-
-      - name: Run scenario 2
-        run: cargo test --release -p scenario-2
-        env:
-          IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
           E2E_SCENARIO_2_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-2.wasm.gz
-
-  e2e-scenario-3:
-    runs-on: ubuntu-latest
-    needs: canister-build-reproducibility
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
-
-      - name: Install Rust
-        run: |
-          rustup update ${RUST_VERSION} --no-self-update
-          rustup default ${RUST_VERSION}
-          rustup target add wasm32-unknown-unknown
-
-      - name: Install PocketIC server
-        uses: dfinity/pocketic@20c33db1aa87cc6ece50857ac632c37acf5e0322 # main
-        with:
-          pocket-ic-server-version: ${{ env.POCKET_IC_SERVER_VERSION }}
-
-      - name: Download WASMs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wasms
-          path: ./wasms
-
-      - name: Build scenario-3 source canister WASM
-        run: bash scripts/build-canister.sh scenario-3
-
-      - name: Run scenario 3
-        run: cargo test --release -p scenario-3
-        env:
-          IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
           E2E_SCENARIO_3_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-3.wasm.gz
 
   e2e-disable-api-if-not-fully-synced-flag:
@@ -777,9 +703,7 @@ jobs:
         cargo-clippy,
         rustfmt,
         e2e-disable-api-if-not-fully-synced-flag,
-        e2e-scenario-1,
-        e2e-scenario-2,
-        e2e-scenario-3,
+        e2e-scenario,
         charge-cycles-on-reject,
         upgradability,
         set_config,
@@ -812,14 +736,8 @@ jobs:
       - name: check e2e-disable-api-if-not-fully-synced-flag result
         if: ${{ needs.e2e-disable-api-if-not-fully-synced-flag.result != 'success' }}
         run: exit 1
-      - name: check e2e-scenario-1 result
-        if: ${{ needs.e2e-scenario-1.result != 'success' }}
-        run: exit 1
-      - name: check e2e-scenario-2 result
-        if: ${{ needs.e2e-scenario-2.result != 'success' }}
-        run: exit 1
-      - name: check e2e-scenario-3 result
-        if: ${{ needs.e2e-scenario-3.result != 'success' }}
+      - name: check e2e-scenario result
+        if: ${{ needs.e2e-scenario.result != 'success' }}
         run: exit 1
       - name: check charge-cycles-on-reject result
         if: ${{ needs.charge-cycles-on-reject.result != 'success' }}
