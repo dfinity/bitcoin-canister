@@ -59,8 +59,12 @@ pub fn load_wasm(env_var: &str, canister_name: &str) -> Vec<u8> {
         .target_dir(&wasm_target_dir)
         .run()
         .unwrap_or_else(|e| panic!("cargo build for {canister_name} failed: {e}"));
-    std::fs::read(artifact.path())
-        .unwrap_or_else(|e| panic!("failed to read WASM from {}: {e}", artifact.path().display()))
+    std::fs::read(artifact.path()).unwrap_or_else(|e| {
+        panic!(
+            "failed to read WASM from {}: {e}",
+            artifact.path().display()
+        )
+    })
 }
 
 // ---------- PocketIC setup ----------
