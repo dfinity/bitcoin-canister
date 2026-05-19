@@ -1226,6 +1226,8 @@ name = "e2e-test-utils"
 version = "0.1.0"
 dependencies = [
  "candid",
+ "cargo_metadata",
+ "escargot",
  "ic-btc-canister",
  "ic-btc-interface",
  "pocket-ic",
@@ -1391,6 +1393,17 @@ checksum = "aa68f1b12764fab894d2755d2518754e71b4fd80ecfb822714a1206c2aab39bf"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "escargot"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11c3aea32bc97b500c9ca6a72b768a26e558264303d101d3409cf6d57a9ed0cf"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

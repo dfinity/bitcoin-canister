@@ -4,6 +4,8 @@
 //! integration test so the other e2e tests don't have to reinvent them.
 
 use candid::{CandidType, Principal};
+use cargo_metadata::MetadataCommand;
+use escargot::CargoBuild;
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
     BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
@@ -12,35 +14,53 @@ use ic_btc_interface::{
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectResponse};
 use serde::de::DeserializeOwned;
 use serde_bytes::ByteBuf;
-use std::{path::PathBuf, process::Command};
+use std::path::PathBuf;
 
 // ---------- WASM loading ----------
 
-/// Loads a canister WASM by reading the path in `env_var`, or by falling back
-/// to `scripts/build-canister.sh <canister_name>` when the env var is unset
-/// (local dev). The repo root is found relative to `CARGO_MANIFEST_DIR`.
+/// Loads a canister WASM by reading the path in `env_var`, or — when the env
+/// var is unset — by invoking `cargo build` programmatically via `escargot`
+/// to produce one for local development.
+///
+/// On CI the env var must be set; if it isn't, we panic rather than silently
+/// shelling out to cargo inside the test process, which would mask a CI
+/// misconfiguration as a slow test run.
 pub fn load_wasm(env_var: &str, canister_name: &str) -> Vec<u8> {
     if let Ok(path) = std::env::var(env_var) {
         return std::fs::read(&path)
             .unwrap_or_else(|e| panic!("failed to read WASM from {path}: {e}"));
     }
-    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let output = Command::new("bash")
-        .arg(repo_root.join("scripts/build-canister.sh"))
-        .arg(canister_name)
-        .current_dir(&repo_root)
-        .output()
-        .unwrap_or_else(|e| panic!("failed to spawn build-canister.sh for {canister_name}: {e}"));
-    assert!(
-        output.status.success(),
-        "build-canister.sh {canister_name} failed:\n{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let wasm_path = repo_root.join(format!(
-        "target/wasm32-unknown-unknown/release/{canister_name}.wasm.gz"
-    ));
-    std::fs::read(&wasm_path)
-        .unwrap_or_else(|e| panic!("failed to read WASM from {wasm_path:?}: {e}"))
+    if std::env::var_os("CI").is_some() {
+        panic!(
+            "Running on CI and expected env var {env_var} to point at a pre-built \
+             {canister_name} WASM. Wire it in the workflow before invoking cargo test."
+        );
+    }
+
+    // Local-dev fallback: build via escargot into a dedicated target dir so we
+    // don't invalidate the native (test-binary) build cache on every iteration.
+    let cargo_toml = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("Cargo.toml");
+    let target_directory = MetadataCommand::new()
+        .manifest_path(&cargo_toml)
+        .no_deps()
+        .exec()
+        .unwrap_or_else(|e| panic!("cargo metadata failed for {}: {e}", cargo_toml.display()))
+        .target_directory;
+    let wasm_target_dir = PathBuf::from(target_directory.as_str()).join("wasm-cargo-bin");
+
+    let artifact = CargoBuild::new()
+        .target("wasm32-unknown-unknown")
+        .bin(canister_name)
+        .arg("--release")
+        .arg("--locked")
+        .manifest_path(&cargo_toml)
+        .target_dir(&wasm_target_dir)
+        .run()
+        .unwrap_or_else(|e| panic!("cargo build for {canister_name} failed: {e}"));
+    std::fs::read(artifact.path())
+        .unwrap_or_else(|e| panic!("failed to read WASM from {}: {e}", artifact.path().display()))
 }
 
 // ---------- PocketIC setup ----------

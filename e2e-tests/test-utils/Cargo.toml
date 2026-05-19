@@ -6,6 +6,8 @@ publish = false
 
 [dependencies]
 candid = { workspace = true }
+cargo_metadata = { workspace = true }
+escargot = { workspace = true }
 ic-btc-canister = { workspace = true }
 ic-btc-interface = { workspace = true }
 pocket-ic = { workspace = true }
