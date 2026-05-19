@@ -3753,9 +3753,13 @@ version = "0.1.0"
 dependencies = [
  "bitcoin-dogecoin",
  "candid",
+ "ic-btc-canister",
+ "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
+ "pocket-ic",
  "serde",
+ "serde_bytes",
 ]
 
 [[package]]
