@@ -1222,6 +1222,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "e2e-test-utils"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "ic-btc-canister",
+ "ic-btc-interface",
+ "pocket-ic",
+ "serde",
+ "serde_bytes",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3753,13 +3765,12 @@ version = "0.1.0"
 dependencies = [
  "bitcoin-dogecoin",
  "candid",
- "ic-btc-canister",
+ "e2e-test-utils",
  "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
  "pocket-ic",
  "serde",
- "serde_bytes",
 ]
 
 [[package]]
@@ -3768,8 +3779,11 @@ version = "0.1.0"
 dependencies = [
  "bitcoin-dogecoin",
  "candid",
+ "e2e-test-utils",
+ "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
+ "pocket-ic",
  "serde",
 ]
 
@@ -3779,9 +3793,13 @@ version = "0.1.0"
 dependencies = [
  "bitcoin-dogecoin",
  "candid",
+ "e2e-test-utils",
+ "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
+ "pocket-ic",
  "serde",
+ "serde_bytes",
 ]
 
 [[package]]

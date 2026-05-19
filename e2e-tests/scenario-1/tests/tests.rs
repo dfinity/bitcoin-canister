@@ -1,225 +1,15 @@
-use candid::{CandidType, Deserialize, Principal};
-use ic_btc_canister::types::{HttpRequest, HttpResponse};
+use e2e_test_utils::{
+    bitcoin_get_balance, bitcoin_get_balance_query, bitcoin_get_block_headers, bitcoin_get_utxos,
+    bitcoin_get_utxos_query, get_blockchain_info, install_bitcoin_canister,
+    install_canister_on_subnet, load_wasm, pocket_ic_with_bitcoin_subnet,
+    tick_until_main_chain_height, tick_until_stable_height, update_raw,
+};
 use ic_btc_interface::{
-    BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
-    GetBlockHeadersResponse, GetUtxosRequest, GetUtxosResponse, InitConfig, Network,
+    GetBalanceRequest, GetBlockHeadersRequest, GetUtxosRequest, InitConfig, Network,
     NetworkInRequest,
 };
-use pocket_ic::{PocketIc, PocketIcBuilder, RejectCode, RejectResponse};
+use pocket_ic::RejectCode;
 use scenario_1::{ADDRESS_1, ADDRESS_2, ADDRESS_5};
-use serde_bytes::ByteBuf;
-use std::{path::PathBuf, process::Command};
-
-struct Setup {
-    pic: PocketIc,
-    btc_id: Principal,
-}
-
-impl Setup {
-    fn new() -> Self {
-        let source_wasm = load_wasm("E2E_SCENARIO_1_WASM_PATH", "scenario-1");
-        let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
-
-        // Install both canisters on a bitcoin subnet to match production. The source
-        // canister stands in for the bitcoin adapter, which in production is a
-        // node-level service co-located with the bitcoin canister.
-        let pic = PocketIcBuilder::new().with_bitcoin_subnet().build();
-        let bitcoin_subnet = pic
-            .topology()
-            .get_bitcoin()
-            .expect("bitcoin subnet not present");
-
-        let source_id = pic.create_canister_on_subnet(None, None, bitcoin_subnet);
-        pic.add_cycles(source_id, 10_000_000_000_000);
-        pic.install_canister(source_id, source_wasm, vec![], None);
-
-        let btc_id = pic.create_canister_on_subnet(None, None, bitcoin_subnet);
-        pic.add_cycles(btc_id, 10_000_000_000_000);
-        pic.install_canister(
-            btc_id,
-            btc_wasm,
-            candid::encode_one(CanisterArg::Init(InitConfig {
-                stability_threshold: Some(2),
-                network: Some(Network::Regtest),
-                blocks_source: Some(source_id),
-                ..Default::default()
-            }))
-            .unwrap(),
-            None,
-        );
-
-        Self { pic, btc_id }
-    }
-
-    fn tick_until_main_chain_height(&self, target: u32, max_ticks: u32) {
-        for _ in 0..max_ticks {
-            self.pic.tick();
-            if self.get_blockchain_info().height >= target {
-                return;
-            }
-        }
-        panic!("timed out after {max_ticks} ticks waiting for main chain height {target}");
-    }
-
-    fn get_blockchain_info(&self) -> BlockchainInfo {
-        let bytes = self
-            .pic
-            .query_call(
-                self.btc_id,
-                Principal::anonymous(),
-                "get_blockchain_info",
-                candid::encode_args(()).unwrap(),
-            )
-            .expect("get_blockchain_info query failed");
-        candid::decode_one(&bytes).expect("failed to decode BlockchainInfo")
-    }
-
-    fn bitcoin_get_balance(&self, req: GetBalanceRequest) -> u64 {
-        self.update("bitcoin_get_balance", req)
-    }
-
-    fn bitcoin_get_balance_query(&self, req: GetBalanceRequest) -> u64 {
-        self.query("bitcoin_get_balance_query", req)
-    }
-
-    fn bitcoin_get_utxos(&self, req: GetUtxosRequest) -> GetUtxosResponse {
-        self.update("bitcoin_get_utxos", req)
-    }
-
-    fn bitcoin_get_utxos_query(&self, req: GetUtxosRequest) -> GetUtxosResponse {
-        self.query("bitcoin_get_utxos_query", req)
-    }
-
-    fn bitcoin_get_block_headers(&self, req: GetBlockHeadersRequest) -> GetBlockHeadersResponse {
-        self.update("bitcoin_get_block_headers", req)
-    }
-
-    fn tick_until_stable_height(&self, target: u32, max_ticks: u32) {
-        for _ in 0..max_ticks {
-            self.pic.tick();
-            if self.get_stable_height() >= target {
-                return;
-            }
-        }
-        panic!("timed out after {max_ticks} ticks waiting for stable height {target}");
-    }
-
-    fn get_stable_height(&self) -> u32 {
-        let request = HttpRequest {
-            method: "GET".to_string(),
-            url: "/metrics".to_string(),
-            headers: vec![],
-            body: ByteBuf::new(),
-        };
-        let bytes = self
-            .pic
-            .query_call(
-                self.btc_id,
-                Principal::anonymous(),
-                "http_request",
-                candid::encode_one(request).unwrap(),
-            )
-            .expect("http_request /metrics query failed");
-        let response: HttpResponse =
-            candid::decode_one(&bytes).expect("failed to decode /metrics response");
-        assert_eq!(
-            response.status_code,
-            200,
-            "metrics endpoint returned {}: {}",
-            response.status_code,
-            String::from_utf8_lossy(&response.body)
-        );
-        let body =
-            String::from_utf8(response.body.into_vec()).expect("/metrics body is not valid UTF-8");
-        // The metric is encoded as f64 but always a whole number; parse as f64 first
-        // so this survives any encoder change that emits "3.0" instead of "3".
-        // Accept both unlabeled ("stable_height N") and labeled ("stable_height{...} N")
-        // forms so a future label addition doesn't silently break the match.
-        let line = body
-            .lines()
-            .find(|line| line.starts_with("stable_height ") || line.starts_with("stable_height{"))
-            .expect("stable_height metric not found in /metrics output");
-        let value = line
-            .split_whitespace()
-            .nth(1)
-            .expect("stable_height line has no value field");
-        value
-            .parse::<f64>()
-            .unwrap_or_else(|e| panic!("failed to parse stable_height value {value:?}: {e}"))
-            as u32
-    }
-
-    fn update_call_raw(
-        &self,
-        method: &str,
-        arg: impl CandidType,
-    ) -> Result<Vec<u8>, RejectResponse> {
-        self.pic.update_call(
-            self.btc_id,
-            Principal::anonymous(),
-            method,
-            candid::encode_one(arg).unwrap(),
-        )
-    }
-
-    fn query<T: CandidType + for<'de> Deserialize<'de>>(
-        &self,
-        method: &str,
-        arg: impl CandidType,
-    ) -> T {
-        let bytes = self
-            .pic
-            .query_call(
-                self.btc_id,
-                Principal::anonymous(),
-                method,
-                candid::encode_one(arg).unwrap(),
-            )
-            .unwrap_or_else(|e| panic!("{method} query failed: {e:?}"));
-        candid::decode_one(&bytes).unwrap_or_else(|e| panic!("decode {method} response: {e}"))
-    }
-
-    fn update<T: CandidType + for<'de> Deserialize<'de>>(
-        &self,
-        method: &str,
-        arg: impl CandidType,
-    ) -> T {
-        let bytes = self
-            .pic
-            .update_call(
-                self.btc_id,
-                Principal::anonymous(),
-                method,
-                candid::encode_one(arg).unwrap(),
-            )
-            .unwrap_or_else(|e| panic!("{method} update call failed: {e:?}"));
-        candid::decode_one(&bytes).unwrap_or_else(|e| panic!("decode {method} response: {e}"))
-    }
-}
-
-fn load_wasm(env_var: &str, canister_name: &str) -> Vec<u8> {
-    if let Ok(path) = std::env::var(env_var) {
-        return std::fs::read(&path)
-            .unwrap_or_else(|e| panic!("failed to read WASM from {path}: {e}"));
-    }
-    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let output = Command::new("bash")
-        .arg(repo_root.join("scripts/build-canister.sh"))
-        .arg(canister_name)
-        .current_dir(&repo_root)
-        .output()
-        .unwrap_or_else(|e| panic!("failed to spawn build-canister.sh for {canister_name}: {e}"));
-    assert!(
-        output.status.success(),
-        "build-canister.sh {canister_name} failed:\n{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let wasm_path = repo_root.join(format!(
-        "target/wasm32-unknown-unknown/release/{canister_name}.wasm.gz"
-    ));
-    std::fs::read(&wasm_path)
-        .unwrap_or_else(|e| panic!("failed to read WASM from {wasm_path:?}: {e}"))
-}
 
 fn balance_req(address: &str, min_confirmations: Option<u32>) -> GetBalanceRequest {
     GetBalanceRequest {
@@ -239,13 +29,27 @@ fn utxos_req(address: &str) -> GetUtxosRequest {
 
 #[test]
 fn scenario_1() {
-    let setup = Setup::new();
+    let source_wasm = load_wasm("E2E_SCENARIO_1_WASM_PATH", "scenario-1");
+    let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
+    let (pic, bitcoin_subnet) = pocket_ic_with_bitcoin_subnet();
+    let source_id = install_canister_on_subnet(&pic, bitcoin_subnet, source_wasm, vec![]);
+    let btc_id = install_bitcoin_canister(
+        &pic,
+        bitcoin_subnet,
+        InitConfig {
+            stability_threshold: Some(2),
+            network: Some(Network::Regtest),
+            blocks_source: Some(source_id),
+            ..Default::default()
+        },
+        btc_wasm,
+    );
 
     // Wait until all 5 blocks have been ingested. The scenario-1 canister serves 7
     // GetSuccessors responses (one per heartbeat call); 500 ticks is a generous ceiling.
-    setup.tick_until_main_chain_height(5, 500);
+    tick_until_main_chain_height(&pic, btc_id, 5, 500);
 
-    let info = setup.get_blockchain_info();
+    let info = get_blockchain_info(&pic, btc_id);
     assert_eq!(
         info.height, 5,
         "expected blockchain height 5, got {}",
@@ -256,27 +60,29 @@ fn scenario_1() {
     // main_chain_height=5, blocks 1–3 should become stable. Stable ingestion happens
     // incrementally across heartbeats after the main chain advances, so a few dozen
     // ticks typically suffice; 200 is a generous ceiling.
-    setup.tick_until_stable_height(3, 200);
+    tick_until_stable_height(&pic, btc_id, 3, 200);
 
     // ADDRESS_1 has no balance: it transferred everything to ADDRESS_2 in block 2.
-    assert_eq!(setup.bitcoin_get_balance(balance_req(ADDRESS_1, None)), 0);
+    assert_eq!(bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_1, None)), 0);
     assert_eq!(
-        setup.bitcoin_get_balance_query(balance_req(ADDRESS_1, None)),
+        bitcoin_get_balance_query(&pic, btc_id, balance_req(ADDRESS_1, None)),
         0
     );
 
     // ADDRESS_2 with min_confirmations=2: block 5's spend is excluded (only 1 confirmation at
     // tip), so it still shows the 50 BTC received in block 2.
     assert_eq!(
-        setup.bitcoin_get_balance(balance_req(ADDRESS_2, Some(2))),
+        bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_2, Some(2))),
         5_000_000_000
     );
 
     // ADDRESS_2 UTXOs without filter: block 5 is included so all are spent.
-    assert_eq!(setup.bitcoin_get_utxos(utxos_req(ADDRESS_2)).utxos.len(), 0);
     assert_eq!(
-        setup
-            .bitcoin_get_utxos_query(utxos_req(ADDRESS_2))
+        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_2)).utxos.len(),
+        0
+    );
+    assert_eq!(
+        bitcoin_get_utxos_query(&pic, btc_id, utxos_req(ADDRESS_2))
             .utxos
             .len(),
         0
@@ -284,45 +90,51 @@ fn scenario_1() {
 
     // ADDRESS_5 has 10k UTXOs (received in block 5), but responses are capped at 1000.
     assert_eq!(
-        setup.bitcoin_get_utxos(utxos_req(ADDRESS_5)).utxos.len(),
+        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_5)).utxos.len(),
         1000
     );
     assert_eq!(
-        setup
-            .bitcoin_get_utxos_query(utxos_req(ADDRESS_5))
+        bitcoin_get_utxos_query(&pic, btc_id, utxos_req(ADDRESS_5))
             .utxos
             .len(),
         1000
     );
 
     // Calling query-only methods as replicated (update) calls must be rejected.
-    let err = setup
-        .update_call_raw("bitcoin_get_utxos_query", utxos_req(ADDRESS_5))
+    let err = update_raw(&pic, btc_id, "bitcoin_get_utxos_query", utxos_req(ADDRESS_5))
         .expect_err("expected replicated bitcoin_get_utxos_query to be rejected");
     assert_eq!(err.reject_code, RejectCode::CanisterReject);
 
-    let err = setup
-        .update_call_raw("bitcoin_get_balance_query", balance_req(ADDRESS_5, None))
-        .expect_err("expected replicated bitcoin_get_balance_query to be rejected");
+    let err = update_raw(
+        &pic,
+        btc_id,
+        "bitcoin_get_balance_query",
+        balance_req(ADDRESS_5, None),
+    )
+    .expect_err("expected replicated bitcoin_get_balance_query to be rejected");
     assert_eq!(err.reject_code, RejectCode::CanisterReject);
 
     // ADDRESS_5 balance.
     assert_eq!(
-        setup.bitcoin_get_balance(balance_req(ADDRESS_5, None)),
+        bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_5, None)),
         5_000_000_000
     );
     assert_eq!(
-        setup.bitcoin_get_balance_query(balance_req(ADDRESS_5, None)),
+        bitcoin_get_balance_query(&pic, btc_id, balance_req(ADDRESS_5, None)),
         5_000_000_000
     );
 
     // Verify block headers. The scenario-1 canister chains 5 blocks onto the genesis block,
     // so get_block_headers returns 6 headers (genesis + blocks 1–5).
-    let headers_resp = setup.bitcoin_get_block_headers(GetBlockHeadersRequest {
-        start_height: 0,
-        end_height: None,
-        network: NetworkInRequest::Regtest,
-    });
+    let headers_resp = bitcoin_get_block_headers(
+        &pic,
+        btc_id,
+        GetBlockHeadersRequest {
+            start_height: 0,
+            end_height: None,
+            network: NetworkInRequest::Regtest,
+        },
+    );
     assert_eq!(headers_resp.tip_height, 5);
 
     // Expected headers are the raw 80-byte Bitcoin block headers, matching the blob literals
