@@ -317,8 +317,16 @@ pub struct Setup {
 impl Setup {
     /// Brings up a fresh PocketIC instance with a bitcoin subnet, installs
     /// the source canister, then installs the bitcoin canister with
-    /// `init.blocks_source` overridden to point at the source canister id.
+    /// `init.blocks_source` wired to the source canister id.
+    ///
+    /// Panics if `init.blocks_source` is `Some(_)`: the source canister id
+    /// is created inside this constructor, so a caller-provided value can
+    /// only be a mistake.
     pub fn new(source_wasm_env: &str, source_name: &str, init: InitConfig) -> Self {
+        assert!(
+            init.blocks_source.is_none(),
+            "Setup::new wires blocks_source itself; caller must leave it as None",
+        );
         let source_wasm = load_wasm(source_wasm_env, source_name);
         let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
         let (pic, bitcoin_subnet) = pocket_ic_with_bitcoin_subnet();
