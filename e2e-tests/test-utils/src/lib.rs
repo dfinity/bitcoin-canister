@@ -299,15 +299,6 @@ pub fn bitcoin_send_transaction(pic: &PocketIc, btc_id: Principal, req: SendTran
 
 // ---------- Setup ----------
 
-/// Bundles a PocketIC instance with a deployed bitcoin canister and its
-/// source canister, plus thin method wrappers around the most common
-/// bitcoin canister calls.
-///
-/// Fields are public so tests can still reach the underlying `PocketIc`
-/// and canister ids for things that don't fit the bitcoin-canister method
-/// surface — source-canister queries (e.g. scenario-3's
-/// `get_last_transaction`), and raw update calls that inspect the reject
-/// response (e.g. asserting on `MalformedTransaction`).
 pub struct Setup {
     pub pic: PocketIc,
     pub btc_id: Principal,
