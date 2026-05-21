@@ -1,0 +1,15 @@
+[package]
+name = "e2e-test-utils"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+candid = { workspace = true }
+cargo_metadata = { workspace = true }
+escargot = { workspace = true }
+ic-btc-canister = { workspace = true }
+ic-btc-interface = { workspace = true }
+pocket-ic = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
