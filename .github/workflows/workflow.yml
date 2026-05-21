@@ -95,7 +95,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude scenario-1 --exclude scenario-2 --exclude scenario-3 -- --color always
+          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' -- --color always
         env:
           RUST_BACKTRACE: 1
 
