@@ -1,9 +1,4 @@
-use e2e_test_utils::{
-    bitcoin_get_balance, bitcoin_get_balance_query, bitcoin_get_block_headers, bitcoin_get_utxos,
-    bitcoin_get_utxos_query, get_blockchain_info, install_bitcoin_canister,
-    install_canister_on_subnet, load_wasm, pocket_ic_with_bitcoin_subnet,
-    tick_until_main_chain_height, tick_until_stable_height, update_raw,
-};
+use e2e_test_utils::{update_raw, Setup};
 use ic_btc_interface::{
     GetBalanceRequest, GetBlockHeadersRequest, GetUtxosRequest, InitConfig, Network,
     NetworkInRequest,
@@ -29,27 +24,21 @@ fn utxos_req(address: &str) -> GetUtxosRequest {
 
 #[test]
 fn scenario_1() {
-    let source_wasm = load_wasm("E2E_SCENARIO_1_WASM_PATH", "scenario-1");
-    let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
-    let (pic, bitcoin_subnet) = pocket_ic_with_bitcoin_subnet();
-    let source_id = install_canister_on_subnet(&pic, bitcoin_subnet, source_wasm, vec![]);
-    let btc_id = install_bitcoin_canister(
-        &pic,
-        bitcoin_subnet,
+    let setup = Setup::new(
+        "E2E_SCENARIO_1_WASM_PATH",
+        "scenario-1",
         InitConfig {
             stability_threshold: Some(2),
             network: Some(Network::Regtest),
-            blocks_source: Some(source_id),
             ..Default::default()
         },
-        btc_wasm,
     );
 
     // Wait until all 5 blocks have been ingested. The scenario-1 canister serves 7
     // GetSuccessors responses (one per heartbeat call); 500 ticks is a generous ceiling.
-    tick_until_main_chain_height(&pic, btc_id, 5, 500);
+    setup.tick_until_main_chain_height(5, 500);
 
-    let info = get_blockchain_info(&pic, btc_id);
+    let info = setup.get_blockchain_info();
     assert_eq!(
         info.height, 5,
         "expected blockchain height 5, got {}",
@@ -60,34 +49,27 @@ fn scenario_1() {
     // main_chain_height=5, blocks 1–3 should become stable. Stable ingestion happens
     // incrementally across heartbeats after the main chain advances, so a few dozen
     // ticks typically suffice; 200 is a generous ceiling.
-    tick_until_stable_height(&pic, btc_id, 3, 200);
+    setup.tick_until_stable_height(3, 200);
 
     // ADDRESS_1 has no balance: it transferred everything to ADDRESS_2 in block 2.
+    assert_eq!(setup.bitcoin_get_balance(balance_req(ADDRESS_1, None)), 0);
     assert_eq!(
-        bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_1, None)),
-        0
-    );
-    assert_eq!(
-        bitcoin_get_balance_query(&pic, btc_id, balance_req(ADDRESS_1, None)),
+        setup.bitcoin_get_balance_query(balance_req(ADDRESS_1, None)),
         0
     );
 
     // ADDRESS_2 with min_confirmations=2: block 5's spend is excluded (only 1 confirmation at
     // tip), so it still shows the 50 BTC received in block 2.
     assert_eq!(
-        bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_2, Some(2))),
+        setup.bitcoin_get_balance(balance_req(ADDRESS_2, Some(2))),
         5_000_000_000
     );
 
     // ADDRESS_2 UTXOs without filter: block 5 is included so all are spent.
+    assert_eq!(setup.bitcoin_get_utxos(utxos_req(ADDRESS_2)).utxos.len(), 0);
     assert_eq!(
-        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_2))
-            .utxos
-            .len(),
-        0
-    );
-    assert_eq!(
-        bitcoin_get_utxos_query(&pic, btc_id, utxos_req(ADDRESS_2))
+        setup
+            .bitcoin_get_utxos_query(utxos_req(ADDRESS_2))
             .utxos
             .len(),
         0
@@ -95,13 +77,12 @@ fn scenario_1() {
 
     // ADDRESS_5 has 10k UTXOs (received in block 5), but responses are capped at 1000.
     assert_eq!(
-        bitcoin_get_utxos(&pic, btc_id, utxos_req(ADDRESS_5))
-            .utxos
-            .len(),
+        setup.bitcoin_get_utxos(utxos_req(ADDRESS_5)).utxos.len(),
         1000
     );
     assert_eq!(
-        bitcoin_get_utxos_query(&pic, btc_id, utxos_req(ADDRESS_5))
+        setup
+            .bitcoin_get_utxos_query(utxos_req(ADDRESS_5))
             .utxos
             .len(),
         1000
@@ -109,8 +90,8 @@ fn scenario_1() {
 
     // Calling query-only methods as replicated (update) calls must be rejected.
     let err = update_raw(
-        &pic,
-        btc_id,
+        &setup.pic,
+        setup.btc_id,
         "bitcoin_get_utxos_query",
         utxos_req(ADDRESS_5),
     )
@@ -118,8 +99,8 @@ fn scenario_1() {
     assert_eq!(err.reject_code, RejectCode::CanisterReject);
 
     let err = update_raw(
-        &pic,
-        btc_id,
+        &setup.pic,
+        setup.btc_id,
         "bitcoin_get_balance_query",
         balance_req(ADDRESS_5, None),
     )
@@ -128,25 +109,21 @@ fn scenario_1() {
 
     // ADDRESS_5 balance.
     assert_eq!(
-        bitcoin_get_balance(&pic, btc_id, balance_req(ADDRESS_5, None)),
+        setup.bitcoin_get_balance(balance_req(ADDRESS_5, None)),
         5_000_000_000
     );
     assert_eq!(
-        bitcoin_get_balance_query(&pic, btc_id, balance_req(ADDRESS_5, None)),
+        setup.bitcoin_get_balance_query(balance_req(ADDRESS_5, None)),
         5_000_000_000
     );
 
     // Verify block headers. The scenario-1 canister chains 5 blocks onto the genesis block,
     // so get_block_headers returns 6 headers (genesis + blocks 1–5).
-    let headers_resp = bitcoin_get_block_headers(
-        &pic,
-        btc_id,
-        GetBlockHeadersRequest {
-            start_height: 0,
-            end_height: None,
-            network: NetworkInRequest::Regtest,
-        },
-    );
+    let headers_resp = setup.bitcoin_get_block_headers(GetBlockHeadersRequest {
+        start_height: 0,
+        end_height: None,
+        network: NetworkInRequest::Regtest,
+    });
     assert_eq!(headers_resp.tip_height, 5);
 
     // Expected headers are the raw 80-byte Bitcoin block headers, matching the blob literals
