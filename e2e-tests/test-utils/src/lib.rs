@@ -296,3 +296,84 @@ pub fn bitcoin_get_block_headers(
 pub fn bitcoin_send_transaction(pic: &PocketIc, btc_id: Principal, req: SendTransactionRequest) {
     update(pic, btc_id, "bitcoin_send_transaction", req)
 }
+
+// ---------- Setup ----------
+
+pub struct Setup {
+    pub pic: PocketIc,
+    pub btc_id: Principal,
+    pub source_id: Principal,
+}
+
+impl Setup {
+    /// Brings up a fresh PocketIC instance with a bitcoin subnet, installs
+    /// the source canister, then installs the bitcoin canister with
+    /// `init.blocks_source` wired to the source canister id.
+    ///
+    /// Panics if `init.blocks_source` is `Some(_)`: the source canister id
+    /// is created inside this constructor, so a caller-provided value can
+    /// only be a mistake.
+    pub fn new(source_wasm_env: &str, source_name: &str, init: InitConfig) -> Self {
+        assert!(
+            init.blocks_source.is_none(),
+            "Setup::new wires blocks_source itself; caller must leave it as None",
+        );
+        let source_wasm = load_wasm(source_wasm_env, source_name);
+        let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
+        let (pic, bitcoin_subnet) = pocket_ic_with_bitcoin_subnet();
+        let source_id = install_canister_on_subnet(&pic, bitcoin_subnet, source_wasm, vec![]);
+        let init = InitConfig {
+            blocks_source: Some(source_id),
+            ..init
+        };
+        let btc_id = install_bitcoin_canister(&pic, bitcoin_subnet, init, btc_wasm);
+        Self {
+            pic,
+            btc_id,
+            source_id,
+        }
+    }
+
+    pub fn get_blockchain_info(&self) -> BlockchainInfo {
+        get_blockchain_info(&self.pic, self.btc_id)
+    }
+
+    pub fn get_stable_height(&self) -> u32 {
+        get_stable_height(&self.pic, self.btc_id)
+    }
+
+    pub fn tick_until_main_chain_height(&self, target: u32, max_ticks: u32) {
+        tick_until_main_chain_height(&self.pic, self.btc_id, target, max_ticks)
+    }
+
+    pub fn tick_until_stable_height(&self, target: u32, max_ticks: u32) {
+        tick_until_stable_height(&self.pic, self.btc_id, target, max_ticks)
+    }
+
+    pub fn bitcoin_get_balance(&self, req: GetBalanceRequest) -> u64 {
+        bitcoin_get_balance(&self.pic, self.btc_id, req)
+    }
+
+    pub fn bitcoin_get_balance_query(&self, req: GetBalanceRequest) -> u64 {
+        bitcoin_get_balance_query(&self.pic, self.btc_id, req)
+    }
+
+    pub fn bitcoin_get_utxos(&self, req: GetUtxosRequest) -> GetUtxosResponse {
+        bitcoin_get_utxos(&self.pic, self.btc_id, req)
+    }
+
+    pub fn bitcoin_get_utxos_query(&self, req: GetUtxosRequest) -> GetUtxosResponse {
+        bitcoin_get_utxos_query(&self.pic, self.btc_id, req)
+    }
+
+    pub fn bitcoin_get_block_headers(
+        &self,
+        req: GetBlockHeadersRequest,
+    ) -> GetBlockHeadersResponse {
+        bitcoin_get_block_headers(&self.pic, self.btc_id, req)
+    }
+
+    pub fn bitcoin_send_transaction(&self, req: SendTransactionRequest) {
+        bitcoin_send_transaction(&self.pic, self.btc_id, req)
+    }
+}
