@@ -9,15 +9,12 @@ fn set_config_updates_stability_threshold() {
         ..Default::default()
     });
 
-    // Verify the init-time stability threshold is visible via get_config.
     assert_eq!(setup.get_config().stability_threshold, 0);
 
-    // Update the stability threshold via set_config.
     setup.set_config(SetConfigRequest {
         stability_threshold: Some(17),
         ..Default::default()
     });
 
-    // Verify the new value is visible via get_config.
     assert_eq!(setup.get_config().stability_threshold, 17);
 }
