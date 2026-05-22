@@ -8,8 +8,9 @@ use cargo_metadata::MetadataCommand;
 use escargot::CargoBuild;
 use ic_btc_canister::types::{HttpRequest, HttpResponse};
 use ic_btc_interface::{
-    BlockchainInfo, CanisterArg, GetBalanceRequest, GetBlockHeadersRequest,
+    BlockchainInfo, CanisterArg, Config, GetBalanceRequest, GetBlockHeadersRequest,
     GetBlockHeadersResponse, GetUtxosRequest, GetUtxosResponse, InitConfig, SendTransactionRequest,
+    SetConfigRequest,
 };
 use pocket_ic::{PocketIc, PocketIcBuilder, RejectResponse};
 use serde::de::DeserializeOwned;
@@ -110,6 +111,20 @@ pub fn install_bitcoin_canister(
     install_canister_on_subnet(pic, subnet, wasm, arg)
 }
 
+/// Upgrades the bitcoin canister, wrapping the optional `SetConfigRequest` in
+/// `CanisterArg::Upgrade` and candid-encoding it. Panics on reject.
+pub fn upgrade_bitcoin_canister(
+    pic: &PocketIc,
+    btc_id: Principal,
+    wasm: Vec<u8>,
+    set_config: Option<SetConfigRequest>,
+) {
+    let arg = candid::encode_one(CanisterArg::Upgrade(set_config))
+        .expect("failed to encode bitcoin canister CanisterArg::Upgrade");
+    pic.upgrade_canister(btc_id, wasm, arg, None)
+        .unwrap_or_else(|e| panic!("bitcoin canister upgrade failed: {e:?}"));
+}
+
 // ---------- Generic candid call helpers ----------
 
 /// Candid-encoded query call; panics with a precise message if the call or
@@ -167,6 +182,19 @@ pub fn update_raw(
 }
 
 // ---------- Bitcoin canister introspection ----------
+
+/// Reads the bitcoin canister's `get_config` query endpoint.
+pub fn get_config(pic: &PocketIc, btc_id: Principal) -> Config {
+    let bytes = pic
+        .query_call(
+            btc_id,
+            Principal::anonymous(),
+            "get_config",
+            candid::encode_args(()).unwrap(),
+        )
+        .expect("get_config query failed");
+    candid::decode_one(&bytes).expect("failed to decode Config")
+}
 
 /// Reads the bitcoin canister's `get_blockchain_info` query endpoint.
 pub fn get_blockchain_info(pic: &PocketIc, btc_id: Principal) -> BlockchainInfo {
