@@ -23,7 +23,10 @@ fn scenario_3() {
         transaction: valid_tx.clone(),
     });
 
-    let last_tx: ByteBuf = query(&setup.pic, setup.source_id, "get_last_transaction", ());
+    let source_id = setup
+        .source_id
+        .expect("Setup::new installs a source canister");
+    let last_tx: ByteBuf = query(&setup.pic, source_id, "get_last_transaction", ());
     assert_eq!(last_tx.as_slice(), valid_tx.as_slice());
 
     // Send an invalid transaction; the canister must reject with MalformedTransaction.

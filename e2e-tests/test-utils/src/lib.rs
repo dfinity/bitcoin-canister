@@ -183,19 +183,6 @@ pub fn update_raw(
 
 // ---------- Bitcoin canister introspection ----------
 
-/// Reads the bitcoin canister's `get_config` query endpoint.
-pub fn get_config(pic: &PocketIc, btc_id: Principal) -> Config {
-    let bytes = pic
-        .query_call(
-            btc_id,
-            Principal::anonymous(),
-            "get_config",
-            candid::encode_args(()).unwrap(),
-        )
-        .expect("get_config query failed");
-    candid::decode_one(&bytes).expect("failed to decode Config")
-}
-
 /// Reads the bitcoin canister's `get_blockchain_info` query endpoint.
 pub fn get_blockchain_info(pic: &PocketIc, btc_id: Principal) -> BlockchainInfo {
     let bytes = pic
@@ -325,12 +312,20 @@ pub fn bitcoin_send_transaction(pic: &PocketIc, btc_id: Principal, req: SendTran
     update(pic, btc_id, "bitcoin_send_transaction", req)
 }
 
+pub fn get_config(pic: &PocketIc, btc_id: Principal) -> Config {
+    query(pic, btc_id, "get_config", ())
+}
+
+pub fn set_config(pic: &PocketIc, btc_id: Principal, req: SetConfigRequest) {
+    update(pic, btc_id, "set_config", req)
+}
+
 // ---------- Setup ----------
 
 pub struct Setup {
     pub pic: PocketIc,
     pub btc_id: Principal,
-    pub source_id: Principal,
+    pub source_id: Option<Principal>,
 }
 
 impl Setup {
@@ -358,7 +353,31 @@ impl Setup {
         Self {
             pic,
             btc_id,
-            source_id,
+            source_id: Some(source_id),
+        }
+    }
+
+    /// Brings up a fresh PocketIC instance with a bitcoin subnet and
+    /// installs only the bitcoin canister — no source canister. Use this
+    /// for tests that don't ingest blocks (e.g. config mutations,
+    /// metadata checks).
+    ///
+    /// Panics if `init.blocks_source` is `Some(_)`: no source canister is
+    /// installed here, so any value supplied would point at a non-existent
+    /// principal and silently break block ingestion.
+    pub fn new_bitcoin_only(init: InitConfig) -> Self {
+        assert!(
+            init.blocks_source.is_none(),
+            "Setup::new_bitcoin_only installs no source canister; \
+             caller must leave blocks_source as None",
+        );
+        let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
+        let (pic, bitcoin_subnet) = pocket_ic_with_bitcoin_subnet();
+        let btc_id = install_bitcoin_canister(&pic, bitcoin_subnet, init, btc_wasm);
+        Self {
+            pic,
+            btc_id,
+            source_id: None,
         }
     }
 
@@ -403,5 +422,13 @@ impl Setup {
 
     pub fn bitcoin_send_transaction(&self, req: SendTransactionRequest) {
         bitcoin_send_transaction(&self.pic, self.btc_id, req)
+    }
+
+    pub fn get_config(&self) -> Config {
+        get_config(&self.pic, self.btc_id)
+    }
+
+    pub fn set_config(&self, req: SetConfigRequest) {
+        set_config(&self.pic, self.btc_id, req)
     }
 }

@@ -19,6 +19,7 @@ members = [
     "e2e-tests/cdk-bitcoin-canister",
     "e2e-tests/disable-api-if-not-fully-synced-flag",
     "e2e-tests/post-upgrade-config",
+    "e2e-tests/set-config",
     "e2e-tests/test-utils",
     "test-utils",
     "ic-http",
