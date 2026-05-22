@@ -347,7 +347,16 @@ impl Setup {
     /// installs only the bitcoin canister — no source canister. Use this
     /// for tests that don't ingest blocks (e.g. config mutations,
     /// metadata checks).
+    ///
+    /// Panics if `init.blocks_source` is `Some(_)`: no source canister is
+    /// installed here, so any value supplied would point at a non-existent
+    /// principal and silently break block ingestion.
     pub fn new_bitcoin_only(init: InitConfig) -> Self {
+        assert!(
+            init.blocks_source.is_none(),
+            "Setup::new_bitcoin_only installs no source canister; \
+             caller must leave blocks_source as None",
+        );
         let btc_wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
         let (pic, bitcoin_subnet) = pocket_ic_with_bitcoin_subnet();
         let btc_id = install_bitcoin_canister(&pic, bitcoin_subnet, init, btc_wasm);
