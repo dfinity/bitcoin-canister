@@ -431,4 +431,11 @@ impl Setup {
     pub fn set_config(&self, req: SetConfigRequest) {
         set_config(&self.pic, self.btc_id, req)
     }
+
+    /// Upgrades the bitcoin canister in place, reloading the same wasm used at
+    /// install time from `IC_BTC_CANISTER_WASM_PATH`.
+    pub fn upgrade_bitcoin_canister(&self, set_config: Option<SetConfigRequest>) {
+        let wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
+        upgrade_bitcoin_canister(&self.pic, self.btc_id, wasm, set_config)
+    }
 }

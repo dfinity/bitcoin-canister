@@ -2,7 +2,9 @@
 name = "post-upgrade-config"
 version = "0.1.0"
 edition = "2021"
-publish = false
+
+[lib]
+path = "src/lib.rs"
 
 [dev-dependencies]
 e2e-test-utils = { workspace = true }
