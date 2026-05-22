@@ -95,7 +95,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' -- --color always
+          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' --exclude set-config -- --color always
         env:
           RUST_BACKTRACE: 1
 
@@ -159,7 +159,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [scenario-1, scenario-2, scenario-3]
+        include:
+          - { name: scenario-1, source: scenario-1 }
+          - { name: scenario-2, source: scenario-2 }
+          - { name: scenario-3, source: scenario-3 }
+          - { name: set-config, source: '' }
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -188,11 +192,12 @@ jobs:
           name: wasms
           path: ./wasms
 
-      - name: Build ${{ matrix.scenario }} source canister WASM
-        run: bash scripts/build-canister.sh ${{ matrix.scenario }}
+      - name: Build ${{ matrix.source }} source canister WASM
+        if: matrix.source != ''
+        run: bash scripts/build-canister.sh ${{ matrix.source }}
 
-      - name: Run ${{ matrix.scenario }}
-        run: cargo test --release -p ${{ matrix.scenario }}
+      - name: Run ${{ matrix.name }}
+        run: cargo test --release -p ${{ matrix.name }}
         env:
           IC_BTC_CANISTER_WASM_PATH: ${{ github.workspace }}/wasms/ic-btc-canister.wasm.gz
           E2E_SCENARIO_1_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-1.wasm.gz
@@ -291,28 +296,6 @@ jobs:
       - name: Run upgradability test
         run: |
           bash e2e-tests/upgradability.sh
-
-  set_config:
-    runs-on: ubuntu-latest
-    needs: canister-build-reproducibility
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-
-      - name: Download WASMs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wasms
-          path: ./wasms
-
-      - name: Install dfx
-        uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
-        with:
-          dfx-version: $DFX_VERSION
-
-      - name: Run set_config test
-        run: |
-          bash e2e-tests/set_config.sh
 
   post_upgrade_config:
     runs-on: ubuntu-latest
@@ -706,7 +689,6 @@ jobs:
         e2e-scenario,
         charge-cycles-on-reject,
         upgradability,
-        set_config,
         cycles_burn,
         benchmark,
         watchdog_health_status,
@@ -744,9 +726,6 @@ jobs:
         run: exit 1
       - name: check upgradability result
         if: ${{ needs.upgradability.result != 'success' && needs.upgradability.result != 'skipped' }}
-        run: exit 1
-      - name: check set_config result
-        if: ${{ needs.set_config.result != 'success' }}
         run: exit 1
       - name: check cycles_burn result
         if: ${{ needs.cycles_burn.result != 'success' }}
