@@ -163,7 +163,7 @@ jobs:
           - { name: scenario-1, source: scenario-1 }
           - { name: scenario-2, source: scenario-2 }
           - { name: scenario-3, source: scenario-3 }
-          - { name: set-config }
+          - { name: set-config, source: '' }
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
