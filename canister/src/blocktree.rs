@@ -492,7 +492,7 @@ impl<Block: ChainBlock> BlockTree<Block> {
         BlockChain::new_with_successors(first, chain_rev)
     }
 
-    /// Bottom-up DFS returning (accumulated_difficulty, depth, main_chain_reversed).
+    /// Bottom-up DFS returning (accumulated_difficulty, main_chain_length, main_chain_reversed).
     fn main_chain_by_difficulty_inner(&self) -> (DifficultyBasedDepth, usize, Vec<&Block>) {
         let self_difficulty = DifficultyBasedDepth::new(self.root.difficulty());
 
@@ -507,8 +507,8 @@ impl<Block: ChainBlock> BlockTree<Block> {
         // Using strict `>` means the first child that sets `best_key` is kept
         // on ties, so the earliest-received branch wins.
         for child in self.children.iter() {
-            let (child_diff, child_depth, child_chain) = child.main_chain_by_difficulty_inner();
-            let key = (child_diff, child_depth);
+            let (child_diff, child_length, child_chain) = child.main_chain_by_difficulty_inner();
+            let key = (child_diff, child_length);
 
             if key > best_key {
                 best_key = key;
@@ -517,9 +517,9 @@ impl<Block: ChainBlock> BlockTree<Block> {
         }
 
         let total_difficulty = self_difficulty + best_key.0;
-        let total_depth = 1 + best_key.1;
+        let total_length = 1 + best_key.1;
         best_chain.push(&self.root);
-        (total_difficulty, total_depth, best_chain)
+        (total_difficulty, total_length, best_chain)
     }
 
     /// Returns the length of the main chain determined by most accumulated
@@ -558,8 +558,8 @@ impl<Block: ChainBlock> BlockTree<Block> {
         }
 
         let total_difficulty = self_difficulty + best_key.0;
-        let total_depth = 1 + best_key.1;
-        (total_difficulty, total_depth)
+        let total_length = 1 + best_key.1;
+        (total_difficulty, total_length)
     }
 
     /// Returns a `BlockTree` where the hash of the root block matches the provided `block_hash`

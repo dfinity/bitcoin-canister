@@ -1236,7 +1236,7 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 3);
     }
 
-    // Contested deeper in the tree: the main chain stops at the inner fork.
+    // Tied fork deeper in the tree: first-received child wins at the inner fork.
     //
     // * (d=5) -> A (d=10) -> B (d=20)
     //                     -> C (d=20)
@@ -1430,7 +1430,7 @@ mod test {
         assert_eq!(get_main_chain_length(&forest), 2);
     }
 
-    // Three children: two tie, third loses. Still contested.
+    // Three children: two tie, third loses.
     //
     //     * (d=1)
     //   / | \
