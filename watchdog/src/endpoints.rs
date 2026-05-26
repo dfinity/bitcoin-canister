@@ -11,10 +11,13 @@ use crate::{
 use ic_management_canister_types::{HttpRequestResult, TransformArgs};
 use serde_json::json;
 
+const MAX_RESPONSE_BYTES: u64 = 4 * 1024;
+
 /// Creates a config for fetching mainnet block data from api.bitcore.io.
 pub fn endpoint_bitcoin_mainnet_api_bitcore_io() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.bitcore.io/api/BTC/mainnet/block?limit=1",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_bitcoin_mainnet_api_bitcore_io",
             func: transform_bitcoin_mainnet_api_bitcore_io,
@@ -33,6 +36,7 @@ pub fn endpoint_bitcoin_mainnet_api_bitcore_io() -> HttpRequestConfig {
 pub fn endpoint_bitcoin_mainnet_api_blockchair_com() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockchair.com/bitcoin/stats",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_bitcoin_mainnet_api_blockchair_com",
             func: transform_bitcoin_mainnet_api_blockchair_com,
@@ -52,6 +56,7 @@ pub fn endpoint_bitcoin_mainnet_api_blockchair_com() -> HttpRequestConfig {
 pub fn endpoint_bitcoin_mainnet_api_blockcypher_com() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockcypher.com/v1/btc/main",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_bitcoin_mainnet_api_blockcypher_com",
             func: transform_bitcoin_mainnet_api_blockcypher_com,
@@ -70,6 +75,7 @@ pub fn endpoint_bitcoin_mainnet_api_blockcypher_com() -> HttpRequestConfig {
 pub fn endpoint_bitcoin_mainnet_blockchain_info() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockchain.info/q/getblockcount",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_bitcoin_mainnet_blockchain_info",
             func: transform_bitcoin_mainnet_blockchain_info,
@@ -93,6 +99,7 @@ pub fn endpoint_bitcoin_mainnet_blockchain_info() -> HttpRequestConfig {
 pub fn endpoint_bitcoin_mainnet_blockstream_info() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://blockstream.info/api/blocks/tip/height",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_bitcoin_mainnet_blockstream_info",
             func: transform_bitcoin_mainnet_blockstream_info,
@@ -121,6 +128,7 @@ pub fn endpoint_bitcoin_mempool(network: Network) -> HttpRequestConfig {
     };
     HttpRequestConfig::new(
         url,
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_bitcoin_mempool",
             func: transform_bitcoin_mempool,
@@ -154,6 +162,7 @@ pub fn endpoint_bitcoin_testnet_mempool() -> HttpRequestConfig {
 pub fn endpoint_dogecoin_mainnet_api_bitcore_io() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.bitcore.io/api/DOGE/mainnet/block?limit=1",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_dogecoin_mainnet_api_bitcore_io",
             func: transform_dogecoin_mainnet_api_bitcore_io,
@@ -172,6 +181,7 @@ pub fn endpoint_dogecoin_mainnet_api_bitcore_io() -> HttpRequestConfig {
 pub fn endpoint_dogecoin_mainnet_api_blockchair_com() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockchair.com/dogecoin/stats",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_dogecoin_mainnet_api_blockchair_com",
             func: transform_dogecoin_mainnet_api_blockchair_com,
@@ -191,6 +201,7 @@ pub fn endpoint_dogecoin_mainnet_api_blockchair_com() -> HttpRequestConfig {
 pub fn endpoint_dogecoin_mainnet_api_blockcypher_com() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://api.blockcypher.com/v1/doge/main",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_dogecoin_mainnet_api_blockcypher_com",
             func: transform_dogecoin_mainnet_api_blockcypher_com,
@@ -209,6 +220,7 @@ pub fn endpoint_dogecoin_mainnet_api_blockcypher_com() -> HttpRequestConfig {
 pub fn endpoint_dogecoin_mainnet_psy_protocol() -> HttpRequestConfig {
     HttpRequestConfig::new(
         "https://doge-electrs-demo.qed.me/blocks/tip/height",
+        MAX_RESPONSE_BYTES,
         Some(TransformFnWrapper {
             name: "transform_dogecoin_mainnet_psy_protocol",
             func: transform_dogecoin_mainnet_psy_protocol,

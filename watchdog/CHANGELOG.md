@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Cap `max_response_bytes` on every HTTPS outcall at 4 KB ([DEFI-2827](https://dfinity.atlassian.net/browse/DEFI-2827)). Previously the request omitted the cap and the IC billed against its 2 MB default, which dominates per-call cost on application subnets.
+
 ## [watchdog/release/2026-03-13] - 2026-03-13
 
 ### Changed
