@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-05-27] - 2026-05-27
+
+### Changed
+
+- Clarify main-chain tie-break terminology in comments and naming ([#530](https://github.com/dfinity/bitcoin-canister/pull/530))
+
+
+### Fixed
+
+- Prevent main chain from decreasing when tip is contested ([#521](https://github.com/dfinity/bitcoin-canister/pull/521))
+
+
 ## [release/2026-04-15] - 2026-04-15
 
 ### Added
@@ -325,3 +337,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2026-03-06]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-02-18...release/2026-03-06
 
 [release/2026-04-15]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-03-06...release/2026-04-15
+
+[release/2026-05-27]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-04-15...release/2026-05-27
