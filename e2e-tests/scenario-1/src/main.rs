@@ -2,10 +2,13 @@ use bitcoin::{
     blockdata::constants::genesis_block, consensus::Encodable, Address, Block,
     Network as BitcoinNetwork, OutPoint,
 };
-use candid::CandidType;
+use candid::{CandidType, Principal};
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
+use ic_cdk::call::Call;
 use ic_cdk::{init, update};
-use scenario_1::{ADDRESS_1, ADDRESS_2, ADDRESS_3, ADDRESS_4, ADDRESS_5, MINER_ADDRESS};
+use scenario_1::{
+    ProxyCallResult, ADDRESS_1, ADDRESS_2, ADDRESS_3, ADDRESS_4, ADDRESS_5, MINER_ADDRESS,
+};
 use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
 use std::str::FromStr;
@@ -255,6 +258,31 @@ fn append_block(block: &Block) {
     let mut block_bytes = vec![];
     block.consensus_encode(&mut block_bytes).unwrap();
     BLOCKS.with(|b| b.borrow_mut().push(block_bytes));
+}
+
+/// Forwards `arg` to `target.method` with `cycles` cycles attached and reports
+/// the outcome. Ingress messages carry no cycles, so e2e tests route calls
+/// through this canister to exercise the bitcoin canister's cycle charging.
+///
+/// `charged_cycles` is this canister's balance delta across the call, i.e. the
+/// cycles attached minus those refunded — the amount the callee accepted.
+#[update]
+async fn proxy_call(
+    target: Principal,
+    method: String,
+    arg: Vec<u8>,
+    cycles: u128,
+) -> ProxyCallResult {
+    let balance_before = ic_cdk::api::canister_cycle_balance();
+    let result = Call::unbounded_wait(target, &method)
+        .with_raw_args(&arg)
+        .with_cycles(cycles)
+        .await;
+    let charged_cycles = balance_before.saturating_sub(ic_cdk::api::canister_cycle_balance());
+    ProxyCallResult {
+        charged_cycles,
+        reject_message: result.err().map(|e| e.to_string()),
+    }
 }
 
 fn main() {}

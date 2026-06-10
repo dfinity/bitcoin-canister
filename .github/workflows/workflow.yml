@@ -95,7 +95,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' --exclude post-upgrade-config --exclude set-config -- --color always
+          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' --exclude charge-cycles-on-reject --exclude post-upgrade-config --exclude set-config -- --color always
         env:
           RUST_BACKTRACE: 1
 
@@ -163,6 +163,7 @@ jobs:
           - { name: scenario-1, source: scenario-1 }
           - { name: scenario-2, source: scenario-2 }
           - { name: scenario-3, source: scenario-3 }
+          - { name: charge-cycles-on-reject, source: scenario-1 }
           - { name: post-upgrade-config, source: '' }
           - { name: set-config, source: '' }
 
@@ -239,41 +240,6 @@ jobs:
       - name: Run disable api if not fully synced flag
         run: |
           bash e2e-tests/disable-api-if-not-fully-synced-flag.sh
-
-  charge-cycles-on-reject:
-    runs-on: ubuntu-latest
-    needs: [cargo-build, canister-build-reproducibility]
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
-
-      - name: Download WASMs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wasms
-          path: ./wasms
-
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
-
-      - name: Install dfx
-        uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
-        with:
-          dfx-version: $DFX_VERSION
-
-      - name: Run charge cycles on reject
-        run: |
-          bash e2e-tests/charge-cycles-on-reject.sh
 
   upgradability:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'CI_OVERRIDE_UPGRADABILITY_CHECK') }}
@@ -666,7 +632,6 @@ jobs:
         rustfmt,
         e2e-disable-api-if-not-fully-synced-flag,
         e2e-scenario,
-        charge-cycles-on-reject,
         upgradability,
         cycles_burn,
         benchmark,
@@ -699,9 +664,6 @@ jobs:
         run: exit 1
       - name: check e2e-scenario result
         if: ${{ needs.e2e-scenario.result != 'success' }}
-        run: exit 1
-      - name: check charge-cycles-on-reject result
-        if: ${{ needs.charge-cycles-on-reject.result != 'success' }}
         run: exit 1
       - name: check upgradability result
         if: ${{ needs.upgradability.result != 'success' && needs.upgradability.result != 'skipped' }}
