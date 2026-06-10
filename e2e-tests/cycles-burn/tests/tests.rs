@@ -1,4 +1,4 @@
-//! Verifies that the bitcoin canister burns its cycle balance when started
+//! Verifies that the bitcoin canister burns its cycles balance when started
 //! with `burn_cycles = enabled`.
 //!
 //! Mirrors the original dfx-based `cycles_burn.sh`, which deployed the canister
