@@ -1,0 +1,12 @@
+[package]
+name = "bitcoin-canister-metadata"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dev-dependencies]
+e2e-test-utils = { workspace = true }
+flate2 = { workspace = true }
+wasmparser = { workspace = true }

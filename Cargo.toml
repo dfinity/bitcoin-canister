@@ -16,6 +16,7 @@ members = [
     "e2e-tests/scenario-1",
     "e2e-tests/scenario-2",
     "e2e-tests/scenario-3",
+    "e2e-tests/bitcoin-canister-metadata",
     "e2e-tests/cdk-bitcoin-canister",
     "e2e-tests/disable-api-if-not-fully-synced-flag",
     "e2e-tests/post-upgrade-config",
@@ -41,6 +42,7 @@ clap = { version = "4.0.11", features = ["derive"] }
 datasize = "0.2.15"
 e2e-test-utils = { path = "./e2e-tests/test-utils" }
 escargot = "0.5"
+flate2 = "1.1"
 futures = "0.3.28"
 hex = "0.4.3"
 hex_lit = "0.1.1"
@@ -61,6 +63,7 @@ serde_bytes = "0.11"
 serde_json = "1.0.94"
 tempfile = "3.10.1"
 tokio = { version = "1.44.2", features = ["full"] }
+wasmparser = "0.244"
 
 [profile.release-lto]
 inherits = "release"
