@@ -22,8 +22,12 @@ fn candid_service_metadata_matches_did_file() {
         "ic-btc-canister",
     ));
 
-    let metadata = candid_service_section(&wasm)
-        .expect("bitcoin canister wasm has no `icp:public candid:service` metadata section");
+    let metadata = candid_service_section(&wasm).expect(
+        "bitcoin canister wasm has no `icp:public candid:service` metadata section. \
+         This section is embedded by `scripts/build-canister.sh` (via `ic-wasm metadata`), \
+         not by a plain `cargo build`, so a raw locally-built wasm won't have it. \
+         Point `IC_BTC_CANISTER_WASM_PATH` at a `build-canister.sh`-produced wasm.",
+    );
 
     let did_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../canister/candid.did");
     let expected = std::fs::read(&did_path)
