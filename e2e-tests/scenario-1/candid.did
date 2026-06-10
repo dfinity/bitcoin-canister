@@ -18,7 +18,13 @@ type get_successors_response = variant {
   follow_up : blob;
 };
 
+type proxy_call_result = record {
+  charged_cycles: nat;
+  reject_message: opt text;
+};
+
 service : {
   bitcoin_get_successors: (get_successors_request) -> (get_successors_response);
+  proxy_call: (principal, text, blob, nat) -> (proxy_call_result);
 }
 
