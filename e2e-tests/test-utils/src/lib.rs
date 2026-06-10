@@ -111,6 +111,20 @@ pub fn install_bitcoin_canister(
     install_canister_on_subnet(pic, subnet, wasm, arg)
 }
 
+/// Upgrades the bitcoin canister, wrapping the optional `SetConfigRequest` in
+/// `CanisterArg::Upgrade` and candid-encoding it. Panics on reject.
+pub fn upgrade_bitcoin_canister(
+    pic: &PocketIc,
+    btc_id: Principal,
+    wasm: Vec<u8>,
+    set_config: Option<SetConfigRequest>,
+) {
+    let arg = candid::encode_one(CanisterArg::Upgrade(set_config))
+        .expect("failed to encode bitcoin canister CanisterArg::Upgrade");
+    pic.upgrade_canister(btc_id, wasm, arg, None)
+        .unwrap_or_else(|e| panic!("bitcoin canister upgrade failed: {e:?}"));
+}
+
 // ---------- Generic candid call helpers ----------
 
 /// Candid-encoded query call; panics with a precise message if the call or
@@ -416,5 +430,12 @@ impl Setup {
 
     pub fn set_config(&self, req: SetConfigRequest) {
         set_config(&self.pic, self.btc_id, req)
+    }
+
+    /// Upgrades the bitcoin canister in place, reloading the same wasm used at
+    /// install time from `IC_BTC_CANISTER_WASM_PATH`.
+    pub fn upgrade_bitcoin_canister(&self, set_config: Option<SetConfigRequest>) {
+        let wasm = load_wasm("IC_BTC_CANISTER_WASM_PATH", "ic-btc-canister");
+        upgrade_bitcoin_canister(&self.pic, self.btc_id, wasm, set_config)
     }
 }

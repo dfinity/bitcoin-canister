@@ -3076,6 +3076,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "post-upgrade-config"
+version = "0.1.0"
+dependencies = [
+ "e2e-test-utils",
+ "ic-btc-interface",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
