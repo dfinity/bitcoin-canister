@@ -24,6 +24,7 @@ pub struct TransformFnWrapper<T> {
 impl HttpRequestConfig {
     pub fn new<T>(
         url: &str,
+        max_response_bytes: u64,
         transform_endpoint: Option<TransformFnWrapper<T>>,
         transform_implementation: TransformFn,
     ) -> Self
@@ -31,7 +32,7 @@ impl HttpRequestConfig {
         T: Fn(TransformArgs) -> HttpRequestResult + 'static,
     {
         Self {
-            request: create_request(url, transform_endpoint),
+            request: create_request(url, max_response_bytes, transform_endpoint),
             transform_implementation,
         }
     }
@@ -110,14 +111,21 @@ impl HttpRequestConfig {
     }
 }
 
-fn create_request<T>(url: &str, transform_func: Option<TransformFnWrapper<T>>) -> HttpRequestArgs
+fn create_request<T>(
+    url: &str,
+    max_response_bytes: u64,
+    transform_func: Option<TransformFnWrapper<T>>,
+) -> HttpRequestArgs
 where
     T: Fn(TransformArgs) -> HttpRequestResult + 'static,
 {
-    let builder = ic_http::create_request().get(url).header(HttpHeader {
-        name: "User-Agent".to_string(),
-        value: "watchdog_canister".to_string(),
-    });
+    let builder = ic_http::create_request()
+        .get(url)
+        .max_response_bytes(max_response_bytes)
+        .header(HttpHeader {
+            name: "User-Agent".to_string(),
+            value: "watchdog_canister".to_string(),
+        });
     let builder = if let Some(func) = transform_func {
         builder.transform_func(func.name, func.func, vec![])
     } else {
