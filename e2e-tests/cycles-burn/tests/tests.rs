@@ -3,7 +3,7 @@
 //!
 //! Mirrors the original dfx-based `cycles_burn.sh`, which deployed the canister
 //! with cycles and `burn_cycles = enabled` and checked that its balance dropped
-//! to zero. The burn happens in the heartbeat; under PocketIC the heartbeat
+//! to zero. The burn happens in the heartbeat; under PocketIC, the heartbeat
 //! already runs as part of installation, so the balance is drained by the time
 //! the canister is up. We tick a few more times for robustness regardless.
 
