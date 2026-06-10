@@ -33,6 +33,11 @@ fn candid_service_metadata_matches_did_file() {
     let expected = std::fs::read(&did_path)
         .unwrap_or_else(|e| panic!("failed to read {}: {e}", did_path.display()));
 
+    let metadata = std::str::from_utf8(&metadata)
+        .unwrap_or_else(|e| panic!("candid:service metadata is not valid UTF-8: {e}"));
+    let expected = std::str::from_utf8(&expected)
+        .unwrap_or_else(|e| panic!("{} is not valid UTF-8: {e}", did_path.display()));
+
     assert_eq!(
         metadata,
         expected,
