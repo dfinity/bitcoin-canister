@@ -10,7 +10,7 @@
 use e2e_test_utils::Setup;
 use ic_btc_interface::{Flag, InitConfig, Network};
 
-const MAX_TICKS: usize = 5;
+const TICKS: usize = 5;
 
 fn setup_with_burn_cycles(flag: Flag) -> Setup {
     let setup = Setup::new_bitcoin_only(InitConfig {
@@ -18,7 +18,7 @@ fn setup_with_burn_cycles(flag: Flag) -> Setup {
         burn_cycles: Some(flag),
         ..Default::default()
     });
-    for _ in 0..MAX_TICKS {
+    for _ in 0..TICKS {
         setup.pic.tick();
     }
     setup
