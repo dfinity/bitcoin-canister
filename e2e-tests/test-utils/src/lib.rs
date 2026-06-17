@@ -181,6 +181,22 @@ pub fn update_raw(
     )
 }
 
+/// Raw query call; returns the canister's response bytes or the reject so
+/// tests can assert on rejection codes and messages.
+pub fn query_raw(
+    pic: &PocketIc,
+    canister_id: Principal,
+    method: &str,
+    arg: impl CandidType,
+) -> Result<Vec<u8>, RejectResponse> {
+    pic.query_call(
+        canister_id,
+        Principal::anonymous(),
+        method,
+        candid::encode_one(arg).unwrap(),
+    )
+}
+
 // ---------- Bitcoin canister introspection ----------
 
 /// Reads the bitcoin canister's `get_blockchain_info` query endpoint.

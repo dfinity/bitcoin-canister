@@ -95,7 +95,7 @@ jobs:
       - name: Run Tests
         shell: bash
         run: |
-          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' --exclude post-upgrade-config --exclude set-config --exclude cycles-burn -- --color always
+          cargo test --release --all-targets --workspace --exclude benchmarks --exclude e2e-cdk-bitcoin-canister --exclude 'scenario-*' --exclude post-upgrade-config --exclude set-config --exclude cycles-burn --exclude disable-api-if-not-fully-synced-flag -- --color always
         env:
           RUST_BACKTRACE: 1
 
@@ -166,6 +166,7 @@ jobs:
           - { name: post-upgrade-config, source: '' }
           - { name: set-config, source: '' }
           - { name: cycles-burn, source: '' }
+          - { name: disable-api-if-not-fully-synced-flag, source: disable-api-if-not-fully-synced-flag }
 
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -205,41 +206,7 @@ jobs:
           E2E_SCENARIO_1_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-1.wasm.gz
           E2E_SCENARIO_2_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-2.wasm.gz
           E2E_SCENARIO_3_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/scenario-3.wasm.gz
-
-  e2e-disable-api-if-not-fully-synced-flag:
-    runs-on: ubuntu-latest
-    needs: [cargo-build, canister-build-reproducibility]
-
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-1
-
-      - name: Download WASMs
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wasms
-          path: ./wasms
-
-      - name: Install Rust
-        run: |
-          rustup update ${{ matrix.rust }} --no-self-update
-          rustup default ${{ matrix.rust }}
-          rustup target add wasm32-unknown-unknown
-
-      - name: Install dfx
-        uses: dfinity/setup-dfx@e50c04f104ee4285ec010f10609483cf41e4d365 # main
-        with:
-          dfx-version: $DFX_VERSION
-
-      - name: Run disable api if not fully synced flag
-        run: |
-          bash e2e-tests/disable-api-if-not-fully-synced-flag.sh
+          E2E_DISABLE_API_WASM_PATH: ${{ github.workspace }}/target/wasm32-unknown-unknown/release/disable-api-if-not-fully-synced-flag.wasm.gz
 
   charge-cycles-on-reject:
     runs-on: ubuntu-latest
@@ -644,7 +611,6 @@ jobs:
         shell-checks,
         cargo-clippy,
         rustfmt,
-        e2e-disable-api-if-not-fully-synced-flag,
         e2e-scenario,
         charge-cycles-on-reject,
         upgradability,
@@ -672,9 +638,6 @@ jobs:
         run: exit 1
       - name: check rustfmt result
         if: ${{ needs.rustfmt.result != 'success' }}
-        run: exit 1
-      - name: check e2e-disable-api-if-not-fully-synced-flag result
-        if: ${{ needs.e2e-disable-api-if-not-fully-synced-flag.result != 'success' }}
         run: exit 1
       - name: check e2e-scenario result
         if: ${{ needs.e2e-scenario.result != 'success' }}
