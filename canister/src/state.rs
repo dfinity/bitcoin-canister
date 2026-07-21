@@ -222,22 +222,35 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         assert_eq!(popped_block.unwrap().block_hash(), &ingested_block_hash);
     }
 
-    let prev_state = (
-        state.utxos.next_height(),
-        &state.utxos.ingesting_block.clone(),
-    );
-    let has_state_changed = |state: &State| -> bool {
-        prev_state != (state.utxos.next_height(), &state.utxos.ingesting_block)
-    };
+    // Whether this call performed any stable-block ingestion work.
+    //
+    // Previously this was computed by cloning `ingesting_block` on entry and
+    // deep-comparing it (via `PartialEq`) afterwards. That clone + compare walks
+    // the whole `IngestingBlock`, including the accumulated `utxos_delta`, on
+    // every heartbeat. With the deterministic memory tracker (DMT) charging
+    // instructions per accessed page, that per-slice cost grows with the delta
+    // and can consume the self-slicing budget, starving forward progress so that
+    // a block never finishes ingesting and the heartbeat never resumes fetching
+    // (DEFI-2954). We track a cheap bool instead.
+    //
+    // Returning `true` for every `Slicing::Paused` is equivalent to the old
+    // behaviour: each paused slice mutates `ingesting_block` (via
+    // `stats.num_rounds` / `ins_total`), so the old comparison was always `true`
+    // there too. It is also the safe choice: a paused slice has already consumed
+    // a full ingestion budget, so the heartbeat must not additionally fetch or
+    // process a response this round, or it risks exceeding the message
+    // instruction limit.
+    let mut did_work = false;
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
     print("Running ingest_block_continue...");
     match state.utxos.ingest_block_continue() {
         None => {} // No block to continue ingesting.
-        Some(Slicing::Paused(())) => return has_state_changed(state),
+        Some(Slicing::Paused(())) => return true,
         Some(Slicing::Done((ingested_block_hash, stats))) => {
             state.metrics.block_ingestion_stats = stats;
-            pop_block(state, ingested_block_hash)
+            pop_block(state, ingested_block_hash);
+            did_work = true;
         }
     }
 
@@ -255,15 +268,16 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
             .insert_block(&block, state.utxos.next_height());
 
         match state.utxos.ingest_block(block) {
-            Slicing::Paused(()) => return has_state_changed(state),
+            Slicing::Paused(()) => return true,
             Slicing::Done((ingested_block_hash, stats)) => {
                 state.metrics.block_ingestion_stats = stats;
-                pop_block(state, ingested_block_hash)
+                pop_block(state, ingested_block_hash);
+                did_work = true;
             }
         }
     }
 
-    has_state_changed(state)
+    did_work
 }
 
 pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeaderBlob]) {
