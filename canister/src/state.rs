@@ -211,7 +211,8 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
 /// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
 /// multiple calls may be required for all the stable blocks to be ingested.
 ///
-/// Returns a bool indicating whether or not the state has changed.
+/// Returns `true` if any stable-block ingestion work was performed during this call
+/// (including a paused, time-sliced slice), or `false` if there was nothing to ingest.
 pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     fn pop_block(state: &mut State, ingested_block_hash: BlockHash) {
         let stable_height = state.stable_height();
@@ -235,7 +236,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
     //
     // Returning `true` for every `Slicing::Paused` is equivalent to the old
     // behaviour: each paused slice mutates `ingesting_block` (via
-    // `stats.num_rounds` / `ins_total`), so the old comparison was always `true`
+    // `stats.num_rounds` / `stats.ins_total`), so the old comparison was always `true`
     // there too. It is also the safe choice: a paused slice has already consumed
     // a full ingestion budget, so the heartbeat must not additionally fetch or
     // process a response this round, or it risks exceeding the message
