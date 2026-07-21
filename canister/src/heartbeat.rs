@@ -774,6 +774,11 @@ mod test {
         );
         // ...and ingestion made real progress into the stable UTXO set.
         assert!(with_state(|s| s.utxos.next_height()) > 0);
+
+        // Restore the shared (thread-local) performance-counter mock to its default so this
+        // test does not affect others that may run later on the same thread.
+        runtime::set_performance_counter_step(0);
+        runtime::performance_counter_reset();
     }
 
     #[async_std::test]

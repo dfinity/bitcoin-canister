@@ -674,6 +674,11 @@ mod test {
         // Everything stable has been ingested -> no work -> false.
         crate::runtime::performance_counter_reset();
         assert!(!ingest_stable_blocks_into_utxoset(&mut state));
+
+        // Restore the shared (thread-local) performance-counter mock to its default so this
+        // test does not affect others that may run later on the same thread.
+        crate::runtime::set_performance_counter_step(0);
+        crate::runtime::performance_counter_reset();
     }
 
     #[test]
