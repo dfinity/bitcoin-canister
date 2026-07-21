@@ -696,6 +696,86 @@ mod test {
         );
     }
 
+    // While a stable block is still being ingested, the heartbeat must return early (via
+    // `ingest_stable_blocks_into_utxoset`) and must NOT issue a new `get_successors` request.
+    #[async_std::test]
+    async fn heartbeat_does_not_fetch_while_ingesting_a_stable_block() {
+        let network = Network::Regtest;
+        let btc_network = into_bitcoin_network(network);
+
+        init(InitConfig {
+            stability_threshold: Some(0),
+            network: Some(network),
+            ..Default::default()
+        });
+
+        let address: Address = random_p2pkh_address(btc_network).into();
+
+        // `block_1` carries several transactions so that its ingestion spans multiple slices;
+        // `block_2` is a successor so that `block_1` becomes stable.
+        let block_1 = build_block(genesis_block(network).header(), address.clone(), 6);
+        let block_2 = build_block(block_1.header(), address, 1);
+
+        let blocks: Vec<BlockBlob> = [block_1, block_2]
+            .iter()
+            .map(|block| {
+                let mut block_bytes = vec![];
+                block.consensus_encode(&mut block_bytes).unwrap();
+                block_bytes
+            })
+            .collect();
+
+        runtime::set_successors_response(GetSuccessorsReply::Ok(GetSuccessorsResponse::Complete(
+            GetSuccessorsCompleteResponse {
+                blocks,
+                next: vec![],
+            },
+        )));
+
+        // Fetch the blocks, then process the response (inserting them into the block tree).
+        heartbeat().await;
+        heartbeat().await;
+        assert_eq!(with_state(state::main_chain_height), 2);
+
+        // Number of `get_successors` calls issued so far (only the single fetch above).
+        let fetches_after_processing =
+            runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow());
+
+        // Force time-slicing so the stable blocks ingest over several heartbeats.
+        runtime::set_performance_counter_step(250_000_000);
+
+        // Start ingesting: this leaves a block partially ingested.
+        runtime::performance_counter_reset();
+        heartbeat().await;
+
+        // Every heartbeat that finds a block mid-ingestion must return early without fetching.
+        let mut ingesting_heartbeats = 0;
+        while with_state(|s| s.utxos.ingesting_block.is_some()) {
+            assert_eq!(
+                runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow()),
+                fetches_after_processing,
+                "heartbeat fetched new blocks while a stable block was still being ingested",
+            );
+            ingesting_heartbeats += 1;
+            runtime::performance_counter_reset();
+            heartbeat().await;
+        }
+
+        // The scenario must actually have exercised in-progress ingestion...
+        assert!(
+            ingesting_heartbeats > 0,
+            "expected at least one heartbeat with ingestion in progress"
+        );
+        // ...no heartbeat fetched while ingestion was ongoing (incl. the one that completed it)...
+        assert_eq!(
+            runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow()),
+            fetches_after_processing,
+            "heartbeat fetched new blocks while ingesting stable blocks",
+        );
+        // ...and ingestion made real progress into the stable UTXO set.
+        assert!(with_state(|s| s.utxos.next_height()) > 0);
+    }
+
     #[async_std::test]
     async fn fetches_and_processes_responses_paginated() {
         let network = Network::Regtest;
