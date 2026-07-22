@@ -223,24 +223,10 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         assert_eq!(popped_block.unwrap().block_hash(), &ingested_block_hash);
     }
 
-    // Whether this call performed any stable-block ingestion work.
-    //
-    // Previously this was computed by cloning `ingesting_block` on entry and
-    // deep-comparing it (via `PartialEq`) afterwards. That clone + compare walks
-    // the whole `IngestingBlock`, including the accumulated `utxos_delta`, on
-    // every heartbeat. With the deterministic memory tracker (DMT) charging
-    // instructions per accessed page, that per-slice cost grows with the delta
-    // and can consume the self-slicing budget, starving forward progress so that
-    // a block never finishes ingesting and the heartbeat never resumes fetching
-    // (DEFI-2954). We track a cheap bool instead.
-    //
-    // Returning `true` for every `Slicing::Paused` is equivalent to the old
-    // behaviour: each paused slice mutates `ingesting_block` (via
-    // `stats.num_rounds` / `stats.ins_total`), so the old comparison was always `true`
-    // there too. It is also the safe choice: a paused slice has already consumed
-    // a full ingestion budget, so the heartbeat must not additionally fetch or
-    // process a response this round, or it risks exceeding the message
-    // instruction limit.
+    // Tracks whether this call performed any stable-block ingestion work. A
+    // `Slicing::Paused` counts as work (matching the previous clone + `PartialEq`
+    // comparison) and is the safe choice: a paused slice has already spent a full
+    // ingestion budget, so the heartbeat must not also fetch/process this round.
     let mut did_work = false;
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
