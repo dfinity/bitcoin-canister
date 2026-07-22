@@ -211,9 +211,15 @@ pub fn insert_block(state: &mut State, block: Block) -> Result<(), InsertBlockEr
 /// NOTE: This method does a form of time-slicing to stay within the instruction limit, and
 /// multiple calls may be required for all the stable blocks to be ingested.
 ///
-/// Returns `true` if any stable-block ingestion work was performed during this call
-/// (including a paused, time-sliced slice), or `false` if there was nothing to ingest.
-pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
+/// Returns:
+///   * `Slicing::Paused(())` if ingestion was time-sliced and paused mid-block, so
+///     further calls are needed to finish the current block.
+///   * `Slicing::Done(true)` if all stable blocks were ingested during this call.
+///   * `Slicing::Done(false)` if there was nothing to ingest.
+///
+/// The `bool` carried by `Done` reports whether any ingestion work happened, which the
+/// heartbeat uses to decide whether it may move on to fetching new blocks this round.
+pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> Slicing<(), bool> {
     fn pop_block(state: &mut State, ingested_block_hash: BlockHash) {
         let stable_height = state.stable_height();
         // Pop the stable block.
@@ -223,17 +229,17 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         assert_eq!(popped_block.unwrap().block_hash(), &ingested_block_hash);
     }
 
-    // Tracks whether this call performed any stable-block ingestion work. A
-    // `Slicing::Paused` counts as work (matching the previous clone + `PartialEq`
-    // comparison) and is the safe choice: a paused slice has already spent a full
-    // ingestion budget, so the heartbeat must not also fetch/process this round.
+    // Tracks whether this call performed any stable-block ingestion work. Note that a
+    // `Slicing::Paused` slice returns early rather than setting this flag: a paused slice
+    // has already spent a full ingestion budget, so the heartbeat must not also
+    // fetch/process this round.
     let mut did_work = false;
 
     // Finish ingesting the stable block that's partially ingested, if that exists.
     print("Running ingest_block_continue...");
     match state.utxos.ingest_block_continue() {
         None => {} // No block to continue ingesting.
-        Some(Slicing::Paused(())) => return true,
+        Some(Slicing::Paused(())) => return Slicing::Paused(()),
         Some(Slicing::Done((ingested_block_hash, stats))) => {
             state.metrics.block_ingestion_stats = stats;
             pop_block(state, ingested_block_hash);
@@ -255,7 +261,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
             .insert_block(&block, state.utxos.next_height());
 
         match state.utxos.ingest_block(block) {
-            Slicing::Paused(()) => return true,
+            Slicing::Paused(()) => return Slicing::Paused(()),
             Slicing::Done((ingested_block_hash, stats)) => {
                 state.metrics.block_ingestion_stats = stats;
                 pop_block(state, ingested_block_hash);
@@ -264,7 +270,7 @@ pub fn ingest_stable_blocks_into_utxoset(state: &mut State) -> bool {
         }
     }
 
-    did_work
+    Slicing::Done(did_work)
 }
 
 pub fn insert_next_block_headers(state: &mut State, next_block_headers: &[BlockHeaderBlob]) {
@@ -553,7 +559,7 @@ mod test {
 
             for block in blocks[1..].iter() {
                 insert_block(&mut state, block.clone()).unwrap();
-                ingest_stable_blocks_into_utxoset(&mut state);
+                let _ = ingest_stable_blocks_into_utxoset(&mut state);
             }
 
             let mut bytes = vec![];
@@ -577,21 +583,30 @@ mod test {
         let mut state = State::new(cache, stability_threshold, network, blocks[0].clone());
 
         assert_eq!(state.stable_height(), 0);
-        // Nothing is stable yet (the genesis block has no successor) -> no work -> false.
-        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
+        // Nothing is stable yet (the genesis block has no successor) -> nothing to ingest.
+        assert_eq!(
+            ingest_stable_blocks_into_utxoset(&mut state),
+            Slicing::Done(false)
+        );
 
         insert_block(&mut state, blocks[1].clone()).unwrap();
 
-        // The genesis block is now stable. Ingesting it does work -> true.
+        // The genesis block is now stable. Ingesting it fully completes in one call.
         let metrics_before = state.metrics.block_ingestion_stats.clone();
-        assert!(ingest_stable_blocks_into_utxoset(&mut state));
+        assert_eq!(
+            ingest_stable_blocks_into_utxoset(&mut state),
+            Slicing::Done(true)
+        );
         assert_eq!(state.stable_height(), 1);
 
         // Verify that the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
 
-        // Nothing new is stable now -> no work -> false.
-        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
+        // Nothing new is stable now -> nothing to ingest.
+        assert_eq!(
+            ingest_stable_blocks_into_utxoset(&mut state),
+            Slicing::Done(false)
+        );
 
         // Ingest the next block. This time, the performance counter is set so that
         // the ingestion is time-sliced.
@@ -600,10 +615,14 @@ mod test {
         insert_block(&mut state, blocks[2].clone()).unwrap();
         let metrics_before = state.metrics.block_ingestion_stats.clone();
         let mut num_rounds = 0;
+        let mut saw_paused = false;
         while state.stable_height() == 1 {
             assert_eq!(metrics_before, state.metrics.block_ingestion_stats);
-            // Each slice performed work, whether it paused mid-block or finished it -> true.
-            assert!(ingest_stable_blocks_into_utxoset(&mut state));
+            // Every slice either pauses mid-block or finishes the block on the final call.
+            match ingest_stable_blocks_into_utxoset(&mut state) {
+                Slicing::Paused(()) => saw_paused = true,
+                Slicing::Done(did_work) => assert!(did_work),
+            }
             crate::runtime::performance_counter_reset();
             num_rounds += 1;
         }
@@ -611,14 +630,18 @@ mod test {
         // Assert that the block has been ingested.
         assert_eq!(state.stable_height(), 2);
 
-        // Assert that the block ingestion has been time-sliced.
+        // Assert that the block ingestion has been time-sliced (paused at least once).
         assert!(num_rounds > 1);
+        assert!(saw_paused);
 
         // Assert the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
 
-        // Everything stable has been ingested -> no work -> false.
-        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
+        // Everything stable has been ingested -> nothing to ingest.
+        assert_eq!(
+            ingest_stable_blocks_into_utxoset(&mut state),
+            Slicing::Done(false)
+        );
 
         // Restore the shared (thread-local) performance-counter mock to its default so this
         // test does not affect others that may run later on the same thread.

@@ -4,7 +4,7 @@ use crate::{
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
-        GetSuccessorsResponse,
+        GetSuccessorsResponse, Slicing,
     },
     with_state, with_state_mut,
 };
@@ -23,12 +23,20 @@ pub async fn heartbeat() {
     collect_metrics();
     maybe_burn_cycles();
 
-    if ingest_stable_blocks_into_utxoset() {
-        // Stable-block ingestion did work this round: it either finished a block
-        // or paused mid-block (time-sliced). Exit the heartbeat as a precaution to
-        // not exceed the instructions limit.
-        print("Ingested stable blocks (possibly paused mid-block). Exiting heartbeat.");
-        return;
+    match ingest_stable_blocks_into_utxoset() {
+        // Ingestion paused mid-block (time-sliced): a full budget was already spent, so
+        // exit the heartbeat as a precaution to not exceed the instructions limit.
+        Slicing::Paused(()) => {
+            print("Paused while ingesting a stable block. Exiting heartbeat.");
+            return;
+        }
+        // A stable block finished ingesting this round: exit for the same precaution.
+        Slicing::Done(true) => {
+            print("Done ingesting stable blocks. Exiting heartbeat.");
+            return;
+        }
+        // Nothing was ingested; carry on to fetching/processing.
+        Slicing::Done(false) => {}
     }
 
     if maybe_fetch_blocks().await {
@@ -193,7 +201,7 @@ async fn maybe_fetch_blocks() -> bool {
     true
 }
 
-fn ingest_stable_blocks_into_utxoset() -> bool {
+fn ingest_stable_blocks_into_utxoset() -> Slicing<(), bool> {
     with_state_mut(state::ingest_stable_blocks_into_utxoset)
 }
 
