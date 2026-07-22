@@ -24,9 +24,10 @@ pub async fn heartbeat() {
     maybe_burn_cycles();
 
     if ingest_stable_blocks_into_utxoset() {
-        // Exit the heartbeat if stable blocks had been ingested.
-        // This is a precaution to not exceed the instructions limit.
-        print("Done ingesting stable blocks.");
+        // Stable-block ingestion did work this round: it either finished a block
+        // or paused mid-block (time-sliced). Exit the heartbeat as a precaution to
+        // not exceed the instructions limit.
+        print("Ingested stable blocks (possibly paused mid-block). Exiting heartbeat.");
         return;
     }
 
