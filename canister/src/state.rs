@@ -577,15 +577,21 @@ mod test {
         let mut state = State::new(cache, stability_threshold, network, blocks[0].clone());
 
         assert_eq!(state.stable_height(), 0);
+        // Nothing is stable yet (the genesis block has no successor) -> no work -> false.
+        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
+
         insert_block(&mut state, blocks[1].clone()).unwrap();
 
-        // The genesis block is now stable. Ingest it.
+        // The genesis block is now stable. Ingesting it does work -> true.
         let metrics_before = state.metrics.block_ingestion_stats.clone();
-        ingest_stable_blocks_into_utxoset(&mut state);
+        assert!(ingest_stable_blocks_into_utxoset(&mut state));
         assert_eq!(state.stable_height(), 1);
 
         // Verify that the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
+
+        // Nothing new is stable now -> no work -> false.
+        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
 
         // Ingest the next block. This time, the performance counter is set so that
         // the ingestion is time-sliced.
@@ -596,7 +602,8 @@ mod test {
         let mut num_rounds = 0;
         while state.stable_height() == 1 {
             assert_eq!(metrics_before, state.metrics.block_ingestion_stats);
-            ingest_stable_blocks_into_utxoset(&mut state);
+            // Each slice performed work, whether it paused mid-block or finished it -> true.
+            assert!(ingest_stable_blocks_into_utxoset(&mut state));
             crate::runtime::performance_counter_reset();
             num_rounds += 1;
         }
@@ -609,56 +616,8 @@ mod test {
 
         // Assert the stats have been updated.
         assert_ne!(metrics_before, state.metrics.block_ingestion_stats);
-    }
-
-    // The return value must be `true` whenever a stable block was ingested (fully or as a
-    // time-sliced chunk) and `false` when there was nothing to ingest. The heartbeat relies
-    // on this to decide whether to keep ingesting or move on to fetching new blocks.
-    #[test]
-    fn ingest_stable_blocks_into_utxoset_reports_whether_work_was_done() {
-        let network = Network::Regtest;
-        // Enough transactions that a single block's ingestion spans multiple slices below.
-        let blocks = build_chain(network, 3, 20);
-
-        let cache = TestBlocksCache::new(network);
-        let mut state = State::new(cache, 0, network, blocks[0].clone());
-
-        // Nothing is stable yet (the genesis block has no successor) -> no work -> false.
-        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
-        assert_eq!(state.stable_height(), 0);
-
-        // Inserting the next block makes the genesis block stable. Ingesting it does work -> true.
-        insert_block(&mut state, blocks[1].clone()).unwrap();
-        assert!(ingest_stable_blocks_into_utxoset(&mut state));
-        assert_eq!(state.stable_height(), 1);
-
-        // Nothing new is stable now -> no work -> false.
-        assert!(!ingest_stable_blocks_into_utxoset(&mut state));
-
-        // Insert a successor so that `blocks[1]` becomes stable, and force time-slicing so that
-        // its ingestion pauses partway through.
-        crate::runtime::set_performance_counter_step(100_000_000);
-        insert_block(&mut state, blocks[2].clone()).unwrap();
-
-        // A paused (partially ingested) slice still did work -> true, even though the block
-        // isn't fully ingested yet.
-        crate::runtime::performance_counter_reset();
-        assert!(ingest_stable_blocks_into_utxoset(&mut state));
-        assert!(
-            state.utxos.ingesting_block.is_some(),
-            "expected ingestion to be time-sliced (paused mid-block)"
-        );
-        assert_eq!(state.stable_height(), 1);
-
-        // Every subsequent slice reports work until the block is fully ingested.
-        while state.utxos.ingesting_block.is_some() {
-            crate::runtime::performance_counter_reset();
-            assert!(ingest_stable_blocks_into_utxoset(&mut state));
-        }
-        assert_eq!(state.stable_height(), 2);
 
         // Everything stable has been ingested -> no work -> false.
-        crate::runtime::performance_counter_reset();
         assert!(!ingest_stable_blocks_into_utxoset(&mut state));
 
         // Restore the shared (thread-local) performance-counter mock to its default so this
