@@ -566,7 +566,7 @@ mod test {
     }
 
     #[test]
-    fn block_ingestion_stats_are_updated() {
+    fn ingest_stable_blocks_updates_stats_and_reports_work() {
         let stability_threshold = 0;
         let num_blocks = 3;
         let num_transactions_per_block = 10;

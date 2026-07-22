@@ -438,7 +438,7 @@ mod test {
     }
 
     #[async_std::test]
-    async fn time_slices_large_blocks() {
+    async fn time_slices_large_blocks_without_fetching_while_ingesting() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
