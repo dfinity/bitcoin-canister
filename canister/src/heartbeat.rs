@@ -12,12 +12,59 @@ use bitcoin::{consensus::Decodable, Block as BitcoinBlock};
 use datasize::data_size;
 use ic_btc_interface::Flag;
 use ic_btc_types::{Block, BlockHash};
+use std::cell::Cell;
 use std::time::Duration;
+
+/// DEBUG ONLY (DEFI-2954): minimum wall-clock interval, in nanoseconds, between heartbeats that
+/// are allowed to do work.
+///
+/// A round fires a heartbeat roughly once per second, and while the UTXO-set ingestion is stuck
+/// each heartbeat spends a full ~1B-instruction budget, driving a very high cycle burn. Throttling
+/// the heartbeat caps that burn so the canister can be observed/debugged cheaply. Set to `0` to
+/// disable throttling (run every round, i.e. the production behaviour).
+///
+/// This is a debugging aid and is NOT intended to be merged to production.
+const MIN_HEARTBEAT_INTERVAL_NANOS: u64 = 60 * 1_000_000_000; // ~60 seconds
+
+thread_local! {
+    /// Timestamp (ns since epoch) of the last heartbeat that was allowed to do work.
+    static LAST_HEARTBEAT_NANOS: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Pure throttle decision: whether a heartbeat at `now_nanos` may do work given that the last
+/// working heartbeat was at `last_nanos` (`0` meaning "never"). Kept side-effect free so it can be
+/// unit-tested deterministically.
+fn should_run_after(now_nanos: u64, last_nanos: u64) -> bool {
+    last_nanos == 0 || now_nanos.saturating_sub(last_nanos) >= MIN_HEARTBEAT_INTERVAL_NANOS
+}
+
+/// Returns whether the heartbeat should do work now, recording `now_nanos` as the most recent
+/// working heartbeat when it returns `true`.
+fn heartbeat_should_run(now_nanos: u64) -> bool {
+    LAST_HEARTBEAT_NANOS.with(|last| {
+        if should_run_after(now_nanos, last.get()) {
+            last.set(now_nanos);
+            true
+        } else {
+            false
+        }
+    })
+}
 
 /// The heartbeat of the Bitcoin canister.
 ///
 /// The heartbeat fetches new blocks from the bitcoin network and inserts them into the state.
 pub async fn heartbeat() {
+    // DEBUG ONLY (DEFI-2954): skip this heartbeat if the previous working heartbeat was too
+    // recent, to cap the cycle burn rate while ingestion is stuck. See MIN_HEARTBEAT_INTERVAL_NANOS.
+    // Compiled out under `cfg(test)`: many tests drive `heartbeat()` several times in rapid
+    // (near-instant) succession and rely on each call doing work. The throttle logic itself is
+    // covered by dedicated tests (`heartbeat_should_run` / `should_run_after`).
+    #[cfg(not(test))]
+    if !heartbeat_should_run(time()) {
+        return;
+    }
+
     print("Starting heartbeat...");
 
     collect_metrics();
@@ -921,6 +968,70 @@ mod test {
             with_state(|s| s.unstable_blocks.next_block_headers_max_height()),
             Some(30)
         );
+    }
+
+    // DEBUG ONLY (DEFI-2954): the heartbeat throttle must only let work through once per
+    // ~`MIN_HEARTBEAT_INTERVAL_NANOS`. This checks the pure interval decision at the boundary.
+    #[test]
+    fn heartbeat_throttle_interval_boundary() {
+        let interval = MIN_HEARTBEAT_INTERVAL_NANOS;
+        assert!(interval > 0, "throttling must be enabled for this test");
+
+        let now = 5_000_000_000_000u64; // arbitrary "now" (ns), large enough to subtract from.
+
+        // The very first heartbeat (no previous run, last == 0) is always allowed.
+        assert!(should_run_after(now, 0));
+
+        // Anything within the interval is throttled.
+        assert!(!should_run_after(now, now - 1));
+        assert!(!should_run_after(now, now - (interval - 1)));
+
+        // At or beyond the interval it is allowed again.
+        assert!(should_run_after(now, now - interval));
+        assert!(should_run_after(now, now - (interval + 1)));
+    }
+
+    // DEBUG ONLY (DEFI-2954): `heartbeat_should_run` is what `heartbeat()` calls to decide whether
+    // to do work. It must allow the first call, then only allow one call per interval, re-arming
+    // relative to the last call that actually ran. Timestamps are supplied explicitly, simulating
+    // the ~once-per-second heartbeat invocations, so this is deterministic without mock time.
+    #[test]
+    fn heartbeat_should_run_allows_work_once_per_interval() {
+        let interval = MIN_HEARTBEAT_INTERVAL_NANOS;
+        let one_sec = 1_000_000_000u64;
+
+        // Start from a clean throttle state (thread-local can carry over between tests).
+        LAST_HEARTBEAT_NANOS.with(|c| c.set(0));
+
+        let t0 = 5_000_000_000_000u64;
+
+        // First invocation runs and records t0.
+        assert!(heartbeat_should_run(t0), "first heartbeat should run");
+
+        // Subsequent invocations within the interval (e.g. every ~second) are all throttled.
+        let mut throttled = 0;
+        let mut t = t0 + one_sec;
+        while t < t0 + interval {
+            assert!(!heartbeat_should_run(t), "heartbeat within interval must be throttled");
+            throttled += 1;
+            t += one_sec;
+        }
+        assert!(throttled >= 50, "expected many throttled heartbeats within the ~60s interval");
+
+        // At the interval boundary it runs again (and re-arms from this new time).
+        assert!(heartbeat_should_run(t0 + interval), "heartbeat at the interval should run");
+
+        // One second later is throttled relative to the new last-run time (not the original).
+        assert!(
+            !heartbeat_should_run(t0 + interval + one_sec),
+            "throttle should re-arm from the last heartbeat that ran"
+        );
+
+        // A further full interval later it runs again.
+        assert!(heartbeat_should_run(t0 + 2 * interval));
+
+        // Clean up the shared throttle state so other tests are unaffected.
+        LAST_HEARTBEAT_NANOS.with(|c| c.set(0));
     }
 
     fn num_inputs(block: &Block) -> u32 {
