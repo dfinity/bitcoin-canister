@@ -207,7 +207,7 @@ mod test {
         with_state_mut(|state| {
             insert_block(state, block1).unwrap();
             insert_block(state, block2).unwrap();
-            ingest_stable_blocks_into_utxoset(state);
+            let _ = ingest_stable_blocks_into_utxoset(state);
         });
     }
 
@@ -464,7 +464,7 @@ mod test {
             with_state_mut(|state| insert_block(state, block).unwrap());
         }
 
-        with_state_mut(ingest_stable_blocks_into_utxoset);
+        let _ = with_state_mut(ingest_stable_blocks_into_utxoset);
 
         blobs
     }
