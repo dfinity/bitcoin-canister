@@ -79,7 +79,7 @@ benches:
   heartbeat_steady_state_synced:
     total:
       calls: 1
-      instructions: 119658
+      instructions: 46890
       heap_increase: 0
       stable_memory_increase: 0
     scopes:
@@ -90,7 +90,7 @@ benches:
         stable_memory_increase: 0
       collect_metrics_tip_depths:
         calls: 1
-        instructions: 73672
+        instructions: 904
         heap_increase: 0
         stable_memory_increase: 0
       ingest_no_op:
