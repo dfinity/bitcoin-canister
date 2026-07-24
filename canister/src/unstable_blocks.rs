@@ -73,6 +73,9 @@ pub struct GenericUnstableBlocks<Tree> {
     network: Network,
     // The headers of the blocks that are expected to be received.
     next_block_headers: NextBlockHeaders,
+    // Cached depths of all tips in `tree`, refreshed on push/pop.
+    #[serde(default)]
+    tip_depths_cache: Vec<usize>,
 }
 
 impl<A> GenericUnstableBlocks<A> {
@@ -83,6 +86,7 @@ impl<A> GenericUnstableBlocks<A> {
             outpoints_cache,
             network,
             next_block_headers,
+            tip_depths_cache,
         } = self;
         GenericUnstableBlocks {
             stability_threshold,
@@ -90,6 +94,7 @@ impl<A> GenericUnstableBlocks<A> {
             outpoints_cache,
             network,
             next_block_headers,
+            tip_depths_cache,
         }
     }
 }
@@ -113,12 +118,15 @@ impl UnstableBlocks {
         let mut tree = BlockTree::new_with_cache(blocks_cache, anchor);
         tree.set_root_metrics(anchor_metrics);
 
+        let tip_depths_cache = tree.tip_depths();
+
         Self {
             stability_threshold,
             tree,
             outpoints_cache,
             network,
             next_block_headers: NextBlockHeaders::default(),
+            tip_depths_cache,
         }
     }
 
@@ -173,7 +181,12 @@ impl UnstableBlocks {
 
     /// Returns the depths of all tips in the tree.
     pub fn tip_depths(&self) -> Vec<usize> {
-        self.tree.tip_depths()
+        self.tip_depths_cache.clone()
+    }
+
+    /// Recomputes the cached tip depths from the current tree.
+    pub fn refresh_tip_depths_cache(&mut self) {
+        self.tip_depths_cache = self.tree.tip_depths();
     }
 
     fn get_network(&self) -> Network {
@@ -304,6 +317,8 @@ pub fn pop(blocks: &mut UnstableBlocks, stable_height: Height) -> Option<Block> 
 
     blocks.next_block_headers.remove_until_height(stable_height);
 
+    blocks.refresh_tip_depths_cache();
+
     // The block returned here is the previous anchor block. The new
     // anchor block was its child (see above).
     Some(tree.into_root_and_remove_from_cache())
@@ -330,6 +345,8 @@ pub fn push(
     parent_block_tree.extend_cached(block, metrics)?;
 
     blocks.next_block_headers.remove(&block_hash);
+
+    blocks.refresh_tip_depths_cache();
 
     Ok(())
 }
@@ -509,6 +526,42 @@ mod test {
         // children yet, so calling `pop` should return `None`.
         assert_eq!(peek(&forest), None);
         assert_eq!(pop(&mut forest, 0), None);
+    }
+
+    #[test]
+    fn tip_depths_cache_stays_consistent_through_push_and_pop() {
+        let block_0 = BlockBuilder::genesis().build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+        let block_2 = BlockBuilder::with_prev_header(block_1.header()).build();
+        let block_3 = BlockBuilder::with_prev_header(block_2.header()).build();
+        let fork = BlockBuilder::with_prev_header(block_0.header()).build();
+
+        let network = Network::Regtest;
+        let utxos = UtxoSet::new(network);
+        let cache = TestBlocksCache::new(network);
+        let mut forest = UnstableBlocks::new(cache, &utxos, 2, block_0.clone(), network);
+
+        let sorted_tip_depths = |forest: &UnstableBlocks| {
+            let mut depths = forest.tip_depths();
+            depths.sort_unstable();
+            depths
+        };
+
+        assert_eq!(sorted_tip_depths(&forest), vec![1]);
+
+        // `fork` branches off the anchor, so the tree then has tips at depths 4 and 2.
+        for (block, expected) in [
+            (block_1, vec![2]),
+            (block_2, vec![3]),
+            (block_3, vec![4]),
+            (fork, vec![2, 4]),
+        ] {
+            push(&mut forest, &utxos, block).unwrap();
+            assert_eq!(sorted_tip_depths(&forest), expected);
+        }
+
+        assert!(pop(&mut forest, 0).is_some());
+        assert_eq!(sorted_tip_depths(&forest), vec![3]);
     }
 
     #[test]
