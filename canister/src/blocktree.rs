@@ -607,10 +607,16 @@ impl<Block: ChainBlock> BlockTree<Block> {
 
     /// Returns the hashes of all blocks in the tree.
     pub fn get_hashes(&self) -> Vec<BlockHash> {
-        let mut hashes = Vec::with_capacity(self.children.len() + 1);
-        hashes.push(*self.root.block_hash());
-        hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
+        let mut hashes = Vec::new();
+        self.collect_hashes(&mut hashes);
         hashes
+    }
+
+    fn collect_hashes(&self, hashes: &mut Vec<BlockHash>) {
+        hashes.push(*self.root.block_hash());
+        for child in self.children.iter() {
+            child.collect_hashes(hashes);
+        }
     }
 
     /// Returns all blocks in the tree with their depths
