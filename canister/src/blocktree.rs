@@ -605,12 +605,29 @@ impl<Block: ChainBlock> BlockTree<Block> {
         None
     }
 
-    /// Returns the hashes of all blocks in the tree.
+    /// Returns the hashes of all blocks in the tree, in pre-order (the root first,
+    /// then each child subtree in order).
+    ///
+    /// Collects into a single shared accumulator via a depth-first traversal, which is
+    /// O(n) in the number of blocks. (A naive recursion that returns a fresh `Vec` per
+    /// node and concatenates them into the parent is O(n²) on a long chain, because each
+    /// level re-copies its descendants' hashes upward — a cost paid every heartbeat when
+    /// building the `get_successors` request; see DEFI-2957.)
     pub fn get_hashes(&self) -> Vec<BlockHash> {
-        let mut hashes = Vec::with_capacity(self.children.len() + 1);
-        hashes.push(*self.root.block_hash());
-        hashes.extend(self.children.iter().flat_map(|child| child.get_hashes()));
+        // Intentionally not pre-sized: computing the length up front (`blocks_count`)
+        // would walk the whole tree a second time, doubling the page accesses DMT
+        // charges for. A single DFS that touches each node once is what we want.
+        let mut hashes = Vec::new();
+        self.collect_hashes(&mut hashes);
         hashes
+    }
+
+    /// Appends this subtree's block hashes to `hashes` in pre-order.
+    fn collect_hashes(&self, hashes: &mut Vec<BlockHash>) {
+        hashes.push(*self.root.block_hash());
+        for child in self.children.iter() {
+            child.collect_hashes(hashes);
+        }
     }
 
     /// Returns all blocks in the tree with their depths
@@ -983,6 +1000,43 @@ mod test {
 
         assert_eq!(height_2_block_hash, fork[1].block_hash());
         assert_eq!(height_2_depth, 1);
+    }
+
+    // `get_hashes` must return every block exactly once, in pre-order with the root first.
+    // The heartbeat relies on index 0 being the anchor (`processed_block_hashes.remove(0)`),
+    // so this contract is load-bearing for the O(n) rewrite.
+    #[test]
+    fn get_hashes_is_preorder_with_root_first() {
+        // Tree:  root -> a -> b
+        //           \-> c
+        let root = BlockBuilder::genesis().build();
+        let a = BlockBuilder::with_prev_header(root.header()).build();
+        let b = BlockBuilder::with_prev_header(a.header()).build();
+        let c = BlockBuilder::with_prev_header(root.header()).build();
+
+        let mut tree = test_tree(root.clone());
+        tree.extend_cached(a.clone(), BlockMetrics::default())
+            .unwrap();
+        tree.extend_cached(b.clone(), BlockMetrics::default())
+            .unwrap();
+        tree.extend_cached(c.clone(), BlockMetrics::default())
+            .unwrap();
+
+        let hashes = tree.get_hashes();
+
+        // Pre-order: root, then the first child subtree (a, b), then the second child (c).
+        assert_eq!(
+            hashes,
+            vec![
+                *root.block_hash(),
+                *a.block_hash(),
+                *b.block_hash(),
+                *c.block_hash(),
+            ]
+        );
+        // One hash per block, root first (the anchor the heartbeat pops).
+        assert_eq!(hashes.len(), tree.blocks_count());
+        assert_eq!(hashes[0], *root.block_hash());
     }
 
     #[test]
