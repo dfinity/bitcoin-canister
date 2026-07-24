@@ -1,9 +1,12 @@
 use bitcoin::consensus::Decodable;
 use bitcoin::constants::genesis_block;
 use bitcoin::{block::Header, consensus::Encodable, Block as BitcoinBlock};
-use canbench_rs::{bench, bench_fn, BenchResult};
+use canbench_rs::{bench, bench_fn, bench_scope, BenchResult};
 use ic_btc_canister::state::main_chain_height;
-use ic_btc_canister::{types::BlockHeaderBlob, with_state, with_state_mut};
+use ic_btc_canister::{
+    types::{BlockHeaderBlob, Slicing},
+    with_state, with_state_mut,
+};
 use ic_btc_interface::{
     GetBalanceRequest, GetBlockHeadersRequest, GetCurrentFeePercentilesRequest, GetUtxosRequest,
     InitConfig, Network, NetworkInRequest,
@@ -540,6 +543,103 @@ fn bitcoin_get_current_fee_percentiles() -> BenchResult {
                 network: NetworkInRequest::Regtest,
             },
         );
+    })
+}
+
+// Benchmarks the synchronous per-round work of a steady-state (fully synced) heartbeat,
+// attributing instructions across its components via bench scopes (DEFI-2957).
+//
+// Motivation: once synced, the mainnet canister's heartbeat runs every round (~1-2/s) and,
+// under the deterministic memory tracker (DMT), is charged for the heap pages it touches.
+// Each round re-derives several quantities from the ~stability_threshold-sized unstable block
+// tree, even though that tree only changes on a block push (~every 10 min) / pop. This
+// benchmark isolates that repeated work so we can see where the steady-state execution burn
+// goes before optimizing.
+//
+// Scope: this measures the SYNCHRONOUS work only. The async fetch
+// (`maybe_fetch_blocks` -> inter-canister `bitcoin_get_successors` call) is intentionally
+// excluded: canbench builds to wasm32, where the real inter-canister call is compiled in (the
+// test mock is `cfg(not(wasm32))`) and cannot execute under canbench. Likewise, canbench
+// reports INSTRUCTIONS, not DMT page-access charges, and cannot reproduce multi-heartbeat
+// behaviour in a single message (see DEFI-2954). It therefore identifies the expensive
+// components and guards against regressions; an on-subnet A/B on `axowo` remains the arbiter
+// for absolute cycle burn.
+//
+// Note: fee-percentile computation is NOT part of a synced heartbeat on mainnet/staging, since
+// `lazily_evaluate_fee_percentiles` is enabled on both canisters (it is evaluated lazily on the
+// paid query instead). It is covered separately by `bitcoin_get_current_fee_percentiles`.
+#[bench(raw)]
+fn heartbeat_steady_state_synced() -> BenchResult {
+    // A ~100-block unstable tree matches the size the synced mainnet canister maintains
+    // (its `stability_threshold` is 100). The measured tree walks (tip depths, stable-child
+    // check, block-hash collection) read only the tree structure and per-block
+    // headers/difficulty, so their instruction cost is independent of the number of
+    // transactions per block; a modest count keeps setup fast.
+    let blocks_to_insert: usize = 100;
+    let num_transactions_per_block: usize = 300;
+    let num_outputs_per_transaction: usize = 3;
+
+    // Set the stability threshold well above the chain's accumulated difficulty so that NO
+    // block becomes stable: this models the common steady-state round where the tree is full
+    // (~100 blocks) but nothing is ingested. `ingest_stable_blocks_into_utxoset` then exercises
+    // the `peek()`/`get_stable_child()` walk without doing ingestion work.
+    ic_btc_canister::init(InitConfig {
+        network: Some(Network::Regtest),
+        stability_threshold: Some((blocks_to_insert * 2) as u128),
+        ..Default::default()
+    });
+
+    let address = parsed_address();
+    let genesis = genesis_block(bitcoin::Network::Regtest);
+    let mut counter = 1u64;
+    let chain = build_chain_from(
+        genesis.header,
+        blocks_to_insert,
+        num_transactions_per_block,
+        num_outputs_per_transaction,
+        0,
+        &address,
+        &mut counter,
+    );
+
+    with_state_mut(|s| {
+        for block in &chain {
+            ic_btc_canister::state::insert_block(s, block.clone()).unwrap();
+        }
+    });
+
+    assert_chain_height(blocks_to_insert);
+
+    bench_fn(|| {
+        // 1. `collect_metrics()`: a full recursive tip-depth walk of the unstable tree, feeding
+        //    a diagnostic-only histogram (`unstable_blocks_tip_depths`, exported via /metrics).
+        {
+            let _s = bench_scope("collect_metrics_tip_depths");
+            with_state(|s| {
+                let _ = s.unstable_blocks.tip_depths();
+            });
+        }
+
+        // 2. `ingest_stable_blocks_into_utxoset()`: a no-op when synced, but `peek()` ->
+        //    `get_stable_child()` still recomputes `difficulty_based_depth()` over the tree
+        //    every round.
+        {
+            let _s = bench_scope("ingest_no_op");
+            with_state_mut(|s| {
+                let slicing = ic_btc_canister::state::ingest_stable_blocks_into_utxoset(s);
+                // Guard that the state truly models a synced canister with nothing to ingest.
+                assert!(matches!(slicing, Slicing::Done(false)));
+            });
+        }
+
+        // 3. `maybe_fetch_blocks()`: building the `get_successors` request walks the tree to
+        //    collect every processed block hash (the async call itself is excluded, see above).
+        {
+            let _s = bench_scope("build_get_successors_request");
+            with_state(|s| {
+                let _ = ic_btc_canister::state::get_block_hashes(s);
+            });
+        }
     })
 }
 

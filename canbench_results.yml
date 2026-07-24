@@ -76,6 +76,28 @@ benches:
       heap_increase: 0
       stable_memory_increase: 0
     scopes: {}
+  heartbeat_steady_state_synced:
+    total:
+      calls: 1
+      instructions: 809184
+      heap_increase: 0
+      stable_memory_increase: 0
+    scopes:
+      build_get_successors_request:
+        calls: 1
+        instructions: 707618
+        heap_increase: 0
+        stable_memory_increase: 0
+      collect_metrics_tip_depths:
+        calls: 1
+        instructions: 73672
+        heap_increase: 0
+        stable_memory_increase: 0
+      ingest_no_op:
+        calls: 1
+        instructions: 24741
+        heap_increase: 0
+        stable_memory_increase: 0
   insert_300_blocks:
     total:
       calls: 1
