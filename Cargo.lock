@@ -1194,6 +1194,8 @@ version = "0.1.0"
 dependencies = [
  "bitcoin-dogecoin",
  "candid",
+ "e2e-test-utils",
+ "ic-btc-interface",
  "ic-btc-test-utils",
  "ic-cdk 0.20.0",
  "serde",

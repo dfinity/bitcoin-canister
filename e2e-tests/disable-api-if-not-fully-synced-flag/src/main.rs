@@ -3,6 +3,7 @@ use bitcoin::{
     Network as BitcoinNetwork,
 };
 use candid::CandidType;
+use disable_api_if_not_fully_synced_flag::ADDRESS;
 use ic_btc_test_utils::{BlockBuilder, TransactionBuilder};
 use ic_cdk::{init, update};
 use serde::{Deserialize, Serialize};
@@ -13,8 +14,6 @@ use std::str::FromStr;
 type BlockBlob = Vec<u8>;
 type BlockHeaderBlob = Vec<u8>;
 type BlockHash = Vec<u8>;
-
-const ADDRESS: &str = "bcrt1qg4cvn305es3k8j69x06t9hf4v5yx4mxdaeazl8";
 
 // The number of blocks to generate (on top of genesis)
 const NUM_BLOCKS: usize = 2;
