@@ -326,14 +326,18 @@ impl<Block> BlockTree<Block> {
 
     /// Returns the depths of all tips in the tree.
     pub fn tip_depths(&self) -> Vec<usize> {
-        if self.children.is_empty() {
-            return vec![1]; // Leaf node, depth is 1
+        let mut depths = Vec::new();
+        let mut stack = vec![(self, 1usize)];
+        while let Some((node, depth)) = stack.pop() {
+            if node.children.is_empty() {
+                depths.push(depth);
+            } else {
+                for child in node.children.iter() {
+                    stack.push((child, depth + 1));
+                }
+            }
         }
-
-        self.children
-            .iter()
-            .flat_map(|child| child.tip_depths().into_iter().map(|d| d + 1))
-            .collect()
+        depths
     }
 
     fn get_child_blocks(&self) -> Vec<&Block> {
