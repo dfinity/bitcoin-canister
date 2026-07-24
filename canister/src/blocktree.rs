@@ -985,6 +985,36 @@ mod test {
         assert_eq!(height_2_depth, 1);
     }
 
+    // The heartbeat pops index 0 as the anchor (`processed_block_hashes.remove(0)`), so
+    // `get_hashes` must return every block once in pre-order with the root first.
+    #[test]
+    fn get_hashes_is_preorder_with_root_first() {
+        // root -> a -> b
+        //    \--> c
+        let root = BlockBuilder::genesis().build();
+        let a = BlockBuilder::with_prev_header(root.header()).build();
+        let b = BlockBuilder::with_prev_header(a.header()).build();
+        let c = BlockBuilder::with_prev_header(root.header()).build();
+
+        let mut tree = test_tree(root.clone());
+        tree.extend_cached(a.clone(), BlockMetrics::default())
+            .unwrap();
+        tree.extend_cached(b.clone(), BlockMetrics::default())
+            .unwrap();
+        tree.extend_cached(c.clone(), BlockMetrics::default())
+            .unwrap();
+
+        assert_eq!(
+            tree.get_hashes(),
+            vec![
+                *root.block_hash(),
+                *a.block_hash(),
+                *b.block_hash(),
+                *c.block_hash(),
+            ]
+        );
+    }
+
     #[test]
     fn deserialize_very_deep_block_tree() {
         fn grow_tree(chain: Vec<Block>) -> BlockTree {
