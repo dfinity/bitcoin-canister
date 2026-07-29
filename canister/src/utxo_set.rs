@@ -452,7 +452,10 @@ fn init_balances() -> StableBTreeMap<Address, u64, Memory> {
 
 /// A state for maintaining a stable block that is partially ingested into the UTXO set.
 /// Used for time slicing.
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Eq)]
+// `Clone` is only needed by tests; deriving it in production would invite the
+// kind of expensive deep clone this type is designed to avoid on the hot path.
+#[cfg_attr(test, derive(Clone))]
 pub struct IngestingBlock {
     pub block: Block,
     pub next_tx_idx: usize,

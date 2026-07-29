@@ -4,7 +4,7 @@ use crate::{
     state::{self, ResponseToProcess},
     types::{
         GetSuccessorsCompleteResponse, GetSuccessorsRequest, GetSuccessorsRequestInitial,
-        GetSuccessorsResponse,
+        GetSuccessorsResponse, Slicing,
     },
     with_state, with_state_mut,
 };
@@ -23,11 +23,20 @@ pub async fn heartbeat() {
     collect_metrics();
     maybe_burn_cycles();
 
-    if ingest_stable_blocks_into_utxoset() {
-        // Exit the heartbeat if stable blocks had been ingested.
-        // This is a precaution to not exceed the instructions limit.
-        print("Done ingesting stable blocks.");
-        return;
+    match ingest_stable_blocks_into_utxoset() {
+        // Ingestion paused mid-block (time-sliced): a full budget was already spent, so
+        // exit the heartbeat as a precaution to not exceed the instructions limit.
+        Slicing::Paused(()) => {
+            print("Paused while ingesting a stable block. Exiting heartbeat.");
+            return;
+        }
+        // A stable block finished ingesting this round: exit for the same precaution.
+        Slicing::Done(true) => {
+            print("Done ingesting stable blocks. Exiting heartbeat.");
+            return;
+        }
+        // Nothing was ingested; carry on to fetching/processing.
+        Slicing::Done(false) => {}
     }
 
     if maybe_fetch_blocks().await {
@@ -192,7 +201,7 @@ async fn maybe_fetch_blocks() -> bool {
     true
 }
 
-fn ingest_stable_blocks_into_utxoset() -> bool {
+fn ingest_stable_blocks_into_utxoset() -> Slicing<(), bool> {
     with_state_mut(state::ingest_stable_blocks_into_utxoset)
 }
 
@@ -437,7 +446,7 @@ mod test {
     }
 
     #[async_std::test]
-    async fn time_slices_large_blocks() {
+    async fn time_slices_large_blocks_without_fetching_while_ingesting() {
         let network = Network::Regtest;
         let btc_network = into_bitcoin_network(network);
 
@@ -482,6 +491,12 @@ mod test {
         // Assert that the blocks have been ingested.
         assert_eq!(with_state(state::main_chain_height), 2);
 
+        // Number of `get_successors` calls issued so far (only the single fetch above).
+        // While stable blocks are still being ingested, the heartbeat must return early
+        // and must NOT issue a new `get_successors` request.
+        let fetches_after_processing =
+            runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow());
+
         // Ingest stable blocks.
         runtime::performance_counter_reset();
         heartbeat().await;
@@ -493,6 +508,12 @@ mod test {
         assert_eq!(partial_block.next_tx_idx, 2);
         assert_eq!(partial_block.next_input_idx, 1);
         assert_eq!(partial_block.next_output_idx, 0);
+        // The paused ingestion returned early without fetching new blocks.
+        assert_eq!(
+            runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow()),
+            fetches_after_processing,
+            "heartbeat fetched new blocks while a stable block was still being ingested",
+        );
 
         // Ingest more stable blocks.
         runtime::performance_counter_reset();
@@ -504,6 +525,12 @@ mod test {
         assert_eq!(partial_block.next_tx_idx, 5);
         assert_eq!(partial_block.next_input_idx, 1);
         assert_eq!(partial_block.next_output_idx, 0);
+        // Still ingesting, still no new fetch.
+        assert_eq!(
+            runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow()),
+            fetches_after_processing,
+            "heartbeat fetched new blocks while a stable block was still being ingested",
+        );
 
         // Only the genesis block has been fully processed, so the stable height is one.
         assert_eq!(with_state(|s| s.utxos.next_height()), 1);
@@ -520,6 +547,19 @@ mod test {
 
         // The stable height is now updated to include `block_1`.
         assert_eq!(with_state(|s| s.utxos.next_height()), 2);
+
+        // No heartbeat fetched new blocks while ingestion was ongoing, including the
+        // one that completed it.
+        assert_eq!(
+            runtime::GET_SUCCESSORS_RESPONSES_INDEX.with(|i| *i.borrow()),
+            fetches_after_processing,
+            "heartbeat fetched new blocks while ingesting stable blocks",
+        );
+
+        // Restore the shared (thread-local) performance-counter mock to its default so this
+        // test does not affect others that may run later on the same thread.
+        runtime::set_performance_counter_step(0);
+        runtime::performance_counter_reset();
     }
 
     #[async_std::test]

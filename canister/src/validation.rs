@@ -177,7 +177,7 @@ mod test {
             // Insert all the blocks except the last block.
             for block in blocks[1..blocks.len() - 1].iter() {
                 insert_block(&mut state, block.clone()).unwrap();
-                ingest_stable_blocks_into_utxoset(&mut state);
+                let _ = ingest_stable_blocks_into_utxoset(&mut state);
             }
 
             // Try validating the last block header (which wasn't inserted above).

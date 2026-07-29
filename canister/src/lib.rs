@@ -281,6 +281,9 @@ pub fn post_upgrade(config_update: Option<SetConfigRequest>) {
     // even if the upgrade event interrupted the canister fetching state.
     with_state_mut(|state| {
         reset_syncing_state(state);
+
+        // Repopulate the tip-depths cache, which defaults to empty for older state.
+        state.unstable_blocks.refresh_tip_depths_cache();
     });
 
     // Update the state based on the provided configuration.
@@ -436,7 +439,7 @@ mod test {
         for block in blocks[1..].iter() {
             with_state_mut(|s| {
                 crate::state::insert_block(s, block.clone()).unwrap();
-                crate::state::ingest_stable_blocks_into_utxoset(s);
+                let _ = crate::state::ingest_stable_blocks_into_utxoset(s);
             });
         }
 
@@ -825,7 +828,7 @@ mod test {
         for block in blocks[1..].iter() {
             with_state_mut(|s| {
                 crate::state::insert_block(s, block.clone()).unwrap();
-                crate::state::ingest_stable_blocks_into_utxoset(s);
+                let _ = crate::state::ingest_stable_blocks_into_utxoset(s);
             });
         }
 
