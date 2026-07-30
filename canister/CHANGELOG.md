@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [release/2026-07-30] - 2026-07-30
+
+### Changed
+
+- DEFI-2957: Cache unstable-block tip depths, refresh at push/pop ([#543](https://github.com/dfinity/bitcoin-canister/pull/543))
+
+- DEFI-2957: Make BlockTree::get_hashes O(n) instead of O(n²) ([#541](https://github.com/dfinity/bitcoin-canister/pull/541))
+
+- DEFI-2954: Avoid deep-cloning ingesting_block on every heartbeat ([#538](https://github.com/dfinity/bitcoin-canister/pull/538))
+
+
 ## [release/2026-05-27] - 2026-05-27
 
 ### Changed
@@ -339,3 +350,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 [release/2026-04-15]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-03-06...release/2026-04-15
 
 [release/2026-05-27]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-04-15...release/2026-05-27
+
+[release/2026-07-30]: https://github.com/dfinity/bitcoin-canister/compare/release/2026-05-27...release/2026-07-30
