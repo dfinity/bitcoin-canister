@@ -2,7 +2,9 @@ use crate::{
     memory::Memory,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
-    types::{Address, AddressUtxo, AddressUtxoRange, Slicing, TxOut, Utxo},
+    types::{
+        Address, AddressUtxo, AddressUtxoRange, Slicing, TxOut, Utxo, MAX_ADDRESS_UTXO_HEIGHT,
+    },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Network, Satoshi};
@@ -394,6 +396,12 @@ impl UtxoSet {
         let tx_out: TxOut = (&output).into();
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
+            // Larger heights would make `AddressUtxoRange` miss the UTXO.
+            assert!(
+                self.next_height <= MAX_ADDRESS_UTXO_HEIGHT,
+                "Height {} exceeds the maximum height of the address UTXO index",
+                self.next_height
+            );
             self.address_utxos.insert(
                 Blob::try_from(
                     AddressUtxo {
@@ -573,7 +581,9 @@ mod test {
     use crate::{
         address_utxoset::AddressUtxoSet,
         runtime,
-        test_utils::{BlockBuilder, TestBlocksCache, TransactionBuilder},
+        test_utils::{
+            p2wsh_address_with_p2wpkh_prefix, BlockBuilder, TestBlocksCache, TransactionBuilder,
+        },
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::{
@@ -583,7 +593,7 @@ mod test {
         Amount,
     };
     use ic_btc_interface::Network;
-    use ic_btc_test_utils::random_p2pkh_address;
+    use ic_btc_test_utils::{random_p2pkh_address, random_p2wpkh_address};
     use ic_btc_types::into_bitcoin_network;
     use maplit::btreeset;
     use proptest::prelude::*;
@@ -843,6 +853,66 @@ mod test {
                 .collect::<Vec<_>>(),
             vec![31, 17, 4, 2, 0]
         );
+    }
+
+    #[test]
+    fn address_utxo_range_excludes_addresses_prefixed_by_the_address() {
+        let network = Network::Mainnet;
+        let btc_network = into_bitcoin_network(network);
+        let p2wpkh = random_p2wpkh_address(btc_network);
+        let p2wsh = p2wsh_address_with_p2wpkh_prefix(&p2wpkh, btc_network);
+        let address: Address = p2wpkh.into();
+        let other_address: Address = p2wsh.into();
+
+        let mut utxo = UtxoSet::new(network);
+        let heights = [0, 1, 1_000, MAX_ADDRESS_UTXO_HEIGHT];
+        for addr in [&address, &other_address] {
+            for height in heights {
+                utxo.address_utxos.insert(
+                    Blob::try_from(
+                        AddressUtxo {
+                            address: addr.clone(),
+                            height,
+                            outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
+                        }
+                        .to_bytes()
+                        .as_ref(),
+                    )
+                    .unwrap(),
+                    (),
+                );
+            }
+        }
+
+        let offset_utxo = |height| Utxo {
+            height,
+            outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
+            value: 0,
+        };
+
+        for addr in [&address, &other_address] {
+            for (offset, expected_heights) in [
+                (None, heights.to_vec()),
+                (Some(offset_utxo(u32::MAX)), heights.to_vec()),
+                (
+                    Some(offset_utxo(MAX_ADDRESS_UTXO_HEIGHT + 1)),
+                    heights.to_vec(),
+                ),
+                (Some(offset_utxo(1_000)), vec![0, 1, 1_000]),
+            ] {
+                let entries: Vec<_> = utxo
+                    .address_utxos
+                    .range(AddressUtxoRange::new(addr, &offset))
+                    .map(|entry| {
+                        AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()))
+                    })
+                    .collect();
+                assert!(entries.iter().all(|entry| entry.address == *addr));
+                let mut entry_heights: Vec<_> = entries.iter().map(|entry| entry.height).collect();
+                entry_heights.sort();
+                assert_eq!(entry_heights, expected_heights);
+            }
+        }
     }
 
     #[test]

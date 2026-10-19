@@ -210,6 +210,16 @@ impl StableStructuresStorable for AddressUtxo {
     };
 }
 
+/// The maximum height of a UTXO that can be stored in the address UTXO index.
+///
+/// Keys in the index are `address || height || outpoint`, with nothing marking where the address
+/// ends, so the key of an address that starts with the full string of another address is placed
+/// next to the keys of the shorter address. Heights are XOR'ed, so for heights up to this maximum
+/// the first height byte is always `0xFF`. As addresses are ASCII, that byte is always greater
+/// than the byte at the same position in the key of a longer address, which allows the range of
+/// an address to exclude the keys of all longer addresses (see `AddressUtxoRange`).
+pub const MAX_ADDRESS_UTXO_HEIGHT: Height = 0x00FF_FFFF;
+
 pub struct AddressUtxoRange {
     start_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
     end_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
@@ -220,13 +230,26 @@ impl AddressUtxoRange {
     /// that are >= the given UTXO.
     ///
     /// The UTXOs are sorted by height in descending order, and then by outpoint.
+    ///
+    /// The range never includes UTXOs of other addresses, including addresses that start with
+    /// the full string of the given address, as long as UTXO heights don't exceed
+    /// `MAX_ADDRESS_UTXO_HEIGHT`.
     pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
+        let min_start = (
+            MAX_ADDRESS_UTXO_HEIGHT,
+            OutPoint::new(Txid::from(vec![0; 32]), 0),
+        );
         let (start_height, start_outpoint) = match utxo {
-            Some(utxo) => (utxo.height, utxo.outpoint.clone()),
+            Some(utxo) if utxo.height <= MAX_ADDRESS_UTXO_HEIGHT => {
+                (utxo.height, utxo.outpoint.clone())
+            }
 
-            // No UTXO specified. Start with the minimum value possible for a height and OutPoint.
-            // Heights are sorted in descending order, so u32::MAX is considered its minimum.
-            None => (u32::MAX, OutPoint::new(Txid::from(vec![0; 32]), 0)),
+            // No UTXO specified, or a UTXO with a height that can't be in the index.
+            // Start with the minimum value possible for a height and OutPoint. Heights are sorted
+            // in descending order, so `MAX_ADDRESS_UTXO_HEIGHT` is considered its minimum.
+            // Starting with a larger height would include the keys of longer addresses that
+            // start with the given address.
+            _ => min_start,
         };
 
         // The end of the range is the maximum value possible for a height and OutPoint.
