@@ -219,13 +219,16 @@ impl UtxoSet {
 
         // Retrieve all address's outpoints from the stable set, removing any outpoints
         // that were added by the ingesting block.
+        // The range only contains the address's UTXOs, but the address is checked again as a
+        // safeguard against returning UTXOs of other addresses.
+        let queried_address = address.clone();
         let stable_outpoints = self
             .address_utxos
             .range(AddressUtxoRange::new(address, offset))
-            .map(|entry| {
+            .filter_map(move |entry| {
                 let address_utxo =
                     AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
-                address_utxo.outpoint
+                (address_utxo.address == queried_address).then_some(address_utxo.outpoint)
             })
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
 
