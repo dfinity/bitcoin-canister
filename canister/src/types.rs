@@ -250,10 +250,6 @@ impl AddressUtxoRange {
     /// the full string of the given address, as long as UTXO heights don't exceed
     /// `MAX_ADDRESS_UTXO_HEIGHT`.
     pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
-        let min_start = (
-            MAX_ADDRESS_UTXO_HEIGHT,
-            OutPoint::new(Txid::from(vec![0; 32]), 0),
-        );
         let (start_height, start_outpoint) = match utxo {
             Some(utxo) if utxo.height <= MAX_ADDRESS_UTXO_HEIGHT => {
                 (utxo.height, utxo.outpoint.clone())
@@ -265,14 +261,18 @@ impl AddressUtxoRange {
             // keys of longer addresses that start with the given address at the beginning of the
             // range, before all of the address's UTXOs, so they would be scanned on every query.
             //
-            // The same applies to a UTXO with a height above `MAX_ADDRESS_UTXO_HEIGHT`. Such a
-            // UTXO comes from a caller-supplied page and can't be in the index, so it is ignored.
-            _ => min_start,
+            // A UTXO with a height above `MAX_ADDRESS_UTXO_HEIGHT` can only come from a
+            // caller-supplied page. All of the address's UTXOs are >= it, so the range starts at
+            // the minimum as well, rather than at a height like `u32::MAX`.
+            _ => (
+                MAX_ADDRESS_UTXO_HEIGHT,
+                OutPoint::new(Txid::from(vec![0; 32]), 0),
+            ),
         };
 
         // The end of the range is the maximum value possible for a height and OutPoint.
         // i.e. the range that matches with all UTXOs of that address that are >= the given UTXO.
-        // Heights are sorted in descending order, so `0` is considered its minimum.
+        // Heights are sorted in descending order, so `0` is considered its maximum.
         let (end_height, end_outpoint) = (0, OutPoint::new(Txid::from(vec![255; 32]), u32::MAX));
 
         let start_bound = Blob::try_from(
