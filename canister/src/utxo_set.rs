@@ -222,6 +222,7 @@ impl UtxoSet {
         // The range only contains the address's UTXOs, but the address is checked again as a
         // safeguard against returning UTXOs of other addresses. Keys are decoded from the end
         // (height and outpoint have fixed sizes), so the decoded address is always the right one.
+        // A mismatch means the range is wrong, so debug builds panic to make tests catch it.
         let queried_address = address.clone();
         let stable_outpoints = self
             .address_utxos
@@ -229,6 +230,7 @@ impl UtxoSet {
             .filter_map(move |entry| {
                 let address_utxo =
                     AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
+                debug_assert_eq!(address_utxo.address, queried_address);
                 (address_utxo.address == queried_address).then_some(address_utxo.outpoint)
             })
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
