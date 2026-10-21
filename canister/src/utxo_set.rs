@@ -874,7 +874,7 @@ mod test {
         let other_address: Address = p2wsh.into();
 
         let mut utxo = UtxoSet::new(network);
-        let heights = [0, 1, 1_000, MAX_ADDRESS_UTXO_HEIGHT];
+        let heights = [MAX_ADDRESS_UTXO_HEIGHT, 1_000, 1, 0];
         for addr in [&address, &other_address] {
             for height in heights {
                 utxo.address_utxos.insert(
@@ -907,7 +907,15 @@ mod test {
                     Some(offset_utxo(MAX_ADDRESS_UTXO_HEIGHT + 1)),
                     heights.to_vec(),
                 ),
-                (Some(offset_utxo(1_000)), vec![0, 1, 1_000]),
+                (Some(offset_utxo(1_000)), vec![1_000, 1, 0]),
+                // A page that starts right after the UTXO at the maximum height.
+                (
+                    Some(Utxo {
+                        outpoint: OutPoint::new(Txid::from(vec![0; 32]), 1),
+                        ..offset_utxo(MAX_ADDRESS_UTXO_HEIGHT)
+                    }),
+                    vec![1_000, 1, 0],
+                ),
             ] {
                 let entries: Vec<_> = utxo
                     .address_utxos
@@ -917,8 +925,7 @@ mod test {
                     })
                     .collect();
                 assert!(entries.iter().all(|entry| entry.address == *addr));
-                let mut entry_heights: Vec<_> = entries.iter().map(|entry| entry.height).collect();
-                entry_heights.sort();
+                let entry_heights: Vec<_> = entries.iter().map(|entry| entry.height).collect();
                 assert_eq!(entry_heights, expected_heights);
             }
         }
