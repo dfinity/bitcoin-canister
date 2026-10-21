@@ -242,7 +242,9 @@ impl AddressUtxoRange {
     /// Given an address and UTXO, returns a range that matches with all of the address's UTXOs
     /// that are >= the given UTXO.
     ///
-    /// The UTXOs are sorted by height in descending order, and then by outpoint.
+    /// The UTXOs are sorted by height in descending order, and then by the outpoint's key bytes.
+    /// As `vout` is stored little-endian, this differs from numeric outpoint order for
+    /// `vout >= 256`.
     ///
     /// The range never includes UTXOs of other addresses, including addresses that start with
     /// the full string of the given address, as long as UTXO heights don't exceed
