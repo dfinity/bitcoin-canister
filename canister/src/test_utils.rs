@@ -319,38 +319,26 @@ pub fn p2wsh_address_with_p2wpkh_prefix(
     p2wpkh: &BitcoinAddress,
     network: bitcoin::Network,
 ) -> BitcoinAddress {
-    const CHARSET: &[u8] = b"qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+    use bitcoin::bech32::{Fe32, Fe32IterExt};
     const P2WSH_PROGRAM_CHARS: usize = 52; // 32 bytes encoded in 5-bit groups.
 
     let p2wpkh_str = p2wpkh.to_string();
-    let hrp_len = p2wpkh_str
+    let separator = p2wpkh_str
         .rfind('1')
-        .expect("bech32 address must have a separator")
-        + 1;
+        .expect("bech32 address must have a separator");
     // Skip the human-readable part, the separator, and the witness version.
-    let data = &p2wpkh_str.as_bytes()[hrp_len + 1..];
+    let data = &p2wpkh_str[separator + 2..];
     assert!(data.len() < P2WSH_PROGRAM_CHARS);
 
     // Use the P2WPKH data as the leading 5-bit groups of the P2WSH witness program,
-    // padding the rest with zeros.
-    let mut groups: Vec<u8> = data
-        .iter()
-        .map(|c| CHARSET.iter().position(|x| x == c).unwrap() as u8)
+    // padding the rest with zeros. The trailing 4 padding bits are dropped.
+    let program: Vec<u8> = data
+        .chars()
+        .map(|c| Fe32::from_char(c).unwrap())
+        .chain(std::iter::repeat(Fe32::Q))
+        .take(P2WSH_PROGRAM_CHARS)
+        .fes_to_bytes()
         .collect();
-    groups.resize(P2WSH_PROGRAM_CHARS, 0);
-
-    // Convert the 5-bit groups to bytes. The trailing 4 padding bits are zero.
-    let mut program = vec![];
-    let (mut acc, mut bits) = (0u32, 0);
-    for group in groups {
-        acc = (acc << 5) | group as u32;
-        bits += 5;
-        if bits >= 8 {
-            bits -= 8;
-            program.push((acc >> bits) as u8);
-        }
-    }
-    assert_eq!(program.len(), 32);
 
     let program = bitcoin::WitnessProgram::new(bitcoin::WitnessVersion::V0, &program).unwrap();
     let p2wsh = BitcoinAddress::from_witness_program(program, network);
