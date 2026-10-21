@@ -220,7 +220,8 @@ impl UtxoSet {
         // Retrieve all address's outpoints from the stable set, removing any outpoints
         // that were added by the ingesting block.
         // The range only contains the address's UTXOs, but the address is checked again as a
-        // safeguard against returning UTXOs of other addresses.
+        // safeguard against returning UTXOs of other addresses. Keys are decoded from the end
+        // (height and outpoint have fixed sizes), so the decoded address is always the right one.
         let queried_address = address.clone();
         let stable_outpoints = self
             .address_utxos
@@ -399,7 +400,9 @@ impl UtxoSet {
         let tx_out: TxOut = (&output).into();
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
-            // Larger heights would make `AddressUtxoRange` miss the UTXO.
+            // Larger heights would make `AddressUtxoRange` miss the UTXO. Trapping rolls back
+            // the ingestion and keeps the canister upgradeable, whereas skipping the index entry
+            // would make `get_utxos` silently inconsistent with the UTXO set and balances.
             assert!(
                 self.next_height <= MAX_ADDRESS_UTXO_HEIGHT,
                 "Height {} exceeds the maximum height of the address UTXO index",

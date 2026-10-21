@@ -1135,6 +1135,7 @@ mod test {
         let btc_network = into_bitcoin_network(network);
 
         // A P2WPKH address, and a valid P2WSH address whose string starts with it.
+        // Their address UTXO index keys share a prefix, as keys don't mark where the address ends.
         let p2wpkh = bitcoin::Address::from_witness_program(
             bitcoin::WitnessProgram::new(bitcoin::WitnessVersion::V0, &[0x42; 20]).unwrap(),
             btc_network,

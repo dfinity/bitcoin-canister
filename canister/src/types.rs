@@ -212,12 +212,25 @@ impl StableStructuresStorable for AddressUtxo {
 
 /// The maximum height of a UTXO that can be stored in the address UTXO index.
 ///
-/// Keys in the index are `address || height || outpoint`, with nothing marking where the address
-/// ends, so the key of an address that starts with the full string of another address is placed
-/// next to the keys of the shorter address. Heights are XOR'ed, so for heights up to this maximum
-/// the first height byte is always `0xFF`. As addresses are ASCII, that byte is always greater
-/// than the byte at the same position in the key of a longer address, which allows the range of
-/// an address to exclude the keys of all longer addresses (see `AddressUtxoRange`).
+/// Keys of the index are `address || height || outpoint`, with nothing marking the end of the
+/// address. If an address `B` starts with the full string of another address `A` (e.g. a P2WSH
+/// address crafted to start with a P2WPKH address), `B`'s keys share `A`'s key prefix:
+///
+/// ```text
+/// A's key: A | FF xx xx xx | outpoint            (encoded height, h <= MAX_ADDRESS_UTXO_HEIGHT)
+/// B's key: A | b  b  b  …  | height | outpoint   (b: remaining bytes of B)
+/// ```
+///
+/// Heights are stored XOR'ed (big endian), so every height up to this maximum has `0xFF` as its
+/// first encoded byte. Addresses are UTF-8, which never contains the byte `0xFF`, so at the byte
+/// right after `A`, `A`'s own keys are always greater than the keys of any longer address.
+/// `AddressUtxoRange` starts at the encoded height of this maximum (`FF 00 00 00`), which
+/// excludes the keys of all longer addresses without scanning them.
+///
+/// This limit is not expected to be reached: Bitcoin grows by ~52.5k blocks per year, leaving
+/// centuries of headroom, and heights cannot be inflated without valid proof-of-work. Reaching it
+/// would trap block ingestion (see `UtxoSet::insert_utxo`) rather than silently missing UTXOs;
+/// lifting it requires a key format with an explicit address length.
 pub const MAX_ADDRESS_UTXO_HEIGHT: Height = 0x00FF_FFFF;
 
 pub struct AddressUtxoRange {
@@ -244,11 +257,14 @@ impl AddressUtxoRange {
                 (utxo.height, utxo.outpoint.clone())
             }
 
-            // No UTXO specified, or a UTXO with a height that can't be in the index.
-            // Start with the minimum value possible for a height and OutPoint. Heights are sorted
-            // in descending order, so `MAX_ADDRESS_UTXO_HEIGHT` is considered its minimum.
-            // Starting with a larger height would include the keys of longer addresses that
-            // start with the given address.
+            // No UTXO specified. Start with the minimum value possible for a height and OutPoint.
+            // Heights are sorted in descending order, so `MAX_ADDRESS_UTXO_HEIGHT` is considered
+            // its minimum (see its documentation). Starting at `u32::MAX` instead would place the
+            // keys of longer addresses that start with the given address at the beginning of the
+            // range, before all of the address's UTXOs, so they would be scanned on every query.
+            //
+            // The same applies to a UTXO with a height above `MAX_ADDRESS_UTXO_HEIGHT`. Such a
+            // UTXO comes from a caller-supplied page and can't be in the index, so it is ignored.
             _ => min_start,
         };
 
