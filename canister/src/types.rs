@@ -229,7 +229,7 @@ impl StableStructuresStorable for AddressUtxo {
 ///
 /// This limit is not expected to be reached: Bitcoin grows by ~52.5k blocks per year, leaving
 /// centuries of headroom, and heights cannot be inflated without valid proof-of-work. Reaching it
-/// would trap block ingestion (see `UtxoSet::insert_utxo`) rather than silently missing UTXOs;
+/// would trap block ingestion (see `UtxoSet::ingest_block`) rather than silently missing UTXOs;
 /// lifting it requires a key format with an explicit address length.
 pub const MAX_ADDRESS_UTXO_HEIGHT: Height = 0x00FF_FFFF;
 

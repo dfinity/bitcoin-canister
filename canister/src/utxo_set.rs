@@ -86,6 +86,15 @@ impl UtxoSet {
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
             self.next_height
         );
+        // Larger heights would make `AddressUtxoRange` miss the block's UTXOs. Checking before
+        // the block is stored means a trap rolls back all of its ingestion, and the canister
+        // stays upgradeable. Skipping the index entries instead would make `get_utxos` silently
+        // inconsistent with the UTXO set and balances.
+        assert!(
+            self.next_height <= MAX_ADDRESS_UTXO_HEIGHT,
+            "Height {} exceeds the maximum height of the address UTXO index",
+            self.next_height
+        );
 
         // Store in the state the new block to be ingested.
         self.ingesting_block = Some(IngestingBlock::new(block));
@@ -402,14 +411,6 @@ impl UtxoSet {
         let tx_out: TxOut = (&output).into();
         if let Ok(address) = Address::from_script(&output.script_pubkey, self.network) {
             // Add the address to the index if we can parse it.
-            // Larger heights would make `AddressUtxoRange` miss the UTXO. Trapping rolls back
-            // the ingestion and keeps the canister upgradeable, whereas skipping the index entry
-            // would make `get_utxos` silently inconsistent with the UTXO set and balances.
-            assert!(
-                self.next_height <= MAX_ADDRESS_UTXO_HEIGHT,
-                "Height {} exceeds the maximum height of the address UTXO index",
-                self.next_height
-            );
             self.address_utxos.insert(
                 Blob::try_from(
                     AddressUtxo {
