@@ -1166,10 +1166,6 @@ mod test {
         for (address, min_value) in [(&address_1, 1_000), (&address_2, 2_000)] {
             let expected_values: BTreeSet<_> = (min_value..min_value + num_utxos).collect();
 
-            let values = |utxos: Vec<Utxo>| -> BTreeSet<u64> {
-                utxos.into_iter().map(|utxo| utxo.value).collect()
-            };
-
             // Without pagination.
             let response = get_utxos_internal(
                 &state,
@@ -1180,24 +1176,23 @@ mod test {
             )
             .unwrap()
             .0;
-            assert_eq!(values(response.utxos), expected_values);
+            assert_eq!(response.utxos.len(), num_utxos as usize);
+            let values: BTreeSet<_> = response.utxos.iter().map(|utxo| utxo.value).collect();
+            assert_eq!(values, expected_values);
             assert_eq!(response.next_page, None);
 
-            // With pagination.
+            // With pagination, one UTXO per page: the same UTXOs in the same order.
             let mut utxos = vec![];
             let mut page = None;
-            loop {
+            for _ in 0..num_utxos {
                 let response = get_utxos_internal(&state, &address.to_string(), 0, page, 1)
                     .unwrap()
                     .0;
                 utxos.extend(response.utxos);
-                match response.next_page {
-                    Some(next_page) => page = Some(next_page.to_vec()),
-                    None => break,
-                }
+                page = response.next_page.map(|next_page| next_page.to_vec());
             }
-            assert_eq!(utxos.len(), num_utxos as usize);
-            assert_eq!(values(utxos), expected_values);
+            assert_eq!(page, None);
+            assert_eq!(utxos, response.utxos);
         }
     }
 
