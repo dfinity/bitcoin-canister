@@ -932,6 +932,44 @@ mod test {
     }
 
     #[test]
+    #[should_panic(expected = "exceeds the maximum height of the address UTXO index")]
+    fn ingesting_block_above_max_address_utxo_height_panics() {
+        let network = Network::Regtest;
+        let mut utxo_set = UtxoSet::new(network);
+        let address = random_p2pkh_address(into_bitcoin_network(network)).into();
+        utxo_set.next_height = MAX_ADDRESS_UTXO_HEIGHT + 1;
+
+        let coinbase = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        let _ = utxo_set.ingest_block(BlockBuilder::genesis().with_transaction(coinbase).build());
+    }
+
+    #[test]
+    fn ingesting_block_at_max_address_utxo_height_indexes_utxos() {
+        let network = Network::Regtest;
+        let mut utxo_set = UtxoSet::new(network);
+        let address = random_p2pkh_address(into_bitcoin_network(network)).into();
+        utxo_set.next_height = MAX_ADDRESS_UTXO_HEIGHT;
+
+        let coinbase = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        let _ = utxo_set.ingest_block(
+            BlockBuilder::genesis()
+                .with_transaction(coinbase.clone())
+                .build(),
+        );
+
+        assert_eq!(
+            utxo_set
+                .get_address_outpoints(&address, &None)
+                .collect::<Vec<_>>(),
+            vec![OutPoint::new(coinbase.txid(), 0)]
+        );
+    }
+
+    #[test]
     #[should_panic]
     fn inserting_same_outpoint_panics() {
         let network = Network::Testnet;
