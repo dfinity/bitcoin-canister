@@ -210,6 +210,29 @@ impl StableStructuresStorable for AddressUtxo {
     };
 }
 
+/// The maximum height of a UTXO that can be stored in the address UTXO index.
+///
+/// Keys of the index are `address || height || outpoint`, with nothing marking the end of the
+/// address. If an address `B` starts with the full string of another address `A` (e.g. a P2WSH
+/// address crafted to start with a P2WPKH address), `B`'s keys share `A`'s key prefix:
+///
+/// ```text
+/// A's key: A | FF xx xx xx | outpoint            (encoded height, h <= MAX_ADDRESS_UTXO_HEIGHT)
+/// B's key: A | b  b  b  …  | height | outpoint   (b: remaining bytes of B)
+/// ```
+///
+/// Heights are stored XOR'ed (big endian), so every height up to this maximum has `0xFF` as its
+/// first encoded byte. Addresses are UTF-8, which never contains the byte `0xFF`, so at the byte
+/// right after `A`, `A`'s own keys are always greater than the keys of any longer address.
+/// `AddressUtxoRange` starts at the encoded height of this maximum (`FF 00 00 00`), which
+/// excludes the keys of all longer addresses without scanning them.
+///
+/// This limit is not expected to be reached: Bitcoin grows by ~52.5k blocks per year, leaving
+/// centuries of headroom, and heights cannot be inflated without valid proof-of-work. Reaching it
+/// would trap block ingestion (see `UtxoSet::ingest_block`) rather than silently missing UTXOs;
+/// lifting it requires a key format with an explicit address length.
+pub const MAX_ADDRESS_UTXO_HEIGHT: Height = 0x00FF_FFFF;
+
 pub struct AddressUtxoRange {
     start_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
     end_bound: Blob<{ AddressUtxo::BOUND.max_size() as usize }>,
@@ -219,19 +242,37 @@ impl AddressUtxoRange {
     /// Given an address and UTXO, returns a range that matches with all of the address's UTXOs
     /// that are >= the given UTXO.
     ///
-    /// The UTXOs are sorted by height in descending order, and then by outpoint.
+    /// The UTXOs are sorted by height in descending order, and then by the outpoint's key bytes.
+    /// As `vout` is stored little-endian, this differs from numeric outpoint order for
+    /// `vout >= 256`.
+    ///
+    /// The range never includes UTXOs of other addresses, including addresses that start with
+    /// the full string of the given address, as long as UTXO heights don't exceed
+    /// `MAX_ADDRESS_UTXO_HEIGHT`.
     pub fn new(address: &Address, utxo: &Option<Utxo>) -> Self {
         let (start_height, start_outpoint) = match utxo {
-            Some(utxo) => (utxo.height, utxo.outpoint.clone()),
+            Some(utxo) if utxo.height <= MAX_ADDRESS_UTXO_HEIGHT => {
+                (utxo.height, utxo.outpoint.clone())
+            }
 
             // No UTXO specified. Start with the minimum value possible for a height and OutPoint.
-            // Heights are sorted in descending order, so u32::MAX is considered its minimum.
-            None => (u32::MAX, OutPoint::new(Txid::from(vec![0; 32]), 0)),
+            // Heights are sorted in descending order, so `MAX_ADDRESS_UTXO_HEIGHT` is considered
+            // its minimum (see its documentation). Starting at `u32::MAX` instead would place the
+            // keys of longer addresses that start with the given address at the beginning of the
+            // range, before all of the address's UTXOs, so they would be scanned on every query.
+            //
+            // A UTXO with a height above `MAX_ADDRESS_UTXO_HEIGHT` can only come from a
+            // caller-supplied page. All of the address's UTXOs are >= it, so the range starts at
+            // the minimum as well, rather than at a height like `u32::MAX`.
+            _ => (
+                MAX_ADDRESS_UTXO_HEIGHT,
+                OutPoint::new(Txid::from(vec![0; 32]), 0),
+            ),
         };
 
         // The end of the range is the maximum value possible for a height and OutPoint.
         // i.e. the range that matches with all UTXOs of that address that are >= the given UTXO.
-        // Heights are sorted in descending order, so `0` is considered its minimum.
+        // Heights are sorted in descending order, so `0` is considered its maximum.
         let (end_height, end_outpoint) = (0, OutPoint::new(Txid::from(vec![255; 32]), u32::MAX));
 
         let start_bound = Blob::try_from(

@@ -291,7 +291,10 @@ mod test {
     use super::*;
     use crate::{
         genesis_block, runtime, state,
-        test_utils::{BlockBuilder, BlockChainBuilder, TestBlocksCache, TransactionBuilder},
+        test_utils::{
+            p2wsh_address_with_p2wpkh_prefix, BlockBuilder, BlockChainBuilder, TestBlocksCache,
+            TransactionBuilder,
+        },
         types::into_bitcoin_network,
         with_state_mut,
     };
@@ -301,6 +304,7 @@ mod test {
     };
     use ic_btc_types::Block;
     use proptest::prelude::*;
+    use std::collections::BTreeSet;
 
     #[test]
     fn get_utxos_malformed_address() {
@@ -1123,6 +1127,73 @@ mod test {
                 next_page: None,
             }
         );
+    }
+
+    #[test]
+    fn get_utxos_does_not_include_addresses_prefixed_by_the_given_address() {
+        let network = Network::Mainnet;
+        let btc_network = into_bitcoin_network(network);
+
+        // A P2WPKH address, and a valid P2WSH address whose string starts with it.
+        // Their address UTXO index keys share a prefix, as keys don't mark where the address ends.
+        let p2wpkh = random_p2wpkh_address(btc_network);
+        let p2wsh = p2wsh_address_with_p2wpkh_prefix(&p2wpkh, btc_network);
+        let address_1: Address = p2wpkh.into();
+        let address_2: Address = p2wsh.into();
+
+        let num_utxos = 3;
+        let mut block_builder = BlockBuilder::genesis();
+        for i in 0..num_utxos {
+            for (address, value) in [(&address_1, 1_000 + i), (&address_2, 2_000 + i)] {
+                block_builder = block_builder.with_transaction(
+                    TransactionBuilder::coinbase()
+                        .with_output(address, value)
+                        .build(),
+                );
+            }
+        }
+        let block_0 = block_builder.build();
+        let block_1 = BlockBuilder::with_prev_header(block_0.header()).build();
+
+        // Ingest the genesis block into the stable UTXO set. The block is pushed without
+        // validation, as the test blocks don't satisfy the mainnet difficulty target.
+        let cache = TestBlocksCache::new(network);
+        let mut state = State::new(cache, 0, network, block_0);
+        unstable_blocks::push(&mut state.unstable_blocks, &state.utxos, block_1).unwrap();
+        let _ = state::ingest_stable_blocks_into_utxoset(&mut state);
+        assert_eq!(state.utxos.next_height(), 1);
+
+        for (address, min_value) in [(&address_1, 1_000), (&address_2, 2_000)] {
+            let expected_values: BTreeSet<_> = (min_value..min_value + num_utxos).collect();
+
+            // Without pagination.
+            let response = get_utxos_internal(
+                &state,
+                &address.to_string(),
+                0,
+                None,
+                MAX_UTXOS_PER_RESPONSE,
+            )
+            .unwrap()
+            .0;
+            assert_eq!(response.utxos.len(), num_utxos as usize);
+            let values: BTreeSet<_> = response.utxos.iter().map(|utxo| utxo.value).collect();
+            assert_eq!(values, expected_values);
+            assert_eq!(response.next_page, None);
+
+            // With pagination, one UTXO per page: the same UTXOs in the same order.
+            let mut utxos = vec![];
+            let mut page = None;
+            for _ in 0..num_utxos {
+                let response = get_utxos_internal(&state, &address.to_string(), 0, page, 1)
+                    .unwrap()
+                    .0;
+                utxos.extend(response.utxos);
+                page = response.next_page.map(|next_page| next_page.to_vec());
+            }
+            assert_eq!(page, None);
+            assert_eq!(utxos, response.utxos);
+        }
     }
 
     #[test]

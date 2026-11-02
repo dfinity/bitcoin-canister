@@ -8,7 +8,7 @@
 //!   --utxos-dump-path utxos-dump.csv
 use bitcoin::{hashes::Hash, Address as BitcoinAddress, Script, Txid as BitcoinTxid};
 use clap::Parser;
-use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo};
+use ic_btc_canister::types::{into_bitcoin_network, Address, AddressUtxo, MAX_ADDRESS_UTXO_HEIGHT};
 use ic_btc_interface::Network;
 use ic_btc_types::{OutPoint, Txid};
 use ic_stable_structures::{storable::Blob, DefaultMemoryImpl, StableBTreeMap, Storable};
@@ -79,6 +79,11 @@ fn main() {
         };
 
         if let Some(address) = address {
+            // `AddressUtxoRange` would not find UTXOs above this height.
+            assert!(
+                height <= MAX_ADDRESS_UTXO_HEIGHT,
+                "Height {height} exceeds the maximum height of the address UTXO index"
+            );
             let address: Address = address.into();
 
             address_utxos.insert(

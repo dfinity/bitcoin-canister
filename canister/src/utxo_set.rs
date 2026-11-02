@@ -2,7 +2,9 @@ use crate::{
     memory::Memory,
     multi_iter::MultiIter,
     runtime::{inc_performance_counter, performance_counter, print},
-    types::{Address, AddressUtxo, AddressUtxoRange, Slicing, TxOut, Utxo},
+    types::{
+        Address, AddressUtxo, AddressUtxoRange, Slicing, TxOut, Utxo, MAX_ADDRESS_UTXO_HEIGHT,
+    },
 };
 use bitcoin::{Script, TxOut as BitcoinTxOut};
 use ic_btc_interface::{Height, Network, Satoshi};
@@ -82,6 +84,15 @@ impl UtxoSet {
         assert!(
             self.ingesting_block.is_none(),
             "Cannot ingest new block while previous block (height {}) isn't fully ingested",
+            self.next_height
+        );
+        // Larger heights would make `AddressUtxoRange` miss the block's UTXOs. Checking before
+        // the block is stored means a trap rolls back all of its ingestion, and the canister
+        // stays upgradeable. Skipping the index entries instead would make `get_utxos` silently
+        // inconsistent with the UTXO set and balances.
+        assert!(
+            self.next_height <= MAX_ADDRESS_UTXO_HEIGHT,
+            "Height {} exceeds the maximum height of the address UTXO index",
             self.next_height
         );
 
@@ -217,13 +228,19 @@ impl UtxoSet {
 
         // Retrieve all address's outpoints from the stable set, removing any outpoints
         // that were added by the ingesting block.
+        // The range only contains the address's UTXOs, but the address is checked again as a
+        // safeguard against returning UTXOs of other addresses. Keys are decoded from the end
+        // (height and outpoint have fixed sizes), so the decoded address is always the right one.
+        // A mismatch means the range is wrong, so debug builds panic to make tests catch it.
+        let queried_address = address.clone();
         let stable_outpoints = self
             .address_utxos
             .range(AddressUtxoRange::new(address, offset))
-            .map(|entry| {
+            .filter_map(move |entry| {
                 let address_utxo =
                     AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()));
-                address_utxo.outpoint
+                debug_assert_eq!(address_utxo.address, queried_address);
+                (address_utxo.address == queried_address).then_some(address_utxo.outpoint)
             })
             .filter(move |outpoint| !added_outpoints.contains(outpoint));
 
@@ -573,7 +590,9 @@ mod test {
     use crate::{
         address_utxoset::AddressUtxoSet,
         runtime,
-        test_utils::{BlockBuilder, TestBlocksCache, TransactionBuilder},
+        test_utils::{
+            p2wsh_address_with_p2wpkh_prefix, BlockBuilder, TestBlocksCache, TransactionBuilder,
+        },
         unstable_blocks::UnstableBlocks,
     };
     use bitcoin::{
@@ -583,7 +602,7 @@ mod test {
         Amount,
     };
     use ic_btc_interface::Network;
-    use ic_btc_test_utils::random_p2pkh_address;
+    use ic_btc_test_utils::{random_p2pkh_address, random_p2wpkh_address};
     use ic_btc_types::into_bitcoin_network;
     use maplit::btreeset;
     use proptest::prelude::*;
@@ -842,6 +861,111 @@ mod test {
                 })
                 .collect::<Vec<_>>(),
             vec![31, 17, 4, 2, 0]
+        );
+    }
+
+    #[test]
+    fn address_utxo_range_excludes_addresses_prefixed_by_the_address() {
+        let network = Network::Mainnet;
+        let btc_network = into_bitcoin_network(network);
+        let p2wpkh = random_p2wpkh_address(btc_network);
+        let p2wsh = p2wsh_address_with_p2wpkh_prefix(&p2wpkh, btc_network);
+        let address: Address = p2wpkh.into();
+        let other_address: Address = p2wsh.into();
+
+        let mut utxo = UtxoSet::new(network);
+        let heights = [MAX_ADDRESS_UTXO_HEIGHT, 1_000, 1, 0];
+        for addr in [&address, &other_address] {
+            for height in heights {
+                utxo.address_utxos.insert(
+                    Blob::try_from(
+                        AddressUtxo {
+                            address: addr.clone(),
+                            height,
+                            outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
+                        }
+                        .to_bytes()
+                        .as_ref(),
+                    )
+                    .unwrap(),
+                    (),
+                );
+            }
+        }
+
+        let offset_utxo = |height| Utxo {
+            height,
+            outpoint: OutPoint::new(Txid::from(vec![0; 32]), 0),
+            value: 0,
+        };
+
+        for addr in [&address, &other_address] {
+            for (offset, expected_heights) in [
+                (None, heights.to_vec()),
+                (Some(offset_utxo(u32::MAX)), heights.to_vec()),
+                (
+                    Some(offset_utxo(MAX_ADDRESS_UTXO_HEIGHT + 1)),
+                    heights.to_vec(),
+                ),
+                (Some(offset_utxo(1_000)), vec![1_000, 1, 0]),
+                // A page that starts right after the UTXO at the maximum height.
+                (
+                    Some(Utxo {
+                        outpoint: OutPoint::new(Txid::from(vec![0; 32]), 1),
+                        ..offset_utxo(MAX_ADDRESS_UTXO_HEIGHT)
+                    }),
+                    vec![1_000, 1, 0],
+                ),
+            ] {
+                let entries: Vec<_> = utxo
+                    .address_utxos
+                    .range(AddressUtxoRange::new(addr, &offset))
+                    .map(|entry| {
+                        AddressUtxo::from_bytes(std::borrow::Cow::Borrowed(entry.key().as_slice()))
+                    })
+                    .collect();
+                assert!(entries.iter().all(|entry| entry.address == *addr));
+                let entry_heights: Vec<_> = entries.iter().map(|entry| entry.height).collect();
+                assert_eq!(entry_heights, expected_heights);
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeds the maximum height of the address UTXO index")]
+    fn ingesting_block_above_max_address_utxo_height_panics() {
+        let network = Network::Regtest;
+        let mut utxo_set = UtxoSet::new(network);
+        let address = random_p2pkh_address(into_bitcoin_network(network)).into();
+        utxo_set.next_height = MAX_ADDRESS_UTXO_HEIGHT + 1;
+
+        let coinbase = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        let _ = utxo_set.ingest_block(BlockBuilder::genesis().with_transaction(coinbase).build());
+    }
+
+    #[test]
+    fn ingesting_block_at_max_address_utxo_height_indexes_utxos() {
+        let network = Network::Regtest;
+        let mut utxo_set = UtxoSet::new(network);
+        let address = random_p2pkh_address(into_bitcoin_network(network)).into();
+        utxo_set.next_height = MAX_ADDRESS_UTXO_HEIGHT;
+
+        let coinbase = TransactionBuilder::coinbase()
+            .with_output(&address, 1000)
+            .build();
+        let _ = utxo_set.ingest_block(
+            BlockBuilder::genesis()
+                .with_transaction(coinbase.clone())
+                .build(),
+        );
+
+        assert_eq!(
+            utxo_set
+                .get_address_outpoints(&address, &None)
+                .collect::<Vec<_>>(),
+            vec![OutPoint::new(coinbase.txid(), 0)]
         );
     }
 

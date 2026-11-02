@@ -309,3 +309,39 @@ fn target_difficulty() {
         1
     );
 }
+
+/// Returns a valid P2WSH address whose string representation starts with the full string
+/// representation of the given P2WPKH address.
+///
+/// Such an address exists for any P2WPKH address: the data part of the P2WPKH address
+/// (witness program and checksum) is used as the beginning of the P2WSH witness program.
+pub fn p2wsh_address_with_p2wpkh_prefix(
+    p2wpkh: &BitcoinAddress,
+    network: bitcoin::Network,
+) -> BitcoinAddress {
+    use bitcoin::bech32::{Fe32, Fe32IterExt};
+    const P2WSH_PROGRAM_CHARS: usize = 52; // 32 bytes encoded in 5-bit groups.
+
+    let p2wpkh_str = p2wpkh.to_string();
+    let separator = p2wpkh_str
+        .rfind('1')
+        .expect("bech32 address must have a separator");
+    // Skip the human-readable part, the separator, and the witness version.
+    let data = &p2wpkh_str[separator + 2..];
+    assert!(data.len() < P2WSH_PROGRAM_CHARS);
+
+    // Use the P2WPKH data as the leading 5-bit groups of the P2WSH witness program,
+    // padding the rest with zeros. The trailing 4 padding bits are dropped.
+    let program: Vec<u8> = data
+        .chars()
+        .map(|c| Fe32::from_char(c).unwrap())
+        .chain(std::iter::repeat(Fe32::Q))
+        .take(P2WSH_PROGRAM_CHARS)
+        .fes_to_bytes()
+        .collect();
+
+    let program = bitcoin::WitnessProgram::new(bitcoin::WitnessVersion::V0, &program).unwrap();
+    let p2wsh = BitcoinAddress::from_witness_program(program, network);
+    assert!(p2wsh.to_string().starts_with(&p2wpkh_str));
+    p2wsh
+}
